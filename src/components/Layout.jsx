@@ -57,7 +57,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -69,24 +69,26 @@ export default function Layout({ children, currentPageName }) {
       `}</style>
 
       {/* Top Navigation */}
-      <nav className={`bg-white border-b border-slate-200 sticky z-50 ${isTutorialMode ? 'top-12' : 'top-0'}`}>
+      <nav className={`bg-white/80 backdrop-blur-lg border-b border-slate-200/50 sticky z-50 shadow-sm ${isTutorialMode ? 'top-12' : 'top-0'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between h-16 md:h-20">
             <div className="flex items-center">
               <Link 
                 to={createPageUrl('Dashboard')}
-                className="flex-shrink-0 flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                className="flex-shrink-0 flex items-center gap-3 hover:opacity-80 transition-all cursor-pointer group"
               >
-                <img 
-                  src="/logo.png" 
-                  alt="LECM Logo" 
-                  className="h-10 w-auto"
-                  onError={(e) => {
-                    console.error('Logo failed to load');
-                    e.target.style.display = 'none';
-                  }}
-                />
-                <span className="text-xl font-semibold text-slate-900">LECRM</span>
+                <div className="relative">
+                  <img 
+                    src="/logo.png" 
+                    alt="LECRM Logo" 
+                    className="h-10 w-auto transition-transform group-hover:scale-105"
+                    onError={(e) => {
+                      console.error('Logo failed to load');
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+                <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">LECRM</span>
               </Link>
             </div>
 
@@ -99,13 +101,13 @@ export default function Layout({ children, currentPageName }) {
                   <Link
                     key={item.name}
                     to={createPageUrl(item.path)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                       isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
                     {item.name}
                   </Link>
                 );
@@ -194,8 +196,10 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* Main Content */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`}>
-        {children}
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`}>
+        <div className="animate-in fade-in duration-300">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -103,9 +103,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-600 mt-1">Overview of your sales pipeline and activities</p>
+      <div className="mb-2">
+        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
+        <p className="text-slate-600 mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
       </div>
 
       {/* Stats Grid */}
@@ -119,15 +119,15 @@ export default function Dashboard() {
               step={1}
               position="bottom"
             >
-              <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <Card className="border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                      <p className="text-3xl font-bold text-slate-900 mt-2">{stat.value}</p>
+                    <div className="flex-1">
+                      <p className="text-xs md:text-sm font-medium text-slate-600 mb-1">{stat.title}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-slate-900">{stat.value}</p>
                     </div>
-                    <div className={`${stat.bgColor} p-3 rounded-xl`}>
-                      <Icon className={`w-6 h-6 ${stat.color}`} />
+                    <div className={`${stat.bgColor} p-3 md:p-4 rounded-xl group-hover:scale-110 transition-transform`}>
+                      <Icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
                     </div>
                   </div>
                 </CardContent>
