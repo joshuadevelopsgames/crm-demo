@@ -16,7 +16,8 @@ import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import ErrorBoundary from './components/ErrorBoundary';
+import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
 
 // Create a query client
@@ -52,28 +53,30 @@ function AppContent() {
   };
 
   return (
-    <Routes>
-      <Route path="/tutorial" element={<Tutorial />} />
-      <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
-      <Route path="/gmail-callback" element={<GmailCallback />} />
-      <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
-      <Route path="*" element={
-        <Layout currentPageName={getPageName()}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path={createPageUrl('Dashboard')} element={<Dashboard />} />
-            <Route path={createPageUrl('Accounts')} element={<Accounts />} />
-            <Route path={createPageUrl('AccountDetail')} element={<AccountDetail />} />
-            <Route path={createPageUrl('Contacts')} element={<Contacts />} />
-            <Route path={createPageUrl('Tasks')} element={<Tasks />} />
-            <Route path={createPageUrl('Sequences')} element={<Sequences />} />
-            <Route path={createPageUrl('Scoring')} element={<Scoring />} />
-            <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
-            <Route path="*" element={<Dashboard />} />
-          </Routes>
-        </Layout>
-      } />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/tutorial" element={<Tutorial />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/gmail-callback" element={<GmailCallback />} />
+        <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
+        <Route path="*" element={
+          <Layout currentPageName={getPageName()}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path={createPageUrl('Dashboard')} element={<Dashboard />} />
+              <Route path={createPageUrl('Accounts')} element={<Accounts />} />
+              <Route path={createPageUrl('AccountDetail')} element={<AccountDetail />} />
+              <Route path={createPageUrl('Contacts')} element={<Contacts />} />
+              <Route path={createPageUrl('Tasks')} element={<Tasks />} />
+              <Route path={createPageUrl('Sequences')} element={<Sequences />} />
+              <Route path={createPageUrl('Scoring')} element={<Scoring />} />
+              <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
+              <Route path="*" element={<Dashboard />} />
+            </Routes>
+          </Layout>
+        } />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
@@ -84,6 +87,7 @@ function App() {
         <TutorialProvider>
           <TutorialBar />
           <AppContent />
+          <InstallPrompt />
         </TutorialProvider>
       </Router>
     </QueryClientProvider>

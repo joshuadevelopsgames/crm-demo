@@ -6,12 +6,23 @@
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-// Get redirect URI - handle both browser and SSR environments
+// Get redirect URI - handle both browser, mobile app, and SSR environments
+// NOTE: Google OAuth requires http/https schemes, not custom URL schemes
 const getRedirectUri = () => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin + '/google-auth-callback';
+  if (typeof window === 'undefined') {
+    return '/google-auth-callback';
   }
-  return '/google-auth-callback';
+  
+  // For mobile apps, use the production URL (Vercel deployment)
+  // The callback page will then redirect to the mobile app
+  if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    // Use the Vercel deployment URL for OAuth redirect
+    // The callback page will handle redirecting to the app
+    return 'https://lecrm-fhmlnu2u1-joshuas-projects-81b25231.vercel.app/google-auth-callback';
+  }
+  
+  // Web browser - use the current origin
+  return window.location.origin + '/google-auth-callback';
 };
 
 // Google OAuth scopes for authentication

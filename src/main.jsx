@@ -7,10 +7,25 @@ import './index.css';
 const hideLoadingScreen = () => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
+    console.log('Hiding loading screen...');
     loadingScreen.style.opacity = '0';
     loadingScreen.style.transition = 'opacity 0.3s ease-out';
+    loadingScreen.style.pointerEvents = 'none';
     setTimeout(() => {
+      loadingScreen.style.display = 'none';
       loadingScreen.remove();
+      console.log('Loading screen removed');
+      
+      // Ensure root is visible
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.display = 'block';
+        root.style.visibility = 'visible';
+        root.style.opacity = '1';
+        root.style.zIndex = '1';
+        root.style.position = 'relative';
+        console.log('Root element made visible');
+      }
     }, 300);
   }
 };
@@ -83,17 +98,18 @@ const checkAndHide = () => {
   // Always ensure loading screen stays visible until we're sure
   ensureLoadingScreenVisible();
   
-  // Check if React has fully rendered with visible content
-  if (root && root.children.length > 0) {
-    // Check multiple ways to detect if app is ready
-    const hasNav = root.querySelector('nav');
-    const hasMain = root.querySelector('main');
-    const hasLayout = root.querySelector('[class*="Layout"]');
-    const hasDashboard = root.querySelector('[class*="Dashboard"]');
-    const hasLogin = root.querySelector('[class*="Login"]');
-    const hasTutorialBar = root.querySelector('[class*="Tutorial"]');
-    const hasCard = root.querySelector('[class*="Card"]');
-    const hasButton = root.querySelector('button');
+    // Check if React has fully rendered with visible content
+    if (root && root.children.length > 0) {
+      // Check multiple ways to detect if app is ready
+      const hasNav = root.querySelector('nav');
+      const hasMain = root.querySelector('main');
+      const hasLayout = root.querySelector('[class*="Layout"]');
+      const hasDashboard = root.querySelector('[class*="Dashboard"]');
+      const hasLogin = root.querySelector('[class*="Login"]') || root.textContent.includes('LECRM') || root.textContent.includes('Sign in');
+      const hasTutorialBar = root.querySelector('[class*="Tutorial"]');
+      const hasCard = root.querySelector('[class*="Card"]');
+      const hasButton = root.querySelector('button');
+      const hasForm = root.querySelector('form');
     
     // Also check if content has actual height/width (is visible)
     const firstChild = root.children[0];
@@ -109,7 +125,7 @@ const checkAndHide = () => {
                             root.querySelector('[data-reactroot]') ||
                             root.querySelector('div > div'); // Nested divs suggest React Router structure
     
-    const hasRealContent = hasNav || hasMain || hasLayout || hasDashboard || hasLogin || hasTutorialBar || hasCard || hasButton;
+    const hasRealContent = hasNav || hasMain || hasLayout || hasDashboard || hasLogin || hasTutorialBar || hasCard || hasButton || hasForm || root.textContent.includes('LECRM') || root.textContent.includes('Sign in');
     
     console.log('Check', checkCount, {
       hasNav: !!hasNav,
@@ -127,9 +143,34 @@ const checkAndHide = () => {
     if (hasRealContent && hasVisibleContent) {
       // App has fully rendered and is visible, wait a moment then hide
       console.log('✅ App content detected and visible, hiding loading screen');
+      
+      // Make sure root is visible immediately
+      if (root) {
+        root.style.display = 'block';
+        root.style.visibility = 'visible';
+        root.style.opacity = '1';
+        root.style.zIndex = '10';
+        root.style.position = 'relative';
+      }
+      
       setTimeout(() => {
         hideLoadingScreen();
-      }, 2000); // Longer delay to ensure smooth transition
+      }, 500); // Shorter delay
+      return;
+    }
+    
+    // Also check if we're on login page - force hide after a few checks
+    if (window.location.pathname === '/login' && checkCount > 10) {
+      console.log('✅ Login page detected, forcing loading screen to hide');
+      if (root) {
+        root.style.display = 'block';
+        root.style.visibility = 'visible';
+        root.style.opacity = '1';
+        root.style.zIndex = '10';
+      }
+      setTimeout(() => {
+        hideLoadingScreen();
+      }, 200);
       return;
     }
     

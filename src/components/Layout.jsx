@@ -163,18 +163,45 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-1" style={isNativeApp ? { gap: '4px' } : {}}>
               <Link
                 to="/tutorial"
-                className="text-slate-600 hover:text-slate-900 p-2"
+                className="text-slate-600 hover:text-slate-900"
                 title="Tutorial"
+                style={isNativeApp ? {
+                  padding: '10px',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                } : {
+                  padding: '8px'
+                }}
               >
                 <HelpCircle className="w-6 h-6" />
               </Link>
               <NotificationBell />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-slate-600 hover:text-slate-900 p-2"
+                className="text-slate-600 hover:text-slate-900"
+                style={isNativeApp ? {
+                  padding: '10px',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer'
+                } : {
+                  padding: '8px'
+                }}
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -199,6 +226,11 @@ export default function Layout({ children, currentPageName }) {
                         ? 'bg-slate-900 text-white'
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
+                    style={isNativeApp ? {
+                      minHeight: '48px',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'manipulation'
+                    } : {}}
                   >
                     <Icon className="w-5 h-5" />
                     {item.name}
@@ -216,6 +248,12 @@ export default function Layout({ children, currentPageName }) {
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 w-full"
+                style={isNativeApp ? {
+                  minHeight: '48px',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
+                  textAlign: 'left'
+                } : {}}
               >
                 <LogOut className="w-5 h-5" />
                 Logout
