@@ -19,7 +19,8 @@
     }
   },
   "ios": {
-    "contentInset": "automatic"
+    "contentInset": "automatic",
+    "backgroundColor": "#ffffff"
   },
   "android": {
     "allowMixedContent": true,

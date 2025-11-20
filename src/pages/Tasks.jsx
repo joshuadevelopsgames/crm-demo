@@ -23,7 +23,12 @@ import {
   List,
   CalendarIcon,
   X,
-  Tag
+  Tag,
+  ChevronsUp,
+  ChevronsDown,
+  Minus,
+  Ban,
+  AlertTriangle
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
 import {
@@ -154,7 +159,7 @@ export default function Tasks() {
     assigned_to: '',
     due_date: '',
     due_time: '',
-    priority: 'medium',
+    priority: 'normal',
     status: 'todo',
     category: 'other',
     related_account_id: '',
@@ -172,7 +177,7 @@ export default function Tasks() {
       assigned_to: '',
       due_date: '',
       due_time: '',
-      priority: 'medium',
+      priority: 'normal',
       status: 'todo',
       category: 'other',
       related_account_id: '',
@@ -371,7 +376,7 @@ export default function Tasks() {
       assigned_to: task.assigned_to || '',
       due_date: task.due_date || '',
       due_time: task.due_time || '',
-      priority: task.priority || 'medium',
+      priority: task.priority || 'normal',
       status: task.status || 'todo',
       category: task.category || 'other',
       related_account_id: task.related_account_id || '',
@@ -467,7 +472,7 @@ export default function Tasks() {
     if (a.order !== undefined && b.order !== undefined) {
       return a.order - b.order;
     }
-    const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+    const priorityOrder = { critical: 6, blocker: 5, major: 4, normal: 3, minor: 2, trivial: 1 };
     const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
     if (priorityDiff !== 0) return priorityDiff;
     
@@ -481,18 +486,20 @@ export default function Tasks() {
 
   const getPriorityFlag = (priority) => {
     const flags = {
-      urgent: { label: 'P1', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
-      high: { label: 'P2', color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
-      medium: { label: 'P3', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-      low: { label: 'P4', color: 'text-gray-600', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' }
+      critical: { label: 'Critical', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200', icon: AlertTriangle },
+      blocker: { label: 'Blocker', color: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-300', icon: Ban },
+      major: { label: 'Major', color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', icon: ChevronsUp },
+      normal: { label: 'Normal', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', icon: Minus },
+      minor: { label: 'Minor', color: 'text-slate-600', bgColor: 'bg-slate-50', borderColor: 'border-slate-200', icon: ChevronsDown },
+      trivial: { label: 'Trivial', color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200', icon: Circle }
     };
-    return flags[priority] || flags.medium;
+    return flags[priority] || flags.normal;
   };
 
   const cyclePriority = (currentPriority) => {
-    // Cycle in de-escalating order: urgent → high → medium → low → urgent
-    const priorityOrder = ['urgent', 'high', 'medium', 'low'];
-    const currentIndex = priorityOrder.indexOf(currentPriority || 'medium');
+    // Cycle in de-escalating order: critical → blocker → major → normal → minor → trivial → critical
+    const priorityOrder = ['critical', 'blocker', 'major', 'normal', 'minor', 'trivial'];
+    const currentIndex = priorityOrder.indexOf(currentPriority || 'normal');
     const nextIndex = (currentIndex + 1) % priorityOrder.length;
     return priorityOrder[nextIndex];
   };
@@ -513,7 +520,7 @@ export default function Tasks() {
           const updatedTasks = queryClient.getQueryData(['tasks']) || tasks;
           if (!updatedTasks || updatedTasks.length === 0) return;
           
-          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+          const priorityOrder = { critical: 6, blocker: 5, major: 4, normal: 3, minor: 2, trivial: 1 };
           
           // Sort by priority, then due date (same logic as filteredTasks sorting)
           const sortedTasks = [...updatedTasks].sort((a, b) => {
@@ -544,12 +551,14 @@ export default function Tasks() {
 
   const getPriorityColor = (priority) => {
     const colors = {
-      urgent: 'bg-red-100 text-red-800 border-red-200',
-      high: 'bg-orange-100 text-orange-800 border-orange-200',
-      medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      low: 'bg-blue-100 text-blue-800 border-blue-200'
+      critical: 'bg-red-100 text-red-800 border-red-200',
+      blocker: 'bg-red-200 text-red-900 border-red-300',
+      major: 'bg-orange-100 text-orange-800 border-orange-200',
+      normal: 'bg-blue-100 text-blue-800 border-blue-200',
+      minor: 'bg-slate-100 text-slate-700 border-slate-200',
+      trivial: 'bg-gray-100 text-gray-600 border-gray-200'
     };
-    return colors[priority] || colors.medium;
+    return colors[priority] || colors.normal;
   };
 
   const getStatusIcon = (status) => {
@@ -658,11 +667,13 @@ export default function Tasks() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectContent position="item-aligned">
+                      <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="blocker">Blocker</SelectItem>
+                      <SelectItem value="major">Major</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="minor">Minor</SelectItem>
+                      <SelectItem value="trivial">Trivial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -849,7 +860,8 @@ export default function Tasks() {
       >
         <div className="space-y-4">
           <Tabs value={activeFilter} onValueChange={setActiveFilter}>
-            <TabsList className="bg-white/80 backdrop-blur-sm">
+            <div className="overflow-x-auto -mx-4 px-4">
+              <TabsList className="bg-white/80 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
               <TabsTrigger value="inbox" className="flex items-center gap-2">
                 <Inbox className="w-4 h-4" />
                 Inbox ({counts.inbox})
@@ -866,7 +878,8 @@ export default function Tasks() {
                 <CheckCircle2 className="w-4 h-4" />
                 Completed ({counts.completed})
               </TabsTrigger>
-            </TabsList>
+              </TabsList>
+            </div>
           </Tabs>
 
           <Card className="p-4">
@@ -883,14 +896,24 @@ export default function Tasks() {
               <div className="flex gap-3 items-center">
                 <Select value={filterPriority} onValueChange={setFilterPriority}>
                   <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Priority" />
+                    <SelectValue placeholder="Priority">
+                      {filterPriority === 'all' ? 'All Priorities' :
+                       filterPriority === 'critical' ? 'Critical' :
+                       filterPriority === 'blocker' ? 'Blocker' :
+                       filterPriority === 'major' ? 'Major' :
+                       filterPriority === 'normal' ? 'Normal' :
+                       filterPriority === 'minor' ? 'Minor' :
+                       filterPriority === 'trivial' ? 'Trivial' : 'Priority'}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="urgent">P1 - Urgent</SelectItem>
-                    <SelectItem value="high">P2 - High</SelectItem>
-                    <SelectItem value="medium">P3 - Medium</SelectItem>
-                    <SelectItem value="low">P4 - Low</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="blocker">Blocker</SelectItem>
+                    <SelectItem value="major">Major</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="minor">Minor</SelectItem>
+                    <SelectItem value="trivial">Trivial</SelectItem>
                   </SelectContent>
                 </Select>
                 {getAllLabels().length > 0 && (
@@ -993,12 +1016,13 @@ export default function Tasks() {
           strategy={verticalListSortingStrategy}
         >
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch">
               {filteredTasks.map((task) => {
                 const StatusIcon = getStatusIcon(task.status);
                 const accountName = getAccountName(task.related_account_id);
                 const isOverdue = isTaskOverdue(task);
                 const priorityFlag = getPriorityFlag(task.priority);
+                const PriorityIcon = priorityFlag.icon || Flag;
                 const isSelected = selectedTasks.includes(task.id);
                 
                 return (
@@ -1010,82 +1034,108 @@ export default function Tasks() {
                     bulkMode={bulkActionMode}
                   >
                     <Card
-                      className={`h-full hover:shadow-md transition-all cursor-pointer ${
-                        task.status === 'completed' ? 'opacity-60' : ''
+                      className={`h-full min-h-[200px] hover:shadow-md transition-all cursor-pointer border ${
+                        task.status === 'completed' ? 'opacity-60 border-slate-200' : 'border-slate-200 hover:border-slate-300'
                       } ${isOverdue && task.status !== 'completed' ? 'border-red-200 bg-red-50/30' : ''}`}
                       onClick={() => !bulkActionMode && openEditDialog(task)}
                     >
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <div 
-                              className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity`}
-                              onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
-                              title={`Click to change priority (currently ${priorityFlag.label})`}
-                            >
-                              <Flag className={`w-3.5 h-3.5 ${priorityFlag.color} fill-current`} />
-                            </div>
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) => {
-                                handleStatusChange(task.id, value);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <SelectTrigger className="w-8 h-8 p-0 border-0 hover:bg-slate-100">
-                                <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} mx-auto`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="todo">To Do</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="blocked">Blocked</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                              </SelectContent>
-                            </Select>
+                      <CardContent className="px-3 pt-2 pb-0 flex flex-col h-full">
+                        {/* Header with priority and status */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div 
+                            className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0`}
+                            onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
+                            title={`Click to change priority (currently ${priorityFlag.label})`}
+                          >
+                            <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className={`font-semibold text-slate-900 text-sm line-clamp-2 ${
-                              task.status === 'completed' ? 'line-through' : ''
-                            }`}>
-                              {task.title}
-                            </h3>
+                          <Select
+                            value={task.status}
+                            onValueChange={(value) => {
+                              handleStatusChange(task.id, value);
+                            }}
+                          >
+                            <SelectTrigger 
+                              className="w-[130px] h-6 px-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <StatusIcon className={`w-3 h-3 ${getStatusColor(task.status)} flex-shrink-0`} />
+                              <SelectValue className="text-xs font-medium" />
+                            </SelectTrigger>
+                            <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
+                              <SelectItem value="todo">To Do</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="blocked">Blocked</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Centered content area */}
+                        <div className="flex-1 flex flex-col justify-center pt-2">
+                          {/* Task Title */}
+                          <h3 className={`font-semibold text-slate-900 text-sm mb-1.5 line-clamp-2 leading-snug ${
+                            task.status === 'completed' ? 'line-through text-slate-500' : ''
+                          }`}>
+                            {task.title}
+                          </h3>
+                          
+                          {/* Description - always reserve space */}
+                          <div className="min-h-[40px]">
+                            {task.description ? (
+                              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{task.description}</p>
+                            ) : (
+                              <div className="h-full"></div>
+                            )}
                           </div>
                         </div>
                         
-                        {task.description && (
-                          <p className="text-xs text-slate-600 mb-3 line-clamp-2">{task.description}</p>
-                        )}
-                        
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          {task.estimated_time && (
-                            <Badge variant="outline" className="text-slate-600 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {task.estimated_time}m
-                            </Badge>
-                          )}
-                          {task.labels && task.labels.length > 0 && (
-                            task.labels.slice(0, 2).map((label, idx) => (
-                              <Badge key={idx} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200 text-xs">
-                                {label}
+                        {/* Metadata badges */}
+                        <div className="mt-auto pt-0.5 border-t border-slate-100">
+                          <div className="flex flex-wrap items-center gap-1 text-xs">
+                            {task.due_date && (
+                              <Badge 
+                                variant="outline" 
+                                className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 ${
+                                  isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 
+                                  isTaskToday(task) ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  'text-slate-600 bg-slate-50 border-slate-200'
+                                }`}
+                              >
+                                <Calendar className="w-2.5 h-2.5" />
+                                {isTaskToday(task) ? 'Today' : format(new Date(task.due_date), 'MMM d')}
                               </Badge>
-                            ))
-                          )}
-                          {task.due_date && (
-                            <Badge 
-                              variant="outline" 
-                              className={`flex items-center gap-1 text-xs ${
-                                isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 'text-slate-600'
-                              }`}
-                            >
-                              <Calendar className="w-3 h-3" />
-                              {isTaskToday(task) ? 'Today' : format(new Date(task.due_date), 'MMM d')}
-                            </Badge>
-                          )}
-                          {accountName && (
-                            <Badge variant="outline" className="text-blue-600 border-blue-200 flex items-center gap-1 text-xs">
-                              <Building2 className="w-3 h-3" />
-                              {accountName}
-                            </Badge>
+                            )}
+                            {task.estimated_time && (
+                              <Badge variant="outline" className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5">
+                                <Clock className="w-2.5 h-2.5" />
+                                {task.estimated_time}m
+                              </Badge>
+                            )}
+                            {accountName && (
+                              <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-0.5 px-1.5 py-0.5 truncate max-w-[100px]">
+                                <Building2 className="w-2.5 h-2.5 flex-shrink-0" />
+                                <span className="truncate text-xs">{accountName}</span>
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Labels row */}
+                          {task.labels && task.labels.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                              {task.labels.slice(0, 2).map((label, idx) => (
+                                <Badge key={idx} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200 text-xs px-1.5 py-0.5">
+                                  {label}
+                                </Badge>
+                              ))}
+                              {task.labels.length > 2 && (
+                                <span className="text-xs text-slate-500">+{task.labels.length - 2}</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -1101,6 +1151,7 @@ export default function Tasks() {
                 const accountName = getAccountName(task.related_account_id);
                 const isOverdue = isTaskOverdue(task);
                 const priorityFlag = getPriorityFlag(task.priority);
+                const PriorityIcon = priorityFlag.icon || Flag;
                 const isSelected = selectedTasks.includes(task.id);
                 
                 return (
@@ -1128,19 +1179,27 @@ export default function Tasks() {
                               onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
                               title={`Click to change priority (currently ${priorityFlag.label})`}
                             >
-                              <Flag className={`w-3.5 h-3.5 ${priorityFlag.color} fill-current`} />
+                              <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
                             </div>
                             <Select
                               value={task.status}
                               onValueChange={(value) => {
                                 handleStatusChange(task.id, value);
                               }}
-                              onClick={(e) => e.stopPropagation()}
                             >
-                              <SelectTrigger className="w-12 h-12 p-0 border-0 hover:bg-slate-100">
-                                <StatusIcon className={`w-6 h-6 ${getStatusColor(task.status)} mx-auto`} />
+                              <SelectTrigger 
+                                className="w-[160px] px-3 py-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} flex-shrink-0`} />
+                                <SelectValue className="text-sm" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
                                 <SelectItem value="todo">To Do</SelectItem>
                                 <SelectItem value="in_progress">In Progress</SelectItem>
                                 <SelectItem value="blocked">Blocked</SelectItem>

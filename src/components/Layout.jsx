@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
+import { Capacitor } from '@capacitor/core';
 
 import { 
   LayoutDashboard, 
@@ -23,9 +24,15 @@ import NotificationBell from './NotificationBell';
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const { isTutorialMode, exitTutorial } = useTutorial();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Check if running in native app (only affects mobile app, not web)
+  useEffect(() => {
+    setIsNativeApp(Capacitor.isNativePlatform());
+  }, []);
 
   const navigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
@@ -57,7 +64,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -68,17 +75,33 @@ export default function Layout({ children, currentPageName }) {
         }
       `}</style>
 
-      {/* Top Navigation - Fixed to prevent scrolling into status bar */}
+      {/* Top Navigation - Mobile-specific styles only apply in native app */}
       <nav 
         className="bg-white border-b border-slate-200/50 fixed left-0 right-0 z-50 shadow-sm" 
-        style={{ 
+        style={isNativeApp ? { 
+          // Mobile app specific styles
           top: isTutorialMode ? '3rem' : '0',
-          paddingTop: 'env(safe-area-inset-top, 0px)',
+          left: '0',
+          right: '0',
+          paddingTop: 'max(0px, calc(env(safe-area-inset-top, 0px) - 0.5rem))',
+          backgroundColor: '#ffffff',
+          position: 'fixed',
+          willChange: 'transform',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          marginTop: '0',
+          marginBottom: '0',
+          zIndex: '9999'
+        } : {
+          // Web styles (unchanged from original)
+          top: isTutorialMode ? '3rem' : '0',
           backgroundColor: '#ffffff'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 md:h-20">
+          <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link 
                 to={createPageUrl('Dashboard')}
@@ -202,9 +225,17 @@ export default function Layout({ children, currentPageName }) {
         )}
       </nav>
 
-      {/* Main Content - Add padding-top to account for fixed nav and safe area */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={{ 
-        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1.5rem)` 
+      {/* Main Content - Padding accounts for fixed nav bar */}
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={isNativeApp ? { 
+        // Mobile app specific padding
+        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) - 0.25rem)`,
+        paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
+        backgroundColor: '#ffffff',
+        minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
+      } : {
+        // Web styles - need padding for fixed nav bar
+        paddingTop: isTutorialMode ? '7rem' : '5rem',
+        backgroundColor: '#ffffff'
       }}>
         <div className="animate-in fade-in duration-300">
           {children}

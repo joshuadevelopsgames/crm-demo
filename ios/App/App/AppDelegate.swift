@@ -4,10 +4,18 @@ import Capacitor
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow?
+    var window: UIWindow? {
+        didSet {
+            // Set window background to white immediately when window is created
+            window?.backgroundColor = UIColor.white
+        }
+    }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Set window background to white to prevent black flash
+        if let window = self.window {
+            window.backgroundColor = UIColor.white
+        }
         return true
     }
 

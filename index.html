@@ -9,9 +9,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <style>
       html, body {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         margin: 0;
         padding: 0;
+        width: 100%;
+        min-height: 100%;
+        overscroll-behavior: none;
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
       }
       /* Ensure white background extends to top for iPhone notch */
       body::before {
@@ -25,12 +30,137 @@
         z-index: 10000;
         pointer-events: none;
       }
+      /* Ensure root is white */
+      #root {
+        background-color: #ffffff;
+        width: 100%;
+        min-height: 100%;
+      }
     </style>
+    <script>
+      // Set background immediately to prevent black screen
+      document.documentElement.style.backgroundColor = '#ffffff';
+      document.body.style.backgroundColor = '#ffffff';
+    </script>
     <meta name="apple-mobile-web-app-title" content="LECRM" />
     <title>LECRM</title>
   </head>
   <body>
+    <!-- Loading Screen - Shows immediately before React loads -->
+    <div id="loading-screen" style="position: fixed !important; inset: 0 !important; z-index: 99999 !important; background-color: #ffffff !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; padding-top: env(safe-area-inset-top, 0px) !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; padding-left: env(safe-area-inset-left, 0px) !important; padding-right: env(safe-area-inset-right, 0px) !important; visibility: visible !important; opacity: 1 !important;">
+      <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+        <div style="position: relative; width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
+          <img id="logo-img" src="/logo.png" alt="LECRM Logo" style="height: 4rem; width: auto; max-width: 4rem; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';" />
+          <div id="logo-fallback" style="display: none; width: 4rem; height: 4rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 0.5rem; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">LE</div>
+        </div>
+        <span style="font-size: 1.875rem; font-weight: 700; background: linear-gradient(to right, #0f172a, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          LECRM
+        </span>
+      </div>
+      <div style="position: relative;">
+        <div style="width: 3rem; height: 3rem; border: 4px solid #e2e8f0; border-radius: 9999px;"></div>
+        <div style="width: 3rem; height: 3rem; border: 4px solid #0f172a; border-top-color: transparent; border-radius: 9999px; position: absolute; top: 0; left: 0; animation: spin 1s linear infinite;"></div>
+      </div>
+      <p style="margin-top: 1.5rem; color: #475569; font-size: 0.875rem; font-weight: 500;">Loading...</p>
+    </div>
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
     <div id="root"></div>
+    <script>
+      // Ensure loading screen is visible immediately when HTML loads
+      (function() {
+        console.log('🚀 HTML loaded, initializing app...');
+        console.log('User agent:', navigator.userAgent);
+        console.log('Platform:', navigator.platform);
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        const root = document.getElementById('root');
+        
+        console.log('Loading screen element:', loadingScreen);
+        console.log('Root element:', root);
+        
+        if (loadingScreen) {
+          loadingScreen.style.display = 'flex';
+          loadingScreen.style.opacity = '1';
+          loadingScreen.style.visibility = 'visible';
+          loadingScreen.style.zIndex = '99999';
+          console.log('✅ Loading screen made visible');
+        } else {
+          console.error('❌ Loading screen element not found!');
+        }
+        
+        // Set body background immediately
+        document.body.style.backgroundColor = '#ffffff';
+        document.documentElement.style.backgroundColor = '#ffffff';
+        console.log('✅ Background set to white');
+        
+        // Ensure root is visible
+        if (root) {
+          root.style.display = 'block';
+          root.style.visibility = 'visible';
+          root.style.opacity = '1';
+          console.log('✅ Root element made visible');
+        }
+        
+        // Try multiple logo paths for Capacitor compatibility
+        const logoImg = document.getElementById('logo-img');
+        const logoFallback = document.getElementById('logo-fallback');
+        
+        if (logoImg) {
+          // Function to try loading logo
+          const tryLoadLogo = (pathIndex = 0) => {
+            const paths = ['/logo.png', './logo.png', 'logo.png', '../public/logo.png'];
+            
+            if (pathIndex >= paths.length) {
+              // All paths failed, show fallback
+              logoImg.style.display = 'none';
+              if (logoFallback) {
+                logoFallback.style.display = 'flex';
+              }
+              return;
+            }
+            
+            const testImg = new Image();
+            testImg.onload = function() {
+              // Image loaded successfully, use this path
+              logoImg.src = paths[pathIndex];
+              logoImg.style.display = 'block';
+              if (logoFallback) {
+                logoFallback.style.display = 'none';
+              }
+            };
+            testImg.onerror = function() {
+              // Try next path after a short delay
+              if (pathIndex < paths.length - 1) {
+                setTimeout(() => tryLoadLogo(pathIndex + 1), 50);
+              } else {
+                // All paths failed
+                logoImg.style.display = 'none';
+                if (logoFallback) {
+                  logoFallback.style.display = 'flex';
+                }
+              }
+            };
+            testImg.src = paths[pathIndex];
+          };
+          
+          // Start trying to load logo
+          tryLoadLogo();
+          
+          // Also set up error handler as backup
+          logoImg.onerror = function() {
+            this.style.display = 'none';
+            if (logoFallback) {
+              logoFallback.style.display = 'flex';
+            }
+          };
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

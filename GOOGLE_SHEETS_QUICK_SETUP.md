@@ -120,3 +120,4 @@ Account ID | Note Type | Title | Content | Source URL | Recorded By | Recorded D
 The system will automatically try to load from your Google Sheet. If it can't access it, it falls back to mock data so the app still works.
 
 
+

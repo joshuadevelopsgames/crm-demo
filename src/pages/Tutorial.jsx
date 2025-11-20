@@ -382,7 +382,7 @@ const tutorialSteps = [
 export default function Tutorial() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { startTutorial, currentStep, setCurrentStep } = useTutorial();
+  const { startTutorial, currentStep, setCurrentStep, exitTutorial } = useTutorial();
   const step = tutorialSteps[currentStep];
   const progress = ((currentStep + 1) / tutorialSteps.length) * 100;
 
@@ -427,6 +427,7 @@ export default function Tutorial() {
   };
 
   const handleSkip = () => {
+    exitTutorial();
     navigate('/dashboard');
   };
 

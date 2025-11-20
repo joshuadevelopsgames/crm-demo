@@ -74,3 +74,4 @@ npm run dev
 - React Query is used for all data fetching and caching
 
 
+

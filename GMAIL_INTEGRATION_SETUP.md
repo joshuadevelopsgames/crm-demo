@@ -163,3 +163,4 @@ For each synced email, the CRM stores:
 - Add email thread grouping
 - Implement email search within CRM
 
+

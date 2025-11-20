@@ -10,14 +10,44 @@
 
 html {
   background-color: #ffffff;
+  height: 100%;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  height: 100%;
   background-color: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mobile app specific styles - only apply in native app */
+@media (display-mode: standalone) {
+  html {
+    /* Prevent overscroll bounce in mobile app */
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    /* Prevent overscroll bounce on iOS in mobile app */
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+}
+
+/* Ensure white background extends all the way down */
+#root {
+  background-color: #ffffff;
+  min-height: 100vh;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
 }
 
 /* Enhanced mobile-first design */
@@ -110,7 +140,62 @@ body {
 @supports (padding: max(0px)) {
   body {
     padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
+}
+
+/* Ensure white background extends to bottom - prevent black section */
+html, body, #root {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* Ensure the main container extends to bottom */
+#root > div {
+  background-color: #ffffff;
+  min-height: 100vh;
+}
+
+/* Prevent black sections when scrolling - cover entire viewport */
+html::before,
+html::after,
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  background-color: #ffffff;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Top cover */
+html::before,
+body::before {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+}
+
+/* Bottom cover */
+html::after,
+body::after {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+}
+
+/* Ensure scroll container has white background */
+html {
+  background-color: #ffffff !important;
+  background-attachment: fixed;
+}
+
+body {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  background-attachment: fixed;
 }
 
 
@@ -179,6 +264,44 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Simple fade animation - don't interfere with Radix positioning */
+.select-dropdown[data-state="open"],
+[data-radix-select-content][data-state="open"] {
+  animation: fadeIn 0.15s ease-out;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure item-aligned dropdowns are visible */
+[data-radix-select-content][data-state="open"] {
+  position: absolute !important;
+}
+
+.select-dropdown[data-state="closed"],
+[data-radix-select-content][data-state="closed"] {
+  animation: fadeOut 0.1s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 

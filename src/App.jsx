@@ -15,6 +15,8 @@ import TakeScorecard from './pages/TakeScorecard';
 import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
+import GoogleAuthCallback from './pages/GoogleAuthCallback';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { createPageUrl } from './utils';
 
 // Create a query client
@@ -45,14 +47,16 @@ function AppContent() {
     if (path === '/tutorial') return null; // Tutorial doesn't use Layout
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
+    if (path === '/google-auth-callback') return null; // Google auth callback doesn't use Layout
     return 'Dashboard';
   };
 
   return (
     <Routes>
       <Route path="/tutorial" element={<Tutorial />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
       <Route path="/gmail-callback" element={<GmailCallback />} />
+      <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
       <Route path="*" element={
         <Layout currentPageName={getPageName()}>
           <Routes>

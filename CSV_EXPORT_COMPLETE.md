@@ -78,3 +78,4 @@ The CSV export is ready to use! You can:
 For direct Google Sheets API integration (automatic sync), see `GOOGLE_SHEETS_INTEGRATION.md`.
 
 
+

@@ -8,11 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { format, isToday, isPast, differenceInDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import { Capacitor } from '@capacitor/core';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Check if running in native app
+  useEffect(() => {
+    setIsNativeApp(Capacitor.isNativePlatform());
+  }, []);
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -124,21 +131,27 @@ export default function NotificationBell() {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <Card className="absolute right-0 top-12 w-96 max-h-[600px] overflow-y-auto z-50 shadow-xl">
+          <div className={isNativeApp ? "fixed left-0 right-0 z-50 flex justify-center px-4" : "absolute right-0 z-50 mt-2"} style={isNativeApp ? {
+            top: `calc(4rem + env(safe-area-inset-top, 0px) + 0.5rem)`,
+            paddingLeft: `max(1rem, env(safe-area-inset-left, 0px) + 1rem)`,
+            paddingRight: `max(1rem, env(safe-area-inset-right, 0px) + 1rem)`
+          } : {
+            top: '100%'
+          }}>
+            <Card className="max-h-[600px] overflow-y-auto shadow-xl w-full max-w-sm">
             <CardContent className="p-0">
               <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
                 <h3 className="font-semibold text-slate-900">Notifications</h3>
                 <div className="flex items-center gap-2">
-                  {unreadCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markAllAsReadMutation.mutate()}
-                      className="text-xs"
-                    >
-                      Mark all read
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markAllAsReadMutation.mutate()}
+                    className="text-xs"
+                    disabled={unreadCount === 0}
+                  >
+                    Mark all read
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -193,7 +206,8 @@ export default function NotificationBell() {
                 )}
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </>
       )}
     </div>
