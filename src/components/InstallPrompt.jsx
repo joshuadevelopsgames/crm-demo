@@ -86,32 +86,63 @@ export default function InstallPrompt() {
     return null;
   }
 
+  // Detect mobile device
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '20px',
-        right: '20px',
-        maxWidth: '400px',
-        margin: '0 auto',
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        padding: '20px',
-        zIndex: 10000,
-        border: '1px solid #e2e8f0',
-        animation: 'slideUp 0.3s ease-out'
-      }}
-    >
+    <>
+      {/* Backdrop overlay */}
+      <div
+        onClick={handleDismiss}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 9999,
+          animation: 'fadeIn 0.2s ease-out'
+        }}
+      />
+      
+      <div
+        style={{
+          position: 'fixed',
+          bottom: isMobile ? `max(20px, env(safe-area-inset-bottom, 20px))` : '20px',
+          left: isMobile ? '16px' : '20px',
+          right: isMobile ? '16px' : '20px',
+          maxWidth: isMobile ? '100%' : '400px',
+          maxHeight: isMobile ? `calc(100vh - max(40px, env(safe-area-inset-top, 40px)) - max(40px, env(safe-area-inset-bottom, 40px)))` : 'auto',
+          margin: '0 auto',
+          backgroundColor: 'white',
+          borderRadius: isMobile ? '16px 16px 0 0' : '12px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+          padding: isMobile ? '24px 20px max(24px, env(safe-area-inset-bottom, 24px))' : '20px',
+          zIndex: 10000,
+          border: '1px solid #e2e8f0',
+          animation: 'slideUp 0.3s ease-out',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
       <style>{`
         @keyframes slideUp {
           from {
-            transform: translateY(100px);
+            transform: translateY(100%);
             opacity: 0;
           }
           to {
             transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
             opacity: 1;
           }
         }
@@ -152,23 +183,53 @@ export default function InstallPrompt() {
           <span style={{ color: 'white', fontWeight: 'bold', fontSize: '20px' }}>LE</span>
         </div>
         
-        <div style={{ flex: 1 }}>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '600', color: '#0f172a' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ 
+            margin: '0 0 12px 0', 
+            fontSize: isMobile ? '20px' : '18px', 
+            fontWeight: '600', 
+            color: '#0f172a',
+            paddingRight: '32px'
+          }}>
             Install LECRM
           </h3>
           {isIOS ? (
             <div>
-              <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+              <p style={{ 
+                margin: '0 0 16px 0', 
+                fontSize: isMobile ? '15px' : '14px', 
+                color: '#64748b', 
+                lineHeight: '1.6' 
+              }}>
                 Install LECRM to your home screen for quick access:
               </p>
-              <ol style={{ margin: '0 0 12px 0', paddingLeft: '20px', fontSize: '14px', color: '#64748b', lineHeight: '1.8' }}>
-                <li>Tap the <strong>Share</strong> button <span style={{ fontSize: '18px' }}>⎋</span></li>
-                <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-                <li>Tap <strong>"Add"</strong> to confirm</li>
+              <ol style={{ 
+                margin: '0 0 16px 0', 
+                paddingLeft: '24px', 
+                fontSize: isMobile ? '15px' : '14px', 
+                color: '#64748b', 
+                lineHeight: '2',
+                listStyleType: 'decimal'
+              }}>
+                <li style={{ marginBottom: '8px' }}>
+                  Tap the <strong style={{ color: '#0f172a' }}>Share</strong> button 
+                  <span style={{ fontSize: '18px', marginLeft: '4px' }}>⎋</span>
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  Scroll down and tap <strong style={{ color: '#0f172a' }}>"Add to Home Screen"</strong>
+                </li>
+                <li>
+                  Tap <strong style={{ color: '#0f172a' }}>"Add"</strong> to confirm
+                </li>
               </ol>
             </div>
           ) : (
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+            <p style={{ 
+              margin: '0 0 16px 0', 
+              fontSize: isMobile ? '15px' : '14px', 
+              color: '#64748b', 
+              lineHeight: '1.6' 
+            }}>
               Install LECRM for a faster, app-like experience with offline access.
             </p>
           )}
@@ -178,18 +239,21 @@ export default function InstallPrompt() {
               onClick={handleInstallClick}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: isMobile ? '14px 16px' : '12px 16px',
                 backgroundColor: '#0f172a',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: isMobile ? '15px' : '14px',
                 fontWeight: '500',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: '8px',
+                minHeight: '44px',
+                WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation'
               }}
             >
               <Download size={18} />
@@ -199,6 +263,7 @@ export default function InstallPrompt() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
