@@ -52,3 +52,4 @@ android/.DS_Store
 !android/app/build.gradle
 !android/build.gradle
 
+.vercel
