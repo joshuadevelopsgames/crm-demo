@@ -78,7 +78,7 @@ export default function Layout({ children, currentPageName }) {
           top: isTutorialMode ? '3rem' : '0',
           left: '0',
           right: '0',
-          paddingTop: 'max(0px, calc(env(safe-area-inset-top, 0px) - 0.5rem))',
+          paddingTop: `max(0px, env(safe-area-inset-top, 0px))`,
           backgroundColor: '#ffffff',
           position: 'fixed',
           willChange: 'transform',
@@ -261,7 +261,7 @@ export default function Layout({ children, currentPageName }) {
       {/* Main Content - Responsive padding: different for PWA/mobile vs desktop */}
       <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={(isPWA || isNativeApp) ? { 
         // PWA and native app specific padding (with safe areas)
-        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) - 0.25rem)`,
+        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
         backgroundColor: '#ffffff',
         minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`

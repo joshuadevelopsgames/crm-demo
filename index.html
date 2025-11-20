@@ -40,17 +40,19 @@
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
       }
-      /* Ensure white background extends to top for iPhone notch */
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: env(safe-area-inset-top, 0px);
-        background-color: #ffffff;
-        z-index: 10000;
-        pointer-events: none;
+      /* Ensure white background extends to top for iPhone notch - only for PWA */
+      @media (display-mode: standalone) {
+        body::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: env(safe-area-inset-top, 0px);
+          background-color: #ffffff;
+          z-index: 9998;
+          pointer-events: none;
+        }
       }
       /* Ensure root is white */
       #root {

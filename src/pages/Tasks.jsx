@@ -66,6 +66,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
 // Sortable Task Item Wrapper
 const SortableTaskItem = ({ task, isSelected, onToggleSelect, bulkMode, ...props }) => {
@@ -116,6 +117,7 @@ export default function Tasks() {
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [lastCompletedTask, setLastCompletedTask] = useState(null);
   const queryClient = useQueryClient();
+  const { isPWA, isMobile, isNativeApp } = useDeviceDetection();
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -486,12 +488,12 @@ export default function Tasks() {
 
   const getPriorityFlag = (priority) => {
     const flags = {
-      critical: { label: 'Critical', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200', icon: AlertTriangle },
-      blocker: { label: 'Blocker', color: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-300', icon: Ban },
-      major: { label: 'Major', color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', icon: ChevronsUp },
-      normal: { label: 'Normal', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', icon: Minus },
-      minor: { label: 'Minor', color: 'text-slate-600', bgColor: 'bg-slate-50', borderColor: 'border-slate-200', icon: ChevronsDown },
-      trivial: { label: 'Trivial', color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200', icon: Circle }
+      critical: { label: 'Critical', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200', borderColorValue: '#fecaca', icon: AlertTriangle },
+      blocker: { label: 'Blocker', color: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-300', borderColorValue: '#fca5a5', icon: Ban },
+      major: { label: 'Major', color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', borderColorValue: '#fed7aa', icon: ChevronsUp },
+      normal: { label: 'Normal', color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', borderColorValue: '#bfdbfe', icon: Minus },
+      minor: { label: 'Minor', color: 'text-slate-600', bgColor: 'bg-slate-50', borderColor: 'border-slate-200', borderColorValue: '#e2e8f0', icon: ChevronsDown },
+      trivial: { label: 'Trivial', color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200', borderColorValue: '#e5e7eb', icon: Circle }
     };
     return flags[priority] || flags.normal;
   };
@@ -1115,8 +1117,8 @@ export default function Tasks() {
                               <Badge variant="outline" className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5">
                                 <Clock className="w-2.5 h-2.5" />
                                 {task.estimated_time}m
-                              </Badge>
-                            )}
+                            </Badge>
+                          )}
                           {accountName && (
                               <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-0.5 px-1.5 py-0.5 truncate max-w-[100px]">
                                 <Building2 className="w-2.5 h-2.5 flex-shrink-0" />
@@ -1145,7 +1147,7 @@ export default function Tasks() {
               })}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className={`space-y-${(isPWA || isMobile || isNativeApp) ? '2' : '3'}`}>
               {filteredTasks.map((task) => {
                 const StatusIcon = getStatusIcon(task.status);
                 const accountName = getAccountName(task.related_account_id);
@@ -1153,6 +1155,7 @@ export default function Tasks() {
                 const priorityFlag = getPriorityFlag(task.priority);
                 const PriorityIcon = priorityFlag.icon || Flag;
                 const isSelected = selectedTasks.includes(task.id);
+                const isMobileView = isPWA || isMobile || isNativeApp;
                 
                 return (
                   <SortableTaskItem
@@ -1163,12 +1166,120 @@ export default function Tasks() {
                     bulkMode={bulkActionMode}
                   >
                     <Card
-                      className={`hover:shadow-md transition-all cursor-pointer ${
+                      className={`transition-all cursor-pointer relative overflow-hidden ${
                         task.status === 'completed' ? 'opacity-60' : ''
-                      } ${isOverdue && task.status !== 'completed' ? 'border-red-200 bg-red-50/30' : ''}`}
+                      } ${
+                        isOverdue && task.status !== 'completed' ? 'border-red-200 bg-red-50/30' : ''
+                      } ${
+                        isMobileView ? 'shadow-sm hover:shadow-md' : 'hover:shadow-md'
+                      }`}
                       onClick={() => !bulkActionMode && openEditDialog(task)}
+                      style={isMobileView ? {
+                        borderLeftWidth: '4px',
+                        borderLeftColor: priorityFlag.borderColorValue,
+                        padding: '0',
+                      } : {}}
                     >
-                      <CardContent className="p-5">
+                      <CardContent className={isMobileView ? 'p-4' : 'p-5'}>
+                        {isMobileView ? (
+                          // Mobile-optimized layout
+                          <div className="space-y-3">
+                            {/* Top row: Priority, Title, Status */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                <div 
+                                  className={`flex items-center justify-center ${isMobileView ? 'w-8 h-8' : 'w-6 h-6'} rounded-md border-2 ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 touch-manipulation`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePriorityClick(task.id, task.priority, e);
+                                  }}
+                                  title={`Change priority (${priorityFlag.label})`}
+                                  style={{ 
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    WebkitTapHighlightColor: 'transparent'
+                                  }}
+                                >
+                                  <PriorityIcon className={`${isMobileView ? 'w-4 h-4' : 'w-3.5 h-3.5'} ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className={`font-semibold ${isMobileView ? 'text-base' : 'text-base'} text-slate-900 leading-tight ${
+                                    task.status === 'completed' ? 'line-through text-slate-500' : ''
+                                  }`}>
+                                    {task.title}
+                                  </h3>
+                                  {task.description && (
+                                    <p className={`${isMobileView ? 'text-sm' : 'text-sm'} text-slate-600 mt-1 line-clamp-1 leading-relaxed`}>
+                                      {task.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <Select
+                                value={task.status}
+                                onValueChange={(value) => {
+                                  handleStatusChange(task.id, value);
+                                }}
+                              >
+                                <SelectTrigger 
+                                  className={`${isMobileView ? 'w-[140px] h-9' : 'w-[160px]'} px-3 py-1.5 border border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                                >
+                                  <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} flex-shrink-0`} />
+                                  <SelectValue className={`${isMobileView ? 'text-sm' : 'text-sm'} font-medium`} />
+                                </SelectTrigger>
+                                <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
+                                  <SelectItem value="todo">To Do</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="blocked">Blocked</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {/* Bottom row: Metadata badges */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {task.due_date && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs px-2 py-0.5 flex items-center gap-1 ${
+                                    isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 
+                                    isTaskToday(task) ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                    'text-slate-600 bg-slate-50 border-slate-200'
+                                  }`}
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  {isTaskToday(task) ? 'Today' : 
+                                   isOverdue ? `${differenceInDays(new Date(), parseLocalDate(task.due_date))}d overdue` :
+                                   format(new Date(task.due_date), 'MMM d')}
+                                </Badge>
+                              )}
+                              {accountName && (
+                                <Badge variant="outline" className="text-xs px-2 py-0.5 text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-1 truncate max-w-[120px]">
+                                  <Building2 className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{accountName}</span>
+                                </Badge>
+                              )}
+                              {task.labels && task.labels.length > 0 && (
+                                task.labels.slice(0, 2).map((label, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs px-2 py-0.5 text-purple-700 bg-purple-50 border-purple-200">
+                                    {label}
+                                  </Badge>
+                                ))
+                              )}
+                              {task.labels && task.labels.length > 2 && (
+                                <span className="text-xs text-slate-500">+{task.labels.length - 2}</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          // Desktop layout (unchanged)
                         <div className="flex items-start gap-4">
                           <div className="flex items-center gap-3 flex-shrink-0" {...(!bulkActionMode && { onMouseDown: (e) => e.stopPropagation() })}>
                             {!bulkActionMode && (
@@ -1179,27 +1290,27 @@ export default function Tasks() {
                               onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
                               title={`Click to change priority (currently ${priorityFlag.label})`}
                             >
-                              <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
+                                <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
                             </div>
                             <Select
                               value={task.status}
                               onValueChange={(value) => {
                                 handleStatusChange(task.id, value);
                               }}
-                            >
-                              <SelectTrigger 
-                                className="w-[160px] px-3 py-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                onMouseDown={(e) => {
-                                  e.stopPropagation();
-                                }}
                               >
-                                <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} flex-shrink-0`} />
-                                <SelectValue className="text-sm" />
+                                <SelectTrigger 
+                                  className="w-[160px] px-3 py-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} flex-shrink-0`} />
+                                  <SelectValue className="text-sm" />
                               </SelectTrigger>
-                              <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
+                                <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
                                 <SelectItem value="todo">To Do</SelectItem>
                                 <SelectItem value="in_progress">In Progress</SelectItem>
                                 <SelectItem value="blocked">Blocked</SelectItem>
@@ -1280,6 +1391,7 @@ export default function Tasks() {
                             </div>
                           </div>
                         </div>
+                        )}
                       </CardContent>
                     </Card>
                   </SortableTaskItem>
