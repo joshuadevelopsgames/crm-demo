@@ -8,9 +8,14 @@
   font-weight: 400;
 }
 
+html {
+  background-color: #ffffff;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
+  background-color: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -79,12 +84,32 @@ body {
 
 /* Capacitor-specific styles (only when running in native app) */
 @media (display-mode: standalone) {
-  /* PWA/App installed styles */
-  body {
-    padding-top: env(safe-area-inset-top);
+  /* PWA/App installed styles - white background extends to top */
+  html, body {
+    background-color: #ffffff;
+    padding-top: 0;
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Ensure white background extends to top for iPhone notch/island */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background-color: #ffffff;
+    z-index: 9999;
+  }
+}
+
+/* Native app styles - white background all the way up */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: max(0px, env(safe-area-inset-top));
   }
 }
 

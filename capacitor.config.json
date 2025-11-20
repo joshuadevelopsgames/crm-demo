@@ -13,8 +13,9 @@
       "resizeOnFullScreen": true
     },
     "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#ffffff"
+      "style": "light",
+      "backgroundColor": "#ffffff",
+      "overlaysWebView": true
     }
   },
   "ios": {

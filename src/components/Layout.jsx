@@ -57,7 +57,7 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-white">
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -68,8 +68,15 @@ export default function Layout({ children, currentPageName }) {
         }
       `}</style>
 
-      {/* Top Navigation */}
-      <nav className={`bg-white/80 backdrop-blur-lg border-b border-slate-200/50 sticky z-50 shadow-sm ${isTutorialMode ? 'top-12' : 'top-0'}`}>
+      {/* Top Navigation - Fixed to prevent scrolling into status bar */}
+      <nav 
+        className="bg-white border-b border-slate-200/50 fixed left-0 right-0 z-50 shadow-sm" 
+        style={{ 
+          top: isTutorialMode ? '3rem' : '0',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          backgroundColor: '#ffffff'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 md:h-20">
             <div className="flex items-center">
@@ -195,8 +202,10 @@ export default function Layout({ children, currentPageName }) {
         )}
       </nav>
 
-      {/* Main Content */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`}>
+      {/* Main Content - Add padding-top to account for fixed nav and safe area */}
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={{ 
+        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1.5rem)` 
+      }}>
         <div className="animate-in fade-in duration-300">
           {children}
         </div>

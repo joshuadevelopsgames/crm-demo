@@ -6,7 +6,26 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <style>
+      html, body {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+      }
+      /* Ensure white background extends to top for iPhone notch */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: env(safe-area-inset-top, 0px);
+        background-color: #ffffff;
+        z-index: 10000;
+        pointer-events: none;
+      }
+    </style>
     <meta name="apple-mobile-web-app-title" content="LECRM" />
     <title>LECRM</title>
   </head>

@@ -7,8 +7,9 @@ import './index.css';
 import { Capacitor } from '@capacitor/core';
 if (Capacitor.isNativePlatform()) {
   import('@capacitor/status-bar').then(({ StatusBar }) => {
-    StatusBar.setStyle({ style: 'dark' });
+    StatusBar.setStyle({ style: 'light' }); // Light content (dark text) on white background
     StatusBar.setBackgroundColor({ color: '#ffffff' });
+    StatusBar.setOverlaysWebView({ overlay: true }); // Allow content to go under status bar
   });
   
   import('@capacitor/keyboard').then(({ Keyboard }) => {
