@@ -43,10 +43,12 @@
       /* Ensure white background extends to top for iPhone notch - only for PWA */
       @media (display-mode: standalone) {
         html {
-          padding-top: env(safe-area-inset-top, 0px);
+          padding-top: 0;
+          background-color: #ffffff !important;
         }
         body {
           padding-top: 0;
+          background-color: #ffffff !important;
         }
         body::before {
           content: '';
@@ -54,9 +56,9 @@
           top: 0;
           left: 0;
           right: 0;
-          height: env(safe-area-inset-top, 0px);
-          background-color: #ffffff;
-          z-index: 9998;
+          height: env(safe-area-inset-top, 44px);
+          background-color: #ffffff !important;
+          z-index: 9997;
           pointer-events: none;
         }
       }

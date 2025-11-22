@@ -75,10 +75,10 @@ export default function Layout({ children, currentPageName }) {
         className="bg-white border-b border-slate-200/50 fixed left-0 right-0 z-50 shadow-sm" 
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
-          top: isTutorialMode ? '3rem' : '0',
+          top: isTutorialMode ? '3rem' : `max(0px, env(safe-area-inset-top, 0px))`,
           left: '0',
           right: '0',
-          paddingTop: `calc(max(0px, env(safe-area-inset-top, 0px)) + 0px)`,
+          paddingTop: '0',
           backgroundColor: '#ffffff',
           position: 'fixed',
           willChange: 'transform',

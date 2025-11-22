@@ -157,35 +157,30 @@ html, body, #root {
 
 /* PWA: Prevent black sections when scrolling - cover entire viewport */
 @media (display-mode: standalone) {
-  html::before,
-  html::after,
-  body::before,
-  body::after {
+  /* Top cover - only for PWA - high z-index to cover black area but below nav */
+  body::before {
     content: '';
     position: fixed;
-    background-color: #ffffff;
-    z-index: -1;
-    pointer-events: none;
-  }
-
-  /* Top cover - only for PWA */
-  html::before,
-  body::before {
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top, 0px);
-    background-color: #ffffff;
+    height: env(safe-area-inset-top, 44px);
+    background-color: #ffffff !important;
+    z-index: 9997;
+    pointer-events: none;
   }
 
   /* Bottom cover - only for PWA */
-  html::after,
   body::after {
+    content: '';
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     height: env(safe-area-inset-bottom, 0px);
-    background-color: #ffffff;
+    background-color: #ffffff !important;
+    z-index: 9997;
+    pointer-events: none;
   }
 }
 
