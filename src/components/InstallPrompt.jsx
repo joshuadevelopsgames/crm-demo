@@ -112,12 +112,16 @@ export default function InstallPrompt() {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: '280px',
-          height: '280px',
+          width: '260px',
+          height: '260px',
+          minWidth: '260px',
+          maxWidth: '260px',
+          minHeight: '260px',
+          maxHeight: '260px',
           backgroundColor: 'white',
           borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-          padding: '24px',
+          padding: '20px',
           zIndex: 10000,
           border: '1px solid #e2e8f0',
           animation: 'popIn 0.3s ease-out',
@@ -125,7 +129,7 @@ export default function InstallPrompt() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           boxSizing: 'border-box'
         }}
       >
@@ -172,7 +176,7 @@ export default function InstallPrompt() {
         <X size={18} style={{ color: '#94a3b8' }} />
       </button>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', flex: 1, justifyContent: 'center', width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px', width: '100%' }}>
         <div
           style={{
             width: '64px',
