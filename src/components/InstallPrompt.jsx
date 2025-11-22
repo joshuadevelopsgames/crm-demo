@@ -109,33 +109,32 @@ export default function InstallPrompt() {
       <div
         style={{
           position: 'fixed',
-          bottom: isMobile ? `max(16px, env(safe-area-inset-bottom, 16px))` : '20px',
-          left: isMobile ? '12px' : '20px',
-          right: isMobile ? '12px' : '20px',
-          maxWidth: isMobile ? '100%' : '400px',
-          maxHeight: isMobile ? `calc(100vh - max(32px, env(safe-area-inset-top, 32px)) - max(32px, env(safe-area-inset-bottom, 32px)))` : 'auto',
-          top: isMobile ? `max(32px, env(safe-area-inset-top, 32px))` : 'auto',
-          margin: '0 auto',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: isMobile ? 'calc(100% - 32px)' : '360px',
+          maxWidth: '360px',
+          maxHeight: 'calc(100vh - 64px)',
           backgroundColor: 'white',
-          borderRadius: isMobile ? '16px 16px 0 0' : '12px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-          padding: isMobile ? '20px 16px max(20px, env(safe-area-inset-bottom, 20px))' : '20px',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          padding: '20px',
           zIndex: 10000,
           border: '1px solid #e2e8f0',
-          animation: 'slideUp 0.3s ease-out',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain'
+          animation: 'popIn 0.3s ease-out',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
       <style>{`
-        @keyframes slideUp {
+        @keyframes popIn {
           from {
-            transform: translateY(100%);
+            transform: translate(-50%, -50%) scale(0.9);
             opacity: 0;
           }
           to {
-            transform: translateY(0);
+            transform: translate(-50%, -50%) scale(1);
             opacity: 1;
           }
         }
@@ -149,124 +148,124 @@ export default function InstallPrompt() {
         }
       `}</style>
       
-      <button
-        onClick={handleDismiss}
-        style={{
-          position: 'absolute',
-          top: isMobile ? '16px' : '12px',
-          right: isMobile ? '16px' : '12px',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1,
-          minWidth: '32px',
-          minHeight: '32px'
-        }}
-        aria-label="Dismiss"
-      >
-        <X size={20} style={{ color: '#64748b' }} />
-      </button>
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '12px' : '16px' }}>
-        <div
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={handleDismiss}
           style={{
-            width: isMobile ? '40px' : '48px',
-            height: isMobile ? '40px' : '48px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            position: 'absolute',
+            top: '-8px',
+            right: '-8px',
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            padding: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0
+            zIndex: 1,
+            width: '32px',
+            height: '32px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}
+          aria-label="Dismiss"
         >
-          <span style={{ color: 'white', fontWeight: 'bold', fontSize: isMobile ? '16px' : '20px' }}>LE</span>
-        </div>
-        
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ 
-            margin: '0 0 8px 0', 
-            fontSize: isMobile ? '17px' : '18px', 
-            fontWeight: '600', 
-            color: '#0f172a',
-            paddingRight: isMobile ? '36px' : '32px'
-          }}>
-            Install LECRM
-          </h3>
-          {isIOS ? (
-            <div>
+          <X size={16} style={{ color: '#64748b' }} />
+        </button>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '24px' }}>LE</span>
+          </div>
+          
+          <div style={{ width: '100%' }}>
+            <h3 style={{ 
+              margin: '0 0 8px 0', 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: '#0f172a'
+            }}>
+              Install LECRM
+            </h3>
+            {isIOS ? (
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ 
+                  margin: '0 0 8px 0', 
+                  fontSize: '13px', 
+                  color: '#64748b', 
+                  lineHeight: '1.4' 
+                }}>
+                  Add to your home screen:
+                </p>
+                <ol style={{ 
+                  margin: '0 0 0 0', 
+                  paddingLeft: '18px', 
+                  fontSize: '13px', 
+                  color: '#64748b', 
+                  lineHeight: '1.5',
+                  listStyleType: 'decimal'
+                }}>
+                  <li style={{ marginBottom: '4px' }}>
+                    Tap <strong style={{ color: '#0f172a' }}>Share</strong>
+                  </li>
+                  <li style={{ marginBottom: '4px' }}>
+                    Select <strong style={{ color: '#0f172a' }}>"Add to Home Screen"</strong>
+                  </li>
+                  <li>
+                    Tap <strong style={{ color: '#0f172a' }}>"Add"</strong>
+                  </li>
+                </ol>
+              </div>
+            ) : (
               <p style={{ 
-                margin: '0 0 10px 0', 
-                fontSize: isMobile ? '14px' : '14px', 
+                margin: '0 0 16px 0', 
+                fontSize: '13px', 
                 color: '#64748b', 
                 lineHeight: '1.5' 
               }}>
-                Install LECRM to your home screen for quick access:
+                Get a faster, app-like experience with offline access.
               </p>
-              <ol style={{ 
-                margin: '0 0 0 0', 
-                paddingLeft: '20px', 
-                fontSize: isMobile ? '14px' : '14px', 
-                color: '#64748b', 
-                lineHeight: '1.6',
-                listStyleType: 'decimal'
-              }}>
-                <li style={{ marginBottom: '6px' }}>
-                  Tap the <strong style={{ color: '#0f172a' }}>Share</strong> button 
-                  <span style={{ fontSize: '16px', marginLeft: '4px' }}>⎋</span>
-                </li>
-                <li style={{ marginBottom: '6px' }}>
-                  Scroll down and tap <strong style={{ color: '#0f172a' }}>"Add to Home Screen"</strong>
-                </li>
-                <li>
-                  Tap <strong style={{ color: '#0f172a' }}>"Add"</strong> to confirm
-                </li>
-              </ol>
-            </div>
-          ) : (
-            <p style={{ 
-              margin: '0 0 12px 0', 
-              fontSize: isMobile ? '14px' : '14px', 
-              color: '#64748b', 
-              lineHeight: '1.5' 
-            }}>
-              Install LECRM for a faster, app-like experience with offline access.
-            </p>
-          )}
-          
-          {!isIOS && (
-            <button
-              onClick={handleInstallClick}
-              style={{
-                width: '100%',
-                padding: isMobile ? '12px 16px' : '12px 16px',
-                backgroundColor: '#0f172a',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: isMobile ? '14px' : '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                minHeight: '44px',
-                marginTop: '12px',
-                WebkitTapHighlightColor: 'transparent',
-                touchAction: 'manipulation'
-              }}
-            >
-              <Download size={16} />
-              Install App
-            </button>
-          )}
+            )}
+            
+            {!isIOS && (
+              <button
+                onClick={handleInstallClick}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: '#0f172a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  minHeight: '44px',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+              >
+                <Download size={16} />
+                Install App
+              </button>
+            )}
+          </div>
         </div>
-      </div>
     </div>
     </>
   );
