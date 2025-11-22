@@ -1222,7 +1222,7 @@ export default function Tasks() {
                                 }}
                               >
                                 <SelectTrigger 
-                                  className={`${isMobileView ? 'w-[140px] h-9' : 'w-[160px]'} px-3 py-1.5 border border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
+                                  className={`${isMobileView ? 'w-[150px] min-w-[150px] h-9' : 'w-[160px]'} px-3 py-1.5 border border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                   }}
@@ -1232,7 +1232,7 @@ export default function Tasks() {
                                   style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
                                   <StatusIcon className={`w-4 h-4 ${getStatusColor(task.status)} flex-shrink-0`} />
-                                  <SelectValue className={`${isMobileView ? 'text-sm' : 'text-sm'} font-medium`} />
+                                  <SelectValue className={`${isMobileView ? 'text-sm' : 'text-sm'} font-medium whitespace-nowrap`} />
                                 </SelectTrigger>
                                 <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
                                   <SelectItem value="todo">To Do</SelectItem>

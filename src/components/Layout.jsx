@@ -78,7 +78,7 @@ export default function Layout({ children, currentPageName }) {
           top: isTutorialMode ? '3rem' : '0',
           left: '0',
           right: '0',
-          paddingTop: `max(0px, env(safe-area-inset-top, 0px))`,
+          paddingTop: `calc(max(0px, env(safe-area-inset-top, 0px)) + 0px)`,
           backgroundColor: '#ffffff',
           position: 'fixed',
           willChange: 'transform',

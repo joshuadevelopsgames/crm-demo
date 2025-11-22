@@ -42,6 +42,12 @@
       }
       /* Ensure white background extends to top for iPhone notch - only for PWA */
       @media (display-mode: standalone) {
+        html {
+          padding-top: env(safe-area-inset-top, 0px);
+        }
+        body {
+          padding-top: 0;
+        }
         body::before {
           content: '';
           position: fixed;
