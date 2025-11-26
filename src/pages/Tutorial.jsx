@@ -383,8 +383,11 @@ export default function Tutorial() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { startTutorial, currentStep, setCurrentStep, exitTutorial } = useTutorial();
-  const step = tutorialSteps[currentStep];
-  const progress = ((currentStep + 1) / tutorialSteps.length) * 100;
+  
+  // Ensure currentStep is valid
+  const safeStep = currentStep >= 0 && currentStep < tutorialSteps.length ? currentStep : 0;
+  const step = tutorialSteps[safeStep] || tutorialSteps[0];
+  const progress = ((safeStep + 1) / tutorialSteps.length) * 100;
 
   // Initialize tutorial mode and step from URL or default
   useEffect(() => {
@@ -406,16 +409,16 @@ export default function Tutorial() {
   }, [searchParams]);
 
   const handleNext = () => {
-    if (currentStep < tutorialSteps.length - 1) {
-      const nextStep = currentStep + 1;
+    if (safeStep < tutorialSteps.length - 1) {
+      const nextStep = safeStep + 1;
       navigate(`/tutorial?step=${nextStep}`, { replace: true });
       // setCurrentStep will be updated by useEffect when URL changes
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      const prevStep = currentStep - 1;
+    if (safeStep > 0) {
+      const prevStep = safeStep - 1;
       navigate(`/tutorial?step=${prevStep}`, { replace: true });
       // setCurrentStep will be updated by useEffect when URL changes
     }
@@ -423,7 +426,7 @@ export default function Tutorial() {
 
   const handleAction = (route) => {
     // Navigate with tutorial mode enabled
-    navigate(`${route}?tutorial=${currentStep}`);
+    navigate(`${route}?tutorial=${safeStep}`);
   };
 
   const handleSkip = () => {
@@ -431,9 +434,26 @@ export default function Tutorial() {
     navigate('/dashboard');
   };
 
+  if (!step) {
+    return (
+      <div className="min-h-screen bg-white p-4 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-slate-600">Loading tutorial...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white p-4">
-      <div className="max-w-4xl mx-auto">
+    <div 
+      className="min-h-screen p-4" 
+      style={{ 
+        backgroundColor: '#ffffff',
+        minHeight: '100vh',
+        width: '100%'
+      }}
+    >
+      <div className="max-w-4xl mx-auto" style={{ backgroundColor: 'transparent' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -450,7 +470,7 @@ export default function Tutorial() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-700">
-              Step {currentStep + 1} of {tutorialSteps.length}
+              Step {safeStep + 1} of {tutorialSteps.length}
             </span>
             <span className="text-sm text-slate-500">{Math.round(progress)}% Complete</span>
           </div>
@@ -493,7 +513,7 @@ export default function Tutorial() {
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentStep === 0}
+            disabled={safeStep === 0}
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             Previous
@@ -504,13 +524,14 @@ export default function Tutorial() {
               <button
                 key={index}
                 onClick={() => {
-                  setCurrentStep(index);
-                  navigate(`/tutorial?step=${index}`, { replace: true });
+                  const validIndex = index >= 0 && index < tutorialSteps.length ? index : 0;
+                  setCurrentStep(validIndex);
+                  navigate(`/tutorial?step=${validIndex}`, { replace: true });
                 }}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentStep
+                  index === safeStep
                     ? 'bg-blue-600'
-                    : index < currentStep
+                    : index < safeStep
                     ? 'bg-green-500'
                     : 'bg-slate-300'
                 }`}
@@ -521,9 +542,9 @@ export default function Tutorial() {
 
           <Button
             onClick={handleNext}
-            disabled={currentStep === tutorialSteps.length - 1}
+            disabled={safeStep === tutorialSteps.length - 1}
           >
-            {currentStep === tutorialSteps.length - 1 ? (
+            {safeStep === tutorialSteps.length - 1 ? (
               <>
                 <Home className="w-4 h-4 mr-2" />
                 Finish
@@ -538,7 +559,7 @@ export default function Tutorial() {
         </div>
 
         {/* Quick Links */}
-        {currentStep === tutorialSteps.length - 1 && (
+        {safeStep === tutorialSteps.length - 1 && (
           <div className="mt-8 flex gap-4 justify-center">
             <Button variant="outline" onClick={() => navigate('/dashboard')}>
               <Home className="w-4 h-4 mr-2" />
