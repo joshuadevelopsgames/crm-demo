@@ -448,11 +448,18 @@ export default function Tutorial() {
     <div 
       className="min-h-screen p-4" 
       style={{ 
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff !important',
         minHeight: '100vh',
-        width: '100%'
+        width: '100%',
+        position: 'relative',
+        zIndex: 1
       }}
     >
+      <style>{`
+        body { background-color: #ffffff !important; }
+        html { background-color: #ffffff !important; }
+        #root { background-color: #ffffff !important; }
+      `}</style>
       <div className="max-w-4xl mx-auto" style={{ backgroundColor: 'transparent' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

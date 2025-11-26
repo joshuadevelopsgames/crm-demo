@@ -23,7 +23,9 @@ export default function TutorialBar() {
   const { isTutorialMode, currentStep, exitTutorial, goToTutorialStep } = useTutorial();
 
   // Don't show bar on tutorial page or login page
-  if (!isTutorialMode || location.pathname === '/tutorial' || location.pathname === '/login') return null;
+  if (location.pathname === '/tutorial' || location.pathname === '/login') return null;
+  // Only show if in tutorial mode
+  if (!isTutorialMode) return null;
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg z-[60] sticky top-0">
