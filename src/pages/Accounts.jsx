@@ -145,121 +145,19 @@ export default function Accounts() {
             <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
           </div>
         </TutorialTooltip>
-        <div className="flex gap-2">
-          <TutorialTooltip
-            tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload a file to create multiple accounts and contacts at once."
-            step={2}
-            position="bottom"
+        <TutorialTooltip
+          tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload both files to create accounts and contacts with complete data."
+          step={2}
+          position="bottom"
+        >
+          <Button 
+            onClick={() => setIsImportDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Button 
-              onClick={() => setIsImportDialogOpen(true)}
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import from LMN
-            </Button>
-          </TutorialTooltip>
-          
-          <TutorialTooltip
-            tip="Click this button to create a new account (company) in your CRM. Fill in the company name, type, revenue segment, and other details."
-            step={2}
-            position="bottom"
-          >
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-slate-800">
-                <Plus className="w-4 h-4 mr-2" />
-                New Account
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Account</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label>Company Name *</Label>
-                  <Input
-                    value={newAccount.name}
-                    onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                    placeholder="Acme Corporation"
-                  />
-                </div>
-                <div>
-                  <Label>Account Type</Label>
-                  <Select
-                    value={newAccount.account_type}
-                    onValueChange={(value) => setNewAccount({ ...newAccount, account_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prospect">Prospect</SelectItem>
-                      <SelectItem value="customer">Customer</SelectItem>
-                      <SelectItem value="renewal">Renewal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Revenue Segment</Label>
-                  <Select
-                    value={newAccount.revenue_segment}
-                    onValueChange={(value) => setNewAccount({ ...newAccount, revenue_segment: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                      <SelectItem value="mid_market">Mid-Market</SelectItem>
-                      <SelectItem value="smb">SMB</SelectItem>
-                      <SelectItem value="startup">Startup</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Annual Revenue</Label>
-                  <Input
-                    type="number"
-                    value={newAccount.annual_revenue}
-                    onChange={(e) => setNewAccount({ ...newAccount, annual_revenue: e.target.value })}
-                    placeholder="50000"
-                  />
-                </div>
-                <div>
-                  <Label>Industry</Label>
-                  <Input
-                    value={newAccount.industry}
-                    onChange={(e) => setNewAccount({ ...newAccount, industry: e.target.value })}
-                    placeholder="Technology"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={newAccount.notes}
-                    onChange={(e) => setNewAccount({ ...newAccount, notes: e.target.value })}
-                    placeholder="Additional information about this account..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateAccount} disabled={!newAccount.name}>
-                  Create Account
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            <Upload className="w-4 h-4 mr-2" />
+            Import from LMN
+          </Button>
         </TutorialTooltip>
-        </div>
       </div>
 
       {/* Import Leads Dialog */}

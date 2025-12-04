@@ -17,7 +17,6 @@ import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
 import WinLossTest from './pages/WinLossTest';
-import ImportLeads from './pages/ImportLeads';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
@@ -47,7 +46,6 @@ function AppContent() {
     if (path === '/sequences') return 'Sequences';
     if (path === '/scoring') return 'Scoring';
     if (path === '/take-scorecard') return 'TakeScorecard';
-    if (path === '/import-leads') return 'ImportLeads';
     if (path === '/tutorial') return null; // Tutorial doesn't use Layout
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
@@ -75,7 +73,6 @@ function AppContent() {
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />
               <Route path={createPageUrl('Scoring')} element={<Scoring />} />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
-              <Route path={createPageUrl('ImportLeads')} element={<ImportLeads />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </Layout>

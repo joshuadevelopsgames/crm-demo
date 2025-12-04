@@ -122,132 +122,13 @@ export default function Contacts() {
             <h1 className="text-3xl font-bold text-slate-900">Contacts</h1>
             <p className="text-slate-600 mt-1">{filteredContacts.length} total contacts</p>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setIsImportDialogOpen(true)}
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Import from LMN
-            </Button>
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-slate-900 hover:bg-slate-800">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Contact
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Contact</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>First Name *</Label>
-                  <Input
-                    value={newContact.first_name}
-                    onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Last Name *</Label>
-                  <Input
-                    value={newContact.last_name}
-                    onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    value={newContact.email}
-                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Phone</Label>
-                  <Input
-                    value={newContact.phone}
-                    onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Job Title</Label>
-                  <Input
-                    value={newContact.title}
-                    onChange={(e) => setNewContact({ ...newContact, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Role</Label>
-                  <Select
-                    value={newContact.role}
-                    onValueChange={(value) => setNewContact({ ...newContact, role: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="decision_maker">Decision Maker</SelectItem>
-                      <SelectItem value="influencer">Influencer</SelectItem>
-                      <SelectItem value="champion">Champion</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label>Account *</Label>
-                  <Select
-                    value={newContact.account_id}
-                    onValueChange={(value) => setNewContact({ ...newContact, account_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label>LinkedIn URL</Label>
-                  <Input
-                    value={newContact.linkedin_url}
-                    onChange={(e) => setNewContact({ ...newContact, linkedin_url: e.target.value })}
-                    placeholder="https://linkedin.com/in/..."
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label>Preferences & Notes</Label>
-                  <Textarea
-                    value={newContact.preferences}
-                    onChange={(e) => setNewContact({ ...newContact, preferences: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateContact}
-                  disabled={!newContact.first_name || !newContact.last_name || !newContact.email || !newContact.account_id}
-                >
-                  Create Contact
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-          </div>
+          <Button 
+            onClick={() => setIsImportDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Import from LMN
+          </Button>
         </div>
       </TutorialTooltip>
 
@@ -361,7 +242,7 @@ export default function Contacts() {
                     </td>
                     <td className="px-4 py-4">
                       <Badge variant="outline" className={getRoleColor(contact.role)}>
-                        {contact.role.replace('_', ' ')}
+                        {contact.role ? contact.role.replace('_', ' ') : 'user'}
                       </Badge>
                     </td>
                     <td className="px-4 py-4">

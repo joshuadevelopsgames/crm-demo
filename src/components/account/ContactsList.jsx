@@ -208,7 +208,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 </div>
 
                 <Badge variant="outline" className={getRoleColor(contact.role)}>
-                  {contact.role.replace('_', ' ')}
+                  {contact.role ? contact.role.replace('_', ' ') : 'user'}
                 </Badge>
 
                 <div className="space-y-2 text-sm">

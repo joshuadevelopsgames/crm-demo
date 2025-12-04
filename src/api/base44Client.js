@@ -117,7 +117,7 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        const newAccount = { ...data, id: Date.now().toString() };
+        const newAccount = { ...data, id: data.id || Date.now().toString() };
         mockAccounts.push(newAccount);
         return newAccount;
       },
@@ -128,6 +128,25 @@ export const base44 = {
           return mockAccounts[index];
         }
         return data;
+      },
+      // Upsert: Create if doesn't exist, update if it does
+      upsert: async (data, lookupField = 'lmn_crm_id') => {
+        // Find existing by lookup field
+        const existing = mockAccounts.find(a => 
+          a[lookupField] && data[lookupField] && a[lookupField] === data[lookupField]
+        );
+        
+        if (existing) {
+          // Update existing
+          const index = mockAccounts.findIndex(a => a.id === existing.id);
+          mockAccounts[index] = { ...existing, ...data, id: existing.id };
+          return { ...mockAccounts[index], _action: 'updated' };
+        } else {
+          // Create new
+          const newAccount = { ...data, id: data.id || Date.now().toString() };
+          mockAccounts.push(newAccount);
+          return { ...newAccount, _action: 'created' };
+        }
       },
     },
     Contact: {
@@ -148,7 +167,7 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        const newContact = { ...data, id: Date.now().toString() };
+        const newContact = { ...data, id: data.id || Date.now().toString() };
         mockContacts.push(newContact);
         return newContact;
       },
@@ -159,6 +178,25 @@ export const base44 = {
           return mockContacts[index];
         }
         return data;
+      },
+      // Upsert: Create if doesn't exist, update if it does
+      upsert: async (data, lookupField = 'lmn_contact_id') => {
+        // Find existing by lookup field
+        const existing = mockContacts.find(c => 
+          c[lookupField] && data[lookupField] && c[lookupField] === data[lookupField]
+        );
+        
+        if (existing) {
+          // Update existing
+          const index = mockContacts.findIndex(c => c.id === existing.id);
+          mockContacts[index] = { ...existing, ...data, id: existing.id };
+          return { ...mockContacts[index], _action: 'updated' };
+        } else {
+          // Create new
+          const newContact = { ...data, id: data.id || Date.now().toString() };
+          mockContacts.push(newContact);
+          return { ...newContact, _action: 'created' };
+        }
       },
     },
     Interaction: {
