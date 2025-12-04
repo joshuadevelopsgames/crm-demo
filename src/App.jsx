@@ -16,6 +16,7 @@ import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
+import WinLossTest from './pages/WinLossTest';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
@@ -59,6 +60,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/gmail-callback" element={<GmailCallback />} />
         <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
+        <Route path="/win-loss-test" element={<WinLossTest />} />
         <Route path="*" element={
           <Layout currentPageName={getPageName()}>
             <Routes>

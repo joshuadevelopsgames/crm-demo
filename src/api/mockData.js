@@ -580,3 +580,160 @@ export const mockNotifications = [
   }
 ];
 
+// Mock Estimates for Win/Loss Tracking
+export const mockEstimates = [
+  {
+    id: '1',
+    account_id: '1',
+    account_name: 'Acme Corporation',
+    estimate_number: 'EST-2024-001',
+    estimate_date: '2024-01-15',
+    description: 'Annual Landscape Maintenance Contract',
+    total_amount: 45000,
+    status: 'won',
+    won_date: '2024-01-25',
+    created_by: 'sales@company.com',
+    notes: 'Client accepted our proposal with no changes'
+  },
+  {
+    id: '2',
+    account_id: '1',
+    account_name: 'Acme Corporation',
+    estimate_number: 'EST-2024-015',
+    estimate_date: '2024-03-20',
+    description: 'Spring Garden Enhancement Project',
+    total_amount: 12500,
+    status: 'won',
+    won_date: '2024-04-02',
+    created_by: 'sales@company.com',
+    notes: 'Upsell opportunity - additional services'
+  },
+  {
+    id: '3',
+    account_id: '1',
+    account_name: 'Acme Corporation',
+    estimate_number: 'EST-2024-032',
+    estimate_date: '2024-06-10',
+    description: 'Irrigation System Upgrade',
+    total_amount: 28000,
+    status: 'lost',
+    lost_date: '2024-06-20',
+    lost_reason: 'Went with cheaper competitor',
+    created_by: 'sales@company.com'
+  },
+  {
+    id: '4',
+    account_id: '2',
+    account_name: 'Tech Startup Inc',
+    estimate_number: 'EST-2024-005',
+    estimate_date: '2024-02-01',
+    description: 'Office Landscape Design & Installation',
+    total_amount: 18500,
+    status: 'won',
+    won_date: '2024-02-15',
+    created_by: 'sales@company.com',
+    notes: 'New client - great opportunity'
+  },
+  {
+    id: '5',
+    account_id: '2',
+    account_name: 'Tech Startup Inc',
+    estimate_number: 'EST-2024-042',
+    estimate_date: '2024-08-05',
+    description: 'Fall Cleanup & Winter Preparation',
+    total_amount: 8500,
+    status: 'pending',
+    created_by: 'sales@company.com',
+    follow_up_date: '2024-08-15'
+  },
+  {
+    id: '6',
+    account_id: '3',
+    account_name: 'Global Manufacturing Co',
+    estimate_number: 'EST-2024-008',
+    estimate_date: '2024-02-20',
+    description: 'Multi-Site Annual Maintenance Agreement',
+    total_amount: 95000,
+    status: 'won',
+    won_date: '2024-03-05',
+    created_by: 'sales@company.com',
+    notes: 'Large contract - 3 year agreement'
+  },
+  {
+    id: '7',
+    account_id: '3',
+    account_name: 'Global Manufacturing Co',
+    estimate_number: 'EST-2024-018',
+    estimate_date: '2024-04-10',
+    description: 'Additional Site Landscaping',
+    total_amount: 32000,
+    status: 'lost',
+    lost_date: '2024-04-25',
+    lost_reason: 'Budget constraints',
+    created_by: 'sales@company.com'
+  },
+  {
+    id: '8',
+    account_id: '3',
+    account_name: 'Global Manufacturing Co',
+    estimate_number: 'EST-2024-025',
+    estimate_date: '2024-05-15',
+    description: 'Parking Lot Landscaping Renovation',
+    total_amount: 15500,
+    status: 'won',
+    won_date: '2024-05-30',
+    created_by: 'sales@company.com'
+  },
+  {
+    id: '9',
+    account_id: '3',
+    account_name: 'Global Manufacturing Co',
+    estimate_number: 'EST-2024-038',
+    estimate_date: '2024-07-20',
+    description: 'Summer Flower Bed Installation',
+    total_amount: 9500,
+    status: 'lost',
+    lost_reason: 'Project postponed indefinitely',
+    lost_date: '2024-08-01',
+    created_by: 'sales@company.com'
+  },
+  {
+    id: '10',
+    account_id: '1',
+    account_name: 'Acme Corporation',
+    estimate_number: 'EST-2024-045',
+    estimate_date: '2024-09-10',
+    description: 'Winter Snow Removal Contract',
+    total_amount: 52000,
+    status: 'won',
+    won_date: '2024-09-25',
+    created_by: 'sales@company.com',
+    notes: 'Renewal of winter services'
+  },
+  {
+    id: '11',
+    account_id: '2',
+    account_name: 'Tech Startup Inc',
+    estimate_number: 'EST-2024-050',
+    estimate_date: '2024-10-15',
+    description: 'Holiday Decoration & Installation',
+    total_amount: 6500,
+    status: 'lost',
+    lost_date: '2024-10-30',
+    lost_reason: 'Decided to handle in-house',
+    created_by: 'sales@company.com'
+  },
+  {
+    id: '12',
+    account_id: '1',
+    account_name: 'Acme Corporation',
+    estimate_number: 'EST-2024-055',
+    estimate_date: '2024-11-20',
+    description: 'Tree Pruning & Health Assessment',
+    total_amount: 14500,
+    status: 'pending',
+    created_by: 'sales@company.com',
+    follow_up_date: '2024-12-05'
+  }
+];
+
