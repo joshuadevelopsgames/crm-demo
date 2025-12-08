@@ -175,6 +175,25 @@ export default function Accounts() {
         onClose={() => setIsImportDialogOpen(false)}
       />
 
+      {/* Tabs: Active / Archived */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="w-full justify-start bg-white border-b rounded-none h-auto p-0 space-x-0">
+          <TabsTrigger 
+            value="active" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+          >
+            Active ({accounts.filter(a => a.status !== 'archived' && a.archived !== true).length})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="archived"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            Archived ({accounts.filter(a => a.status === 'archived' || a.archived === true).length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="mt-0 space-y-4">
           {/* Filters & Search */}
           <TutorialTooltip
             tip="Use these filters to search accounts by name, filter by type or segment, sort by different criteria, and toggle between list and card views."
@@ -459,7 +478,7 @@ export default function Accounts() {
               </p>
             </Card>
           )}
-          </TabsContent>
+        </TabsContent>
 
         <TabsContent value="archived" className="mt-0 space-y-4">
           {/* Same filters for archived tab */}
