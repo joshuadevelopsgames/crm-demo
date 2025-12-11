@@ -684,34 +684,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
         }
       }
 
-      // Invalidate and refetch queries to show the new data
-      // Use refetchQueries with forceRefresh to ensure fresh data
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['accounts'], exact: false }),
-        queryClient.invalidateQueries({ queryKey: ['contacts'], exact: false }),
-        queryClient.invalidateQueries({ queryKey: ['estimates'], exact: false }),
-        queryClient.invalidateQueries({ queryKey: ['jobsites'], exact: false })
-      ]);
+      // Invalidate all queries to force fresh data load
+      queryClient.invalidateQueries();
       
-      // Force refetch with staleTime: 0 to bypass cache
-      await Promise.all([
-        queryClient.refetchQueries({ 
-          queryKey: ['accounts'],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ['contacts'],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ['estimates'],
-          type: 'active'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: ['jobsites'],
-          type: 'active'
-        })
-      ]);
+      // Wait a moment for invalidation to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force refetch all active queries
+      await queryClient.refetchQueries({ type: 'active' });
 
     } catch (err) {
       setError(`Import failed: ${err.message}`);
@@ -1163,6 +1143,83 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </p>
                       )}
                     </div>
+
+                    {/* Estimate Linking Validation */}
+                    {mergedData.stats.estimateLinking && mergedData.stats.estimateLinking.total > 0 && (
+                      <div className={`mt-4 p-3 rounded border ${
+                        mergedData.stats.estimateLinking.orphaned > 0 
+                          ? 'bg-amber-50 border-amber-200' 
+                          : 'bg-emerald-50 border-emerald-200'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          {mergedData.stats.estimateLinking.orphaned > 0 ? (
+                            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <p className={`font-semibold text-sm ${
+                              mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-900' : 'text-emerald-900'
+                            }`}>
+                              Estimate Linking: {mergedData.stats.estimateLinking.linkRate}% linked to accounts
+                            </p>
+                            <div className="text-xs mt-1 space-y-0.5">
+                              <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                • {mergedData.stats.estimateLinking.linkedByContactId} by Contact ID (most reliable)
+                                {mergedData.stats.estimateLinking.linkedByNameMatch > 0 && (
+                                  <span>, {mergedData.stats.estimateLinking.linkedByNameMatch} by name match</span>
+                                )}
+                                {mergedData.stats.estimateLinking.linkedByCrmTags > 0 && (
+                                  <span>, {mergedData.stats.estimateLinking.linkedByCrmTags} by CRM tags</span>
+                                )}
+                              </p>
+                              {mergedData.stats.estimateLinking.orphaned > 0 && (
+                                <p className="text-amber-700 font-medium">
+                                  ⚠ {mergedData.stats.estimateLinking.orphaned} estimates not linked to any account
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Jobsite Linking Validation */}
+                    {mergedData.stats.jobsiteLinking && mergedData.stats.jobsiteLinking.total > 0 && (
+                      <div className={`mt-2 p-3 rounded border ${
+                        mergedData.stats.jobsiteLinking.orphaned > 0 
+                          ? 'bg-amber-50 border-amber-200' 
+                          : 'bg-emerald-50 border-emerald-200'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          {mergedData.stats.jobsiteLinking.orphaned > 0 ? (
+                            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <p className={`font-semibold text-sm ${
+                              mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-900' : 'text-emerald-900'
+                            }`}>
+                              Jobsite Linking: {mergedData.stats.jobsiteLinking.linkRate}% linked to accounts
+                            </p>
+                            <div className="text-xs mt-1 space-y-0.5">
+                              <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                • {mergedData.stats.jobsiteLinking.linkedByContactId} by Contact ID
+                                {mergedData.stats.jobsiteLinking.linkedByNameMatch > 0 && (
+                                  <span>, {mergedData.stats.jobsiteLinking.linkedByNameMatch} by name match</span>
+                                )}
+                              </p>
+                              {mergedData.stats.jobsiteLinking.orphaned > 0 && (
+                                <p className="text-amber-700 font-medium">
+                                  ⚠ {mergedData.stats.jobsiteLinking.orphaned} jobsites not linked to any account
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               )}

@@ -109,35 +109,124 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     accountMap.set(account.id, account);
   });
 
+  // Track estimate linking stats
+  const estimateLinkingStats = {
+    linkedByContactId: 0,
+    linkedByNameMatch: 0,
+    linkedByCrmTags: 0,
+    orphaned: 0,
+    total: estimates.length
+  };
+
+  // Track jobsite linking stats
+  const jobsiteLinkingStats = {
+    linkedByContactId: 0,
+    linkedByNameMatch: 0,
+    orphaned: 0,
+    total: jobsites.length
+  };
+
+  // First pass: Link estimates to accounts and track which method was used
+  const estimatesWithAccountId = estimates.map(estimate => {
+    let linkedAccountId = null;
+    let linkMethod = null;
+
+    // Method 1: Match by contact ID (most reliable)
+    if (estimate.lmn_contact_id) {
+      const contact = mergedContacts.find(c => c.lmn_contact_id === estimate.lmn_contact_id);
+      if (contact && contact.account_id) {
+        linkedAccountId = contact.account_id;
+        linkMethod = 'contact_id';
+        estimateLinkingStats.linkedByContactId++;
+      }
+    }
+
+    // Method 2: Fallback - Match by contact name matching account name
+    if (!linkedAccountId && estimate.contact_name) {
+      const estimateContactName = estimate.contact_name.toLowerCase().trim();
+      for (const account of accountsArray) {
+        if (account.name && account.name.toLowerCase().trim() === estimateContactName) {
+          linkedAccountId = account.id;
+          linkMethod = 'name_match';
+          estimateLinkingStats.linkedByNameMatch++;
+          break;
+        }
+      }
+    }
+
+    // Method 3: Fallback - Match via CRM tags
+    if (!linkedAccountId && estimate.crm_tags) {
+      const crmTagsLower = estimate.crm_tags.toLowerCase();
+      for (const account of accountsArray) {
+        if (account.lmn_crm_id && crmTagsLower.includes(account.lmn_crm_id.toLowerCase())) {
+          linkedAccountId = account.id;
+          linkMethod = 'crm_tags';
+          estimateLinkingStats.linkedByCrmTags++;
+          break;
+        }
+      }
+    }
+
+    // Track orphaned estimates
+    if (!linkedAccountId) {
+      estimateLinkingStats.orphaned++;
+    }
+
+    return {
+      ...estimate,
+      account_id: linkedAccountId,
+      _link_method: linkMethod, // Internal tracking field
+      _is_orphaned: !linkedAccountId
+    };
+  });
+
+  // Link jobsites to accounts (similar logic to estimates)
+  const jobsitesWithAccountId = jobsites.map(jobsite => {
+    let linkedAccountId = null;
+    let linkMethod = null;
+
+    // Method 1: Match by contact ID (most reliable)
+    if (jobsite.lmn_contact_id) {
+      const contact = mergedContacts.find(c => c.lmn_contact_id === jobsite.lmn_contact_id);
+      if (contact && contact.account_id) {
+        linkedAccountId = contact.account_id;
+        linkMethod = 'contact_id';
+        jobsiteLinkingStats.linkedByContactId++;
+      }
+    }
+
+    // Method 2: Fallback - Match by contact name matching account name
+    if (!linkedAccountId && jobsite.contact_name) {
+      const jobsiteContactName = jobsite.contact_name.toLowerCase().trim();
+      for (const account of accountsArray) {
+        if (account.name && account.name.toLowerCase().trim() === jobsiteContactName) {
+          linkedAccountId = account.id;
+          linkMethod = 'name_match';
+          jobsiteLinkingStats.linkedByNameMatch++;
+          break;
+        }
+      }
+    }
+
+    // Track orphaned jobsites
+    if (!linkedAccountId) {
+      jobsiteLinkingStats.orphaned++;
+    }
+
+    return {
+      ...jobsite,
+      account_id: linkedAccountId,
+      _link_method: linkMethod, // Internal tracking field
+      _is_orphaned: !linkedAccountId
+    };
+  });
+
   // Calculate revenue and scores for each account
   accountsArray.forEach(account => {
-    // Find all estimates for this account (via contacts)
-    const accountContactIds = mergedContacts
-      .filter(c => c.account_id === account.id)
-      .map(c => c.lmn_contact_id)
-      .filter(Boolean);
-
-    // Match estimates by contact ID (primary method)
-    let accountEstimates = estimates.filter(est => 
-      est.lmn_contact_id && accountContactIds.includes(est.lmn_contact_id)
+    // Find all estimates for this account (now using account_id field)
+    const accountEstimates = estimatesWithAccountId.filter(est => 
+      est.account_id === account.id
     );
-
-    // Fallback: Match estimates by contact name matching account name
-    if (accountEstimates.length === 0 && account.name) {
-      const accountNameLower = account.name.toLowerCase().trim();
-      accountEstimates = estimates.filter(est => {
-        const estContactName = est.contact_name?.toLowerCase().trim();
-        return estContactName === accountNameLower;
-      });
-    }
-
-    // Also try matching via CRM tags if available
-    if (accountEstimates.length === 0 && account.lmn_crm_id) {
-      accountEstimates = estimates.filter(est => {
-        const crmTags = est.crm_tags?.toLowerCase() || '';
-        return crmTags.includes(account.lmn_crm_id.toLowerCase());
-      });
-    }
 
     // Calculate revenue from won estimates
     const wonEstimates = accountEstimates.filter(est => est.status === 'won');
@@ -147,20 +236,10 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       return sum + revenue;
     }, 0);
 
-    // Count jobsites for this account
-    // Match jobsites by contact ID (primary method)
-    let accountJobsites = jobsites.filter(jobsite => 
-      jobsite.lmn_contact_id && accountContactIds.includes(jobsite.lmn_contact_id)
+    // Count jobsites for this account (now using account_id field from jobsites)
+    const accountJobsites = jobsitesWithAccountId.filter(jobsite => 
+      jobsite.account_id === account.id
     );
-
-    // Fallback: Match jobsites by contact name matching account name
-    if (accountJobsites.length === 0 && account.name) {
-      const accountNameLower = account.name.toLowerCase().trim();
-      accountJobsites = jobsites.filter(jobsite => {
-        const jobsiteContactName = jobsite.contact_name?.toLowerCase().trim();
-        return jobsiteContactName === accountNameLower;
-      });
-    }
 
     // Calculate account score based on revenue, estimates, and jobsites
     const score = calculateAccountScore({
@@ -179,8 +258,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   return {
     accounts: accountsArray,
     contacts: mergedContacts,
-    estimates: estimates,
-    jobsites: jobsites,
+    estimates: estimatesWithAccountId, // Use estimates with account_id
+    jobsites: jobsitesWithAccountId, // Use jobsites with account_id
     stats: {
       totalAccounts: accounts.size,
       totalContacts: mergedContacts.length,
@@ -188,7 +267,30 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       unmatchedContacts: unmatchedCount,
       matchRate: mergedContacts.length > 0 
         ? Math.round((matchedCount / mergedContacts.length) * 100) 
-        : 0
+        : 0,
+      // Estimate linking stats
+      estimateLinking: {
+        total: estimateLinkingStats.total,
+        linked: estimateLinkingStats.linkedByContactId + estimateLinkingStats.linkedByNameMatch + estimateLinkingStats.linkedByCrmTags,
+        orphaned: estimateLinkingStats.orphaned,
+        linkedByContactId: estimateLinkingStats.linkedByContactId,
+        linkedByNameMatch: estimateLinkingStats.linkedByNameMatch,
+        linkedByCrmTags: estimateLinkingStats.linkedByCrmTags,
+        linkRate: estimateLinkingStats.total > 0
+          ? Math.round(((estimateLinkingStats.linkedByContactId + estimateLinkingStats.linkedByNameMatch + estimateLinkingStats.linkedByCrmTags) / estimateLinkingStats.total) * 100)
+          : 0
+      },
+      // Jobsite linking stats
+      jobsiteLinking: {
+        total: jobsiteLinkingStats.total,
+        linked: jobsiteLinkingStats.linkedByContactId + jobsiteLinkingStats.linkedByNameMatch,
+        orphaned: jobsiteLinkingStats.orphaned,
+        linkedByContactId: jobsiteLinkingStats.linkedByContactId,
+        linkedByNameMatch: jobsiteLinkingStats.linkedByNameMatch,
+        linkRate: jobsiteLinkingStats.total > 0
+          ? Math.round(((jobsiteLinkingStats.linkedByContactId + jobsiteLinkingStats.linkedByNameMatch) / jobsiteLinkingStats.total) * 100)
+          : 0
+      }
     }
   };
 }

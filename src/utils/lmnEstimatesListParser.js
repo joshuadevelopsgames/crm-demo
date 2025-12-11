@@ -73,6 +73,7 @@ export function parseEstimatesList(csvText) {
 
     const estimates = [];
     const errors = [];
+    const seenEstimateIds = new Set(); // Track duplicate IDs
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -86,6 +87,13 @@ export function parseEstimatesList(csvText) {
           errors.push(`Row ${i + 1}: Missing Estimate ID, skipped`);
           continue;
         }
+
+        // Check for duplicate estimate IDs
+        if (seenEstimateIds.has(estimateId)) {
+          errors.push(`Row ${i + 1}: Duplicate Estimate ID "${estimateId}", skipped`);
+          continue;
+        }
+        seenEstimateIds.add(estimateId);
 
         // Parse dates (Excel serial dates or ISO strings)
         const parseDate = (value) => {
@@ -189,10 +197,19 @@ export function parseEstimatesList(csvText) {
       }
     }
 
+    // Calculate stats
+    const uniqueEstimateIds = new Set(estimates.map(e => e.lmn_estimate_id));
+    const estimatesWithContactId = estimates.filter(e => e.lmn_contact_id).length;
+    const estimatesWithoutContactId = estimates.length - estimatesWithContactId;
+
     return {
       estimates,
       stats: {
         total: estimates.length,
+        uniqueEstimateIds: uniqueEstimateIds.size,
+        duplicatesSkipped: errors.filter(e => e.includes('Duplicate Estimate ID')).length,
+        estimatesWithContactId,
+        estimatesWithoutContactId,
         errors: errors.length > 0 ? errors.slice(0, 10) : null, // Limit errors shown
         errorsCount: errors.length
       }
@@ -257,5 +274,9 @@ function parseCSVLine(line) {
   result.push(current.trim());
   return result;
 }
+
+
+
+
 
 

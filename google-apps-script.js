@@ -442,7 +442,7 @@ function getHeaders(entityType) {
     'estimates': [
       'ID', 'LMN Estimate ID', 'Estimate Number', 'Estimate Type', 'Estimate Date',
       'Estimate Close Date', 'Contract Start', 'Contract End', 'Project Name', 'Version',
-      'Contact ID', 'LMN Contact ID', 'Contact Name', 'Address', 'Billing Address',
+      'Account ID', 'Contact ID', 'LMN Contact ID', 'Contact Name', 'Address', 'Billing Address',
       'Phone 1', 'Phone 2', 'Email', 'Salesperson', 'Estimator', 'Status',
       'Pipeline Status', 'Proposal First Shared', 'Proposal Last Shared',
       'Proposal Last Updated', 'Division', 'Referral', 'Referral Note',
@@ -453,7 +453,7 @@ function getHeaders(entityType) {
       'Total Profit', 'Predicted Sales', 'Source', 'Created Date'
     ],
     'jobsites': [
-      'ID', 'LMN Jobsite ID', 'LMN Contact ID', 'Contact ID', 'Contact Name',
+      'ID', 'LMN Jobsite ID', 'Account ID', 'LMN Contact ID', 'Contact ID', 'Contact Name',
       'Name', 'Address 1', 'Address 2', 'City', 'State', 'Postal Code',
       'Country', 'Notes', 'Source', 'Created Date'
     ]
@@ -540,6 +540,7 @@ function getFieldMap(entityType) {
       'Contract End': 'contract_end',
       'Project Name': 'project_name',
       'Version': 'version',
+      'Account ID': 'account_id',
       'Contact ID': 'contact_id',
       'LMN Contact ID': 'lmn_contact_id',
       'Contact Name': 'contact_name',
@@ -552,6 +553,7 @@ function getFieldMap(entityType) {
     'jobsites': {
       'ID': 'id',
       'LMN Jobsite ID': 'lmn_jobsite_id',
+      'Account ID': 'account_id',
       'LMN Contact ID': 'lmn_contact_id',
       'Contact ID': 'contact_id',
       'Contact Name': 'contact_name',
