@@ -73,12 +73,12 @@ async function getData(entityType, forceRefresh = false) {
 export const base44 = {
   entities: {
     Account: {
-      list: async () => {
-        const data = await getData('accounts');
+      list: async (forceRefresh = false) => {
+        const data = await getData('accounts', forceRefresh);
         return Array.isArray(data) ? data : [];
       },
-      filter: async (filters, sort) => {
-        const data = await getData('accounts');
+      filter: async (filters, sort, forceRefresh = false) => {
+        const data = await getData('accounts', forceRefresh);
         let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(account => {
@@ -118,12 +118,12 @@ export const base44 = {
       },
     },
     Contact: {
-      list: async () => {
-        const data = await getData('contacts');
+      list: async (forceRefresh = false) => {
+        const data = await getData('contacts', forceRefresh);
         return Array.isArray(data) ? data : [];
       },
-      filter: async (filters, sort) => {
-        const data = await getData('contacts');
+      filter: async (filters, sort, forceRefresh = false) => {
+        const data = await getData('contacts', forceRefresh);
         let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(contact => {

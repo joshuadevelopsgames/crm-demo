@@ -665,30 +665,52 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
       // Clear caches and force refresh after writing to Google Sheets
       if (webAppUrl) {
-        // Wait a moment for Google Sheets to process the writes
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait longer for Google Sheets to process all the writes
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Clear the base44Client cache
         const { clearSheetDataCache } = await import('@/api/base44Client');
         if (clearSheetDataCache) {
           clearSheetDataCache();
         }
+        
+        // Also clear the googleSheetsService cache
+        const { getSheetData } = await import('@/services/googleSheetsService');
+        // Force refresh by calling getSheetData with forceRefresh=true
+        try {
+          await getSheetData(true);
+        } catch (err) {
+          console.warn('Error force refreshing sheet data:', err);
+        }
       }
 
       // Invalidate and refetch queries to show the new data
+      // Use refetchQueries with forceRefresh to ensure fresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
-        queryClient.invalidateQueries({ queryKey: ['contacts'] }),
-        queryClient.invalidateQueries({ queryKey: ['estimates'] }),
-        queryClient.invalidateQueries({ queryKey: ['jobsites'] })
+        queryClient.invalidateQueries({ queryKey: ['accounts'], exact: false }),
+        queryClient.invalidateQueries({ queryKey: ['contacts'], exact: false }),
+        queryClient.invalidateQueries({ queryKey: ['estimates'], exact: false }),
+        queryClient.invalidateQueries({ queryKey: ['jobsites'], exact: false })
       ]);
       
-      // Force refetch to ensure data is loaded
+      // Force refetch with staleTime: 0 to bypass cache
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['accounts'] }),
-        queryClient.refetchQueries({ queryKey: ['contacts'] }),
-        queryClient.refetchQueries({ queryKey: ['estimates'] }),
-        queryClient.refetchQueries({ queryKey: ['jobsites'] })
+        queryClient.refetchQueries({ 
+          queryKey: ['accounts'],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ['contacts'],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ['estimates'],
+          type: 'active'
+        }),
+        queryClient.refetchQueries({ 
+          queryKey: ['jobsites'],
+          type: 'active'
+        })
       ]);
 
     } catch (err) {
