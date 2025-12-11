@@ -16,7 +16,19 @@
  * 10. Copy the Web App URL and add it to your .env file as VITE_GOOGLE_SHEETS_WEB_APP_URL
  */
 
-const SHEET_ID = '193wKTGmz1zvWud05U1rCY9SysGQAeYc2KboO6_JjrJs'; // Update with your sheet ID
+const SHEET_ID = '1CzkVSbflUrYO_90Zk7IEreDOIV4lMFnWe30dFilFa6s'; // Update with your sheet ID
+
+/**
+ * Handle CORS by returning HTML with proper headers
+ * Google Apps Script Web Apps handle CORS automatically when deployed correctly,
+ * but we use HtmlService to ensure proper CORS headers
+ */
+function returnJsonWithCors(data) {
+  return HtmlService.createHtmlOutput(JSON.stringify(data))
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setContent(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 /**
  * Handle POST requests to write data to sheets
@@ -25,26 +37,26 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const { action, entityType, records } = data;
-    
+
     if (action !== 'upsert' || !entityType || !records || !Array.isArray(records)) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return returnJsonWithCors({
         success: false,
         error: 'Invalid request format'
-      })).setMimeType(ContentService.MimeType.JSON);
+      });
     }
-    
+
     const result = writeToSheet(entityType, records);
-    
-    return ContentService.createTextOutput(JSON.stringify({
+
+    return returnJsonWithCors({
       success: true,
       result: result
-    })).setMimeType(ContentService.MimeType.JSON);
-    
+    });
+
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return returnJsonWithCors({
       success: false,
       error: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
@@ -52,11 +64,11 @@ function doPost(e) {
  * Handle GET requests (for testing)
  */
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
+  return returnJsonWithCors({
     success: true,
     message: 'LECRM Google Sheets Sync Web App is running',
     timestamp: new Date().toISOString()
-  })).setMimeType(ContentService.MimeType.JSON);
+  });
 }
 
 /**
