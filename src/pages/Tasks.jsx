@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Flag,
   Inbox,
+  GripVertical,
   LayoutGrid,
   List,
   CalendarIcon,
@@ -30,7 +31,22 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
-// Drag and drop removed - task tracker functionality not needed
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   Select,
@@ -52,10 +68,25 @@ import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
-// Simple Task Item Wrapper (drag and drop removed)
-const TaskItem = ({ task, isSelected, onToggleSelect, bulkMode, ...props }) => {
+// Sortable Task Item Wrapper
+const SortableTaskItem = ({ task, isSelected, onToggleSelect, bulkMode, ...props }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="relative group">
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
       {bulkMode && (
         <div className="absolute top-4 left-4 z-10">
           <input
@@ -67,7 +98,7 @@ const TaskItem = ({ task, isSelected, onToggleSelect, bulkMode, ...props }) => {
           />
         </div>
       )}
-      <div className={bulkMode ? 'ml-12' : ''}>
+      <div className={bulkMode ? 'ml-12' : ''} {...(!bulkMode && listeners)}>
         {props.children}
       </div>
     </div>
@@ -87,6 +118,18 @@ export default function Tasks() {
   const [lastCompletedTask, setLastCompletedTask] = useState(null);
   const queryClient = useQueryClient();
   const { isPWA, isMobile, isNativeApp } = useDeviceDetection();
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
@@ -249,7 +292,33 @@ export default function Tasks() {
     }
   };
 
-  // Drag and drop removed - task tracker functionality not needed
+  // Handle drag end
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = filteredTasks.findIndex(task => task.id === active.id);
+    const newIndex = filteredTasks.findIndex(task => task.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(filteredTasks, oldIndex, newIndex);
+    
+    // Save order to database
+    try {
+      await Promise.all(
+        newOrder.map((task, index) => 
+          updateTaskMutation.mutate({
+            id: task.id,
+            data: { order: index }
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Error saving task order:', error);
+    }
+  };
 
   const handleCreateOrUpdate = async () => {
     const user = await base44.auth.me();
@@ -400,8 +469,11 @@ export default function Tasks() {
     }
   });
 
-  // Sort tasks: by priority, then by due date (order field removed)
+  // Sort tasks: order field first, then by priority, then by due date
   filteredTasks.sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order;
+    }
     const priorityOrder = { critical: 6, blocker: 5, major: 4, normal: 3, minor: 2, trivial: 1 };
     const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
     if (priorityDiff !== 0) return priorityDiff;
@@ -442,6 +514,40 @@ export default function Tasks() {
     updateTaskMutation.mutate({
       id: taskId,
       data: { priority: newPriority }
+    }, {
+      onSuccess: () => {
+        // After priority is updated, recalculate order based on priority sorting
+        // Use setTimeout to ensure the query has been invalidated and refetched
+        setTimeout(() => {
+          const updatedTasks = queryClient.getQueryData(['tasks']) || tasks;
+          if (!updatedTasks || updatedTasks.length === 0) return;
+          
+          const priorityOrder = { critical: 6, blocker: 5, major: 4, normal: 3, minor: 2, trivial: 1 };
+          
+          // Sort by priority, then due date (same logic as filteredTasks sorting)
+          const sortedTasks = [...updatedTasks].sort((a, b) => {
+            const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+            if (priorityDiff !== 0) return priorityDiff;
+            
+            if (a.due_date && b.due_date) {
+              return new Date(a.due_date) - new Date(b.due_date);
+            }
+            if (a.due_date) return -1;
+            if (b.due_date) return 1;
+            return 0;
+          });
+          
+          // Update order for all tasks based on their new sorted position
+          sortedTasks.forEach((task, index) => {
+            if (task.order !== index) {
+              updateTaskMutation.mutate({
+                id: task.id,
+                data: { order: index }
+              });
+            }
+          });
+        }, 200);
+      }
     });
   };
 
@@ -907,11 +1013,19 @@ export default function Tasks() {
 
       {/* Tasks List */}
       <TutorialTooltip
-        tip="This is your task list. Click on any task to edit it, update its status, or change its priority. Tasks can be linked to accounts for better organization."
+        tip="This is your task list. Click on any task to edit it, update its status, or change its priority. Drag tasks to reorder them. Tasks can be linked to accounts for better organization."
         step={6}
         position="bottom"
       >
-      <div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={filteredTasks.map(t => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch">
               {filteredTasks.map((task) => {
@@ -923,7 +1037,7 @@ export default function Tasks() {
                 const isSelected = selectedTasks.includes(task.id);
                 
                 return (
-                  <TaskItem
+                  <SortableTaskItem
                     key={task.id}
                     task={task}
                     isSelected={isSelected}
@@ -1037,7 +1151,7 @@ export default function Tasks() {
                         </div>
                       </CardContent>
                     </Card>
-                  </TaskItem>
+                  </SortableTaskItem>
                 );
               })}
             </div>
@@ -1053,7 +1167,7 @@ export default function Tasks() {
                 const isMobileView = isPWA || isMobile || isNativeApp;
                 
                 return (
-                  <TaskItem
+                  <SortableTaskItem
                     key={task.id}
                     task={task}
                     isSelected={isSelected}
@@ -1177,6 +1291,9 @@ export default function Tasks() {
                           // Desktop layout (unchanged)
                         <div className="flex items-start gap-4">
                           <div className="flex items-center gap-3 flex-shrink-0" {...(!bulkActionMode && { onMouseDown: (e) => e.stopPropagation() })}>
+                            {!bulkActionMode && (
+                              <GripVertical className="w-4 h-4 text-slate-400 cursor-move" />
+                            )}
                             <div 
                               className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity`}
                               onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
@@ -1286,12 +1403,13 @@ export default function Tasks() {
                         )}
                       </CardContent>
                     </Card>
-                  </TaskItem>
+                  </SortableTaskItem>
                 );
               })}
             </div>
           )}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {filteredTasks.length === 0 && (
         <Card className="p-12 text-center">
