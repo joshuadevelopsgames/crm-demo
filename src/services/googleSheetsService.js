@@ -1104,23 +1104,37 @@ export async function writeToGoogleSheet(entityType, records) {
   }
 
   try {
+    console.log(`📤 Sending ${records.length} ${entityType} records to Google Sheets...`);
+    const payload = {
+      action: 'upsert',
+      entityType: entityType,
+      records: records
+    };
+    console.log(`📤 Payload preview:`, {
+      action: payload.action,
+      entityType: payload.entityType,
+      recordCount: payload.records.length,
+      firstRecordKeys: payload.records[0] ? Object.keys(payload.records[0]).slice(0, 5) : []
+    });
+    
     const response = await fetch(webAppUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        action: 'upsert',
-        entityType: entityType,
-        records: records
-      })
+      body: JSON.stringify(payload)
     });
 
+    console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`❌ HTTP error response:`, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText.substring(0, 200)}`);
     }
 
     const result = await response.json();
+    console.log(`📥 Response result:`, result);
     
     if (result.success) {
       console.log(`✅ Successfully wrote ${result.result.total} ${entityType} to Google Sheet (${result.result.created} created, ${result.result.updated} updated)`);
