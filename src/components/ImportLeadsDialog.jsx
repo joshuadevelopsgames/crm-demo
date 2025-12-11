@@ -484,36 +484,90 @@ export default function ImportLeadsDialog({ open, onClose }) {
             }
           }
 
-          // Write contacts
+          // Write contacts (split into batches to avoid timeout)
           if (mergedData.contacts && mergedData.contacts.length > 0) {
-            const contactsResult = await writeContactsToSheet(mergedData.contacts);
-            if (!contactsResult.success) {
-              console.error('❌ Failed to write contacts to Google Sheet:', contactsResult.error);
-              results.errors.push(`Google Sheets: Failed to write contacts - ${contactsResult.error}`);
-            } else {
-              console.log(`✅ Wrote ${contactsResult.result?.total || 0} contacts to Google Sheets`);
+            console.log(`📝 Writing ${mergedData.contacts.length} contacts in batches...`);
+            const BATCH_SIZE = 500; // Process 500 contacts at a time
+            let totalCreated = 0;
+            let totalUpdated = 0;
+            let hasError = false;
+            
+            for (let i = 0; i < mergedData.contacts.length; i += BATCH_SIZE) {
+              const batch = mergedData.contacts.slice(i, i + BATCH_SIZE);
+              console.log(`📝 Writing contacts batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(mergedData.contacts.length / BATCH_SIZE)} (${batch.length} contacts)...`);
+              
+              const contactsResult = await writeContactsToSheet(batch);
+              if (!contactsResult.success) {
+                console.error(`❌ Failed to write contacts batch ${Math.floor(i / BATCH_SIZE) + 1}:`, contactsResult.error);
+                results.errors.push(`Google Sheets: Failed to write contacts batch ${Math.floor(i / BATCH_SIZE) + 1} - ${contactsResult.error}`);
+                hasError = true;
+              } else {
+                totalCreated += contactsResult.result?.created || 0;
+                totalUpdated += contactsResult.result?.updated || 0;
+                console.log(`✅ Wrote contacts batch ${Math.floor(i / BATCH_SIZE) + 1} (${contactsResult.result?.total || 0} contacts)`);
+              }
+            }
+            
+            if (!hasError) {
+              console.log(`✅ Successfully wrote all ${mergedData.contacts.length} contacts to Google Sheets (${totalCreated} created, ${totalUpdated} updated)`);
             }
           }
 
-          // Write estimates
+          // Write estimates (split into batches to avoid timeout)
           if (mergedData.estimates && mergedData.estimates.length > 0) {
-            const estimatesResult = await writeEstimatesToSheet(mergedData.estimates);
-            if (!estimatesResult.success) {
-              console.error('❌ Failed to write estimates to Google Sheet:', estimatesResult.error);
-              results.errors.push(`Google Sheets: Failed to write estimates - ${estimatesResult.error}`);
-            } else {
-              console.log(`✅ Wrote ${estimatesResult.result?.total || 0} estimates to Google Sheets`);
+            console.log(`📝 Writing ${mergedData.estimates.length} estimates in batches...`);
+            const BATCH_SIZE = 500;
+            let totalCreated = 0;
+            let totalUpdated = 0;
+            let hasError = false;
+            
+            for (let i = 0; i < mergedData.estimates.length; i += BATCH_SIZE) {
+              const batch = mergedData.estimates.slice(i, i + BATCH_SIZE);
+              console.log(`📝 Writing estimates batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(mergedData.estimates.length / BATCH_SIZE)} (${batch.length} estimates)...`);
+              
+              const estimatesResult = await writeEstimatesToSheet(batch);
+              if (!estimatesResult.success) {
+                console.error(`❌ Failed to write estimates batch ${Math.floor(i / BATCH_SIZE) + 1}:`, estimatesResult.error);
+                results.errors.push(`Google Sheets: Failed to write estimates batch ${Math.floor(i / BATCH_SIZE) + 1} - ${estimatesResult.error}`);
+                hasError = true;
+              } else {
+                totalCreated += estimatesResult.result?.created || 0;
+                totalUpdated += estimatesResult.result?.updated || 0;
+                console.log(`✅ Wrote estimates batch ${Math.floor(i / BATCH_SIZE) + 1} (${estimatesResult.result?.total || 0} estimates)`);
+              }
+            }
+            
+            if (!hasError) {
+              console.log(`✅ Successfully wrote all ${mergedData.estimates.length} estimates to Google Sheets (${totalCreated} created, ${totalUpdated} updated)`);
             }
           }
 
-          // Write jobsites
+          // Write jobsites (split into batches to avoid timeout)
           if (mergedData.jobsites && mergedData.jobsites.length > 0) {
-            const jobsitesResult = await writeJobsitesToSheet(mergedData.jobsites);
-            if (!jobsitesResult.success) {
-              console.error('❌ Failed to write jobsites to Google Sheet:', jobsitesResult.error);
-              results.errors.push(`Google Sheets: Failed to write jobsites - ${jobsitesResult.error}`);
-            } else {
-              console.log(`✅ Wrote ${jobsitesResult.result?.total || 0} jobsites to Google Sheets`);
+            console.log(`📝 Writing ${mergedData.jobsites.length} jobsites in batches...`);
+            const BATCH_SIZE = 500;
+            let totalCreated = 0;
+            let totalUpdated = 0;
+            let hasError = false;
+            
+            for (let i = 0; i < mergedData.jobsites.length; i += BATCH_SIZE) {
+              const batch = mergedData.jobsites.slice(i, i + BATCH_SIZE);
+              console.log(`📝 Writing jobsites batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(mergedData.jobsites.length / BATCH_SIZE)} (${batch.length} jobsites)...`);
+              
+              const jobsitesResult = await writeJobsitesToSheet(batch);
+              if (!jobsitesResult.success) {
+                console.error(`❌ Failed to write jobsites batch ${Math.floor(i / BATCH_SIZE) + 1}:`, jobsitesResult.error);
+                results.errors.push(`Google Sheets: Failed to write jobsites batch ${Math.floor(i / BATCH_SIZE) + 1} - ${jobsitesResult.error}`);
+                hasError = true;
+              } else {
+                totalCreated += jobsitesResult.result?.created || 0;
+                totalUpdated += jobsitesResult.result?.updated || 0;
+                console.log(`✅ Wrote jobsites batch ${Math.floor(i / BATCH_SIZE) + 1} (${jobsitesResult.result?.total || 0} jobsites)`);
+              }
+            }
+            
+            if (!hasError) {
+              console.log(`✅ Successfully wrote all ${mergedData.jobsites.length} jobsites to Google Sheets (${totalCreated} created, ${totalUpdated} updated)`);
             }
           }
 
