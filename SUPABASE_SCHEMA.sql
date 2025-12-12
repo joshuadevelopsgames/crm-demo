@@ -139,10 +139,12 @@ CREATE TABLE IF NOT EXISTS jobsites (
 );
 
 -- Create scorecard_responses table
+-- Note: account_id is text to match application IDs, but we don't use a foreign key
+-- constraint because accounts.id is UUID while the app passes text IDs
 CREATE TABLE IF NOT EXISTS scorecard_responses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
-  template_id uuid,
+  account_id text, -- No FK constraint: accounts.id is UUID but app uses text IDs
+  template_id text,
   template_name text,
   responses jsonb,
   section_scores jsonb,

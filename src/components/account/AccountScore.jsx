@@ -4,19 +4,26 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Award, Plus, Check, X, Download, Sparkles, FileText } from 'lucide-react';
+import { TrendingUp, Award, Plus, Check, X, Download, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { exportAndDownloadScorecard } from '../../utils/exportToCSV';
-import CreateScorecardDialog from './CreateScorecardDialog';
 
 export default function AccountScore({ accountId, scorecards, currentScore, accountName }) {
-  const { data: templates = [] } = useQuery({
-    queryKey: ['scorecard-templates'],
-    queryFn: () => base44.entities.ScorecardTemplate.list()
+  const [expandedScorecards, setExpandedScorecards] = useState({});
+  
+  // Get current ICP template
+  const { data: icpTemplate, isLoading: icpLoading } = useQuery({
+    queryKey: ['icp-template'],
+    queryFn: () => base44.entities.ScorecardTemplate.getCurrentICP()
   });
-  const activeTemplates = templates.filter(t => t.is_active);
+  
+  // Get all templates for export (including versions)
+  const { data: allTemplates = [] } = useQuery({
+    queryKey: ['scorecard-templates'],
+    queryFn: () => base44.entities.ScorecardTemplate.list(true) // Include versions
+  });
 
   // All scorecards are now per-client (manual)
   // Show the most recent scorecard as the current score
@@ -62,59 +69,57 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
         </CardContent>
       </Card>
 
-      {/* Create New Scorecard */}
+      {/* Complete ICP Scorecard */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Scorecards</h3>
-          <div className="flex gap-2">
-            <CreateScorecardDialog accountId={accountId} accountName={accountName} />
-            <Link to={createPageUrl('Scoring')}>
-              <Button variant="outline" size="sm">
-                Manage Templates
-              </Button>
-            </Link>
-          </div>
+          <h3 className="text-lg font-semibold text-slate-900">ICP Scorecard</h3>
+          <Link to={createPageUrl('Scoring')}>
+            <Button variant="outline" size="sm">
+              Manage ICP Template
+            </Button>
+          </Link>
         </div>
         
-        {activeTemplates.length === 0 ? (
+        {icpLoading ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-slate-600">Loading ICP template...</p>
+            </CardContent>
+          </Card>
+        ) : !icpTemplate ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No scoring templates</h3>
-              <p className="text-slate-600 mb-4">Create a scorecard template to start scoring accounts</p>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
+              <p className="text-slate-600 mb-4">Create an ICP template on the Scoring page to start scoring accounts</p>
               <Link to={createPageUrl('Scoring')}>
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Template
+                  Create ICP Template
                 </Button>
               </Link>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activeTemplates.map(template => (
-              <Card key={template.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{template.name}</h4>
-                      <p className="text-sm text-slate-600 mt-1">{template.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">
-                      {template.questions?.length || 0} questions
-                    </span>
-                    <Link to={createPageUrl(`TakeScorecard?accountId=${accountId}&templateId=${template.id}`)}>
-                      <Button size="sm">
-                        Complete Scorecard
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-slate-900">{icpTemplate.name}</h4>
+                  <p className="text-sm text-slate-600 mt-1">{icpTemplate.description || 'Ideal Customer Profile scoring'}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Version {icpTemplate.version_number || 1} • {icpTemplate.questions?.length || 0} questions
+                  </p>
+                </div>
+                <Link to={createPageUrl(`TakeScorecard?accountId=${accountId}`)}>
+                  <Button>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Complete ICP Scorecard
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -134,12 +139,27 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                 : format(new Date(scorecard.completed_date), 'MMM d, yyyy');
               
               const handleExport = () => {
-                // Find the template
-                const template = templates.find(t => t.name === scorecard.template_name);
+                // Find the template by version ID or name
+                const template = scorecard.template_version_id 
+                  ? allTemplates.find(t => t.id === scorecard.template_version_id)
+                  : allTemplates.find(t => t.name === scorecard.template_name && t.is_current_version);
                 if (template) {
                   exportAndDownloadScorecard(scorecard, template, { name: accountName || 'Account' });
                 }
               };
+              
+              const isExpanded = expandedScorecards[scorecard.id];
+              const toggleExpand = () => {
+                setExpandedScorecards(prev => ({
+                  ...prev,
+                  [scorecard.id]: !prev[scorecard.id]
+                }));
+              };
+              
+              // Find the template version used for this scorecard
+              const templateVersion = scorecard.template_version_id 
+                ? allTemplates.find(t => t.id === scorecard.template_version_id)
+                : null;
               
               return (
                 <Card key={scorecard.id} className={isPass ? 'border-emerald-200' : 'border-red-200'}>
@@ -170,14 +190,50 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                         <p className="text-sm text-slate-600">
                           Date: {scorecardDate} • Completed by {scorecard.completed_by}
                         </p>
+                        {templateVersion && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            ICP Template Version {templateVersion.version_number || 1}
+                          </p>
+                        )}
                         {scorecard.section_scores && Object.keys(scorecard.section_scores).length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {Object.entries(scorecard.section_scores).map(([section, score]) => (
-                              <Badge key={section} variant="outline" className="text-xs">
-                                {section}: {score}
-                              </Badge>
-                            ))}
-                          </div>
+                          <>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {Object.entries(scorecard.section_scores).map(([section, score]) => (
+                                <Badge key={section} variant="outline" className="text-xs">
+                                  {section}: {score}
+                                </Badge>
+                              ))}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={toggleExpand}
+                              className="mt-2 text-xs"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-3 h-3 mr-1" />
+                                  Hide Details
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-3 h-3 mr-1" />
+                                  Show Details
+                                </>
+                              )}
+                            </Button>
+                            {isExpanded && templateVersion && (
+                              <div className="mt-3 p-3 bg-slate-50 rounded border border-slate-200">
+                                <p className="text-xs font-semibold text-slate-700 mb-2">Template Version Details:</p>
+                                <p className="text-xs text-slate-600">
+                                  Version {templateVersion.version_number} • Created {format(new Date(templateVersion.created_at), 'MMM d, yyyy')}
+                                </p>
+                                {templateVersion.description && (
+                                  <p className="text-xs text-slate-600 mt-1">{templateVersion.description}</p>
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                       <div className="flex items-center gap-3">

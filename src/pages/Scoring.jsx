@@ -70,11 +70,16 @@ export default function Scoring() {
       
       return base44.entities.ScorecardTemplate.create({
         ...data,
-        total_possible_score: totalScore
+        total_possible_score: totalScore,
+        is_default: data.is_default || false, // Allow marking as ICP template
+        version_number: 1,
+        is_current_version: true
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['icp-template'] });
+      queryClient.invalidateQueries({ queryKey: ['icp-version-history'] });
       setIsDialogOpen(false);
       resetForm();
     }
@@ -88,15 +93,28 @@ export default function Scoring() {
         return sum + (q.weight * maxAnswer);
       }, 0);
       
-      return base44.entities.ScorecardTemplate.update(id, {
-        ...data,
-        total_possible_score: totalScore
-      });
+      // Check if this is the ICP template - if so, use versioning
+      const template = templates.find(t => t.id === id);
+      if (template && template.is_default) {
+        // Use versioning for ICP template updates
+        return base44.entities.ScorecardTemplate.updateWithVersion(id, {
+          ...data,
+          total_possible_score: totalScore
+        });
+      } else {
+        // Regular update for non-ICP templates
+        return base44.entities.ScorecardTemplate.update(id, {
+          ...data,
+          total_possible_score: totalScore
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['icp-template'] });
       setIsDialogOpen(false);
       resetForm();
+      alert('✅ Template updated successfully! A new version has been created.');
     }
   });
 
@@ -271,6 +289,21 @@ export default function Scoring() {
                   />
                   <p className="text-xs text-slate-500 mt-1">Scores at or above this will be marked as PASS</p>
                 </div>
+                {!editingTemplate && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_default"
+                      checked={newTemplate.is_default || false}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, is_default: e.target.checked })}
+                      className="rounded border-slate-300"
+                    />
+                    <Label htmlFor="is_default" className="text-sm font-normal cursor-pointer">
+                      Mark as ICP Template (Ideal Customer Profile)
+                    </Label>
+                    <p className="text-xs text-slate-500">Only one template should be marked as ICP</p>
+                  </div>
+                )}
               </div>
 
               {/* Questions */}

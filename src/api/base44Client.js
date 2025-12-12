@@ -270,19 +270,79 @@ export const base44 = {
       },
     },
     ScorecardTemplate: {
-      list: async () => mockScorecardTemplates,
+      list: async (includeVersions = false) => {
+        const url = includeVersions 
+          ? '/api/data/templates?include_versions=true'
+          : '/api/data/templates';
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch templates: ${response.statusText}`);
+        }
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
+      },
+      getCurrentICP: async () => {
+        const response = await fetch('/api/data/templates?is_default=true&is_current=true');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ICP template: ${response.statusText}`);
+        }
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+          return result.data[0];
+        }
+        return null;
+      },
+      getVersionHistory: async (templateId) => {
+        // Get all versions of a template by parent_template_id
+        const response = await fetch(`/api/data/templates?include_versions=true`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch template versions: ${response.statusText}`);
+        }
+        const result = await response.json();
+        if (result.success) {
+          // Find the current template to get parent_template_id
+          const current = result.data.find(t => t.id === templateId && t.is_current_version);
+          if (current) {
+            const parentId = current.parent_template_id || current.id;
+            return result.data.filter(t => 
+              (t.parent_template_id === parentId || t.id === parentId)
+            ).sort((a, b) => (b.version_number || 0) - (a.version_number || 0));
+          }
+        }
+        return [];
+      },
       create: async (data) => {
-        const newTemplate = { ...data, id: Date.now().toString() };
-        mockScorecardTemplates.push(newTemplate);
-        return newTemplate;
+        const response = await fetch('/api/data/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create template');
       },
       update: async (id, data) => {
-        const index = mockScorecardTemplates.findIndex(t => t.id === id);
-        if (index !== -1) {
-          mockScorecardTemplates[index] = { ...mockScorecardTemplates[index], ...data };
-          return mockScorecardTemplates[index];
-        }
-        return data;
+        const response = await fetch('/api/data/templates', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update template');
+      },
+      updateWithVersion: async (templateId, templateData) => {
+        const response = await fetch('/api/data/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: 'update_with_version', 
+            data: { templateId, templateData } 
+          })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update template version');
       },
     },
     ScorecardResponse: {

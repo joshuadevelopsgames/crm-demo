@@ -48,11 +48,11 @@ export default async function handler(req, res) {
       // Support filtering by account_id via query parameter
       const accountId = req.query.account_id;
       
-      // Validate account_id is a valid UUID if provided
-      if (accountId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)) {
+      // Validate account_id is provided and is a non-empty string
+      if (accountId && typeof accountId !== 'string') {
         return res.status(400).json({
           success: false,
-          error: 'Invalid account_id format. Must be a valid UUID.'
+          error: 'Invalid account_id format. Must be a string.'
         });
       }
 
@@ -107,15 +107,16 @@ export default async function handler(req, res) {
         // Create new scorecard response in Supabase
         const scorecardData = {
           ...data,
+          template_version_id: data.template_version_id || data.template_id, // Store version ID
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
         
-        // Ensure account_id is a valid UUID
-        if (scorecardData.account_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(scorecardData.account_id)) {
+        // Validate account_id is provided and is a non-empty string
+        if (scorecardData.account_id && typeof scorecardData.account_id !== 'string') {
           return res.status(400).json({
             success: false,
-            error: 'Invalid account_id format. Must be a valid UUID.'
+            error: 'Invalid account_id format. Must be a string.'
           });
         }
         

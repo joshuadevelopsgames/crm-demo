@@ -17,63 +17,24 @@ import { exportAndDownloadScorecard } from '../utils/exportToCSV';
 export default function TakeScorecard() {
   const urlParams = new URLSearchParams(window.location.search);
   const accountId = urlParams.get('accountId');
-  const templateId = urlParams.get('templateId');
-  const isCustom = urlParams.get('custom') === 'true';
-  const customName = urlParams.get('name') || '';
-  const customDescription = urlParams.get('description') || '';
-  const customTemplateParam = urlParams.get('customTemplate'); // For templates built in BuildScorecard
 
   const navigate = useNavigate();
   const [answers, setAnswers] = useState({});
   const [scorecardDate, setScorecardDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
 
-  // Parse custom template from URL if provided (from BuildScorecard)
-  const parsedCustomTemplate = useMemo(() => {
-    if (customTemplateParam) {
-      try {
-        return JSON.parse(decodeURIComponent(customTemplateParam));
-      } catch (e) {
-        console.error('Failed to parse custom template:', e);
-        return null;
-      }
-    }
-    return null;
-  }, [customTemplateParam]);
-
-  // For custom scorecards, create a simple template structure
-  const customTemplate = parsedCustomTemplate || (isCustom ? {
-    id: 'custom',
-    name: customName || 'Custom Scorecard',
-    description: customDescription,
-    questions: [], // Will be empty for now - can add question editor later
-    total_possible_score: 0,
-    pass_threshold: 70
-  } : null);
-
-  // If customTemplate is provided, we should use it (even if templateId is also provided)
-  // This handles the case where BuildScorecard modified a template
-  const shouldUseCustomTemplate = !!parsedCustomTemplate;
-
-  const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
-    queryKey: ['scorecard-template', templateId],
+  // Always use the current ICP template
+  const { data: activeTemplate, isLoading: templateLoading, error: templateError } = useQuery({
+    queryKey: ['icp-template'],
     queryFn: async () => {
-      const templates = await base44.entities.ScorecardTemplate.list();
-      console.log('🔍 Looking for template with ID:', templateId);
-      console.log('📋 Available templates:', templates.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
-      const found = templates.find(t => String(t.id) === String(templateId));
-      if (!found) {
-        console.warn(`⚠️ Template with ID "${templateId}" not found. Available template IDs:`, templates.map(t => t.id));
-      } else {
-        console.log('✅ Found template:', found.name);
+      const icpTemplate = await base44.entities.ScorecardTemplate.getCurrentICP();
+      if (!icpTemplate) {
+        throw new Error('ICP template not found. Please create an ICP template on the Scoring page.');
       }
-      return found;
+      return icpTemplate;
     },
-    enabled: !!templateId && !isCustom && !shouldUseCustomTemplate
+    enabled: !!accountId
   });
-
-  // Use custom template if provided (from BuildScorecard), otherwise use fetched template or custom
-  const activeTemplate = shouldUseCustomTemplate ? parsedCustomTemplate : (isCustom ? customTemplate : template);
 
   const { data: account, isLoading: accountLoading, error: accountError } = useQuery({
     queryKey: ['account', accountId],
@@ -125,10 +86,12 @@ export default function TakeScorecard() {
       });
       
       // Create scorecard response with section breakdown
+      // Store template_version_id to track which version of the ICP was used
       const scorecardResponse = await base44.entities.ScorecardResponse.create({
         account_id: accountId,
-        template_id: isCustom ? null : templateId,
-        template_name: isCustom ? (customName || 'Custom Scorecard') : activeTemplate?.name || 'Scorecard',
+        template_id: activeTemplate?.id || null,
+        template_version_id: activeTemplate?.id || null, // Store the version ID
+        template_name: activeTemplate?.name || 'ICP Scorecard',
         responses: data.responses || [],
         section_scores: data.section_scores || {},
         total_score: totalScore,
@@ -137,7 +100,7 @@ export default function TakeScorecard() {
         scorecard_date: scorecardDate,
         completed_by: user.email,
         completed_date: new Date().toISOString(),
-        scorecard_type: 'manual' // All scorecards are per-client (manual)
+        scorecard_type: 'manual'
       });
       console.log('✅ Scorecard response created:', scorecardResponse);
 
@@ -284,11 +247,38 @@ export default function TakeScorecard() {
   }
 
   // Check if account exists
-  if (!account) {
+  // Loading state
+  if (templateLoading || accountLoading) {
+    return (
+      <Card className="p-12 text-center">
+        <p className="text-slate-600">Loading scorecard...</p>
+      </Card>
+    );
+  }
+
+  // Error states
+  if (templateError) {
+    return (
+      <Card className="p-12 text-center">
+        <h3 className="text-lg font-medium text-slate-900 mb-1">ICP Template Not Found</h3>
+        <p className="text-slate-600 mb-4">{templateError.message || 'Please create an ICP template on the Scoring page.'}</p>
+        <div className="flex gap-2 justify-center">
+          <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
+            <Button variant="outline">Back to Account</Button>
+          </Link>
+          <Link to={createPageUrl('Scoring')}>
+            <Button>Go to Scoring Page</Button>
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  if (accountError || !account) {
     return (
       <Card className="p-12 text-center">
         <h3 className="text-lg font-medium text-slate-900 mb-1">Account not found</h3>
-        <p className="text-slate-600 mb-4">The account could not be found</p>
+        <p className="text-slate-600 mb-4">Unable to load the account</p>
         <Link to={createPageUrl('Accounts')}>
           <Button>Back to Accounts</Button>
         </Link>
@@ -296,36 +286,19 @@ export default function TakeScorecard() {
     );
   }
 
-  // Check if template exists (only if not custom and templateId is provided)
-  if (!isCustom && templateId && !template) {
+  if (!activeTemplate) {
     return (
       <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Scorecard template not found</h3>
-        <p className="text-slate-600 mb-4">
-          The template with ID "{templateId}" could not be found. It may have been deleted or the ID is incorrect.
-        </p>
+        <h3 className="text-lg font-medium text-slate-900 mb-1">ICP Template Not Found</h3>
+        <p className="text-slate-600 mb-4">Please create an ICP template on the Scoring page.</p>
         <div className="flex gap-2 justify-center">
           <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
             <Button variant="outline">Back to Account</Button>
           </Link>
           <Link to={createPageUrl('Scoring')}>
-            <Button>View Templates</Button>
+            <Button>Go to Scoring Page</Button>
           </Link>
         </div>
-      </Card>
-    );
-  }
-
-  // For custom scorecards, activeTemplate should exist (it's created inline)
-  // For template-based, we need activeTemplate to exist
-  if (!activeTemplate) {
-    return (
-      <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Scorecard not found</h3>
-        <p className="text-slate-600 mb-4">Unable to load the scorecard template</p>
-        <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
-          <Button>Back to Account</Button>
-        </Link>
       </Card>
     );
   }
@@ -430,14 +403,16 @@ export default function TakeScorecard() {
           {Object.keys(questionsBySection).length === 0 ? (
             <div className="p-12 text-center">
               <p className="text-slate-600 mb-4">
-                {isCustom 
-                  ? "Custom scorecards with editable questions are coming soon. For now, please use a template-based scorecard."
-                  : "No questions found in this scorecard template."
-                }
+                No questions found in this ICP template. Please add questions on the Scoring page.
               </p>
-              <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
-                <Button variant="outline">Back to Account</Button>
-              </Link>
+              <div className="flex gap-2 justify-center">
+                <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
+                  <Button variant="outline">Back to Account</Button>
+                </Link>
+                <Link to={createPageUrl('Scoring')}>
+                  <Button>Go to Scoring Page</Button>
+                </Link>
+              </div>
             </div>
           ) : (
             <>
