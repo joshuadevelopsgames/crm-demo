@@ -7,6 +7,7 @@ import TutorialBar from './components/TutorialBar';
 import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
+import ContactDetail from './pages/ContactDetail';
 import Contacts from './pages/Contacts';
 import Tasks from './pages/Tasks';
 import Sequences from './pages/Sequences';
@@ -42,6 +43,7 @@ function AppContent() {
     if (path === '/dashboard' || path === '/') return 'Dashboard';
     if (path === '/accounts') return 'Accounts';
     if (path === '/account-detail') return 'AccountDetail';
+    if (path === '/contact-detail') return 'ContactDetail';
     if (path === '/contacts') return 'Contacts';
     if (path === '/tasks') return 'Tasks';
     if (path === '/sequences') return 'Sequences';
@@ -70,6 +72,7 @@ function AppContent() {
               <Route path={createPageUrl('Dashboard')} element={<Dashboard />} />
               <Route path={createPageUrl('Accounts')} element={<Accounts />} />
               <Route path={createPageUrl('AccountDetail')} element={<AccountDetail />} />
+              <Route path={createPageUrl('ContactDetail')} element={<ContactDetail />} />
               <Route path={createPageUrl('Contacts')} element={<Contacts />} />
               <Route path={createPageUrl('Tasks')} element={<Tasks />} />
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />

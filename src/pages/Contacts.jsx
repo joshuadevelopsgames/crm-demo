@@ -239,7 +239,7 @@ export default function Contacts() {
                       <tr 
                         key={contact.id}
                         className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
-                        onClick={() => navigate(createPageUrl(`AccountDetail?id=${contact.account_id}`))}
+                        onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -324,7 +324,7 @@ export default function Contacts() {
                 <Card 
                   key={contact.id} 
                   className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
-                  onClick={() => contact.account_id && navigate(createPageUrl(`AccountDetail?id=${contact.account_id}`))}
+                  onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
                     <div className="space-y-4">
@@ -524,7 +524,7 @@ export default function Contacts() {
                       <tr 
                         key={contact.id}
                         className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
-                        onClick={() => navigate(createPageUrl(`AccountDetail?id=${contact.account_id}`))}
+                        onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -609,7 +609,7 @@ export default function Contacts() {
                 <Card 
                   key={contact.id} 
                   className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
-                  onClick={() => contact.account_id && navigate(createPageUrl(`AccountDetail?id=${contact.account_id}`))}
+                  onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
                     <div className="space-y-4">
