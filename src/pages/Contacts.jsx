@@ -224,10 +224,10 @@ export default function Contacts() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-1 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-1 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
@@ -283,7 +283,7 @@ export default function Contacts() {
                             {contact.role ? contact.role.replace('_', ' ') : 'user'}
                           </Badge>
                         </td>
-                        <td className="px-1 py-4">
+                        <td className="px-0.5 py-4">
                           <a 
                             href={`mailto:${contact.email}`}
                             onClick={(e) => e.stopPropagation()}
@@ -292,7 +292,7 @@ export default function Contacts() {
                             {contact.email}
                           </a>
                         </td>
-                        <td className="px-1 py-4">
+                        <td className="px-0.5 py-4">
                           {contact.phone ? (
                             <a 
                               href={`tel:${contact.phone}`}
@@ -509,10 +509,10 @@ export default function Contacts() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-1 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-1 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
@@ -568,7 +568,7 @@ export default function Contacts() {
                             {contact.role ? contact.role.replace('_', ' ') : 'user'}
                           </Badge>
                         </td>
-                        <td className="px-1 py-4">
+                        <td className="px-0.5 py-4">
                           <a 
                             href={`mailto:${contact.email}`}
                             onClick={(e) => e.stopPropagation()}
@@ -577,7 +577,7 @@ export default function Contacts() {
                             {contact.email}
                           </a>
                         </td>
-                        <td className="px-1 py-4">
+                        <td className="px-0.5 py-4">
                           {contact.phone ? (
                             <a 
                               href={`tel:${contact.phone}`}
