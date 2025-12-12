@@ -441,6 +441,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
               data: { contacts: mergedData.contacts, lookupField: 'lmn_contact_id' } 
             })
           });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+          
           const result = await response.json();
           if (result.success) {
             results.contactsCreated = result.created;
@@ -452,31 +458,56 @@ export default function ImportLeadsDialog({ open, onClose }) {
         } catch (err) {
           results.contactsFailed = mergedData.contacts.length;
           results.errors.push(`Contacts bulk import: ${err.message}`);
+          console.error('Contacts import error:', err);
         }
       }
 
       // Import/Update estimates using bulk upsert
+      // Split into smaller chunks to avoid 413 (Content Too Large) errors
       if (mergedData.estimates && mergedData.estimates.length > 0) {
         try {
-          const response = await fetch('/api/data/estimates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              action: 'bulk_upsert', 
-              data: { estimates: mergedData.estimates, lookupField: 'lmn_estimate_id' } 
-            })
-          });
-          const result = await response.json();
-          if (result.success) {
-            results.estimatesCreated = result.created;
-            results.estimatesUpdated = result.updated;
-            console.log(`✅ Bulk imported ${result.total} estimates (${result.created} created, ${result.updated} updated)`);
-          } else {
-            throw new Error(result.error || 'Bulk import failed');
+          const CHUNK_SIZE = 500; // Process 500 at a time to avoid payload size limits
+          let totalCreated = 0;
+          let totalUpdated = 0;
+          
+          for (let i = 0; i < mergedData.estimates.length; i += CHUNK_SIZE) {
+            const chunk = mergedData.estimates.slice(i, i + CHUNK_SIZE);
+            const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+            const totalChunks = Math.ceil(mergedData.estimates.length / CHUNK_SIZE);
+            
+            console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
+            
+            const response = await fetch('/api/data/estimates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                action: 'bulk_upsert', 
+                data: { estimates: chunk, lookupField: 'lmn_estimate_id' } 
+              })
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const result = await response.json();
+            if (result.success) {
+              totalCreated += result.created;
+              totalUpdated += result.updated;
+              console.log(`✅ Chunk ${chunkNum}: ${result.created} created, ${result.updated} updated`);
+            } else {
+              throw new Error(result.error || 'Bulk import failed');
+            }
           }
+          
+          results.estimatesCreated = totalCreated;
+          results.estimatesUpdated = totalUpdated;
+          console.log(`✅ Bulk imported ${mergedData.estimates.length} estimates (${totalCreated} created, ${totalUpdated} updated)`);
         } catch (err) {
           results.estimatesFailed = mergedData.estimates.length;
           results.errors.push(`Estimates bulk import: ${err.message}`);
+          console.error('Estimates import error:', err);
         }
       }
 
@@ -491,6 +522,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
               data: { jobsites: mergedData.jobsites, lookupField: 'lmn_jobsite_id' } 
             })
           });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+          
           const result = await response.json();
           if (result.success) {
             results.jobsitesCreated = result.created;
@@ -502,6 +539,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
         } catch (err) {
           results.jobsitesFailed = mergedData.jobsites.length;
           results.errors.push(`Jobsites bulk import: ${err.message}`);
+          console.error('Jobsites import error:', err);
         }
       }
 

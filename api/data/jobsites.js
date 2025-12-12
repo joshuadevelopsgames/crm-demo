@@ -153,15 +153,29 @@ export default async function handler(req, res) {
           
           batch.forEach(jobsite => {
             // Remove id if it's not a valid UUID - let Supabase generate it
-            const { id, ...jobsiteWithoutId } = jobsite;
+            const { id, account_id, contact_id, ...jobsiteWithoutIds } = jobsite;
             const jobsiteData = {
-              ...jobsiteWithoutId,
+              ...jobsiteWithoutIds,
               updated_at: new Date().toISOString()
             };
             
             // Only include id if it's a valid UUID format
             if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
               jobsiteData.id = id;
+            }
+            
+            // Only include account_id if it's a valid UUID format (foreign key constraint)
+            if (account_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(account_id)) {
+              jobsiteData.account_id = account_id;
+            } else {
+              jobsiteData.account_id = null;
+            }
+            
+            // Only include contact_id if it's a valid UUID format (foreign key constraint)
+            if (contact_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contact_id)) {
+              jobsiteData.contact_id = contact_id;
+            } else {
+              jobsiteData.contact_id = null;
             }
             
             const lookupValue = jobsite[lookupField];
