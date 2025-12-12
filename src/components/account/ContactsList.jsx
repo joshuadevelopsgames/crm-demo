@@ -366,20 +366,20 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                       <div className="flex-1 min-w-0">
                         <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
                           {fullName || 'Unnamed Contact'}
-                        </h4>
+                    </h4>
                         {contact.title && (
                           <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                             {contact.title}
                           </p>
                         )}
                       </div>
-                      {isArchived && (
+                    {isArchived && (
                         <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300 flex-shrink-0">
-                          <Archive className="w-3 h-3 mr-1" />
-                          Archived
-                        </Badge>
-                      )}
-                    </div>
+                        <Archive className="w-3 h-3 mr-1" />
+                        Archived
+                      </Badge>
+                    )}
+                  </div>
                   </div>
                 </div>
 

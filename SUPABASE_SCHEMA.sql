@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   created_date timestamptz,
   last_interaction_date timestamptz,
   renewal_date timestamptz,
+  snoozed_until timestamptz,
   archived boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

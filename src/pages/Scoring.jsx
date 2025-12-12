@@ -116,10 +116,10 @@ export default function Scoring() {
         });
       } else {
         // Regular update for non-ICP templates
-        return base44.entities.ScorecardTemplate.update(id, {
-          ...data,
-          total_possible_score: totalScore
-        });
+      return base44.entities.ScorecardTemplate.update(id, {
+        ...data,
+        total_possible_score: totalScore
+      });
       }
     },
     onSuccess: () => {
@@ -278,17 +278,17 @@ export default function Scoring() {
               </Button>
             )}
             {icpTemplate && (
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
                   <Button 
                     className="bg-slate-900 hover:bg-slate-800" 
                     onClick={() => openEditDialog(icpTemplate)}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Manage ICP Template
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? 'Edit ICP Template' : 'Create ICP Template'}</DialogTitle>
             </DialogHeader>
@@ -511,9 +511,9 @@ export default function Scoring() {
                     {Array.from(new Set(icpTemplate.questions.map(q => q.section).filter(Boolean))).map((section, i) => {
                       const sectionQuestions = icpTemplate.questions.filter(q => q.section === section);
                       return (
-                        <Badge key={i} variant="outline" className="text-xs">
+                      <Badge key={i} variant="outline" className="text-xs">
                           {section} ({sectionQuestions.length})
-                        </Badge>
+                      </Badge>
                       );
                     })}
                   </div>
@@ -560,10 +560,10 @@ export default function Scoring() {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+        ))}
+      </div>
               </CardContent>
-            </Card>
+        </Card>
           )}
         </div>
       )}

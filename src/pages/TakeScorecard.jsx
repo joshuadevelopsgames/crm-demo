@@ -150,7 +150,7 @@ export default function TakeScorecard() {
       } catch (navError) {
         console.error('Navigation error:', navError);
         // Fallback to window.location
-        window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
+      window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
       }
     },
     onError: (error) => {
@@ -266,7 +266,7 @@ export default function TakeScorecard() {
           <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
             <Button variant="outline">Back to Account</Button>
           </Link>
-          <Link to={createPageUrl('Scoring')}>
+        <Link to={createPageUrl('Scoring')}>
             <Button>Go to Scoring Page</Button>
           </Link>
         </div>
@@ -416,7 +416,7 @@ export default function TakeScorecard() {
             </div>
           ) : (
             <>
-              {Object.entries(questionsBySection).map(([section, questions]) => {
+          {Object.entries(questionsBySection).map(([section, questions]) => {
             const sectionScore = scoreData.section_scores[section] || 0;
             const sectionAnswered = questions.every(q => answers[q.originalIndex] !== undefined);
             

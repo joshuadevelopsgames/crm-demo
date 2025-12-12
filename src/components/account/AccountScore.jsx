@@ -102,24 +102,24 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
           </Card>
         ) : (
           <Card>
-            <CardContent className="p-5">
+                <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <div>
+                    <div>
                   <h4 className="font-semibold text-slate-900">{icpTemplate.name}</h4>
                   <p className="text-sm text-slate-600 mt-1">{icpTemplate.description || 'Ideal Customer Profile scoring'}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     Version {icpTemplate.version_number || 1} • {icpTemplate.questions?.length || 0} questions
                   </p>
-                </div>
+                    </div>
                 <Link to={createPageUrl(`TakeScorecard?accountId=${accountId}`)}>
                   <Button>
                     <FileText className="w-4 h-4 mr-2" />
                     Complete ICP Scorecard
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
         )}
       </div>
 
@@ -197,13 +197,13 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                         )}
                         {scorecard.section_scores && Object.keys(scorecard.section_scores).length > 0 && (
                           <>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {Object.entries(scorecard.section_scores).map(([section, score]) => (
-                                <Badge key={section} variant="outline" className="text-xs">
-                                  {section}: {score}
-                                </Badge>
-                              ))}
-                            </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {Object.entries(scorecard.section_scores).map(([section, score]) => (
+                              <Badge key={section} variant="outline" className="text-xs">
+                                {section}: {score}
+                              </Badge>
+                            ))}
+                          </div>
                             <Button
                               variant="ghost"
                               size="sm"

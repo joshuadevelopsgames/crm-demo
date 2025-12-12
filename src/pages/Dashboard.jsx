@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +16,14 @@ import {
   TrendingUp,
   Calendar,
   ArrowRight,
-  Clock
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list()
@@ -45,8 +49,20 @@ export default function Dashboard() {
   const atRiskAccounts = accounts.filter(a => a.status === 'at_risk').length;
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
   
-  // Neglected accounts (no interaction in 30+ days)
+  // Neglected accounts (no interaction in 30+ days, not snoozed)
   const neglectedAccounts = accounts.filter(account => {
+    // Skip archived accounts
+    if (account.archived) return false;
+    
+    // Skip if snoozed
+    if (account.snoozed_until) {
+      const snoozeDate = new Date(account.snoozed_until);
+      if (snoozeDate > new Date()) {
+        return false; // Still snoozed
+      }
+    }
+    
+    // Check if no interaction in 30+ days
     if (!account.last_interaction_date) return true;
     const daysSince = differenceInDays(new Date(), new Date(account.last_interaction_date));
     return daysSince > 30;
@@ -141,20 +157,36 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Neglected Accounts */}
         <TutorialTooltip
-          tip="Accounts here haven't been contacted in 30+ days. Click any account name to view details, log interactions, or update contact information. This helps you identify accounts that need attention."
+          tip="Accounts here haven't been contacted in 30+ days. Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
           step={1}
           position="bottom"
         >
           <Card className="border-amber-200 bg-amber-50/50">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                >
                   <Clock className="w-5 h-5 text-amber-600" />
                   Neglected Accounts
                 </CardTitle>
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                  {neglectedAccounts.length}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                    {neglectedAccounts.length}
+                  </Badge>
+                  {neglectedAccounts.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
           <CardContent>
@@ -179,6 +211,16 @@ export default function Dashboard() {
               ))}
               {neglectedAccounts.length === 0 && (
                 <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
+              )}
+              {neglectedAccounts.length > 5 && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-amber-200 text-amber-700 hover:bg-amber-50"
+                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                >
+                  View All {neglectedAccounts.length} Accounts
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
               )}
             </div>
           </CardContent>

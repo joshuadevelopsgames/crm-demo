@@ -278,3 +278,5 @@ Your data will be **permanently stored** in Supabase and will persist across:
 
 **Everything is ready - just need to create the tables and add the env vars!**
 
+
+

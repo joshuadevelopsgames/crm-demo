@@ -9,6 +9,7 @@ import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
 import ContactDetail from './pages/ContactDetail';
 import Contacts from './pages/Contacts';
+import NeglectedAccounts from './pages/NeglectedAccounts';
 import Tasks from './pages/Tasks';
 import Sequences from './pages/Sequences';
 import Scoring from './pages/Scoring';
@@ -45,6 +46,7 @@ function AppContent() {
     if (path === '/account-detail') return 'AccountDetail';
     if (path === '/contact-detail') return 'ContactDetail';
     if (path === '/contacts') return 'Contacts';
+    if (path === '/neglected-accounts') return 'NeglectedAccounts';
     if (path === '/tasks') return 'Tasks';
     if (path === '/sequences') return 'Sequences';
     if (path === '/scoring') return 'Scoring';
@@ -74,6 +76,7 @@ function AppContent() {
               <Route path={createPageUrl('AccountDetail')} element={<AccountDetail />} />
               <Route path={createPageUrl('ContactDetail')} element={<ContactDetail />} />
               <Route path={createPageUrl('Contacts')} element={<Contacts />} />
+              <Route path={createPageUrl('NeglectedAccounts')} element={<NeglectedAccounts />} />
               <Route path={createPageUrl('Tasks')} element={<Tasks />} />
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />
               <Route path={createPageUrl('Scoring')} element={<Scoring />} />

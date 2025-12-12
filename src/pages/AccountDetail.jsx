@@ -17,7 +17,8 @@ import {
   Edit,
   FileText,
   Lightbulb,
-  BookOpen
+  BookOpen,
+  BellOff
 } from 'lucide-react';
 import { format } from 'date-fns';
 import InteractionTimeline from '../components/account/InteractionTimeline';
@@ -38,12 +39,14 @@ import AddInteractionDialog from '../components/account/AddInteractionDialog';
 import EditAccountDialog from '../components/account/EditAccountDialog';
 import TutorialTooltip from '../components/TutorialTooltip';
 import GmailConnection from '../components/GmailConnection';
+import SnoozeDialog from '../components/SnoozeDialog';
 
 export default function AccountDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const accountId = urlParams.get('id');
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showEditAccount, setShowEditAccount] = useState(false);
+  const [showSnoozeDialog, setShowSnoozeDialog] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -188,6 +191,19 @@ export default function AccountDetail() {
           </div>
         </div>
         <div className="flex gap-3">
+          {account.snoozed_until && new Date(account.snoozed_until) > new Date() && (
+            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+              Snoozed until {format(new Date(account.snoozed_until), 'MMM d, yyyy')}
+            </Badge>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => setShowSnoozeDialog(true)}
+            className="text-amber-700 hover:text-amber-900 hover:bg-amber-50"
+          >
+            <BellOff className="w-4 h-4 mr-2" />
+            Snooze
+          </Button>
           <Button variant="outline" onClick={() => setShowEditAccount(true)}>
             <Edit className="w-4 h-4 mr-2" />
             Edit
@@ -409,6 +425,42 @@ export default function AccountDetail() {
         onClose={() => setShowEditAccount(false)}
         account={account}
       />
+
+      {/* Snooze Dialog */}
+      {showSnoozeDialog && (
+        <SnoozeDialog
+          account={account}
+          open={showSnoozeDialog}
+          onOpenChange={setShowSnoozeDialog}
+          onSnooze={(account, duration, unit) => {
+            const now = new Date();
+            let snoozedUntil;
+            
+            switch (unit) {
+              case 'days':
+                snoozedUntil = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+                break;
+              case 'weeks':
+                snoozedUntil = new Date(now.getTime() + duration * 7 * 24 * 60 * 60 * 1000);
+                break;
+              case 'months':
+                snoozedUntil = new Date(now.getFullYear(), now.getMonth() + duration, now.getDate());
+                break;
+              case 'years':
+                snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
+                break;
+              default:
+                return;
+            }
+            
+            updateAccountMutation.mutate({
+              id: account.id,
+              snoozed_until: snoozedUntil.toISOString()
+            });
+            setShowSnoozeDialog(false);
+          }}
+        />
+      )}
       </TutorialTooltip>
     </div>
   );

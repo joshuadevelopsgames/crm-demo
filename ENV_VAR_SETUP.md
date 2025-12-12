@@ -135,3 +135,5 @@ If you want to add the same variable to multiple projects quickly:
 **Note:** Vercel doesn't have a "copy env vars between projects" feature, so you'll need to add it manually to each project.
 
 
+
+
