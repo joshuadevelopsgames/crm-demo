@@ -259,7 +259,8 @@ export default function TakeScorecard() {
   const passThreshold = activeTemplate?.pass_threshold || 70;
 
   // Show loading state while fetching
-  if ((templateLoading && !isCustom) || accountLoading) {
+  // Only show loading if we're actually fetching a template (not using customTemplate)
+  if ((templateLoading && !isCustom && !shouldUseCustomTemplate) || accountLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
