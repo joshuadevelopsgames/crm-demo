@@ -258,7 +258,7 @@ export default function BuildScorecard() {
         </div>
         <Button 
           onClick={() => saveAndContinueMutation.mutate()}
-          disabled={questions.length === 0 || saveAndContinueMutation.isLoading}
+          disabled={!Array.isArray(questions) || questions.length === 0 || saveAndContinueMutation.isLoading}
           size="lg"
         >
           <Save className="w-4 h-4 mr-2" />
@@ -294,7 +294,7 @@ export default function BuildScorecard() {
 
       {/* Questions by Section */}
       <div className="space-y-6">
-        {Object.entries(questionsBySection).map(([section, sectionQuestions]) => (
+        {questionsBySection && typeof questionsBySection === 'object' && Object.entries(questionsBySection).map(([section, sectionQuestions]) => (
           <Card key={section}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
