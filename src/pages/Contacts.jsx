@@ -283,7 +283,7 @@ export default function Contacts() {
                             {contact.role ? contact.role.replace('_', ' ') : 'user'}
                           </Badge>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-2 py-4">
                           <a 
                             href={`mailto:${contact.email}`}
                             onClick={(e) => e.stopPropagation()}
@@ -292,7 +292,7 @@ export default function Contacts() {
                             {contact.email}
                           </a>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-2 py-4">
                           {contact.phone ? (
                             <a 
                               href={`tel:${contact.phone}`}
@@ -568,7 +568,7 @@ export default function Contacts() {
                             {contact.role ? contact.role.replace('_', ' ') : 'user'}
                           </Badge>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-2 py-4">
                           <a 
                             href={`mailto:${contact.email}`}
                             onClick={(e) => e.stopPropagation()}
@@ -577,7 +577,7 @@ export default function Contacts() {
                             {contact.email}
                           </a>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-2 py-4">
                           {contact.phone ? (
                             <a 
                               href={`tel:${contact.phone}`}
