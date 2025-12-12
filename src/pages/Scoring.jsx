@@ -32,6 +32,7 @@ import {
 import TutorialTooltip from '../components/TutorialTooltip';
 import { parseScorecardTemplateFromSheet } from '@/services/googleSheetsService';
 import { Download } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function Scoring() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function Scoring() {
       return base44.entities.ScorecardTemplate.create({
         ...data,
         total_possible_score: totalScore,
-        is_default: data.is_default || false, // Allow marking as ICP template
+        is_default: true, // Always mark as ICP template
         version_number: 1,
         is_current_version: true
       });
@@ -159,9 +160,10 @@ export default function Scoring() {
 
   const resetForm = () => {
     setNewTemplate({
-      name: '',
-      description: '',
+      name: 'ICP Weighted Scorecard',
+      description: 'Ideal Customer Profile scoring based on weighted questions',
       is_active: true,
+      is_default: true,
       pass_threshold: 70,
       questions: [
         { question_text: '', weight: 5, answer_type: 'scale_1_5', category: '', section: '' }
@@ -216,47 +218,53 @@ export default function Scoring() {
     setNewTemplate({ ...newTemplate, questions: updatedQuestions });
   };
 
-  // Auto-import default template on first load if it doesn't exist
+  // Auto-import ICP template on first load if it doesn't exist
   useEffect(() => {
-    if (!templatesLoading && templates.length === 0 && !isImporting && importTemplateMutation) {
-      // No templates exist, try to import from Google Sheet
-      console.log('📥 No templates found, attempting to import template from Google Sheet...');
+    if (!icpLoading && !icpTemplate && !isImporting && importTemplateMutation) {
+      // No ICP template exists, try to import from Google Sheet
+      console.log('📥 No ICP template found, attempting to import from Google Sheet...');
       importTemplateMutation.mutate();
     }
-  }, [templatesLoading, templates.length, isImporting, importTemplateMutation]);
+  }, [icpLoading, icpTemplate, isImporting, importTemplateMutation]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Scoring Templates page. Create weighted questionnaires (scorecards) to evaluate accounts. Questions can be grouped by sections and each question has a weight that contributes to the overall score."
+        tip="This is your ICP Template management page. Edit the Ideal Customer Profile scorecard template that all accounts use. When you update the template, a new version is created to preserve history."
         step={4}
         position="bottom"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Scoring Templates</h1>
-            <p className="text-slate-600 mt-1">Create weighted questionnaires to score accounts</p>
+            <h1 className="text-3xl font-bold text-slate-900">ICP Template</h1>
+            <p className="text-slate-600 mt-1">Manage the Ideal Customer Profile scorecard template</p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => importTemplateMutation.mutate()}
-              disabled={isImporting}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {isImporting ? 'Importing...' : 'Import ICP Template'}
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-slate-800" onClick={resetForm}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Template
-            </Button>
-          </DialogTrigger>
+            {!icpTemplate && (
+              <Button 
+                variant="outline" 
+                onClick={() => importTemplateMutation.mutate()}
+                disabled={isImporting}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {isImporting ? 'Importing...' : 'Import ICP Template'}
+              </Button>
+            )}
+            {icpTemplate && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-slate-900 hover:bg-slate-800" 
+                    onClick={() => openEditDialog(icpTemplate)}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Manage ICP Template
+                  </Button>
+                </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingTemplate ? 'Edit Template' : 'Create Scoring Template'}</DialogTitle>
+              <DialogTitle>{editingTemplate ? 'Edit ICP Template' : 'Create ICP Template'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-6 py-4">
               <div className="space-y-4">
@@ -290,18 +298,17 @@ export default function Scoring() {
                   <p className="text-xs text-slate-500 mt-1">Scores at or above this will be marked as PASS</p>
                 </div>
                 {!editingTemplate && (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is_default"
-                      checked={newTemplate.is_default || false}
-                      onChange={(e) => setNewTemplate({ ...newTemplate, is_default: e.target.checked })}
-                      className="rounded border-slate-300"
-                    />
-                    <Label htmlFor="is_default" className="text-sm font-normal cursor-pointer">
-                      Mark as ICP Template (Ideal Customer Profile)
-                    </Label>
-                    <p className="text-xs text-slate-500">Only one template should be marked as ICP</p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm text-blue-800">
+                      This will create the ICP template that all accounts will use for scoring.
+                    </p>
+                  </div>
+                )}
+                {editingTemplate && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+                    <p className="text-sm text-amber-800">
+                      ⚠️ Updating the ICP template will create a new version. Previous scorecards will retain their original template version.
+                    </p>
                   </div>
                 )}
               </div>
@@ -405,7 +412,7 @@ export default function Scoring() {
                   onClick={handleCreateOrUpdate}
                   disabled={!newTemplate.name || newTemplate.questions.some(q => !q.question_text)}
                 >
-                  {editingTemplate ? 'Update Template' : 'Create Template'}
+                  {editingTemplate ? 'Update ICP Template' : 'Create ICP Template'}
                 </Button>
               </div>
             </div>
@@ -415,98 +422,125 @@ export default function Scoring() {
         </div>
       </TutorialTooltip>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {templates.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
+      {/* ICP Template Display */}
+      {icpLoading ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-slate-600">Loading ICP template...</p>
+          </CardContent>
+        </Card>
+      ) : !icpTemplate ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
+            <p className="text-slate-600 mb-4">Import or create an ICP template to start scoring accounts</p>
+            <Button 
+              variant="outline" 
+              onClick={() => importTemplateMutation.mutate()}
+              disabled={isImporting}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isImporting ? 'Importing...' : 'Import ICP Template'}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Current ICP Template */}
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+            <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  {template.description && (
-                    <p className="text-sm text-slate-600 mt-1">{template.description}</p>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Award className="w-5 h-5 text-emerald-600" />
+                    {icpTemplate.name}
+                  </CardTitle>
+                  {icpTemplate.description && (
+                    <p className="text-sm text-slate-600 mt-2">{icpTemplate.description}</p>
                   )}
                 </div>
-                <Badge variant={template.is_active ? "default" : "secondary"}>
-                  {template.is_active ? 'Active' : 'Inactive'}
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                  Version {icpTemplate.version_number || 1} (Current)
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4 text-sm text-slate-600">
                 <Badge variant="outline">
-                  {template.questions?.length || 0} questions
+                  {icpTemplate.questions?.length || 0} questions
                 </Badge>
                 <span>•</span>
-                <span>Max score: {template.total_possible_score || 0}</span>
+                <span>Max score: {icpTemplate.total_possible_score || 0}</span>
+                <span>•</span>
+                <span>Pass threshold: {icpTemplate.pass_threshold || 70}</span>
               </div>
 
-              {/* Question Categories Summary */}
-              {template.questions && template.questions.length > 0 && (
-                <div className="pt-3 border-t border-slate-100">
-                  <p className="text-xs text-slate-500 mb-2">Question breakdown:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {Array.from(new Set(template.questions.map(q => q.category).filter(Boolean))).map((category, i) => (
-                      <Badge key={i} variant="outline" className="text-xs">
-                        {category}
-                      </Badge>
-                    ))}
-                    {template.questions.filter(q => !q.category).length > 0 && (
-                      <Badge variant="outline" className="text-xs">
-                        {template.questions.filter(q => !q.category).length} uncategorized
-                      </Badge>
-                    )}
+              {/* Question Sections Summary */}
+              {icpTemplate.questions && icpTemplate.questions.length > 0 && (
+                <div className="pt-3 border-t border-slate-200">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">Question Sections:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(icpTemplate.questions.map(q => q.section).filter(Boolean))).map((section, i) => {
+                      const sectionQuestions = icpTemplate.questions.filter(q => q.section === section);
+                      return (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {section} ({sectionQuestions.length})
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="pt-2">
                 <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => openEditDialog(template)}
+                  onClick={() => openEditDialog(icpTemplate)}
+                  className="w-full sm:w-auto"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggleActiveMutation.mutate({ id: template.id, isActive: template.is_active })}
-                >
-                  {template.is_active ? (
-                    <>
-                      <EyeOff className="w-4 h-4 mr-2" />
-                      Deactivate
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Activate
-                    </>
-                  )}
+                  Manage ICP Template
                 </Button>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {/* Auto-scoring progress */}
-
-      {templates.length === 0 && (
-        <Card className="p-12 text-center">
-          <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No scoring templates yet</h3>
-          <p className="text-slate-600 mb-4">
-            Create weighted questionnaires to generate organization scores
-          </p>
-          <p className="text-sm text-slate-500 max-w-md mx-auto">
-            Templates can have 25+ questions with different weights to calculate a comprehensive score from 0-100
-          </p>
-        </Card>
+          {/* Version History */}
+          {icpVersionHistory.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Version History</CardTitle>
+                <p className="text-sm text-slate-600 mt-1">Previous versions of the ICP template</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {icpVersionHistory.filter(v => !v.is_current_version).map((version) => (
+                    <div key={version.id} className="p-4 border border-slate-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">Version {version.version_number}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {format(new Date(version.created_at), 'MMM d, yyyy')}
+                            </Badge>
+                          </div>
+                          {version.description && (
+                            <p className="text-sm text-slate-600 mt-1">{version.description}</p>
+                          )}
+                          <p className="text-xs text-slate-500 mt-1">
+                            {version.questions?.length || 0} questions • Max score: {version.total_possible_score || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
+
     </div>
   );
 }
