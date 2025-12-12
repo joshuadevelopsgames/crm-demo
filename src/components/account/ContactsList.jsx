@@ -344,57 +344,83 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredContacts.map((contact) => {
           const isArchived = contact.status === 'archived' || contact.archived === true;
+          const initials = `${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase();
+          const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+          
           return (
-          <Card key={contact.id} className={`hover:shadow-md transition-shadow ${isArchived ? 'bg-slate-50' : ''}`}>
+          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}>
             <CardContent className="p-5">
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
-                      {contact.first_name} {contact.last_name}
-                    </h4>
-                    {isArchived && (
-                      <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
-                        <Archive className="w-3 h-3 mr-1" />
-                        Archived
-                      </Badge>
-                    )}
+              <div className="space-y-4">
+                {/* Header with Avatar */}
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold text-lg ${
+                    isArchived ? 'bg-slate-400' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                  }`}>
+                    {initials || <Users className="w-6 h-6" />}
                   </div>
-                  {contact.title && (
-                    <p className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>{contact.title}</p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                          {fullName || 'Unnamed Contact'}
+                        </h4>
+                        {contact.title && (
+                          <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {contact.title}
+                          </p>
+                        )}
+                      </div>
+                      {isArchived && (
+                        <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300 flex-shrink-0">
+                          <Archive className="w-3 h-3 mr-1" />
+                          Archived
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''}`}>
+                {/* Role Badge */}
+                <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''} w-fit`}>
                   {contact.role ? contact.role.replace('_', ' ') : 'user'}
                 </Badge>
 
-                <div className={`space-y-2 text-sm`}>
-                  <div className={`flex items-center gap-2 ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${contact.email}`} className={isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600'}>
+                {/* Contact Info */}
+                <div className={`space-y-2 pt-2 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
+                  <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <Mail className="w-4 h-4 flex-shrink-0" />
+                    <a 
+                      href={`mailto:${contact.email}`} 
+                      className={`truncate ${isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600 transition-colors'}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {contact.email}
                     </a>
                   </div>
                   {contact.phone && (
-                    <div className={`flex items-center gap-2 ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                      <Phone className="w-4 h-4" />
-                      <a href={`tel:${contact.phone}`} className={isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600'}>
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <Phone className="w-4 h-4 flex-shrink-0" />
+                      <a 
+                        href={`tel:${contact.phone}`} 
+                        className={`truncate ${isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600 transition-colors'}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {contact.phone}
                       </a>
                     </div>
                   )}
                   {contact.linkedin_url && (
-                    <div className={`flex items-center gap-2 ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                      <Linkedin className="w-4 h-4" />
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <Linkedin className="w-4 h-4 flex-shrink-0" />
                       <a 
                         href={contact.linkedin_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className={isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600'}
+                        className={`truncate ${isArchived ? 'hover:text-slate-600' : 'hover:text-blue-600 transition-colors'}`}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         LinkedIn Profile
                       </a>
@@ -402,10 +428,13 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   )}
                 </div>
 
+                {/* Preferences/Notes */}
                 {contact.preferences && (
                   <div className={`pt-3 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
-                    <p className={`text-xs mb-1 ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>Preferences:</p>
-                    <p className={`text-sm ${isArchived ? 'text-slate-500' : 'text-slate-700'}`}>{contact.preferences}</p>
+                    <p className={`text-xs mb-1 font-medium ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>Notes:</p>
+                    <p className={`text-sm line-clamp-2 ${isArchived ? 'text-slate-500' : 'text-slate-700'}`}>
+                      {contact.preferences}
+                    </p>
                   </div>
                 )}
               </div>
