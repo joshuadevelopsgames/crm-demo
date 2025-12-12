@@ -224,10 +224,10 @@ export default function Contacts() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
@@ -509,10 +509,10 @@ export default function Contacts() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
