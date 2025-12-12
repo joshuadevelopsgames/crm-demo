@@ -93,8 +93,10 @@ export default async function handler(req, res) {
       
       if (action === 'create') {
         // Create new template
+        // Remove 'sections' field as it's not in the database schema
+        const { sections, ...templateDataWithoutSections } = data;
         const templateData = {
-          ...data,
+          ...templateDataWithoutSections,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -145,11 +147,13 @@ export default async function handler(req, res) {
           .eq('id', templateId);
         
         // Create new version
+        // Remove 'sections' field as it's not in the database schema
+        const { sections, ...templateDataWithoutSections } = templateData;
         const newVersionNumber = (currentTemplate.version_number || 1) + 1;
         const parentId = currentTemplate.parent_template_id || currentTemplate.id;
         
         const newVersion = {
-          ...templateData,
+          ...templateDataWithoutSections,
           name: currentTemplate.name, // Keep same name
           is_default: currentTemplate.is_default,
           version_number: newVersionNumber,
@@ -188,12 +192,13 @@ export default async function handler(req, res) {
     
     if (req.method === 'PUT') {
       // Update template (simple update, no versioning)
-      const { id, ...updateData } = req.body;
-      updateData.updated_at = new Date().toISOString();
+      const { id, sections, ...updateDataWithoutSections } = req.body;
+      // Remove 'sections' field as it's not in the database schema
+      updateDataWithoutSections.updated_at = new Date().toISOString();
       
       const { data: updated, error } = await supabase
         .from('scorecard_templates')
-        .update(updateData)
+        .update(updateDataWithoutSections)
         .eq('id', id)
         .select()
         .single();
