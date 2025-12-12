@@ -150,8 +150,24 @@ export default async function handler(req, res) {
           
           const toInsert = [];
           const toUpdate = [];
+          const seenInBatch = new Set(); // Track duplicates within batch
           
           batch.forEach(contact => {
+            const lookupValue = contact[lookupField];
+            
+            // Skip if no lookup value (can't match duplicates)
+            if (!lookupValue) {
+              console.warn(`Skipping contact without ${lookupField}:`, contact.email || contact.first_name || contact.id);
+              return;
+            }
+            
+            // Skip if we've already seen this lookup value in this batch (duplicate in same batch)
+            if (seenInBatch.has(lookupValue)) {
+              console.warn(`Skipping duplicate ${lookupField} in batch:`, lookupValue);
+              return;
+            }
+            seenInBatch.add(lookupValue);
+            
             // Remove id if it's not a valid UUID - let Supabase generate it
             const { id, account_id, ...contactWithoutIds } = contact;
             const contactData = {
@@ -172,8 +188,7 @@ export default async function handler(req, res) {
               contactData.account_id = null;
             }
             
-            const lookupValue = contact[lookupField];
-            if (lookupValue && existingMap.has(lookupValue)) {
+            if (existingMap.has(lookupValue)) {
               toUpdate.push({ id: existingMap.get(lookupValue), data: contactData });
             } else {
               contactData.created_at = new Date().toISOString();
@@ -187,10 +202,29 @@ export default async function handler(req, res) {
               .insert(toInsert);
             
             if (insertError) {
-              console.error('Bulk insert error:', insertError);
-              throw insertError;
+              // Handle unique constraint violations gracefully
+              if (insertError.code === '23505') { // Unique violation
+                console.warn('Unique constraint violation - some contacts may already exist:', insertError.message);
+                // Try to insert one by one to identify which ones failed
+                let successCount = 0;
+                for (const contactData of toInsert) {
+                  try {
+                    const { error: singleError } = await supabase
+                      .from('contacts')
+                      .insert(contactData);
+                    if (!singleError) successCount++;
+                  } catch (e) {
+                    // Skip duplicates
+                  }
+                }
+                created += successCount;
+              } else {
+                console.error('Bulk insert error:', insertError);
+                throw insertError;
+              }
+            } else {
+              created += toInsert.length;
             }
-            created += toInsert.length;
           }
           
           for (const { id, data: updateData } of toUpdate) {

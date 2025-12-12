@@ -160,8 +160,24 @@ export default async function handler(req, res) {
           
           const toInsert = [];
           const toUpdate = [];
+          const seenInBatch = new Set(); // Track duplicates within batch
           
           batch.forEach(account => {
+            const lookupValue = account[lookupField];
+            
+            // Skip if no lookup value (can't match duplicates)
+            if (!lookupValue) {
+              console.warn(`Skipping account without ${lookupField}:`, account.name || account.id);
+              return;
+            }
+            
+            // Skip if we've already seen this lookup value in this batch (duplicate in same batch)
+            if (seenInBatch.has(lookupValue)) {
+              console.warn(`Skipping duplicate ${lookupField} in batch:`, lookupValue);
+              return;
+            }
+            seenInBatch.add(lookupValue);
+            
             // Remove id if it's not a valid UUID - let Supabase generate it
             const { id, ...accountWithoutId } = account;
             const accountData = {
@@ -174,8 +190,7 @@ export default async function handler(req, res) {
               accountData.id = id;
             }
             
-            const lookupValue = account[lookupField];
-            if (lookupValue && existingMap.has(lookupValue)) {
+            if (existingMap.has(lookupValue)) {
               // Update existing - use the UUID from database
               toUpdate.push({ id: existingMap.get(lookupValue), data: accountData });
             } else {
@@ -192,10 +207,29 @@ export default async function handler(req, res) {
               .insert(toInsert);
             
             if (insertError) {
-              console.error('Bulk insert error:', insertError);
-              throw insertError;
+              // Handle unique constraint violations gracefully
+              if (insertError.code === '23505') { // Unique violation
+                console.warn('Unique constraint violation - some accounts may already exist:', insertError.message);
+                // Try to insert one by one to identify which ones failed
+                let successCount = 0;
+                for (const accountData of toInsert) {
+                  try {
+                    const { error: singleError } = await supabase
+                      .from('accounts')
+                      .insert(accountData);
+                    if (!singleError) successCount++;
+                  } catch (e) {
+                    // Skip duplicates
+                  }
+                }
+                created += successCount;
+              } else {
+                console.error('Bulk insert error:', insertError);
+                throw insertError;
+              }
+            } else {
+              created += toInsert.length;
             }
-            created += toInsert.length;
           }
           
           // Update existing accounts

@@ -151,8 +151,24 @@ export default async function handler(req, res) {
           
           const toInsert = [];
           const toUpdate = [];
+          const seenInBatch = new Set(); // Track duplicates within batch
           
           batch.forEach(estimate => {
+            const lookupValue = estimate[lookupField];
+            
+            // Skip if no lookup value (can't match duplicates)
+            if (!lookupValue) {
+              console.warn(`Skipping estimate without ${lookupField}:`, estimate.estimate_number || estimate.id);
+              return;
+            }
+            
+            // Skip if we've already seen this lookup value in this batch (duplicate in same batch)
+            if (seenInBatch.has(lookupValue)) {
+              console.warn(`Skipping duplicate ${lookupField} in batch:`, lookupValue);
+              return;
+            }
+            seenInBatch.add(lookupValue);
+            
             // Remove id if it's not a valid UUID - let Supabase generate it
             const { id, account_id, contact_id, ...estimateWithoutIds } = estimate;
             const estimateData = {
@@ -179,8 +195,7 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
-            const lookupValue = estimate[lookupField];
-            if (lookupValue && existingMap.has(lookupValue)) {
+            if (existingMap.has(lookupValue)) {
               toUpdate.push({ id: existingMap.get(lookupValue), data: estimateData });
             } else {
               estimateData.created_at = new Date().toISOString();
@@ -194,10 +209,29 @@ export default async function handler(req, res) {
               .insert(toInsert);
             
             if (insertError) {
-              console.error('Bulk insert error:', insertError);
-              throw insertError;
+              // Handle unique constraint violations gracefully
+              if (insertError.code === '23505') { // Unique violation
+                console.warn('Unique constraint violation - some estimates may already exist:', insertError.message);
+                // Try to insert one by one to identify which ones failed
+                let successCount = 0;
+                for (const estimateData of toInsert) {
+                  try {
+                    const { error: singleError } = await supabase
+                      .from('estimates')
+                      .insert(estimateData);
+                    if (!singleError) successCount++;
+                  } catch (e) {
+                    // Skip duplicates
+                  }
+                }
+                created += successCount;
+              } else {
+                console.error('Bulk insert error:', insertError);
+                throw insertError;
+              }
+            } else {
+              created += toInsert.length;
             }
-            created += toInsert.length;
           }
           
           for (const { id, data: updateData } of toUpdate) {
