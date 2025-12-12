@@ -86,30 +86,45 @@ export default function BuildScorecard() {
   });
 
   // Get unique sections from questions (ensure questions is always an array)
+  // MUST be called before any early returns (React hooks rule)
   const sections = useMemo(() => {
-    if (!Array.isArray(questions) || questions.length === 0) {
+    try {
+      const questionsArray = Array.isArray(questions) ? questions : [];
+      if (questionsArray.length === 0) {
+        return [];
+      }
+      const sectionSet = new Set(questionsArray.map(q => {
+        if (!q || typeof q !== 'object') return 'Other';
+        return (q.section && typeof q.section === 'string') ? q.section : 'Other';
+      }));
+      return Array.from(sectionSet);
+    } catch (error) {
+      console.error('Error calculating sections:', error);
       return [];
     }
-    const sectionSet = new Set(questions.map(q => (q && q.section) ? q.section : 'Other'));
-    return Array.from(sectionSet);
   }, [questions]);
 
   // Group questions by section (ensure questions is always an array)
   // MUST be called before any early returns (React hooks rule)
   const questionsBySection = useMemo(() => {
-    const grouped = {};
-    if (!Array.isArray(questions)) {
+    try {
+      const grouped = {};
+      const questionsArray = Array.isArray(questions) ? questions : [];
+      questionsArray.forEach((question) => {
+        if (!question || typeof question !== 'object') return;
+        const section = (question.section && typeof question.section === 'string') 
+          ? question.section 
+          : 'Other';
+        if (!grouped[section]) {
+          grouped[section] = [];
+        }
+        grouped[section].push(question);
+      });
       return grouped;
+    } catch (error) {
+      console.error('Error grouping questions by section:', error);
+      return {};
     }
-    questions.forEach((question) => {
-      if (!question) return;
-      const section = (question.section) ? question.section : 'Other';
-      if (!grouped[section]) {
-        grouped[section] = [];
-      }
-      grouped[section].push(question);
-    });
-    return grouped;
   }, [questions]);
 
   const addQuestion = () => {
