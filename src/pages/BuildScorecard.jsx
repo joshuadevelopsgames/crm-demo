@@ -294,7 +294,8 @@ export default function BuildScorecard() {
 
       {/* Questions by Section */}
       <div className="space-y-6">
-        {questionsBySection && typeof questionsBySection === 'object' && Object.entries(questionsBySection).map(([section, sectionQuestions]) => (
+        {questionsBySection && typeof questionsBySection === 'object' && Object.keys(questionsBySection).length > 0 ? (
+          Object.entries(questionsBySection).map(([section, sectionQuestions]) => (
           <Card key={section}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -369,7 +370,14 @@ export default function BuildScorecard() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-slate-600">No questions yet. Add your first question below.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Add New Question */}
