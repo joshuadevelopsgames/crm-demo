@@ -500,6 +500,8 @@ export default function ImportLeadsDialog({ open, onClose }) {
       };
 
       // Import/Update accounts using bulk upsert (much faster)
+      let accountIdMapping = new Map(); // Map lmn_crm_id -> UUID
+      
       if (mergedData.accounts && mergedData.accounts.length > 0) {
         try {
           const response = await fetch('/api/data/accounts', {
@@ -515,6 +517,30 @@ export default function ImportLeadsDialog({ open, onClose }) {
             results.accountsCreated = result.created;
             results.accountsUpdated = result.updated;
             console.log(`✅ Bulk imported ${result.total} accounts (${result.created} created, ${result.updated} updated)`);
+            
+            // Fetch imported accounts to get UUID mapping
+            // Get all lmn_crm_id values from merged accounts
+            const lmnCrmIds = mergedData.accounts.map(acc => acc.lmn_crm_id).filter(Boolean);
+            
+            if (lmnCrmIds.length > 0) {
+              // Fetch accounts by their lmn_crm_id to get UUIDs
+              const accountsResponse = await fetch('/api/data/accounts');
+              if (accountsResponse.ok) {
+                const accountsResult = await accountsResponse.json();
+                if (accountsResult.success && accountsResult.data) {
+                  // Create mapping from lmn_crm_id to UUID
+                  accountsResult.data.forEach(account => {
+                    if (account.lmn_crm_id) {
+                      accountIdMapping.set(account.lmn_crm_id, account.id);
+                      // Also map from string ID format (lmn-account-XXXXX) to UUID
+                      const stringId = `lmn-account-${account.lmn_crm_id}`;
+                      accountIdMapping.set(stringId, account.id);
+                    }
+                  });
+                  console.log(`✅ Created account ID mapping for ${accountIdMapping.size} accounts`);
+                }
+              }
+            }
           } else {
             throw new Error(result.error || 'Bulk import failed');
           }
@@ -525,14 +551,50 @@ export default function ImportLeadsDialog({ open, onClose }) {
       }
 
       // Import/Update contacts using bulk upsert
+      // First, update contact account_id values to use real UUIDs
       if (mergedData.contacts && mergedData.contacts.length > 0) {
+        // Update contacts with correct account_id UUIDs
+        const updatedContacts = mergedData.contacts.map(contact => {
+          if (contact.account_id) {
+            // Try to find the UUID for this account_id
+            let uuid = accountIdMapping.get(contact.account_id);
+            
+            // If account_id is a string like "lmn-account-6857868", extract the lmn_crm_id
+            if (!uuid && contact.account_id.startsWith('lmn-account-')) {
+              const lmnCrmId = contact.account_id.replace('lmn-account-', '');
+              uuid = accountIdMapping.get(lmnCrmId);
+            }
+            
+            // Also try using lmn_crm_id from the account if available
+            if (!uuid && contact.account_name) {
+              // Try to find account by name (fallback)
+              const account = mergedData.accounts?.find(acc => acc.name === contact.account_name);
+              if (account && account.lmn_crm_id) {
+                uuid = accountIdMapping.get(account.lmn_crm_id);
+              }
+            }
+            
+            if (uuid) {
+              return { ...contact, account_id: uuid };
+            } else {
+              console.warn(`⚠️ Could not find UUID for account_id: ${contact.account_id} (contact: ${contact.first_name} ${contact.last_name})`);
+              return { ...contact, account_id: null };
+            }
+          }
+          return contact;
+        });
+        
+        const linkedCount = updatedContacts.filter(c => c.account_id).length;
+        console.log(`✅ Linked ${linkedCount} of ${updatedContacts.length} contacts to accounts`);
+        
+        try {
         try {
           const response = await fetch('/api/data/contacts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               action: 'bulk_upsert', 
-              data: { contacts: mergedData.contacts, lookupField: 'lmn_contact_id' } 
+              data: { contacts: updatedContacts, lookupField: 'lmn_contact_id' } 
             })
           });
           
