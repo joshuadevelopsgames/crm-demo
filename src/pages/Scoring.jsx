@@ -43,7 +43,7 @@ export default function Scoring() {
 
   const queryClient = useQueryClient();
 
-  const { data: templates = [] } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['scorecard-templates'],
     queryFn: () => base44.entities.ScorecardTemplate.list()
   });
@@ -51,6 +51,19 @@ export default function Scoring() {
   // Find primary template
   const primaryTemplate = templates.find(t => t.is_default === true || t.is_primary === true) || 
                           templates.find(t => t.name === 'ICP Weighted Scorecard' && t.is_active);
+
+  // Auto-import primary template on first load if it doesn't exist
+  useEffect(() => {
+    if (!templatesLoading && templates.length === 0 && !isImporting) {
+      // No templates exist, try to import from Google Sheet
+      console.log('📥 No templates found, attempting to import primary template from Google Sheet...');
+      importTemplateMutation.mutate();
+    } else if (!templatesLoading && templates.length > 0 && !primaryTemplate && !isImporting) {
+      // Templates exist but no primary template, try to import
+      console.log('📥 No primary template found, attempting to import from Google Sheet...');
+      importTemplateMutation.mutate();
+    }
+  }, [templatesLoading, templates.length, primaryTemplate, isImporting]);
 
   const [newTemplate, setNewTemplate] = useState({
     name: '',
