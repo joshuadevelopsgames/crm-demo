@@ -177,7 +177,18 @@ export default function TakeScorecard() {
       
       // Use navigate instead of window.location for better state management
       // This ensures React Query cache is properly cleared
-      navigate(createPageUrl(`AccountDetail?id=${accountId}`), { replace: true });
+      try {
+        if (navigate && typeof navigate === 'function') {
+          navigate(createPageUrl(`AccountDetail?id=${accountId}`), { replace: true });
+        } else {
+          // Fallback to window.location if navigate is not available
+          window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
+        }
+      } catch (navError) {
+        console.error('Navigation error:', navError);
+        // Fallback to window.location
+        window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
+      }
     },
     onError: (error) => {
       console.error('❌ Error submitting scorecard:', error);
