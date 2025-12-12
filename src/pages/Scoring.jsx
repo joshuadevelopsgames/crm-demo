@@ -135,20 +135,34 @@ export default function Scoring() {
         throw new Error('Failed to parse template from Google Sheet');
       }
       
-      // Check if template already exists
-      const existing = templates.find(t => t.name === template.name);
+      // Remove 'sections' field as it's not in the database schema
+      // Sections are derived from questions
+      const { sections, ...templateData } = template;
+      
+      // Check if ICP template already exists
+      const existing = icpTemplate;
       if (existing) {
-        // Update existing template
-        return base44.entities.ScorecardTemplate.update(existing.id, template);
+        // Update existing ICP template with versioning
+        return base44.entities.ScorecardTemplate.updateWithVersion(existing.id, {
+          ...templateData,
+          is_default: true // Ensure it stays as ICP
+        });
       } else {
-        // Create new template
-        return base44.entities.ScorecardTemplate.create(template);
+        // Create new ICP template
+        return base44.entities.ScorecardTemplate.create({
+          ...templateData,
+          is_default: true,
+          version_number: 1,
+          is_current_version: true
+        });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['icp-template'] });
+      queryClient.invalidateQueries({ queryKey: ['icp-version-history'] });
       setIsImporting(false);
-      alert('✅ Scorecard template imported successfully!');
+      alert('✅ ICP template imported successfully!');
     },
     onError: (error) => {
       setIsImporting(false);
