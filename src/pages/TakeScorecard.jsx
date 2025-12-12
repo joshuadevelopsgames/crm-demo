@@ -50,6 +50,10 @@ export default function TakeScorecard() {
     pass_threshold: 70
   } : null);
 
+  // If customTemplate is provided, we should use it (even if templateId is also provided)
+  // This handles the case where BuildScorecard modified a template
+  const shouldUseCustomTemplate = !!parsedCustomTemplate;
+
   const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
     queryKey: ['scorecard-template', templateId],
     queryFn: async () => {
@@ -64,11 +68,11 @@ export default function TakeScorecard() {
       }
       return found;
     },
-    enabled: !!templateId && !isCustom
+    enabled: !!templateId && !isCustom && !shouldUseCustomTemplate
   });
 
-  // Use custom template if in custom mode, otherwise use fetched template
-  const activeTemplate = isCustom ? customTemplate : template;
+  // Use custom template if provided (from BuildScorecard), otherwise use fetched template or custom
+  const activeTemplate = shouldUseCustomTemplate ? parsedCustomTemplate : (isCustom ? customTemplate : template);
 
   const { data: account, isLoading: accountLoading, error: accountError } = useQuery({
     queryKey: ['account', accountId],
