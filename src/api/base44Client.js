@@ -11,6 +11,8 @@
  * });
  */
 
+import { mockScorecardTemplates, mockScorecardResponses } from './mockData';
+
 // Helper to get data from API
 async function getData(entityType, forceRefresh = false) {
   try {
