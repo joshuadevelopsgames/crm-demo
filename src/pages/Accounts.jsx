@@ -96,19 +96,33 @@ export default function Accounts() {
   // - "client" tag matches "customer" filter
   // - "lead" tag matches "prospect" filter
   // - Other common mappings
-  // Helper to check if account matches filter type (checks both tags and account_type)
+  // Helper to check if account matches filter type (checks both account_type and tags)
   const accountMatchesType = (account, filterType) => {
     if (filterType === 'all') return true;
     
     // Normalize filter type to lowercase
     const normalizedFilter = filterType.toLowerCase();
+    const accountType = account.account_type?.toLowerCase();
     
-    // Check account_type directly
-    if (account.account_type?.toLowerCase() === normalizedFilter) {
+    // Map account_type values to filter types
+    // account_type "client" should match "customer" filter
+    // account_type "lead" should match "prospect" filter
+    if (normalizedFilter === 'customer') {
+      if (accountType === 'customer' || accountType === 'client') {
+        return true;
+      }
+    }
+    if (normalizedFilter === 'prospect') {
+      if (accountType === 'prospect' || accountType === 'lead') {
+        return true;
+      }
+    }
+    // Direct match for other types
+    if (accountType === normalizedFilter) {
       return true;
     }
     
-    // Handle tags - could be array or string
+    // Also check tags - could be array or string
     let tags = [];
     if (Array.isArray(account.tags)) {
       tags = account.tags.map(t => String(t).toLowerCase().trim());
