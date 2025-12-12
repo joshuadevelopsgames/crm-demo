@@ -626,10 +626,44 @@ export default function ImportLeadsDialog({ open, onClose }) {
           let totalCreated = 0;
           let totalUpdated = 0;
           
-          for (let i = 0; i < mergedData.estimates.length; i += CHUNK_SIZE) {
-            const chunk = mergedData.estimates.slice(i, i + CHUNK_SIZE);
+          // First, update all estimates with correct account_id UUIDs
+          const updatedEstimates = mergedData.estimates.map(estimate => {
+            if (estimate.account_id) {
+              // Try to find the UUID for this account_id
+              let uuid = accountIdMapping.get(estimate.account_id);
+              
+              // If account_id is a string like "lmn-account-6857868", extract the lmn_crm_id
+              if (!uuid && estimate.account_id.startsWith('lmn-account-')) {
+                const lmnCrmId = estimate.account_id.replace('lmn-account-', '');
+                uuid = accountIdMapping.get(lmnCrmId);
+              }
+              
+              // Also try using lmn_crm_id from the account if available
+              if (!uuid && estimate.contact_name) {
+                // Try to find account by contact name (fallback)
+                const account = mergedData.accounts?.find(acc => acc.name === estimate.contact_name);
+                if (account && account.lmn_crm_id) {
+                  uuid = accountIdMapping.get(account.lmn_crm_id);
+                }
+              }
+              
+              if (uuid) {
+                return { ...estimate, account_id: uuid };
+              } else {
+                console.warn(`⚠️ Could not find UUID for account_id: ${estimate.account_id} (estimate: ${estimate.estimate_number || estimate.id})`);
+                return { ...estimate, account_id: null };
+              }
+            }
+            return estimate;
+          });
+          
+          const linkedCount = updatedEstimates.filter(e => e.account_id).length;
+          console.log(`✅ Linked ${linkedCount} of ${updatedEstimates.length} estimates to accounts`);
+          
+          for (let i = 0; i < updatedEstimates.length; i += CHUNK_SIZE) {
+            const chunk = updatedEstimates.slice(i, i + CHUNK_SIZE);
             const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-            const totalChunks = Math.ceil(mergedData.estimates.length / CHUNK_SIZE);
+            const totalChunks = Math.ceil(updatedEstimates.length / CHUNK_SIZE);
             
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
             
@@ -659,7 +693,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
           
           results.estimatesCreated = totalCreated;
           results.estimatesUpdated = totalUpdated;
-          console.log(`✅ Bulk imported ${mergedData.estimates.length} estimates (${totalCreated} created, ${totalUpdated} updated)`);
+          console.log(`✅ Bulk imported ${updatedEstimates.length} estimates (${totalCreated} created, ${totalUpdated} updated)`);
         } catch (err) {
           results.estimatesFailed = mergedData.estimates.length;
           results.errors.push(`Estimates bulk import: ${err.message}`);
@@ -668,14 +702,49 @@ export default function ImportLeadsDialog({ open, onClose }) {
       }
 
       // Import/Update jobsites using bulk upsert
+      // First, update jobsite account_id values to use real UUIDs
       if (mergedData.jobsites && mergedData.jobsites.length > 0) {
+        // Update jobsites with correct account_id UUIDs
+        const updatedJobsites = mergedData.jobsites.map(jobsite => {
+          if (jobsite.account_id) {
+            // Try to find the UUID for this account_id
+            let uuid = accountIdMapping.get(jobsite.account_id);
+            
+            // If account_id is a string like "lmn-account-6857868", extract the lmn_crm_id
+            if (!uuid && jobsite.account_id.startsWith('lmn-account-')) {
+              const lmnCrmId = jobsite.account_id.replace('lmn-account-', '');
+              uuid = accountIdMapping.get(lmnCrmId);
+            }
+            
+            // Also try using lmn_crm_id from the account if available
+            if (!uuid && jobsite.contact_name) {
+              // Try to find account by contact name (fallback)
+              const account = mergedData.accounts?.find(acc => acc.name === jobsite.contact_name);
+              if (account && account.lmn_crm_id) {
+                uuid = accountIdMapping.get(account.lmn_crm_id);
+              }
+            }
+            
+            if (uuid) {
+              return { ...jobsite, account_id: uuid };
+            } else {
+              console.warn(`⚠️ Could not find UUID for account_id: ${jobsite.account_id} (jobsite: ${jobsite.name || jobsite.id})`);
+              return { ...jobsite, account_id: null };
+            }
+          }
+          return jobsite;
+        });
+        
+        const linkedCount = updatedJobsites.filter(j => j.account_id).length;
+        console.log(`✅ Linked ${linkedCount} of ${updatedJobsites.length} jobsites to accounts`);
+        
         try {
           const response = await fetch('/api/data/jobsites', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               action: 'bulk_upsert', 
-              data: { jobsites: mergedData.jobsites, lookupField: 'lmn_jobsite_id' } 
+              data: { jobsites: updatedJobsites, lookupField: 'lmn_jobsite_id' } 
             })
           });
           
