@@ -536,6 +536,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   });
 
   // Calculate revenue and scores for each account
+  // NOTE: organization_score is now primarily set by scorecards, not automatic calculation
+  // Only set automatic score if account doesn't already have a scorecard-based score
   accountsArray.forEach(account => {
     // Find all estimates for this account (now using account_id field)
     const accountEstimates = estimatesWithAccountId.filter(est => 
@@ -555,18 +557,13 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       jobsite.account_id === account.id
     );
 
-    // Calculate account score based on revenue, estimates, and jobsites
-    const score = calculateAccountScore({
-      revenue: totalRevenue,
-      totalEstimates: accountEstimates.length,
-      wonEstimates: wonEstimates.length,
-      lostEstimates: accountEstimates.filter(est => est.status === 'lost').length,
-      jobsitesCount: accountJobsites.length
-    });
-
-    // Update account with calculated values
+    // Update account with calculated revenue
     account.annual_revenue = totalRevenue > 0 ? totalRevenue : null;
-    account.organization_score = score;
+    
+    // Only calculate automatic score if account doesn't already have a scorecard-based score
+    // Scorecard scores take priority - they are set when scorecards are completed
+    // We don't set organization_score here to preserve existing scorecard scores
+    // account.organization_score should be set by scorecard completions, not automatic calculation
   });
 
   // Filter orphaned jobsites for easy access

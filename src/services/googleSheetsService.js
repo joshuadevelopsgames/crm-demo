@@ -5,6 +5,7 @@
 
 // Google Sheets API configuration
 const GOOGLE_SHEET_ID = '1yz-StxTwUcisYEFREG0IbRfIkbmLQUE0DvEnL8oBxlk'; // LECRM Database sheet
+const SCORECARD_TEMPLATE_SHEET_ID = '1p_e-nHr2iqQe2WBSEzF5tto66ZdhcuUNhUKcuTi8eQw'; // Primary Scorecard Template Sheet
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '';
 // Note: WEB_APP_URL and SECRET_TOKEN are now handled server-side via API proxy
 // This prevents exposing the secret token to the browser
@@ -13,11 +14,13 @@ const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '';
  * Fetch data from a specific sheet/tab
  * If no API key, tries to use public CSV export as fallback
  */
-async function fetchSheetData(sheetName) {
+async function fetchSheetData(sheetName, sheetId = null) {
+  const targetSheetId = sheetId || GOOGLE_SHEET_ID;
+  
   // If API key is available, use Google Sheets API
   if (API_KEY) {
     try {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${targetSheetId}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -34,7 +37,7 @@ async function fetchSheetData(sheetName) {
   
   // Fallback: Try public CSV export (requires sheet to be public)
   try {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${targetSheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     console.log(`📥 Fetching ${sheetName} from Google Sheet via CSV...`);
     console.log(`   URL: ${csvUrl}`);
     
@@ -67,7 +70,7 @@ async function fetchSheetData(sheetName) {
     return parsed;
   } catch (error) {
     console.error(`❌ Error fetching ${sheetName} via CSV:`, error);
-    console.error(`   Sheet ID: ${GOOGLE_SHEET_ID}`);
+    console.error(`   Sheet ID: ${targetSheetId}`);
     console.error(`   Sheet Name: ${sheetName}`);
     console.error(`   Make sure the sheet is public and the tab name matches exactly`);
     return [];
@@ -1410,5 +1413,162 @@ export async function writeEstimatesToSheet(estimates) {
  */
 export async function writeJobsitesToSheet(jobsites) {
   return writeToGoogleSheet('jobsites', jobsites);
+}
+
+/**
+ * Parse scorecard template structure from the primary scorecard Google Sheet
+ * Extracts questions, sections, weights, and answer types to create a template
+ * 
+ * Sheet format:
+ * - Column A: Scorecard (Question/Section labels)
+ * - Column B: Data (Answers - used to determine answer types)
+ * - Column C: Score (Points - used to determine weights)
+ * - Column D: Pass/Fail
+ * 
+ * Sections are identified by rows with text in A but empty B/C
+ * Questions are identified by rows with text in A, B, and numeric C
+ */
+export async function parseScorecardTemplateFromSheet() {
+  try {
+    // Try different possible tab names
+    const tabNames = [
+      'Copy of ICP Weighted Scorecard - BS',
+      'ICP Weighted Scorecard - BS',
+      'Scorecard',
+      'Sheet1'
+    ];
+    
+    let rows = null;
+    for (const tabName of tabNames) {
+      rows = await fetchSheetData(tabName, SCORECARD_TEMPLATE_SHEET_ID);
+      if (rows && rows.length >= 2) {
+        console.log(`✅ Found scorecard template in tab: ${tabName}`);
+        break;
+      }
+    }
+    
+    if (!rows || rows.length < 2) {
+      console.warn('⚠️ Could not find scorecard template in any tab');
+      return null;
+    }
+    
+    return parseTemplateStructure(rows);
+  } catch (error) {
+    console.error('❌ Error parsing scorecard template from sheet:', error);
+    return null;
+  }
+}
+
+/**
+ * Parse template structure from sheet rows
+ */
+function parseTemplateStructure(rows) {
+  const questions = [];
+  let currentSection = null;
+  const sections = new Set();
+  
+  // Skip header row (row 1)
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const [colA, colB, colC, colD] = row || [];
+    
+    if (!colA || !colA.toString().trim()) continue; // Skip empty rows
+    
+    const colAStr = colA.toString().trim();
+    const colBStr = (colB || '').toString().trim();
+    const colCStr = (colC || '').toString().trim();
+    
+    // Skip date rows
+    if (colAStr === 'Date:' || 
+        colAStr.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)/) ||
+        !isNaN(new Date(colAStr).getTime())) {
+      continue;
+    }
+    
+    // Skip total/subtotal rows
+    if (colAStr === 'Sub-total' || 
+        colAStr === 'Total Score' || 
+        colAStr === 'Normalized Score (out of 100)' ||
+        colAStr === 'Scorecard' ||
+        colAStr === 'Data' ||
+        colAStr === 'Score' ||
+        colAStr === 'Pass/Fail') {
+      continue;
+    }
+    
+    // Section headers (has text in A, typically empty B/C)
+    if (colAStr && !colBStr && !colCStr && 
+        !colAStr.match(/^\d+$/) && // Not just a number
+        isNaN(new Date(colAStr).getTime())) { // Not a date
+      currentSection = colAStr;
+      sections.add(currentSection);
+      continue;
+    }
+    
+    // Questions (has question text in A, answer in B, score in C)
+    if (colAStr && colBStr && colCStr && 
+        !isNaN(parseInt(colCStr))) {
+      const score = parseInt(colCStr) || 0;
+      
+      // Determine answer type based on answer value
+      let answerType = 'yes_no';
+      let weight = score;
+      
+      // If answer is Yes/No, it's yes_no type
+      if (colBStr.toLowerCase() === 'yes' || colBStr.toLowerCase() === 'no') {
+        answerType = 'yes_no';
+        // Weight is the score (since yes=1, no=0, so score = weight * 1)
+        weight = score;
+      } else if (!isNaN(parseInt(colBStr))) {
+        // If answer is a number, it might be a scale
+        const answerNum = parseInt(colBStr);
+        if (answerNum >= 1 && answerNum <= 5) {
+          answerType = 'scale_1_5';
+          // Weight = score / max_answer_value
+          weight = Math.round(score / 5) || 1;
+        } else {
+          answerType = 'numeric';
+          weight = score;
+        }
+      } else {
+        // Text answer - might be categorical
+        // Check if score matches common patterns
+        if (score <= 5) {
+          answerType = 'yes_no'; // Default to yes_no for small scores
+          weight = score;
+        } else {
+          answerType = 'categorical';
+          weight = score;
+        }
+      }
+      
+      questions.push({
+        question_text: colAStr,
+        weight: weight || 1,
+        answer_type: answerType,
+        section: currentSection || 'Other',
+        category: currentSection || 'Other'
+      });
+    }
+  }
+  
+  // Calculate total possible score
+  const totalPossibleScore = questions.reduce((sum, q) => {
+    const maxAnswer = q.answer_type === 'yes_no' ? 1 : 
+                     q.answer_type === 'scale_1_5' ? 5 : 
+                     q.answer_type === 'numeric' ? 10 : 1;
+    return sum + (q.weight * maxAnswer);
+  }, 0);
+  
+  return {
+    name: 'ICP Weighted Scorecard',
+    description: 'Primary scorecard template for Ideal Customer Profile scoring',
+    is_active: true,
+    is_default: true, // Mark as default template
+    pass_threshold: 70,
+    total_possible_score: totalPossibleScore,
+    questions: questions,
+    sections: Array.from(sections)
+  };
 }
 

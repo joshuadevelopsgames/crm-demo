@@ -30,10 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TutorialTooltip from '../components/TutorialTooltip';
+import { parseScorecardTemplateFromSheet } from '@/services/googleSheetsService';
+import { Download } from 'lucide-react';
 
 export default function Scoring() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -173,7 +176,16 @@ export default function Scoring() {
             <h1 className="text-3xl font-bold text-slate-900">Scoring Templates</h1>
             <p className="text-slate-600 mt-1">Create weighted questionnaires to score accounts</p>
           </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => importTemplateMutation.mutate()}
+              disabled={isImporting}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isImporting ? 'Importing...' : 'Import Primary Template'}
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-slate-900 hover:bg-slate-800" onClick={resetForm}>
               <Plus className="w-4 h-4 mr-2" />
