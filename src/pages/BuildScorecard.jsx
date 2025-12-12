@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,36 +48,34 @@ export default function BuildScorecard() {
     enabled: !!accountId
   });
 
-  // Initialize scorecard with template questions (can be edited)
-  const [scorecardName, setScorecardName] = useState(() => {
-    if (isCustom && customName) {
-      return customName;
+  // Initialize scorecard state
+  const [scorecardName, setScorecardName] = useState(isCustom && customName ? customName : 'Custom Scorecard');
+  const [scorecardDescription, setScorecardDescription] = useState(isCustom && customDescription ? customDescription : '');
+  const [questions, setQuestions] = useState([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Update state when template loads
+  useEffect(() => {
+    if (template && !isInitialized) {
+      setScorecardName(`${template.name} (Custom)`);
+      setScorecardDescription(template.description || '');
+      setQuestions(
+        template.questions?.map((q, index) => ({
+          ...q,
+          id: `q-${index}`,
+          question_text: q.question_text || '',
+          weight: q.weight || 5,
+          answer_type: q.answer_type || 'yes_no',
+          section: q.section || 'Other',
+          category: q.category || 'Other'
+        })) || []
+      );
+      setIsInitialized(true);
+    } else if (isCustom && !isInitialized) {
+      // For custom scorecards without template, just mark as initialized
+      setIsInitialized(true);
     }
-    if (template) {
-      return `${template.name} (Custom)`;
-    }
-    return 'Custom Scorecard';
-  });
-  const [scorecardDescription, setScorecardDescription] = useState(() => {
-    if (isCustom && customDescription) {
-      return customDescription;
-    }
-    return template?.description || '';
-  });
-  const [questions, setQuestions] = useState(() => {
-    if (template?.questions) {
-      return template.questions.map((q, index) => ({
-        ...q,
-        id: `q-${index}`,
-        question_text: q.question_text || '',
-        weight: q.weight || 5,
-        answer_type: q.answer_type || 'yes_no',
-        section: q.section || 'Other',
-        category: q.category || 'Other'
-      }));
-    }
-    return [];
-  });
+  }, [template, isCustom, isInitialized]);
 
   const [newQuestion, setNewQuestion] = useState({
     question_text: '',
