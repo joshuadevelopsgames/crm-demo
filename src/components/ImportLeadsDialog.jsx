@@ -1053,15 +1053,46 @@ export default function ImportLeadsDialog({ open, onClose }) {
                               Estimate Linking: {mergedData.stats.estimateLinking.linkRate}% linked to accounts
                             </p>
                             <div className="text-xs mt-1 space-y-0.5">
-                              <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
-                                • {mergedData.stats.estimateLinking.linkedByContactId} by Contact ID (most reliable)
-                                {mergedData.stats.estimateLinking.linkedByNameMatch > 0 && (
-                                  <span>, {mergedData.stats.estimateLinking.linkedByNameMatch} by name match</span>
-                                )}
-                                {mergedData.stats.estimateLinking.linkedByCrmTags > 0 && (
-                                  <span>, {mergedData.stats.estimateLinking.linkedByCrmTags} by CRM tags</span>
-                                )}
-                              </p>
+                              {mergedData.stats.estimateLinking.linkedByContactId > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByContactId} by Contact ID (most reliable)
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByEmail > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByEmail} by Email → Contact
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByPhone > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByPhone} by Phone → Contact
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByCrmTags > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByCrmTags} by CRM Tags
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByAddress > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByAddress} by Address
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByNameMatch > 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.estimateLinking.linkedByNameMatch} by Name Match (fuzzy)
+                                </p>
+                              )}
+                              {mergedData.stats.estimateLinking.linkedByContactId === 0 && 
+                               mergedData.stats.estimateLinking.linkedByEmail === 0 &&
+                               mergedData.stats.estimateLinking.linkedByPhone === 0 &&
+                               mergedData.stats.estimateLinking.linkedByCrmTags === 0 &&
+                               mergedData.stats.estimateLinking.linkedByAddress === 0 &&
+                               mergedData.stats.estimateLinking.linkedByNameMatch === 0 && (
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • 0 by Contact ID (most reliable)
+                                </p>
+                              )}
                               {mergedData.stats.estimateLinking.orphaned > 0 && (
                                 <p className="text-amber-700 font-medium">
                                   ⚠ {mergedData.stats.estimateLinking.orphaned} estimates not linked to any account
@@ -1093,12 +1124,34 @@ export default function ImportLeadsDialog({ open, onClose }) {
                               Jobsite Linking: {mergedData.stats.jobsiteLinking.linkRate}% linked to accounts
                             </p>
                             <div className="text-xs mt-1 space-y-0.5">
-                              <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
-                                • {mergedData.stats.jobsiteLinking.linkedByContactId} by Contact ID
-                                {mergedData.stats.jobsiteLinking.linkedByNameMatch > 0 && (
-                                  <span>, {mergedData.stats.jobsiteLinking.linkedByNameMatch} by name match</span>
-                                )}
-                              </p>
+                              {mergedData.stats.jobsiteLinking.linkedByContactId > 0 && (
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.jobsiteLinking.linkedByContactId} by Contact ID (most reliable)
+                                </p>
+                              )}
+                              {mergedData.stats.jobsiteLinking.linkedByAddress > 0 && (
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.jobsiteLinking.linkedByAddress} by Address
+                                </p>
+                              )}
+                              {mergedData.stats.jobsiteLinking.linkedByJobsiteName > 0 && (
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.jobsiteLinking.linkedByJobsiteName} by Jobsite Name
+                                </p>
+                              )}
+                              {mergedData.stats.jobsiteLinking.linkedByNameMatch > 0 && (
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • {mergedData.stats.jobsiteLinking.linkedByNameMatch} by Name Match (fuzzy)
+                                </p>
+                              )}
+                              {mergedData.stats.jobsiteLinking.linkedByContactId === 0 && 
+                               mergedData.stats.jobsiteLinking.linkedByAddress === 0 &&
+                               mergedData.stats.jobsiteLinking.linkedByJobsiteName === 0 &&
+                               mergedData.stats.jobsiteLinking.linkedByNameMatch === 0 && (
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                  • 0 by Contact ID
+                                </p>
+                              )}
                               {mergedData.stats.jobsiteLinking.orphaned > 0 && (
                                 <p className="text-amber-700 font-medium">
                                   ⚠ {mergedData.stats.jobsiteLinking.orphaned} jobsites not linked to any account
