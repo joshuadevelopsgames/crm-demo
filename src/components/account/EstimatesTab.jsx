@@ -43,14 +43,44 @@ function normalizeDepartment(division) {
 
 export default function EstimatesTab({ estimates = [], accountId }) {
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterYear, setFilterYear] = useState('all');
   const [expandedDepartments, setExpandedDepartments] = useState(new Set(DEPARTMENT_NAMES));
   const [filterDepartment, setFilterDepartment] = useState('all');
 
-  // Filter by status first
-  const statusFilteredEstimates = estimates.filter(est => {
-    if (filterStatus === 'all') return true;
-    return est.status === filterStatus;
-  });
+  // Get available years from estimates
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    estimates.forEach(est => {
+      if (est.estimate_date) {
+        const year = new Date(est.estimate_date).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Sort newest first
+  }, [estimates]);
+
+  // Filter by status and year
+  const statusFilteredEstimates = useMemo(() => {
+    let filtered = estimates.filter(est => {
+      if (filterStatus !== 'all' && est.status !== filterStatus) return false;
+      
+      if (filterYear !== 'all' && est.estimate_date) {
+        const year = new Date(est.estimate_date).getFullYear();
+        if (year.toString() !== filterYear) return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort by date (newest first)
+    filtered.sort((a, b) => {
+      const dateA = a.estimate_date ? new Date(a.estimate_date).getTime() : 0;
+      const dateB = b.estimate_date ? new Date(b.estimate_date).getTime() : 0;
+      return dateB - dateA; // Newest first
+    });
+    
+    return filtered;
+  }, [estimates, filterStatus, filterYear]);
 
   // Group estimates by department
   const estimatesByDepartment = useMemo(() => {
@@ -62,6 +92,15 @@ export default function EstimatesTab({ estimates = [], accountId }) {
         grouped[department] = [];
       }
       grouped[department].push(est);
+    });
+    
+    // Sort estimates within each department by date (newest first)
+    Object.keys(grouped).forEach(dept => {
+      grouped[dept].sort((a, b) => {
+        const dateA = a.estimate_date ? new Date(a.estimate_date).getTime() : 0;
+        const dateB = b.estimate_date ? new Date(b.estimate_date).getTime() : 0;
+        return dateB - dateA; // Newest first
+      });
     });
     
     // Sort departments: known departments first, then others alphabetically
@@ -122,6 +161,18 @@ export default function EstimatesTab({ estimates = [], accountId }) {
           Estimates ({totalEstimates})
         </h3>
         <div className="flex gap-3">
+          <Select value={filterYear} onValueChange={setFilterYear}>
+            <SelectTrigger className="w-32">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="All Years" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              {availableYears.map(year => (
+                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={filterDepartment} onValueChange={setFilterDepartment}>
             <SelectTrigger className="w-48">
               <Filter className="w-4 h-4 mr-2" />
@@ -271,7 +322,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
           <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-slate-900 mb-1">No estimates found</h3>
           <p className="text-slate-600 mb-4">
-            {filterStatus !== 'all' || filterDepartment !== 'all'
+            {filterStatus !== 'all' || filterDepartment !== 'all' || filterYear !== 'all'
               ? 'No estimates match the selected filters'
               : 'Create your first estimate for this account'}
           </p>
