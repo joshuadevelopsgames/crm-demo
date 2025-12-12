@@ -56,11 +56,19 @@ export default function TakeScorecard() {
   // Use custom template if in custom mode, otherwise use fetched template
   const activeTemplate = isCustom ? customTemplate : template;
 
-  const { data: account, isLoading: accountLoading } = useQuery({
+  const { data: account, isLoading: accountLoading, error: accountError } = useQuery({
     queryKey: ['account', accountId],
     queryFn: async () => {
       const accounts = await base44.entities.Account.list();
-      return accounts.find(a => a.id === accountId);
+      console.log('🔍 Looking for account with ID:', accountId);
+      console.log('📋 Available accounts:', accounts.map(a => ({ id: a.id, name: a.name, idType: typeof a.id })));
+      const found = accounts.find(a => String(a.id) === String(accountId));
+      if (!found) {
+        console.warn(`⚠️ Account with ID "${accountId}" not found. Available account IDs:`, accounts.map(a => a.id));
+      } else {
+        console.log('✅ Found account:', found.name);
+      }
+      return found;
     },
     enabled: !!accountId
   });
