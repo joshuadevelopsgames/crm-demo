@@ -31,15 +31,12 @@ import {
 } from "@/components/ui/select";
 import TutorialTooltip from '../components/TutorialTooltip';
 import { parseScorecardTemplateFromSheet } from '@/services/googleSheetsService';
-import { autoScoreAllAccounts } from '@/utils/autoScoreAllAccounts';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 export default function Scoring() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [isAutoScoring, setIsAutoScoring] = useState(false);
-  const [autoScoreProgress, setAutoScoreProgress] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -48,8 +45,8 @@ export default function Scoring() {
     queryFn: () => base44.entities.ScorecardTemplate.list()
   });
 
-  // Find primary template
-  const primaryTemplate = templates.find(t => t.is_default === true || t.is_primary === true) || 
+  // Find default template (for import reference, but not for auto-scoring)
+  const defaultTemplate = templates.find(t => t.is_default === true || t.is_primary === true) || 
                           templates.find(t => t.name === 'ICP Weighted Scorecard' && t.is_active);
 
   const [newTemplate, setNewTemplate] = useState({
@@ -76,15 +73,10 @@ export default function Scoring() {
         total_possible_score: totalScore
       });
     },
-    onSuccess: async (newTemplate) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
       setIsDialogOpen(false);
       resetForm();
-      
-      // If this is marked as primary/default, auto-score all accounts
-      if (newTemplate.is_default || newTemplate.is_primary) {
-        await triggerAutoScore(newTemplate);
-      }
     }
   });
 
@@ -101,15 +93,10 @@ export default function Scoring() {
         total_possible_score: totalScore
       });
     },
-    onSuccess: async (updatedTemplate) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
       setIsDialogOpen(false);
       resetForm();
-      
-      // If this is the primary template, auto-score all accounts
-      if (updatedTemplate.is_default || updatedTemplate.is_primary) {
-        await triggerAutoScore(updatedTemplate);
-      }
     }
   });
 
@@ -139,17 +126,10 @@ export default function Scoring() {
         return base44.entities.ScorecardTemplate.create(template);
       }
     },
-    onSuccess: async (importedTemplate) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scorecard-templates'] });
       setIsImporting(false);
-      
-      // If this is marked as primary, auto-score all accounts
-      if (importedTemplate.is_default || importedTemplate.is_primary) {
-        await triggerAutoScore(importedTemplate);
-        alert('✅ Scorecard template imported and all accounts have been auto-scored!');
-      } else {
-        alert('✅ Scorecard template imported successfully!');
-      }
+      alert('✅ Scorecard template imported successfully!');
     },
     onError: (error) => {
       setIsImporting(false);
@@ -158,39 +138,6 @@ export default function Scoring() {
     }
   });
 
-  // Function to trigger auto-scoring for all accounts
-  const triggerAutoScore = async (template) => {
-    if (!template) return;
-    
-    setIsAutoScoring(true);
-    setAutoScoreProgress('Starting auto-scoring...');
-    
-    try {
-      const results = await autoScoreAllAccounts(template, (progress) => {
-        setAutoScoreProgress(progress);
-      });
-      
-      // Invalidate queries to refresh account scores
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['scorecards'] });
-      
-      setAutoScoreProgress(`✅ Auto-scoring complete: ${results.scored} accounts scored`);
-      
-      if (results.failed > 0) {
-        console.warn(`⚠️ ${results.failed} accounts failed to score:`, results.errors);
-      }
-      
-      // Clear progress message after a delay
-      setTimeout(() => {
-        setAutoScoreProgress('');
-      }, 3000);
-    } catch (error) {
-      console.error('❌ Auto-scoring error:', error);
-      setAutoScoreProgress(`❌ Auto-scoring failed: ${error.message}`);
-    } finally {
-      setIsAutoScoring(false);
-    }
-  };
 
   const resetForm = () => {
     setNewTemplate({
@@ -251,18 +198,14 @@ export default function Scoring() {
     setNewTemplate({ ...newTemplate, questions: updatedQuestions });
   };
 
-  // Auto-import primary template on first load if it doesn't exist
+  // Auto-import default template on first load if it doesn't exist
   useEffect(() => {
     if (!templatesLoading && templates.length === 0 && !isImporting && importTemplateMutation) {
       // No templates exist, try to import from Google Sheet
-      console.log('📥 No templates found, attempting to import primary template from Google Sheet...');
-      importTemplateMutation.mutate();
-    } else if (!templatesLoading && templates.length > 0 && !primaryTemplate && !isImporting && importTemplateMutation) {
-      // Templates exist but no primary template, try to import
-      console.log('📥 No primary template found, attempting to import from Google Sheet...');
+      console.log('📥 No templates found, attempting to import template from Google Sheet...');
       importTemplateMutation.mutate();
     }
-  }, [templatesLoading, templates.length, primaryTemplate, isImporting, importTemplateMutation]);
+  }, [templatesLoading, templates.length, isImporting, importTemplateMutation]);
 
   return (
     <div className="space-y-6">
@@ -278,23 +221,13 @@ export default function Scoring() {
             <p className="text-slate-600 mt-1">Create weighted questionnaires to score accounts</p>
           </div>
           <div className="flex gap-2">
-            {primaryTemplate && (
-              <Button 
-                variant="outline" 
-                onClick={() => triggerAutoScore(primaryTemplate)}
-                disabled={isAutoScoring}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isAutoScoring ? 'animate-spin' : ''}`} />
-                {isAutoScoring ? 'Auto-Scoring...' : 'Re-score All Accounts'}
-              </Button>
-            )}
             <Button 
               variant="outline" 
               onClick={() => importTemplateMutation.mutate()}
               disabled={isImporting}
             >
               <Download className="w-4 h-4 mr-2" />
-              {isImporting ? 'Importing...' : 'Import Primary Template'}
+              {isImporting ? 'Importing...' : 'Import ICP Template'}
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

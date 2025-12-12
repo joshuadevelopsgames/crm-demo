@@ -107,25 +107,26 @@ export default function TakeScorecard() {
     mutationFn: async (data) => {
       const user = await base44.auth.me();
       
-      // Create scorecard response with section breakdown (marked as manual)
+      // Create scorecard response with section breakdown
       await base44.entities.ScorecardResponse.create({
         account_id: accountId,
         template_id: isCustom ? null : templateId,
         template_name: isCustom ? (customName || 'Custom Scorecard') : activeTemplate?.name || 'Scorecard',
         responses: data.responses,
-        section_scores: data.section_scores, // NEW: Store section sub-totals
+        section_scores: data.section_scores,
         total_score: data.total_score,
         normalized_score: data.normalized_score,
-        is_pass: data.is_pass, // NEW: Pass/fail status
+        is_pass: data.is_pass,
         scorecard_date: scorecardDate,
         completed_by: user.email,
         completed_date: new Date().toISOString(),
-        scorecard_type: 'manual', // Mark as manually completed
-        is_primary: false // Manual scorecards are not primary
+        scorecard_type: 'manual' // All scorecards are per-client (manual)
       });
 
-      // Don't update account organization_score for manual scorecards
-      // Only auto-scored primary scorecards should update organization_score
+      // Update account with the score from this scorecard
+      await base44.entities.Account.update(accountId, {
+        organization_score: data.normalized_score
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account', accountId] });

@@ -18,76 +18,54 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
   });
   const activeTemplates = templates.filter(t => t.is_active);
 
-  // Separate auto-scored primary from manual scorecards
-  const primaryScorecard = scorecards.find(s => s.is_primary === true || s.scorecard_type === 'auto');
-  const manualScorecards = scorecards.filter(s => s.scorecard_type === 'manual' || (!s.is_primary && s.scorecard_type !== 'auto'));
+  // All scorecards are now per-client (manual)
+  // Show the most recent scorecard as the current score
+  const mostRecentScorecard = scorecards.length > 0 
+    ? scorecards.sort((a, b) => {
+        const dateA = new Date(a.completed_date || a.scorecard_date || 0);
+        const dateB = new Date(b.completed_date || b.scorecard_date || 0);
+        return dateB - dateA;
+      })[0]
+    : null;
 
   return (
     <div className="space-y-6">
-      {/* Primary Auto-Scored ICP Scorecard */}
-      {primaryScorecard && (
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                Primary ICP Score (Auto-Scored)
-              </CardTitle>
-              <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                Auto-Scored
-              </Badge>
+      {/* Current Score (from most recent scorecard) */}
+      <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-600" />
+            Current Organization Score
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6">
+            <div className="text-6xl font-bold text-emerald-600">
+              {mostRecentScorecard?.normalized_score !== null && mostRecentScorecard?.normalized_score !== undefined 
+                ? mostRecentScorecard.normalized_score 
+                : (currentScore !== null && currentScore !== undefined ? currentScore : '—')}
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="text-6xl font-bold text-blue-600">
-                {primaryScorecard.normalized_score || currentScore || '—'}
-              </div>
-              <div className="text-slate-600">
-                <p className="text-sm">Out of 100</p>
-                <p className="text-xs mt-1">
-                  Last updated {format(new Date(primaryScorecard.completed_date || primaryScorecard.scorecard_date), 'MMM d, yyyy')}
-                </p>
+            <div className="text-slate-600">
+              <p className="text-sm">Out of 100</p>
+              <p className="text-xs mt-1">
+                {mostRecentScorecard
+                  ? `Last updated ${format(new Date(mostRecentScorecard.completed_date || mostRecentScorecard.scorecard_date), 'MMM d, yyyy')}`
+                  : 'No scorecards completed yet'}
+              </p>
+              {mostRecentScorecard && (
                 <p className="text-xs text-slate-500 mt-1">
-                  Based on: {primaryScorecard.template_name || 'ICP Weighted Scorecard'}
+                  Based on: {mostRecentScorecard.template_name || 'Custom Scorecard'}
                 </p>
-              </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Current Organization Score (if no primary scorecard) */}
-      {!primaryScorecard && (
-        <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-              Current Organization Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="text-6xl font-bold text-emerald-600">
-                {currentScore !== null && currentScore !== undefined ? currentScore : '—'}
-              </div>
-              <div className="text-slate-600">
-                <p className="text-sm">Out of 100</p>
-                <p className="text-xs mt-1">
-                  {scorecards.length > 0 
-                    ? `Last updated ${format(new Date(scorecards[0].completed_date), 'MMM d, yyyy')}`
-                    : 'No scorecards completed yet'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Create New Manual Scorecard */}
+      {/* Create New Scorecard */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Manual Scorecards</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Scorecards</h3>
           <div className="flex gap-2">
             <CreateScorecardDialog accountId={accountId} accountName={accountName} />
             <Link to={createPageUrl('Scoring')}>
@@ -140,12 +118,16 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
         )}
       </div>
 
-      {/* Manual Scorecard History */}
-      {manualScorecards.length > 0 && (
+      {/* Scorecard History */}
+      {scorecards.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Manual Scorecard History</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Scorecard History</h3>
           <div className="space-y-3">
-            {manualScorecards.map(scorecard => {
+            {scorecards.sort((a, b) => {
+              const dateA = new Date(a.completed_date || a.scorecard_date || 0);
+              const dateB = new Date(b.completed_date || b.scorecard_date || 0);
+              return dateB - dateA;
+            }).map(scorecard => {
               const isPass = scorecard.is_pass || (scorecard.normalized_score >= 70); // Default threshold
               const scorecardDate = scorecard.scorecard_date 
                 ? format(new Date(scorecard.scorecard_date), 'MMM d, yyyy')
@@ -166,10 +148,6 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium text-slate-900">{scorecard.template_name || 'Custom Scorecard'}</h4>
-                          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">
-                            <FileText className="w-3 h-3 mr-1 inline" />
-                            Manual
-                          </Badge>
                           <Badge 
                             className={isPass 
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
