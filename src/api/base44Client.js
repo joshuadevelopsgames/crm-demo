@@ -11,61 +11,23 @@
  * });
  */
 
-// Import Google Sheets service
-import { getSheetData } from '../services/googleSheetsService';
-
-// Cache for Google Sheets data
-let sheetDataCache = null;
-let isLoadingSheetData = false;
-
-// Expose cache clearing function
-export function clearSheetDataCache() {
-  sheetDataCache = null;
-  isLoadingSheetData = false;
-}
-
-// Load data from Google Sheet
-async function loadSheetData(forceRefresh = false) {
-  if (isLoadingSheetData && !forceRefresh) {
-    // Wait for existing load
-    while (isLoadingSheetData) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    return sheetDataCache;
-  }
-  
-  if (sheetDataCache && !forceRefresh) {
-    return sheetDataCache;
-  }
-  
-  isLoadingSheetData = true;
-  try {
-    sheetDataCache = await getSheetData(forceRefresh);
-  } catch (error) {
-    console.error('Error loading Google Sheet data:', error);
-    sheetDataCache = null;
-  } finally {
-    isLoadingSheetData = false;
-  }
-  
-  return sheetDataCache;
-}
-
-// Helper to get data - uses Google Sheets only, returns empty array if not available
+// Helper to get data from API
 async function getData(entityType, forceRefresh = false) {
   try {
-    const sheetData = await loadSheetData(forceRefresh);
-    
-    if (sheetData && sheetData[entityType] && sheetData[entityType].length > 0) {
-      console.log(`Loaded ${sheetData[entityType].length} ${entityType} from Google Sheet`);
-      return sheetData[entityType];
+    const response = await fetch(`/api/data/${entityType}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${entityType}: ${response.statusText}`);
     }
+    const result = await response.json();
+    if (result.success) {
+      console.log(`📡 Loaded ${result.data.length} ${entityType} from API`);
+      return result.data || [];
+    }
+    return [];
   } catch (error) {
-    console.warn(`Error loading ${entityType} from Google Sheet:`, error);
+    console.warn(`Error loading ${entityType} from API:`, error);
+    return [];
   }
-  
-  // Return empty array if no data available
-  return [];
 }
 
 // Placeholder - replace with actual base44 SDK initialization
@@ -90,37 +52,71 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newAccount = { ...data, id: data.id || Date.now().toString() };
-        return newAccount;
+        const response = await fetch('/api/data/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create account');
       },
       update: async (id, data) => {
-        // In staging, we don't persist to mock data - return the data as if updated
-        return { ...data, id };
+        const response = await fetch('/api/data/accounts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update account');
       },
       // Upsert: Create if doesn't exist, update if it does
       upsert: async (data, lookupField = 'lmn_crm_id') => {
-        // In staging, check Google Sheets data for existing record
-        const sheetData = await loadSheetData();
-        const accounts = sheetData?.accounts || [];
-        const existing = accounts.find(a => 
-          a[lookupField] && data[lookupField] && a[lookupField] === data[lookupField]
-        );
-        
-        if (existing) {
-          // Return as if updated
-          return { ...existing, ...data, id: existing.id, _action: 'updated' };
-        } else {
-          // Return as if created
-          const newAccount = { ...data, id: data.id || Date.now().toString() };
-          return { ...newAccount, _action: 'created' };
-        }
+        const response = await fetch('/api/data/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'upsert', data: { account: data, lookupField } })
+        });
+        const result = await response.json();
+        if (result.success) return { ...result.data, _action: result.action };
+        throw new Error(result.error || 'Failed to upsert account');
       },
     },
     Contact: {
       list: async (forceRefresh = false) => {
         const data = await getData('contacts', forceRefresh);
         return Array.isArray(data) ? data : [];
+      },
+      create: async (data) => {
+        const response = await fetch('/api/data/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create contact');
+      },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/contacts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update contact');
+      },
+      upsert: async (data, lookupField = 'lmn_contact_id') => {
+        const response = await fetch('/api/data/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'upsert', data: { contact: data, lookupField } })
+        });
+        const result = await response.json();
+        if (result.success) return { ...result.data, _action: result.action };
+        throw new Error(result.error || 'Failed to upsert contact');
       },
       filter: async (filters, sort, forceRefresh = false) => {
         const data = await getData('contacts', forceRefresh);
@@ -133,33 +129,6 @@ export const base44 = {
           });
         }
         return results;
-      },
-      create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newContact = { ...data, id: data.id || Date.now().toString() };
-        return newContact;
-      },
-      update: async (id, data) => {
-        // In staging, we don't persist to mock data - return the data as if updated
-        return { ...data, id };
-      },
-      // Upsert: Create if doesn't exist, update if it does
-      upsert: async (data, lookupField = 'lmn_contact_id') => {
-        // In staging, check Google Sheets data for existing record
-        const sheetData = await loadSheetData();
-        const contacts = sheetData?.contacts || [];
-        const existing = contacts.find(c => 
-          c[lookupField] && data[lookupField] && c[lookupField] === data[lookupField]
-        );
-        
-        if (existing) {
-          // Return as if updated
-          return { ...existing, ...data, id: existing.id, _action: 'updated' };
-        } else {
-          // Return as if created
-          const newContact = { ...data, id: data.id || Date.now().toString() };
-          return { ...newContact, _action: 'created' };
-        }
       },
     },
     Interaction: {
@@ -525,13 +494,43 @@ export const base44 = {
       },
     },
     Estimate: {
-      list: async () => {
-        const sheetData = await loadSheetData();
-        return sheetData?.estimates || [];
+      list: async (forceRefresh = false) => {
+        const data = await getData('estimates', forceRefresh);
+        return Array.isArray(data) ? data : [];
+      },
+      create: async (data) => {
+        const response = await fetch('/api/data/estimates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create estimate');
+      },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/estimates', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update estimate');
+      },
+      upsert: async (data, lookupField = 'lmn_estimate_id') => {
+        const response = await fetch('/api/data/estimates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'upsert', data: { estimate: data, lookupField } })
+        });
+        const result = await response.json();
+        if (result.success) return { ...result.data, _action: result.action };
+        throw new Error(result.error || 'Failed to upsert estimate');
       },
       filter: async (filters, sort) => {
-        const sheetData = await loadSheetData();
-        let results = [...(sheetData?.estimates || [])];
+        const data = await getData('estimates');
+        let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(estimate => {
             return Object.entries(filters).every(([key, value]) => {
@@ -552,29 +551,45 @@ export const base44 = {
         }
         return results;
       },
-      create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newEstimate = { ...data, id: data.id || Date.now().toString() };
-        return newEstimate;
-      },
-      update: async (id, data) => {
-        // In staging, we don't persist to mock data - return the data as if updated
-        return { ...data, id };
-      },
-      upsert: async (data, lookupField = 'lmn_estimate_id') => {
-        // In staging, we don't persist to mock data - return the data as if created/updated
-          const newEstimate = { ...data, id: data.id || Date.now().toString() };
-          return { ...newEstimate, _action: 'created' };
-      },
     },
     Jobsite: {
-      list: async () => {
-        const sheetData = await loadSheetData();
-        return sheetData?.jobsites || [];
+      list: async (forceRefresh = false) => {
+        const data = await getData('jobsites', forceRefresh);
+        return Array.isArray(data) ? data : [];
+      },
+      create: async (data) => {
+        const response = await fetch('/api/data/jobsites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create jobsite');
+      },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/jobsites', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update jobsite');
+      },
+      upsert: async (data, lookupField = 'lmn_jobsite_id') => {
+        const response = await fetch('/api/data/jobsites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'upsert', data: { jobsite: data, lookupField } })
+        });
+        const result = await response.json();
+        if (result.success) return { ...result.data, _action: result.action };
+        throw new Error(result.error || 'Failed to upsert jobsite');
       },
       filter: async (filters, sort) => {
-        const sheetData = await loadSheetData();
-        let results = [...(sheetData?.jobsites || [])];
+        const data = await getData('jobsites');
+        let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(jobsite => {
             return Object.entries(filters).every(([key, value]) => {
@@ -594,20 +609,6 @@ export const base44 = {
           });
         }
         return results;
-      },
-      create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newJobsite = { ...data, id: data.id || Date.now().toString() };
-        return newJobsite;
-      },
-      update: async (id, data) => {
-        // In staging, we don't persist to mock data - return the data as if updated
-        return { ...data, id };
-      },
-      upsert: async (data, lookupField = 'lmn_jobsite_id') => {
-        // In staging, we don't persist to mock data - return the data as if created/updated
-          const newJobsite = { ...data, id: data.id || Date.now().toString() };
-          return { ...newJobsite, _action: 'created' };
       },
     },
   },

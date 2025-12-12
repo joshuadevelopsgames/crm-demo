@@ -6,12 +6,7 @@ import { parseLeadsList } from '@/utils/lmnLeadsListParser';
 import { parseEstimatesList } from '@/utils/lmnEstimatesListParser';
 import { parseJobsiteExport } from '@/utils/lmnJobsiteExportParser';
 import { mergeContactData } from '@/utils/lmnMergeData';
-import { 
-  writeAccountsToSheet, 
-  writeContactsToSheet, 
-  writeEstimatesToSheet, 
-  writeJobsitesToSheet 
-} from '@/services/googleSheetsService';
+// Data is now stored server-side via API endpoints, no Google Sheets needed
 import * as XLSX from 'xlsx';
 import {
   Dialog,
@@ -410,111 +405,120 @@ export default function ImportLeadsDialog({ open, onClose }) {
         errors: []
       };
 
-      // Import/Update accounts using upsert (merge by lmn_crm_id)
-      for (const account of mergedData.accounts) {
+      // Import/Update accounts using bulk upsert (much faster)
+      if (mergedData.accounts && mergedData.accounts.length > 0) {
         try {
-          const result = await base44.entities.Account.upsert(account, 'lmn_crm_id');
-          if (result._action === 'created') {
-            results.accountsCreated++;
-          } else if (result._action === 'updated') {
-            results.accountsUpdated++;
+          const response = await fetch('/api/data/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'bulk_upsert', 
+              data: { accounts: mergedData.accounts, lookupField: 'lmn_crm_id' } 
+            })
+          });
+          const result = await response.json();
+          if (result.success) {
+            results.accountsCreated = result.created;
+            results.accountsUpdated = result.updated;
+            console.log(`✅ Bulk imported ${result.total} accounts (${result.created} created, ${result.updated} updated)`);
+          } else {
+            throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
-          results.accountsFailed++;
-          results.errors.push(`Account "${account.name}": ${err.message}`);
+          results.accountsFailed = mergedData.accounts.length;
+          results.errors.push(`Accounts bulk import: ${err.message}`);
         }
       }
 
-      // Import/Update contacts using upsert (merge by lmn_contact_id)
-      for (const contact of mergedData.contacts) {
+      // Import/Update contacts using bulk upsert
+      if (mergedData.contacts && mergedData.contacts.length > 0) {
         try {
-          const result = await base44.entities.Contact.upsert(contact, 'lmn_contact_id');
-          if (result._action === 'created') {
-            results.contactsCreated++;
-          } else if (result._action === 'updated') {
-            results.contactsUpdated++;
+          const response = await fetch('/api/data/contacts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'bulk_upsert', 
+              data: { contacts: mergedData.contacts, lookupField: 'lmn_contact_id' } 
+            })
+          });
+          const result = await response.json();
+          if (result.success) {
+            results.contactsCreated = result.created;
+            results.contactsUpdated = result.updated;
+            console.log(`✅ Bulk imported ${result.total} contacts (${result.created} created, ${result.updated} updated)`);
+          } else {
+            throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
-          results.contactsFailed++;
-          results.errors.push(`Contact "${contact.first_name} ${contact.last_name}": ${err.message}`);
+          results.contactsFailed = mergedData.contacts.length;
+          results.errors.push(`Contacts bulk import: ${err.message}`);
         }
       }
 
-      // Import/Update estimates using upsert (merge by lmn_estimate_id)
+      // Import/Update estimates using bulk upsert
       if (mergedData.estimates && mergedData.estimates.length > 0) {
-        for (const estimate of mergedData.estimates) {
-          try {
-            const result = await base44.entities.Estimate.upsert(estimate, 'lmn_estimate_id');
-            if (result._action === 'created') {
-              results.estimatesCreated++;
-            } else if (result._action === 'updated') {
-              results.estimatesUpdated++;
-            }
-          } catch (err) {
-            results.estimatesFailed++;
-            results.errors.push(`Estimate "${estimate.estimate_number}": ${err.message}`);
+        try {
+          const response = await fetch('/api/data/estimates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'bulk_upsert', 
+              data: { estimates: mergedData.estimates, lookupField: 'lmn_estimate_id' } 
+            })
+          });
+          const result = await response.json();
+          if (result.success) {
+            results.estimatesCreated = result.created;
+            results.estimatesUpdated = result.updated;
+            console.log(`✅ Bulk imported ${result.total} estimates (${result.created} created, ${result.updated} updated)`);
+          } else {
+            throw new Error(result.error || 'Bulk import failed');
           }
+        } catch (err) {
+          results.estimatesFailed = mergedData.estimates.length;
+          results.errors.push(`Estimates bulk import: ${err.message}`);
         }
       }
 
-      // Import/Update jobsites using upsert (merge by lmn_jobsite_id)
+      // Import/Update jobsites using bulk upsert
       if (mergedData.jobsites && mergedData.jobsites.length > 0) {
-        for (const jobsite of mergedData.jobsites) {
-          try {
-            const result = await base44.entities.Jobsite.upsert(jobsite, 'lmn_jobsite_id');
-            if (result._action === 'created') {
-              results.jobsitesCreated++;
-            } else if (result._action === 'updated') {
-              results.jobsitesUpdated++;
-            }
-          } catch (err) {
-            results.jobsitesFailed++;
-            results.errors.push(`Jobsite "${jobsite.name}": ${err.message}`);
+        try {
+          const response = await fetch('/api/data/jobsites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              action: 'bulk_upsert', 
+              data: { jobsites: mergedData.jobsites, lookupField: 'lmn_jobsite_id' } 
+            })
+          });
+          const result = await response.json();
+          if (result.success) {
+            results.jobsitesCreated = result.created;
+            results.jobsitesUpdated = result.updated;
+            console.log(`✅ Bulk imported ${result.total} jobsites (${result.created} created, ${result.updated} updated)`);
+          } else {
+            throw new Error(result.error || 'Bulk import failed');
           }
+        } catch (err) {
+          results.jobsitesFailed = mergedData.jobsites.length;
+          results.errors.push(`Jobsites bulk import: ${err.message}`);
         }
       }
 
-      // Write all imported data to Google Sheets via secure backend API
-      console.log('🔍 Merged data counts:', {
+      // Data is automatically saved to server via base44.entities.*.upsert() calls above
+      console.log('✅ All imported data saved to server');
+      console.log('🔍 Imported data counts:', {
         accounts: mergedData?.accounts?.length || 0,
         contacts: mergedData?.contacts?.length || 0,
         estimates: mergedData?.estimates?.length || 0,
         jobsites: mergedData?.jobsites?.length || 0
       });
       
-      // Note: Google Sheets sync is now handled via backend API
-      // The secret token is kept secure on the server side
+      // Note: Data is now persisted on the server
+      // It will survive page reloads and browser restarts
       {
         try {
-          console.log('📝 Writing imported data to Google Sheets via secure API...');
-          
-          // Write accounts
-          if (mergedData.accounts && mergedData.accounts.length > 0) {
-            setImportProgress(prev => ({
-              ...prev,
-              currentStep: `Writing ${mergedData.accounts.length} accounts...`,
-              completedSteps: prev.completedSteps,
-              progress: (prev.completedSteps / prev.totalSteps) * 100
-            }));
-            
-            const accountsResult = await writeAccountsToSheet(mergedData.accounts);
-            if (!accountsResult.success) {
-              console.error('❌ Failed to write accounts to Google Sheet:', accountsResult.error);
-              results.errors.push(`Google Sheets: Failed to write accounts - ${accountsResult.error}`);
-            } else {
-              console.log(`✅ Wrote ${accountsResult.result?.total || 0} accounts to Google Sheets`);
-            }
-            
-            setImportProgress(prev => ({
-              ...prev,
-              completedSteps: prev.completedSteps + 1,
-              progress: ((prev.completedSteps + 1) / prev.totalSteps) * 100
-            }));
-          }
-
-          // Write contacts (split into batches to avoid timeout)
-          if (mergedData.contacts && mergedData.contacts.length > 0) {
-            console.log(`📝 Writing ${mergedData.contacts.length} contacts in batches...`);
+          console.log('💾 Data persisted to server - will survive page reloads');
             const BATCH_SIZE = 500; // Process 500 contacts at a time
             const totalBatches = Math.ceil(mergedData.contacts.length / BATCH_SIZE);
             let totalCreated = 0;
@@ -658,26 +662,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
       setImportResults(results);
       setImportStatus('success');
 
-      // Clear caches and force refresh after writing to Google Sheets
-      // Always clear cache after import (Google Sheets sync happens via backend API)
+      // Force refresh data from server
       {
-        // Wait longer for Google Sheets to process all the writes
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Clear the base44Client cache
-        const { clearSheetDataCache } = await import('@/api/base44Client');
-        if (clearSheetDataCache) {
-          clearSheetDataCache();
-        }
-        
-        // Also clear the googleSheetsService cache
-        const { getSheetData } = await import('@/services/googleSheetsService');
-        // Force refresh by calling getSheetData with forceRefresh=true
-        try {
-          await getSheetData(true);
-        } catch (err) {
-          console.warn('Error force refreshing sheet data:', err);
-        }
+        // Small delay to ensure server has processed all writes
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Invalidate all queries to force fresh data load

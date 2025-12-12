@@ -324,7 +324,7 @@ function writeToSheet(entityType, records) {
     const lastRow = sheet.getLastRow();
     Logger.log(`   Last row before append: ${lastRow}`);
     try {
-      sheet.getRange(lastRow + 1, 1, newRows.length, headers.length).setValues(newRows);
+    sheet.getRange(lastRow + 1, 1, newRows.length, headers.length).setValues(newRows);
       Logger.log(`   ✅ Successfully appended ${newRows.length} rows`);
     } catch (error) {
       Logger.log(`   ❌ Error appending rows: ${error.toString()}`);
@@ -339,8 +339,8 @@ function writeToSheet(entityType, records) {
   Logger.log(`   Final row count: ${lastRow}`);
   if (lastRow > 1 && sortColumn > 0) {
     try {
-      sheet.getRange(2, 1, lastRow - 1, headers.length)
-        .sort({column: sortColumn, ascending: true});
+    sheet.getRange(2, 1, lastRow - 1, headers.length)
+      .sort({column: sortColumn, ascending: true});
       Logger.log(`   ✅ Sorted sheet by column ${sortColumn}`);
     } catch (error) {
       Logger.log(`   ⚠️ Error sorting sheet: ${error.toString()}`);
@@ -435,30 +435,30 @@ function updateCompilationTab(spreadsheet, entityType, records) {
     // Always update existing rows that match these accounts (if compilation tab has data)
     if (!isCompilationEmpty) {
       // Update existing rows that match these accounts
-      dataRows.forEach((row, index) => {
-        const accountIdIndex = headers.indexOf('LMN CRM ID');
-        const accountId = row[accountIdIndex];
-        if (accountId && accountMap.has(accountId)) {
-          const account = accountMap.get(accountId);
-          const updatedRow = headers.map(header => {
-            const existingValue = row[headers.indexOf(header)];
-            const accountValue = getCompilationFieldValue(header, account, 'accounts');
-            // Keep contact fields, update account fields
-            if (header.startsWith('Account ') || header === 'Account ID' || header === 'LMN CRM ID' || 
-                header === 'Account Name' || header === 'Account Type' || header === 'Status' ||
-                header === 'Classification' || header === 'Revenue Segment' || header === 'Annual Revenue' ||
-                header === 'Organization Score' || header === 'Account Tags' || header === 'Account Address 1' ||
-                header === 'Account Address 2' || header === 'Account City' || header === 'Account State' ||
-                header === 'Account Postal Code' || header === 'Account Country' || header === 'Account Source' ||
-                header === 'Account Created Date' || header === 'Last Interaction Date' || 
-                header === 'Renewal Date' || header === 'Account Archived') {
-              return accountValue;
-            }
-            return existingValue;
-          });
-          compilationSheet.getRange(index + 2, 1, 1, headers.length).setValues([updatedRow]);
-        }
-      });
+    dataRows.forEach((row, index) => {
+      const accountIdIndex = headers.indexOf('LMN CRM ID');
+      const accountId = row[accountIdIndex];
+      if (accountId && accountMap.has(accountId)) {
+        const account = accountMap.get(accountId);
+        const updatedRow = headers.map(header => {
+          const existingValue = row[headers.indexOf(header)];
+          const accountValue = getCompilationFieldValue(header, account, 'accounts');
+          // Keep contact fields, update account fields
+          if (header.startsWith('Account ') || header === 'Account ID' || header === 'LMN CRM ID' || 
+              header === 'Account Name' || header === 'Account Type' || header === 'Status' ||
+              header === 'Classification' || header === 'Revenue Segment' || header === 'Annual Revenue' ||
+              header === 'Organization Score' || header === 'Account Tags' || header === 'Account Address 1' ||
+              header === 'Account Address 2' || header === 'Account City' || header === 'Account State' ||
+              header === 'Account Postal Code' || header === 'Account Country' || header === 'Account Source' ||
+              header === 'Account Created Date' || header === 'Last Interaction Date' || 
+              header === 'Renewal Date' || header === 'Account Archived') {
+            return accountValue;
+          }
+          return existingValue;
+        });
+        compilationSheet.getRange(index + 2, 1, 1, headers.length).setValues([updatedRow]);
+      }
+    });
     }
     
   } else if (entityType === 'contacts') {

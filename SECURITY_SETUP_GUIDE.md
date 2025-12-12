@@ -266,3 +266,5 @@ If you run into issues:
 ---
 
 **🎉 You're now protected!** Your Google Sheet can only be modified by requests with the correct secret token.
+
+

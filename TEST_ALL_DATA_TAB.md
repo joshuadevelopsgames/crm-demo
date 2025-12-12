@@ -48,3 +48,4 @@ Then check the console - you should see:
 - `⚠️ Imported Accounts tab is empty or has less than 2 rows`
 - `🔄 Trying fallback: reading from "All Data" tab...`
 - `✅ Fallback successful: Found X accounts in "All Data" tab`
+

@@ -179,3 +179,5 @@ The `GOOGLE_SHEETS_SECRET_TOKEN` in Vercel must be **exactly the same** as the `
 ---
 
 **You're almost there!** Once you add the environment variables and redeploy, everything should work perfectly. 🚀
+
+

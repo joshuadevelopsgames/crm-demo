@@ -161,3 +161,4 @@ If you don't want to make the sheet public, you can use the Google Sheets API wi
 ---
 
 **After making the sheet public or adding the API key, refresh your site and the data should appear!**
+
