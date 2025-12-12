@@ -112,6 +112,7 @@ export default function TakeScorecard() {
       const totalScore = data.total || data.total_score || 0;
       
       console.log('📊 Submitting scorecard:', {
+        accountId,
         normalizedScore,
         totalScore,
         responses: data.responses?.length || 0,
@@ -119,7 +120,7 @@ export default function TakeScorecard() {
       });
       
       // Create scorecard response with section breakdown
-      await base44.entities.ScorecardResponse.create({
+      const scorecardResponse = await base44.entities.ScorecardResponse.create({
         account_id: accountId,
         template_id: isCustom ? null : templateId,
         template_name: isCustom ? (customName || 'Custom Scorecard') : activeTemplate?.name || 'Scorecard',
@@ -133,20 +134,42 @@ export default function TakeScorecard() {
         completed_date: new Date().toISOString(),
         scorecard_type: 'manual' // All scorecards are per-client (manual)
       });
+      console.log('✅ Scorecard response created:', scorecardResponse);
 
       // Update account with the score from this scorecard
-      console.log('🔄 Updating account score:', accountId, normalizedScore);
-      await base44.entities.Account.update(accountId, {
-        organization_score: normalizedScore
-      });
-      console.log('✅ Account score updated successfully');
+      console.log('🔄 Updating account score:', accountId, 'to', normalizedScore);
+      try {
+        const updatedAccount = await base44.entities.Account.update(accountId, {
+          organization_score: normalizedScore
+        });
+        console.log('✅ Account score updated successfully:', updatedAccount);
+        
+        // Verify the update worked
+        if (updatedAccount && updatedAccount.organization_score !== normalizedScore) {
+          console.warn('⚠️ Account update returned different score:', updatedAccount.organization_score, 'expected:', normalizedScore);
+        }
+        
+        return { scorecardResponse, updatedAccount };
+      } catch (updateError) {
+        console.error('❌ Error updating account score:', updateError);
+        // Don't throw - scorecard was created successfully, just log the error
+        throw new Error(`Scorecard created but failed to update account score: ${updateError.message}`);
+      }
     },
-    onSuccess: () => {
-      console.log('✅ Scorecard submitted successfully');
-      queryClient.invalidateQueries({ queryKey: ['account', accountId] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['scorecards', accountId] });
-      window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
+    onSuccess: async (result) => {
+      console.log('✅ Scorecard submitted successfully:', result);
+      
+      // Invalidate queries to refresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['account', accountId] }),
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['scorecards', accountId] })
+      ]);
+      
+      // Small delay to ensure queries are invalidated before redirect
+      setTimeout(() => {
+        window.location.href = createPageUrl(`AccountDetail?id=${accountId}`);
+      }, 100);
     },
     onError: (error) => {
       console.error('❌ Error submitting scorecard:', error);
