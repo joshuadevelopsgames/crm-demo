@@ -275,6 +275,20 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     }
   });
 
+  // Create a lookup map for contact ID -> account ID for faster matching
+  const contactIdToAccountMap = new Map();
+  mergedContacts.forEach(contact => {
+    if (contact.lmn_contact_id && contact.account_id) {
+      // Store both exact match and trimmed match (in case of whitespace issues)
+      const contactId = String(contact.lmn_contact_id).trim();
+      if (contactId) {
+        contactIdToAccountMap.set(contactId, contact.account_id);
+        // Also store lowercase version for case-insensitive matching
+        contactIdToAccountMap.set(contactId.toLowerCase(), contact.account_id);
+      }
+    }
+  });
+
   // First pass: Link estimates to accounts with improved matching
   const estimatesWithAccountId = estimates.map(estimate => {
     let linkedAccountId = null;
@@ -282,11 +296,30 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
 
     // Method 1: Match by contact ID (most reliable - ID-based)
     if (estimate.lmn_contact_id) {
-      const contact = mergedContacts.find(c => c.lmn_contact_id === estimate.lmn_contact_id);
-      if (contact && contact.account_id) {
-        linkedAccountId = contact.account_id;
-        linkMethod = 'contact_id';
-        estimateLinkingStats.linkedByContactId++;
+      const estimateContactId = String(estimate.lmn_contact_id).trim();
+      if (estimateContactId) {
+        // Try exact match first
+        linkedAccountId = contactIdToAccountMap.get(estimateContactId);
+        // Try case-insensitive match
+        if (!linkedAccountId) {
+          linkedAccountId = contactIdToAccountMap.get(estimateContactId.toLowerCase());
+        }
+        // Fallback: search in merged contacts (in case of formatting differences)
+        if (!linkedAccountId) {
+          const contact = mergedContacts.find(c => {
+            if (!c.lmn_contact_id) return false;
+            const contactId = String(c.lmn_contact_id).trim();
+            return contactId === estimateContactId || 
+                   contactId.toLowerCase() === estimateContactId.toLowerCase();
+          });
+          if (contact && contact.account_id) {
+            linkedAccountId = contact.account_id;
+          }
+        }
+        if (linkedAccountId) {
+          linkMethod = 'contact_id';
+          estimateLinkingStats.linkedByContactId++;
+        }
       }
     }
 
@@ -337,13 +370,25 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     }
 
-    // Method 5: Match via CRM tags (contains check)
+    // Method 5: Match via CRM tags (improved - handles comma-separated tags, multiple formats)
     if (!linkedAccountId && estimate.crm_tags) {
-      const crmTagsLower = estimate.crm_tags.toLowerCase();
+      const crmTagsLower = estimate.crm_tags.toLowerCase().trim();
+      // Split by comma and try each tag
+      const tagList = crmTagsLower.split(',').map(t => t.trim()).filter(t => t);
+      
       for (const account of accountsArray) {
         if (account.lmn_crm_id) {
-          const crmIdLower = account.lmn_crm_id.toLowerCase();
-          if (crmTagsLower.includes(crmIdLower) || crmIdLower.includes(crmTagsLower)) {
+          const crmIdLower = String(account.lmn_crm_id).toLowerCase().trim();
+          
+          // Check if any tag matches the CRM ID
+          const tagMatches = tagList.some(tag => {
+            return tag === crmIdLower || 
+                   tag.includes(crmIdLower) || 
+                   crmIdLower.includes(tag) ||
+                   tag.replace(/\s+/g, '') === crmIdLower.replace(/\s+/g, ''); // Remove spaces and compare
+          });
+          
+          if (tagMatches) {
             linkedAccountId = account.id;
             linkMethod = 'crm_tags';
             estimateLinkingStats.linkedByCrmTags++;
@@ -388,11 +433,30 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
 
     // Method 1: Match by contact ID (most reliable - ID-based)
     if (jobsite.lmn_contact_id) {
-      const contact = mergedContacts.find(c => c.lmn_contact_id === jobsite.lmn_contact_id);
-      if (contact && contact.account_id) {
-        linkedAccountId = contact.account_id;
-        linkMethod = 'contact_id';
-        jobsiteLinkingStats.linkedByContactId++;
+      const jobsiteContactId = String(jobsite.lmn_contact_id).trim();
+      if (jobsiteContactId) {
+        // Try exact match first
+        linkedAccountId = contactIdToAccountMap.get(jobsiteContactId);
+        // Try case-insensitive match
+        if (!linkedAccountId) {
+          linkedAccountId = contactIdToAccountMap.get(jobsiteContactId.toLowerCase());
+        }
+        // Fallback: search in merged contacts (in case of formatting differences)
+        if (!linkedAccountId) {
+          const contact = mergedContacts.find(c => {
+            if (!c.lmn_contact_id) return false;
+            const contactId = String(c.lmn_contact_id).trim();
+            return contactId === jobsiteContactId || 
+                   contactId.toLowerCase() === jobsiteContactId.toLowerCase();
+          });
+          if (contact && contact.account_id) {
+            linkedAccountId = contact.account_id;
+          }
+        }
+        if (linkedAccountId) {
+          linkMethod = 'contact_id';
+          jobsiteLinkingStats.linkedByContactId++;
+        }
       }
     }
 
