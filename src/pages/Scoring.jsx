@@ -374,8 +374,8 @@ export default function Scoring() {
             </div>
           </DialogContent>
         </Dialog>
-        </div>
-      </TutorialTooltip>
+          </div>
+        </TutorialTooltip>
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
