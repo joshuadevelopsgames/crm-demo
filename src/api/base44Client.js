@@ -286,13 +286,31 @@ export const base44 = {
       },
     },
     ScorecardResponse: {
-      list: async () => {
-        const data = await getData('scorecards');
+      list: async (forceRefresh = false) => {
+        const data = await getData('scorecards', forceRefresh);
         return Array.isArray(data) ? data : [];
       },
-      filter: async (filters, sort) => {
-        const data = await getData('scorecards');
-        let results = Array.isArray(data) ? [...data] : [];
+      filter: async (filters, sort, forceRefresh = false) => {
+        // Build query string for filtering
+        let url = '/api/data/scorecards';
+        const params = new URLSearchParams();
+        
+        if (filters && filters.account_id) {
+          params.append('account_id', filters.account_id);
+        }
+        
+        if (params.toString()) {
+          url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch scorecards: ${response.statusText}`);
+        }
+        const result = await response.json();
+        let results = result.success ? (result.data || []) : [];
+        
+        // Apply additional filters client-side if needed
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(response => {
             return Object.entries(filters).every(([key, value]) => {
@@ -300,6 +318,8 @@ export const base44 = {
             });
           });
         }
+        
+        // Apply sorting
         if (sort) {
           const desc = sort.startsWith('-');
           const sortField = desc ? sort.substring(1) : sort;
@@ -311,12 +331,28 @@ export const base44 = {
             return 0;
           });
         }
+        
         return results;
       },
       create: async (data) => {
-        const newResponse = { ...data, id: Date.now().toString() };
-        mockScorecardResponses.push(newResponse);
-        return newResponse;
+        const response = await fetch('/api/data/scorecards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create scorecard response');
+      },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/scorecards', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update scorecard response');
       },
     },
     SalesInsight: {
