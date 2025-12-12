@@ -569,11 +569,15 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     account.organization_score = score;
   });
 
+  // Filter orphaned jobsites for easy access
+  const orphanedJobsites = jobsitesWithAccountId.filter(jobsite => jobsite._is_orphaned);
+
   return {
     accounts: accountsArray,
     contacts: mergedContacts,
     estimates: estimatesWithAccountId, // Use estimates with account_id
     jobsites: jobsitesWithAccountId, // Use jobsites with account_id
+    orphanedJobsites: orphanedJobsites, // Jobsites that couldn't be linked
     stats: {
       totalAccounts: accounts.size,
       totalContacts: mergedContacts.length,

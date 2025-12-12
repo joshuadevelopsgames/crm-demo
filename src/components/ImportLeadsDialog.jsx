@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { parseContactsExport } from '@/utils/lmnContactsExportParser';
 import { parseLeadsList } from '@/utils/lmnLeadsListParser';
@@ -27,8 +27,19 @@ import {
   RefreshCw,
   ArrowRight,
   X,
-  FileCheck
+  FileCheck,
+  MapPin,
+  User,
+  Link as LinkIcon
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function ImportLeadsDialog({ open, onClose }) {
   // File 1: Contacts Export
@@ -64,6 +75,16 @@ export default function ImportLeadsDialog({ open, onClose }) {
   });
   
   const queryClient = useQueryClient();
+
+  // Fetch accounts for manual linking
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list(),
+    enabled: open && mergedData?.orphanedJobsites?.length > 0 // Only fetch when dialog is open and there are orphaned jobsites
+  });
+
+  // State for manually linking orphaned jobsites
+  const [orphanedJobsiteLinks, setOrphanedJobsiteLinks] = useState({});
 
   // Convert XLSX file to CSV text
   const convertXlsxToCsv = (file) => {
@@ -250,8 +271,81 @@ export default function ImportLeadsDialog({ open, onClose }) {
       setMergedData(merged);
       setImportStatus('ready');
       setError(null);
+      // Reset orphaned jobsite links when new data is merged
+      setOrphanedJobsiteLinks({});
     } catch (err) {
       setError(`Error merging data: ${err.message}`);
+    }
+  };
+
+  // Handle manual linking of orphaned jobsite to account
+  const handleLinkOrphanedJobsite = (jobsiteId, accountId) => {
+    if (!accountId) {
+      // Remove link if accountId is empty
+      const newLinks = { ...orphanedJobsiteLinks };
+      delete newLinks[jobsiteId];
+      setOrphanedJobsiteLinks(newLinks);
+      
+      // Update mergedData to remove the link
+      if (mergedData) {
+        const updatedJobsites = mergedData.jobsites.map(jobsite => 
+          jobsite.lmn_jobsite_id === jobsiteId 
+            ? { ...jobsite, account_id: null, _is_orphaned: true }
+            : jobsite
+        );
+        const orphanedCount = updatedJobsites.filter(j => j._is_orphaned).length;
+        const linkedCount = updatedJobsites.length - orphanedCount;
+        setMergedData({
+          ...mergedData,
+          jobsites: updatedJobsites,
+          orphanedJobsites: updatedJobsites.filter(j => j._is_orphaned),
+          stats: {
+            ...mergedData.stats,
+            jobsiteLinking: {
+              ...mergedData.stats.jobsiteLinking,
+              orphaned: orphanedCount,
+              linked: linkedCount,
+              linkRate: updatedJobsites.length > 0
+                ? Math.round((linkedCount / updatedJobsites.length) * 100)
+                : 0
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    // Add link
+    setOrphanedJobsiteLinks({
+      ...orphanedJobsiteLinks,
+      [jobsiteId]: accountId
+    });
+
+    // Update mergedData to include the link
+    if (mergedData) {
+      const updatedJobsites = mergedData.jobsites.map(jobsite => 
+        jobsite.lmn_jobsite_id === jobsiteId 
+          ? { ...jobsite, account_id: accountId, _is_orphaned: false }
+          : jobsite
+      );
+      const orphanedCount = updatedJobsites.filter(j => j._is_orphaned).length;
+      const linkedCount = updatedJobsites.length - orphanedCount;
+      setMergedData({
+        ...mergedData,
+        jobsites: updatedJobsites,
+        orphanedJobsites: updatedJobsites.filter(j => j._is_orphaned),
+        stats: {
+          ...mergedData.stats,
+          jobsiteLinking: {
+            ...mergedData.stats.jobsiteLinking,
+            orphaned: orphanedCount,
+            linked: linkedCount,
+            linkRate: updatedJobsites.length > 0
+              ? Math.round((linkedCount / updatedJobsites.length) * 100)
+              : 0
+          }
+        }
+      });
     }
   };
 
@@ -1159,6 +1253,103 @@ export default function ImportLeadsDialog({ open, onClose }) {
                               )}
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Orphaned Jobsites Details and Manual Linking */}
+                    {mergedData.orphanedJobsites && mergedData.orphanedJobsites.length > 0 && (
+                      <div className="mt-4 p-4 rounded border bg-amber-50 border-amber-200">
+                        <div className="flex items-start gap-2 mb-3">
+                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-amber-900">
+                              Orphaned Jobsites - Manual Linking Required
+                            </p>
+                            <p className="text-xs text-amber-800 mt-1">
+                              The following jobsites couldn't be automatically linked. Please select an account for each.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {mergedData.orphanedJobsites.map((jobsite) => {
+                            // Check if this jobsite has been manually linked
+                            const manualLink = orphanedJobsiteLinks[jobsite.lmn_jobsite_id];
+                            // Get the current jobsite from mergedData (in case it was updated)
+                            const currentJobsite = mergedData.jobsites.find(j => j.lmn_jobsite_id === jobsite.lmn_jobsite_id);
+                            const selectedAccountId = manualLink || (currentJobsite && !currentJobsite._is_orphaned ? currentJobsite.account_id : null);
+                            const isLinked = !!selectedAccountId;
+                            
+                            return (
+                              <Card key={jobsite.lmn_jobsite_id} className={`p-3 border ${isLinked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-white'}`}>
+                                <div className="space-y-2">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-slate-500" />
+                                        <p className="font-medium text-sm text-slate-900">
+                                          {jobsite.name || 'Unnamed Jobsite'}
+                                        </p>
+                                        {isLinked && (
+                                          <Badge variant="outline" className="text-xs bg-emerald-100 text-emerald-700 border-emerald-300">
+                                            <LinkIcon className="w-3 h-3 mr-1" />
+                                            Linked
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      
+                                      {jobsite.address_1 && (
+                                        <p className="text-xs text-slate-600 ml-6">
+                                          {jobsite.address_1}
+                                          {jobsite.address_2 && `, ${jobsite.address_2}`}
+                                          {jobsite.city && `, ${jobsite.city}`}
+                                          {jobsite.state && ` ${jobsite.state}`}
+                                          {jobsite.postal_code && ` ${jobsite.postal_code}`}
+                                        </p>
+                                      )}
+                                      
+                                      {jobsite.contact_name && (
+                                        <div className="flex items-center gap-2 ml-6">
+                                          <User className="w-3 h-3 text-slate-400" />
+                                          <p className="text-xs text-slate-600">{jobsite.contact_name}</p>
+                                        </div>
+                                      )}
+                                      
+                                      {jobsite.lmn_contact_id && (
+                                        <p className="text-xs text-slate-500 ml-6">
+                                          Contact ID: {jobsite.lmn_contact_id}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="pt-2 border-t border-amber-200">
+                                    <Label className="text-xs text-slate-700 mb-1.5 block">
+                                      Link to Account:
+                                    </Label>
+                                    <Select
+                                      value={selectedAccountId || ''}
+                                      onValueChange={(value) => handleLinkOrphanedJobsite(jobsite.lmn_jobsite_id, value)}
+                                    >
+                                      <SelectTrigger className="w-full h-9">
+                                        <SelectValue placeholder="Select an account..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="">None (Leave unlinked)</SelectItem>
+                                        {accounts
+                                          .filter(acc => !acc.archived && acc.status !== 'archived')
+                                          .map(account => (
+                                            <SelectItem key={account.id} value={account.id}>
+                                              {account.name}
+                                            </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </Card>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
