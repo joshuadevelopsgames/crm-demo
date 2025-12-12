@@ -96,8 +96,17 @@ export default function Accounts() {
   // - "client" tag matches "customer" filter
   // - "lead" tag matches "prospect" filter
   // - Other common mappings
-  const getAccountTypeForFiltering = (account) => {
-    const accountType = account.account_type?.toLowerCase();
+  // Helper to check if account matches filter type (checks both tags and account_type)
+  const accountMatchesType = (account, filterType) => {
+    if (filterType === 'all') return true;
+    
+    // Normalize filter type to lowercase
+    const normalizedFilter = filterType.toLowerCase();
+    
+    // Check account_type directly
+    if (account.account_type?.toLowerCase() === normalizedFilter) {
+      return true;
+    }
     
     // Handle tags - could be array or string
     let tags = [];
@@ -107,17 +116,24 @@ export default function Accounts() {
       tags = account.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
     }
     
-    // Check tags first, then account_type
-    if (tags.includes('client')) return 'customer';
-    if (tags.includes('customer')) return 'customer';
-    if (tags.includes('lead')) return 'prospect';
-    if (tags.includes('prospect')) return 'prospect';
-    if (tags.includes('partner')) return 'partner';
-    if (tags.includes('vendor')) return 'vendor';
-    if (tags.includes('competitor')) return 'competitor';
+    // Map tags to filter types
+    if (normalizedFilter === 'customer' && (tags.includes('client') || tags.includes('customer'))) {
+      return true;
+    }
+    if (normalizedFilter === 'prospect' && (tags.includes('lead') || tags.includes('prospect'))) {
+      return true;
+    }
+    if (normalizedFilter === 'partner' && tags.includes('partner')) {
+      return true;
+    }
+    if (normalizedFilter === 'vendor' && tags.includes('vendor')) {
+      return true;
+    }
+    if (normalizedFilter === 'competitor' && tags.includes('competitor')) {
+      return true;
+    }
     
-    // Fall back to account_type
-    return accountType;
+    return false;
   };
 
   let filteredAccounts = accountsByStatus.filter(account => {
