@@ -45,11 +45,11 @@ export default function CreateScorecardDialog({ accountId, accountName }) {
         alert('Please select a template');
         return;
       }
-      // Navigate to TakeScorecard with template
-      navigate(createPageUrl(`TakeScorecard?accountId=${accountId}&templateId=${selectedTemplateId}`));
+      // Navigate to BuildScorecard to customize the template
+      navigate(createPageUrl(`BuildScorecard?accountId=${accountId}&templateId=${selectedTemplateId}`));
     } else {
-      // Navigate to TakeScorecard with custom mode
-      navigate(createPageUrl(`TakeScorecard?accountId=${accountId}&custom=true&name=${encodeURIComponent(customName)}&description=${encodeURIComponent(customDescription)}`));
+      // Navigate to BuildScorecard with custom mode (no template)
+      navigate(createPageUrl(`BuildScorecard?accountId=${accountId}&custom=true&name=${encodeURIComponent(customName)}&description=${encodeURIComponent(customDescription)}`));
     }
     setOpen(false);
   };

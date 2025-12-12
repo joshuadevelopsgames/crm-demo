@@ -21,20 +21,34 @@ export default function TakeScorecard() {
   const isCustom = urlParams.get('custom') === 'true';
   const customName = urlParams.get('name') || '';
   const customDescription = urlParams.get('description') || '';
+  const customTemplateParam = urlParams.get('customTemplate'); // For templates built in BuildScorecard
 
   const [answers, setAnswers] = useState({});
   const [scorecardDate, setScorecardDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
 
+  // Parse custom template from URL if provided (from BuildScorecard)
+  const parsedCustomTemplate = useMemo(() => {
+    if (customTemplateParam) {
+      try {
+        return JSON.parse(decodeURIComponent(customTemplateParam));
+      } catch (e) {
+        console.error('Failed to parse custom template:', e);
+        return null;
+      }
+    }
+    return null;
+  }, [customTemplateParam]);
+
   // For custom scorecards, create a simple template structure
-  const customTemplate = isCustom ? {
+  const customTemplate = parsedCustomTemplate || (isCustom ? {
     id: 'custom',
     name: customName || 'Custom Scorecard',
     description: customDescription,
     questions: [], // Will be empty for now - can add question editor later
     total_possible_score: 0,
     pass_threshold: 70
-  } : null;
+  } : null);
 
   const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
     queryKey: ['scorecard-template', templateId],

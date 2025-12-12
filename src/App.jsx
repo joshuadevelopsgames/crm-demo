@@ -12,6 +12,7 @@ import Tasks from './pages/Tasks';
 import Sequences from './pages/Sequences';
 import Scoring from './pages/Scoring';
 import TakeScorecard from './pages/TakeScorecard';
+import BuildScorecard from './pages/BuildScorecard';
 import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
@@ -46,6 +47,7 @@ function AppContent() {
     if (path === '/sequences') return 'Sequences';
     if (path === '/scoring') return 'Scoring';
     if (path === '/take-scorecard') return 'TakeScorecard';
+    if (path === '/build-scorecard') return 'BuildScorecard';
     if (path === '/tutorial') return null; // Tutorial doesn't use Layout
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
@@ -73,6 +75,7 @@ function AppContent() {
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />
               <Route path={createPageUrl('Scoring')} element={<Scoring />} />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
+              <Route path={createPageUrl('BuildScorecard')} element={<BuildScorecard />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </Layout>
