@@ -82,11 +82,26 @@ export default async function handler(req, res) {
         }
         
         // Remove id if it's not a valid UUID - let Supabase generate it
-        const { id, ...jobsiteWithoutId } = jobsite;
+        // Also remove internal tracking fields that don't exist in the schema
+        const { id, account_id, contact_id, _is_orphaned, _link_method, ...jobsiteWithoutId } = jobsite;
         const jobsiteData = {
           ...jobsiteWithoutId,
           updated_at: new Date().toISOString()
         };
+        
+        // Only include account_id if it's a valid UUID format (foreign key constraint)
+        if (account_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(account_id)) {
+          jobsiteData.account_id = account_id;
+        } else {
+          jobsiteData.account_id = null;
+        }
+        
+        // Only include contact_id if it's a valid UUID format (foreign key constraint)
+        if (contact_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contact_id)) {
+          jobsiteData.contact_id = contact_id;
+        } else {
+          jobsiteData.contact_id = null;
+        }
         
         // Only include id if it's a valid UUID format
         if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -171,7 +186,8 @@ export default async function handler(req, res) {
             seenInBatch.add(lookupValue);
             
             // Remove id if it's not a valid UUID - let Supabase generate it
-            const { id, account_id, contact_id, ...jobsiteWithoutIds } = jobsite;
+            // Also remove internal tracking fields that don't exist in the schema
+            const { id, account_id, contact_id, _is_orphaned, _link_method, ...jobsiteWithoutIds } = jobsite;
             const jobsiteData = {
               ...jobsiteWithoutIds,
               updated_at: new Date().toISOString()

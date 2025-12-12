@@ -82,11 +82,19 @@ export default async function handler(req, res) {
         }
         
         // Remove id if it's not a valid UUID - let Supabase generate it
-        const { id, ...contactWithoutId } = contact;
+        // Also remove internal tracking fields that don't exist in the schema
+        const { id, account_id, data_source, matched, ...contactWithoutId } = contact;
         const contactData = {
           ...contactWithoutId,
           updated_at: new Date().toISOString()
         };
+        
+        // Only include account_id if it's a valid UUID format (foreign key constraint)
+        if (account_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(account_id)) {
+          contactData.account_id = account_id;
+        } else {
+          contactData.account_id = null;
+        }
         
         // Only include id if it's a valid UUID format
         if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -171,7 +179,8 @@ export default async function handler(req, res) {
             seenInBatch.add(lookupValue);
             
             // Remove id if it's not a valid UUID - let Supabase generate it
-            const { id, account_id, ...contactWithoutIds } = contact;
+            // Also remove internal tracking fields that don't exist in the schema
+            const { id, account_id, data_source, matched, ...contactWithoutIds } = contact;
             const contactData = {
               ...contactWithoutIds,
               updated_at: new Date().toISOString()
