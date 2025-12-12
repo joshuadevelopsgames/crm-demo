@@ -36,11 +36,19 @@ export default function TakeScorecard() {
     pass_threshold: 70
   } : null;
 
-  const { data: template, isLoading: templateLoading } = useQuery({
+  const { data: template, isLoading: templateLoading, error: templateError } = useQuery({
     queryKey: ['scorecard-template', templateId],
     queryFn: async () => {
       const templates = await base44.entities.ScorecardTemplate.list();
-      return templates.find(t => t.id === templateId);
+      console.log('🔍 Looking for template with ID:', templateId);
+      console.log('📋 Available templates:', templates.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
+      const found = templates.find(t => String(t.id) === String(templateId));
+      if (!found) {
+        console.warn(`⚠️ Template with ID "${templateId}" not found. Available template IDs:`, templates.map(t => t.id));
+      } else {
+        console.log('✅ Found template:', found.name);
+      }
+      return found;
     },
     enabled: !!templateId && !isCustom
   });
