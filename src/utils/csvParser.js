@@ -107,21 +107,63 @@ export function mapStatus(status, pipelineStatus) {
   if (pipeline === 'pending') return 'lost';
   
   // Fall back to Status field
-  const stat = (status || '').toLowerCase();
+  const stat = (status || '').toLowerCase().trim();
   
-  // Won statuses
+  // Explicit Won statuses (check these first for accuracy)
+  if (
+    stat === 'email contract award' ||
+    stat === 'verbal contract award' ||
+    stat === 'work complete' ||
+    stat === 'work in progress' ||
+    stat === 'billing complete' ||
+    stat === 'contract signed' ||
+    stat.includes('email contract award') ||
+    stat.includes('verbal contract award') ||
+    stat.includes('work complete') ||
+    stat.includes('billing complete') ||
+    stat.includes('contract signed')
+  ) {
+    return 'won';
+  }
+  
+  // Explicit Lost statuses (check these first for accuracy)
+  if (
+    stat === 'estimate in progress - lost' ||
+    stat === 'review + approve - lost' ||
+    stat === 'client proposal phase - lost' ||
+    stat === 'estimate lost' ||
+    stat === 'estimate on hold' ||
+    stat === 'estimate lost - no reply' ||
+    stat === 'estimate lost - price too high' ||
+    stat.includes('estimate in progress - lost') ||
+    stat.includes('review + approve - lost') ||
+    stat.includes('client proposal phase - lost') ||
+    stat.includes('estimate lost - no reply') ||
+    stat.includes('estimate lost - price too high') ||
+    stat.includes('estimate on hold')
+  ) {
+    return 'lost';
+  }
+  
+  // Pattern-based Won statuses (fallback)
   if (
     stat.includes('contract signed') ||
     stat.includes('contract award') ||
     stat.includes('sold') ||
     stat.includes('email contract') ||
-    stat.includes('verbal contract')
+    stat.includes('verbal contract') ||
+    stat.includes('work complete') ||
+    stat.includes('billing complete')
   ) {
     return 'won';
   }
   
-  // Lost statuses
-  if (stat.includes('lost') || stat.includes('estimate lost')) {
+  // Pattern-based Lost statuses (fallback)
+  if (
+    stat.includes('estimate lost') ||
+    stat.includes('lost') ||
+    stat.includes('on hold')
+  ) {
     return 'lost';
   }
   

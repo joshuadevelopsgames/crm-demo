@@ -28,6 +28,17 @@ function normalizeDepartment(division) {
   
   const divisionLower = division.toLowerCase().trim();
   
+  // Handle unassigned/empty-like values
+  if (divisionLower === '' || 
+      divisionLower === '<unassigned>' || 
+      divisionLower === 'unassigned' ||
+      divisionLower === 'null' ||
+      divisionLower === 'undefined' ||
+      divisionLower === 'n/a' ||
+      divisionLower === 'na') {
+    return 'Uncategorized';
+  }
+  
   // Try to match against known department names
   for (const dept of DEPARTMENT_NAMES) {
     if (divisionLower === dept.toLowerCase() || 
@@ -37,8 +48,8 @@ function normalizeDepartment(division) {
     }
   }
   
-  // Return original if no match found
-  return division || 'Uncategorized';
+  // Return Uncategorized for any unrecognized value
+  return 'Uncategorized';
 }
 
 export default function EstimatesTab({ estimates = [], accountId }) {
