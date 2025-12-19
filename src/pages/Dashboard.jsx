@@ -1,5 +1,5 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
+import SnoozeDialog from '@/components/SnoozeDialog';
 import {
   Building2,
   Users,
@@ -17,12 +18,15 @@ import {
   Calendar,
   ArrowRight,
   Clock,
-  ExternalLink
+  ExternalLink,
+  BellOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [snoozeAccount, setSnoozeAccount] = useState(null);
   
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -80,6 +84,41 @@ export default function Dashboard() {
     if (task.status === 'completed' || !task.due_date) return false;
     return new Date(task.due_date) < new Date();
   });
+
+  const updateAccountMutation = useMutation({
+    mutationFn: ({ accountId, data }) => base44.entities.Account.update(accountId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      setSnoozeAccount(null);
+    }
+  });
+
+  const handleSnooze = (account, duration, unit) => {
+    const now = new Date();
+    let snoozedUntil;
+    
+    switch (unit) {
+      case 'days':
+        snoozedUntil = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+        break;
+      case 'weeks':
+        snoozedUntil = new Date(now.getTime() + duration * 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'months':
+        snoozedUntil = new Date(now.getFullYear(), now.getMonth() + duration, now.getDate());
+        break;
+      case 'years':
+        snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
+        break;
+      default:
+        return;
+    }
+    
+    updateAccountMutation.mutate({
+      accountId: account.id,
+      data: { snoozed_until: snoozedUntil.toISOString() }
+    });
+  };
 
   const stats = [
     {
@@ -193,21 +232,34 @@ export default function Dashboard() {
             <p className="text-sm text-slate-600 mb-3">No contact in 30+ days</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {neglectedAccounts.slice(0, 5).map(account => (
-                <Link
+                <div
                   key={account.id}
-                  to={createPageUrl(`AccountDetail?id=${account.id}`)}
                   className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
                 >
-                  <div className="flex-1">
+                  <Link
+                    to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                    className="flex-1"
+                  >
                     <p className="font-medium text-slate-900">{account.name}</p>
                     <p className="text-xs text-slate-500">
                       {account.last_interaction_date
                         ? `Last contact: ${format(new Date(account.last_interaction_date), 'MMM d, yyyy')}`
                         : 'No interactions logged'}
                     </p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400" />
-                </Link>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSnoozeAccount(account);
+                    }}
+                    className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
+                  >
+                    <BellOff className="w-4 h-4 mr-1" />
+                    Snooze
+                  </Button>
+                </div>
               ))}
               {neglectedAccounts.length === 0 && (
                 <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
@@ -364,7 +416,18 @@ export default function Dashboard() {
         </Card>
         </TutorialTooltip>
       </div>
+
+      {/* Snooze Dialog */}
+      {snoozeAccount && (
+        <SnoozeDialog
+          account={snoozeAccount}
+          open={!!snoozeAccount}
+          onOpenChange={(open) => !open && setSnoozeAccount(null)}
+          onSnooze={handleSnooze}
+        />
+      )}
     </div>
   );
 }
+
 
