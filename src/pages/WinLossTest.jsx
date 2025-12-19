@@ -85,33 +85,31 @@ export default function WinLossTest() {
       const customerId = customerName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       if (!stats[customerId]) {
-        stats[customerId] = {
-          id: customerId,
-          name: customerName,
-          totalEstimates: 0,
-          estimatesWon: 0,
-          estimatesLost: 0,
-          estimatesPending: 0,
-          totalValue: 0,
-          wonValue: 0,
-          lostValue: 0,
-          estimates: []
-        };
-      }
+      stats[customerId] = {
+        id: customerId,
+        name: customerName,
+        totalEstimates: 0,
+        estimatesWon: 0,
+        estimatesLost: 0,
+        totalValue: 0,
+        wonValue: 0,
+        lostValue: 0,
+        estimates: []
+      };
+    }
 
-      stats[customerId].totalEstimates++;
-      stats[customerId].totalValue += estimate.total_amount || 0;
-      stats[customerId].estimates.push(estimate);
+    stats[customerId].totalEstimates++;
+    stats[customerId].totalValue += estimate.total_amount || 0;
+    stats[customerId].estimates.push(estimate);
 
-      if (estimate.status === 'won') {
-        stats[customerId].estimatesWon++;
-        stats[customerId].wonValue += estimate.total_amount || 0;
-      } else if (estimate.status === 'lost') {
-        stats[customerId].estimatesLost++;
-        stats[customerId].lostValue += estimate.total_amount || 0;
-      } else if (estimate.status === 'pending') {
-        stats[customerId].estimatesPending++;
-      }
+    if (estimate.status === 'won') {
+      stats[customerId].estimatesWon++;
+      stats[customerId].wonValue += estimate.total_amount || 0;
+    } else {
+      // All non-won estimates (lost, pending, etc.) are treated as lost
+      stats[customerId].estimatesLost++;
+      stats[customerId].lostValue += estimate.total_amount || 0;
+    }
     });
 
     // Calculate win rate for each customer
@@ -129,22 +127,21 @@ export default function WinLossTest() {
   const overallStats = useMemo(() => {
     const total = estimates.length;
     const won = estimates.filter(e => e.status === 'won').length;
-    const lost = estimates.filter(e => e.status === 'lost').length;
-    const pending = estimates.filter(e => e.status === 'pending').length;
-    const decidedEstimates = won + lost;
+    // All non-won estimates (lost, pending, etc.) are treated as lost
+    const lost = estimates.filter(e => e.status !== 'won').length;
+    const decidedEstimates = total; // All estimates are now decided (won or lost)
     const winRate = decidedEstimates > 0 ? (won / decidedEstimates * 100).toFixed(1) : 0;
 
     const totalValue = estimates.reduce((sum, e) => sum + (e.total_amount || 0), 0);
     const wonValue = estimates.filter(e => e.status === 'won')
       .reduce((sum, e) => sum + (e.total_amount || 0), 0);
-    const lostValue = estimates.filter(e => e.status === 'lost')
+    const lostValue = estimates.filter(e => e.status !== 'won')
       .reduce((sum, e) => sum + (e.total_amount || 0), 0);
 
     return {
       total,
       won,
       lost,
-      pending,
       winRate,
       totalValue,
       wonValue,
@@ -173,7 +170,11 @@ export default function WinLossTest() {
     let filtered = [...estimates];
 
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(e => e.status === filterStatus);
+      // Normalize status: treat pending and any non-won as lost
+      filtered = filtered.filter(e => {
+        const normalizedStatus = e.status === 'won' ? 'won' : 'lost';
+        return normalizedStatus === filterStatus;
+      });
     }
 
     // Sort by date (newest first)
@@ -185,10 +186,10 @@ export default function WinLossTest() {
   const getStatusColor = (status) => {
     const colors = {
       won: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      lost: 'bg-red-100 text-red-800 border-red-200',
-      pending: 'bg-amber-100 text-amber-800 border-amber-200'
+      lost: 'bg-red-100 text-red-800 border-red-200'
     };
-    return colors[status] || 'bg-slate-100 text-slate-800';
+    // All non-won statuses (including pending) are treated as lost
+    return colors[status] || colors.lost;
   };
 
   const getWinRateColor = (rate) => {
@@ -303,7 +304,7 @@ export default function WinLossTest() {
                 <p className={`text-3xl font-bold mt-2 ${getWinRateColor(overallStats.winRate)}`}>
                   {overallStats.winRate}%
                 </p>
-                <p className="text-xs text-slate-500 mt-1">{overallStats.pending} pending</p>
+                <p className="text-xs text-slate-500 mt-1">{overallStats.total} total estimates</p>
               </div>
               <Target className="w-10 h-10 text-purple-500 opacity-80" />
             </div>
@@ -393,7 +394,6 @@ export default function WinLossTest() {
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="won">Won</SelectItem>
                 <SelectItem value="lost">Lost</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -487,6 +487,8 @@ export default function WinLossTest() {
     </div>
   );
 }
+
+
 
 
 

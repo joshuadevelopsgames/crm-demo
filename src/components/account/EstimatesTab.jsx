@@ -62,7 +62,10 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   // Filter by status and year
   const statusFilteredEstimates = useMemo(() => {
     let filtered = estimates.filter(est => {
-      if (filterStatus !== 'all' && est.status !== filterStatus) return false;
+      // Normalize status: treat pending and any non-won as lost
+      const normalizedStatus = est.status === 'won' ? 'won' : 'lost';
+      
+      if (filterStatus !== 'all' && normalizedStatus !== filterStatus) return false;
       
       if (filterYear !== 'all' && est.estimate_date) {
         const year = new Date(est.estimate_date).getFullYear();
@@ -138,10 +141,10 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   const getStatusColor = (status) => {
     const colors = {
       won: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      lost: 'bg-red-100 text-red-800 border-red-200',
-      pending: 'bg-amber-100 text-amber-800 border-amber-200'
+      lost: 'bg-red-100 text-red-800 border-red-200'
     };
-    return colors[status] || 'bg-slate-100 text-slate-800';
+    // All non-won statuses (including pending) are treated as lost
+    return colors[status] || colors.lost;
   };
 
   const calculateDepartmentTotal = (departmentEstimates) => {
@@ -195,7 +198,6 @@ export default function EstimatesTab({ estimates = [], accountId }) {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="won">Won</SelectItem>
               <SelectItem value="lost">Lost</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
           <Button className="bg-emerald-600 hover:bg-emerald-700">
@@ -304,7 +306,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                             </td>
                             <td className="px-4 py-4 text-center">
                               <Badge variant="outline" className={getStatusColor(estimate.status)}>
-                                {estimate.status?.toUpperCase() || 'PENDING'}
+                                {estimate.status === 'won' ? 'WON' : 'LOST'}
                               </Badge>
                             </td>
                           </tr>

@@ -125,7 +125,7 @@ export function parseEstimatesList(csvText) {
         // Determine status
         const status = row[colMap.status]?.toString().trim() || '';
         const pipelineStatus = row[colMap.salesPipelineStatus]?.toString().trim() || '';
-        let estimateStatus = 'pending';
+        let estimateStatus = 'lost'; // Default to lost (no pending option)
         
         if (pipelineStatus.toLowerCase().includes('sold') || 
             pipelineStatus.toLowerCase().includes('contract') ||
@@ -135,6 +135,7 @@ export function parseEstimatesList(csvText) {
                    status.toLowerCase().includes('lost')) {
           estimateStatus = 'lost';
         }
+        // All other cases (pending, in progress, empty) default to lost
 
         const estimate = {
           id: `lmn-estimate-${estimateId}`,
@@ -274,6 +275,8 @@ function parseCSVLine(line) {
   result.push(current.trim());
   return result;
 }
+
+
 
 
 

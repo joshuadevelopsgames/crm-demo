@@ -96,14 +96,15 @@ export function parseDate(dateStr) {
 
 /**
  * Map status from CSV to our system
- * Maps various statuses to: won, lost, or pending
+ * Maps various statuses to: won or lost (pending defaults to lost)
  */
 export function mapStatus(status, pipelineStatus) {
   // Check pipeline status first (more reliable)
   const pipeline = (pipelineStatus || '').toLowerCase();
   if (pipeline === 'sold') return 'won';
   if (pipeline === 'lost') return 'lost';
-  if (pipeline === 'pending') return 'pending';
+  // Pipeline "pending" defaults to lost
+  if (pipeline === 'pending') return 'lost';
   
   // Fall back to Status field
   const stat = (status || '').toLowerCase();
@@ -124,17 +125,17 @@ export function mapStatus(status, pipelineStatus) {
     return 'lost';
   }
   
-  // Pending/In Progress
+  // Pending/In Progress/Empty defaults to lost
   if (
     stat.includes('in progress') ||
     stat.includes('pending') ||
     stat === ''
   ) {
-    return 'pending';
+    return 'lost';
   }
   
-  // Default to pending
-  return 'pending';
+  // Default to lost (no pending option)
+  return 'lost';
 }
 
 /**
@@ -181,6 +182,8 @@ export function processEstimateData(rawData) {
   
   return estimates;
 }
+
+
 
 
 

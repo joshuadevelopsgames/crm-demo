@@ -644,7 +644,7 @@ export const mockEstimates = [
     estimate_date: '2024-08-05',
     description: 'Fall Cleanup & Winter Preparation',
     total_amount: 8500,
-    status: 'pending',
+    status: 'lost',
     created_by: 'sales@company.com',
     follow_up_date: '2024-08-15'
   },
@@ -733,7 +733,7 @@ export const mockEstimates = [
     estimate_date: '2024-11-20',
     description: 'Tree Pruning & Health Assessment',
     total_amount: 14500,
-    status: 'pending',
+    status: 'lost',
     created_by: 'sales@company.com',
     follow_up_date: '2024-12-05'
   }
