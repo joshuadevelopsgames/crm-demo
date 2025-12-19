@@ -144,13 +144,31 @@ export function parseEstimatesList(csvText) {
             stat === 'work in progress' ||
             stat === 'billing complete' ||
             stat === 'contract signed' ||
+            stat === 'contract awarded' ||
+            stat === 'proposal accepted' ||
+            stat === 'quote accepted' ||
+            stat === 'estimate accepted' ||
+            stat === 'approved' ||
+            stat === 'completed' ||
             stat.includes('email contract award') ||
             stat.includes('verbal contract award') ||
             stat.includes('work complete') ||
             stat.includes('billing complete') ||
-            stat.includes('contract signed')
+            stat.includes('contract signed') ||
+            stat.includes('contract awarded') ||
+            stat.includes('proposal accepted') ||
+            stat.includes('quote accepted') ||
+            stat.includes('estimate accepted') ||
+            (stat.includes('accepted') && !stat.includes('rejected')) ||
+            (stat === 'approved' || stat.includes('approved')) ||
+            (stat === 'completed' || stat.includes('completed'))
           ) {
-            estimateStatus = 'won';
+            // Handle ambiguous cases: if contains "pending" after positive keywords, might not be final
+            if (stat.includes('contract signed') && stat.includes('pending')) {
+              estimateStatus = 'lost'; // Contract signed but pending approval = not final
+            } else {
+              estimateStatus = 'won';
+            }
           }
           // Explicit Lost statuses
           else if (
