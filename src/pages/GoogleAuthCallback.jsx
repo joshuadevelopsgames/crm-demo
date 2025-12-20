@@ -5,14 +5,22 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 
-// App plugin is optional - import dynamically if available
-let App = null;
-if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
-  import('@capacitor/app').then((module) => {
-    App = module.App;
-  }).catch((e) => {
+// App plugin is optional - will be loaded dynamically at runtime if needed
+async function getAppPlugin() {
+  // Only try to load in native app environment
+  if (typeof window === 'undefined' || !window.Capacitor?.isNativePlatform()) {
+    return null;
+  }
+  
+  try {
+    // Use a dynamic string to avoid static analysis
+    const pluginName = '@capacitor/app';
+    const module = await import(/* @vite-ignore */ pluginName);
+    return module.App;
+  } catch (e) {
     console.log('App plugin not installed, deep linking may not work');
-  });
+    return null;
+  }
 }
 
 export default function GoogleAuthCallback() {
@@ -96,7 +104,17 @@ export default function GoogleAuthCallback() {
 
   // Listen for app URL open events (mobile deep linking)
   useEffect(() => {
-    if (isMobile && App && typeof App.addListener === 'function') {
+    if (!isMobile) return;
+
+    let AppInstance = null;
+    let cleanup = null;
+
+    const setupAppListener = async () => {
+      AppInstance = await getAppPlugin();
+      if (!AppInstance || typeof AppInstance.addListener !== 'function') {
+        return;
+      }
+
       const handleAppUrl = async (event) => {
         const supabase = getSupabaseAuth();
         if (!supabase) return;
@@ -121,12 +139,20 @@ export default function GoogleAuthCallback() {
         }
       };
       
-      App.addListener('appUrlOpen', handleAppUrl);
+      AppInstance.addListener('appUrlOpen', handleAppUrl);
       
-      return () => {
-        App.removeListener('appUrlOpen', handleAppUrl);
+      cleanup = () => {
+        if (AppInstance && typeof AppInstance.removeListener === 'function') {
+          AppInstance.removeListener('appUrlOpen', handleAppUrl);
+        }
       };
-    }
+    };
+
+    setupAppListener();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [isMobile, navigate]);
 
   const safeAreaTop = isMobile ? 'env(safe-area-inset-top, 0px)' : '0px';

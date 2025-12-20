@@ -7,16 +7,6 @@ import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
-// Browser plugin is optional - import dynamically if available
-let Browser = null;
-if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
-  import('@capacitor/browser').then((module) => {
-    Browser = module.Browser;
-  }).catch((e) => {
-    console.log('Browser plugin not installed, using window.location for OAuth');
-  });
-}
-
 export default function Login() {
   console.log('✅ Login component is rendering!');
   
