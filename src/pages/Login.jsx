@@ -32,6 +32,10 @@ export default function Login() {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userEmail', email);
         localStorage.setItem('authProvider', 'email');
+        
+        // Trigger custom event to notify App.jsx of auth state change
+        window.dispatchEvent(new Event('authStateChange'));
+        
         toast.success('Successfully logged in! (Demo mode)');
         navigate('/dashboard');
         return;

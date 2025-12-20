@@ -109,6 +109,29 @@ function AppContent() {
     };
 
     checkAuth();
+
+    // Listen for localStorage changes (for demo mode)
+    const handleStorageChange = (e) => {
+      if (e.key === 'isAuthenticated') {
+        const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+        setIsAuthenticated(isAuth);
+      }
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also listen for custom event (from same window)
+    const handleCustomStorageChange = () => {
+      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+      setIsAuthenticated(isAuth);
+    };
+    window.addEventListener('authStateChange', handleCustomStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChange', handleCustomStorageChange);
+    };
   }, []);
   
   // Extract page name from path
