@@ -97,19 +97,14 @@ export function parseDate(dateStr) {
 /**
  * Map status from CSV to our system
  * Maps various statuses to: won or lost (pending defaults to lost)
+ * Only reads from "Status" column - does not use "Sales Pipeline Status"
  */
-export function mapStatus(status, pipelineStatus) {
-  // Check pipeline status first (more reliable)
-  const pipeline = (pipelineStatus || '').toLowerCase();
-  if (pipeline === 'sold') return 'won';
-  if (pipeline === 'lost') return 'lost';
-  // Pipeline "pending" defaults to lost
-  if (pipeline === 'pending') return 'lost';
-  
-  // Fall back to Status field
+export function mapStatus(status) {
+  // Only use Status field (not Sales Pipeline Status)
   const stat = (status || '').toLowerCase().trim();
   
   // Explicit Won statuses (check these first for accuracy)
+  // Reading from CSV column: "Status" only
   if (
     stat === 'email contract award' ||
     stat === 'verbal contract award' ||
@@ -117,29 +112,12 @@ export function mapStatus(status, pipelineStatus) {
     stat === 'work in progress' ||
     stat === 'billing complete' ||
     stat === 'contract signed' ||
-    stat === 'contract awarded' ||
-    stat === 'proposal accepted' ||
-    stat === 'quote accepted' ||
-    stat === 'estimate accepted' ||
-    stat === 'approved' ||
-    stat === 'completed' ||
     stat.includes('email contract award') ||
     stat.includes('verbal contract award') ||
     stat.includes('work complete') ||
     stat.includes('billing complete') ||
-    stat.includes('contract signed') ||
-    stat.includes('contract awarded') ||
-    stat.includes('proposal accepted') ||
-    stat.includes('quote accepted') ||
-    stat.includes('estimate accepted') ||
-    (stat.includes('accepted') && !stat.includes('rejected')) ||
-    (stat === 'approved' || stat.includes('approved')) ||
-    (stat === 'completed' || stat.includes('completed'))
+    stat.includes('contract signed')
   ) {
-    // Handle ambiguous cases: if contains "pending" after positive keywords, might not be final
-    if (stat.includes('contract signed') && stat.includes('pending')) {
-      return 'lost'; // Contract signed but pending approval = not final
-    }
     return 'won';
   }
   
@@ -162,38 +140,7 @@ export function mapStatus(status, pipelineStatus) {
     return 'lost';
   }
   
-  // Pattern-based Won statuses (fallback)
-  if (
-    stat.includes('contract signed') ||
-    stat.includes('contract award') ||
-    stat.includes('sold') ||
-    stat.includes('email contract') ||
-    stat.includes('verbal contract') ||
-    stat.includes('work complete') ||
-    stat.includes('billing complete')
-  ) {
-    return 'won';
-  }
-  
-  // Pattern-based Lost statuses (fallback)
-  if (
-    stat.includes('estimate lost') ||
-    stat.includes('lost') ||
-    stat.includes('on hold')
-  ) {
-    return 'lost';
-  }
-  
-  // Pending/In Progress/Empty defaults to lost
-  if (
-    stat.includes('in progress') ||
-    stat.includes('pending') ||
-    stat === ''
-  ) {
-    return 'lost';
-  }
-  
-  // Default to lost (no pending option)
+  // Default to lost (no pending option, no pattern matching)
   return 'lost';
 }
 
@@ -209,7 +156,7 @@ export function processEstimateData(rawData) {
       return;
     }
     
-    const status = mapStatus(row['Status'], row['Sales Pipeline Status']);
+    const status = mapStatus(row['Status']);
     const estimateDate = parseDate(row['Estimate Date']);
     const closeDate = parseDate(row['Estimate Close Date']);
     const totalPrice = parseCurrency(row['Total Price']);
@@ -234,8 +181,8 @@ export function processEstimateData(rawData) {
       estimator: row['Estimator'] || '',
       division: row['Division'] || '',
       confidence_level: row['Confidence Level'] || '',
-      raw_status: row['Status'] || '',
-      pipeline_status: row['Sales Pipeline Status'] || ''
+      raw_status: row['Status'] || ''
+      // Note: Sales Pipeline Status column is no longer read or used for win/loss determination
     });
   });
   

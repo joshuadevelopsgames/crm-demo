@@ -123,95 +123,48 @@ export function parseEstimatesList(csvText) {
         };
 
         // Determine status
+        // Only reading from "Status" column - not using "Sales Pipeline Status"
         const status = row[colMap.status]?.toString().trim() || '';
-        const pipelineStatus = row[colMap.salesPipelineStatus]?.toString().trim() || '';
         let estimateStatus = 'lost'; // Default to lost (no pending option)
         
         const stat = status.toLowerCase().trim();
-        const pipeline = pipelineStatus.toLowerCase().trim();
         
-        // Check pipeline status first (more reliable)
-        if (pipeline === 'sold') {
+        // Explicit Won statuses
+        // Reading from LMN CSV column: "Status" only
+        if (
+          stat === 'email contract award' ||
+          stat === 'verbal contract award' ||
+          stat === 'work complete' ||
+          stat === 'work in progress' ||
+          stat === 'billing complete' ||
+          stat === 'contract signed' ||
+          stat.includes('email contract award') ||
+          stat.includes('verbal contract award') ||
+          stat.includes('work complete') ||
+          stat.includes('billing complete') ||
+          stat.includes('contract signed')
+        ) {
           estimateStatus = 'won';
-        } else if (pipeline === 'lost') {
-          estimateStatus = 'lost';
-        } else {
-          // Explicit Won statuses
-          if (
-            stat === 'email contract award' ||
-            stat === 'verbal contract award' ||
-            stat === 'work complete' ||
-            stat === 'work in progress' ||
-            stat === 'billing complete' ||
-            stat === 'contract signed' ||
-            stat === 'contract awarded' ||
-            stat === 'proposal accepted' ||
-            stat === 'quote accepted' ||
-            stat === 'estimate accepted' ||
-            stat === 'approved' ||
-            stat === 'completed' ||
-            stat.includes('email contract award') ||
-            stat.includes('verbal contract award') ||
-            stat.includes('work complete') ||
-            stat.includes('billing complete') ||
-            stat.includes('contract signed') ||
-            stat.includes('contract awarded') ||
-            stat.includes('proposal accepted') ||
-            stat.includes('quote accepted') ||
-            stat.includes('estimate accepted') ||
-            (stat.includes('accepted') && !stat.includes('rejected')) ||
-            (stat === 'approved' || stat.includes('approved')) ||
-            (stat === 'completed' || stat.includes('completed'))
-          ) {
-            // Handle ambiguous cases: if contains "pending" after positive keywords, might not be final
-            if (stat.includes('contract signed') && stat.includes('pending')) {
-              estimateStatus = 'lost'; // Contract signed but pending approval = not final
-            } else {
-              estimateStatus = 'won';
-            }
-          }
-          // Explicit Lost statuses
-          else if (
-            stat === 'estimate in progress - lost' ||
-            stat === 'review + approve - lost' ||
-            stat === 'client proposal phase - lost' ||
-            stat === 'estimate lost' ||
-            stat === 'estimate on hold' ||
-            stat === 'estimate lost - no reply' ||
-            stat === 'estimate lost - price too high' ||
-            stat.includes('estimate in progress - lost') ||
-            stat.includes('review + approve - lost') ||
-            stat.includes('client proposal phase - lost') ||
-            stat.includes('estimate lost - no reply') ||
-            stat.includes('estimate lost - price too high') ||
-            stat.includes('estimate on hold')
-          ) {
-            estimateStatus = 'lost';
-          }
-          // Pattern-based matching (fallback)
-          else if (
-            pipeline.includes('sold') || 
-            pipeline.includes('contract') ||
-            stat.includes('won') ||
-            stat.includes('contract signed') ||
-            stat.includes('contract award') ||
-            stat.includes('sold') ||
-            stat.includes('email contract') ||
-            stat.includes('verbal contract') ||
-            stat.includes('work complete') ||
-            stat.includes('billing complete')
-          ) {
-            estimateStatus = 'won';
-          } else if (
-            pipeline.includes('lost') ||
-            stat.includes('estimate lost') ||
-            stat.includes('lost') ||
-            stat.includes('on hold')
-          ) {
-            estimateStatus = 'lost';
-          }
-          // All other cases (pending, in progress, empty) default to lost
         }
+        // Explicit Lost statuses
+        else if (
+          stat === 'estimate in progress - lost' ||
+          stat === 'review + approve - lost' ||
+          stat === 'client proposal phase - lost' ||
+          stat === 'estimate lost' ||
+          stat === 'estimate on hold' ||
+          stat === 'estimate lost - no reply' ||
+          stat === 'estimate lost - price too high' ||
+          stat.includes('estimate in progress - lost') ||
+          stat.includes('review + approve - lost') ||
+          stat.includes('client proposal phase - lost') ||
+          stat.includes('estimate lost - no reply') ||
+          stat.includes('estimate lost - price too high') ||
+          stat.includes('estimate on hold')
+        ) {
+          estimateStatus = 'lost';
+        }
+        // All other cases default to lost (no pattern matching)
 
         const estimate = {
           id: `lmn-estimate-${estimateId}`,
@@ -236,7 +189,7 @@ export function parseEstimatesList(csvText) {
           salesperson: row[colMap.salesperson]?.toString().trim() || '',
           estimator: row[colMap.estimator]?.toString().trim() || '',
           status: estimateStatus,
-          pipeline_status: pipelineStatus,
+          // Note: Sales Pipeline Status is no longer used for win/loss determination
           proposal_first_shared: parseDate(row[colMap.proposalFirstShared]),
           proposal_last_shared: parseDate(row[colMap.proposalLastShared]),
           proposal_last_updated: parseDate(row[colMap.proposalLastUpdated]),

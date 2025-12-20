@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Plus, Calendar, DollarSign, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, Plus, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Department names to normalize division values
@@ -55,7 +55,8 @@ function normalizeDepartment(division) {
 export default function EstimatesTab({ estimates = [], accountId }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
-  const [expandedDepartments, setExpandedDepartments] = useState(new Set(DEPARTMENT_NAMES));
+  // Initialize with all departments expanded, including Uncategorized
+  const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DEPARTMENT_NAMES, 'Uncategorized']));
   const [filterDepartment, setFilterDepartment] = useState('all');
 
   // Get available years from estimates
@@ -117,8 +118,12 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       });
     });
     
-    // Sort departments: known departments first, then others alphabetically
+    // Sort departments: Uncategorized always first, then known departments, then others alphabetically
     const sortedDepartments = Object.keys(grouped).sort((a, b) => {
+      // Uncategorized always comes first
+      if (a === 'Uncategorized') return -1;
+      if (b === 'Uncategorized') return 1;
+      
       const aIndex = DEPARTMENT_NAMES.indexOf(a);
       const bIndex = DEPARTMENT_NAMES.indexOf(b);
       
@@ -165,10 +170,47 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     }, 0);
   };
 
+  // Calculate win percentage for a department
+  const calculateDepartmentWinPercentage = (departmentEstimates) => {
+    if (departmentEstimates.length === 0) return 0;
+    const won = departmentEstimates.filter(est => est.status === 'won').length;
+    return (won / departmentEstimates.length) * 100;
+  };
+
+  // Calculate total win percentage for all estimates (not filtered - for account overall)
+  const totalWinPercentage = useMemo(() => {
+    if (estimates.length === 0) return 0;
+    const won = estimates.filter(est => est.status === 'won').length;
+    return (won / estimates.length) * 100;
+  }, [estimates]);
+
   const totalEstimates = statusFilteredEstimates.length;
 
   return (
     <div className="space-y-4">
+      {/* Total Win Percentage Card */}
+      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-emerald-500 flex items-center justify-center">
+                <Target className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-700">Overall Win Rate</p>
+                <p className="text-3xl font-bold text-emerald-900 mt-1">
+                  {totalWinPercentage.toFixed(1)}%
+                </p>
+                <p className="text-xs text-emerald-600 mt-1">
+                  {estimates.filter(est => est.status === 'won').length} won / {estimates.length} total
+                </p>
+              </div>
+            </div>
+            <TrendingUp className="w-8 h-8 text-emerald-600 opacity-50" />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Filter Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h3 className="text-lg font-semibold text-slate-900">
@@ -232,29 +274,75 @@ export default function EstimatesTab({ estimates = [], accountId }) {
               <Card key={department} className="overflow-hidden">
                 {/* Department Header */}
                 <div 
-                  className="bg-slate-50 border-b px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors"
+                  className={`border-b px-4 py-3 cursor-pointer transition-colors ${
+                    department === 'Uncategorized' 
+                      ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' 
+                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                  }`}
                   onClick={() => toggleDepartment(department)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-slate-600" />
+                        <ChevronDown className={`w-4 h-4 ${
+                          department === 'Uncategorized' 
+                            ? 'text-amber-600' 
+                            : 'text-slate-600'
+                        }`} />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                        <ChevronRight className={`w-4 h-4 ${
+                          department === 'Uncategorized' 
+                            ? 'text-amber-600' 
+                            : 'text-slate-600'
+                        }`} />
                       )}
-                      <h4 className="font-semibold text-slate-900">{department}</h4>
+                      <h4 className={`font-semibold ${
+                        department === 'Uncategorized' 
+                          ? 'text-amber-900' 
+                          : 'text-slate-900'
+                      }`}>
+                        {department}
+                      </h4>
                       <Badge variant="outline" className="ml-2">
                         {departmentEstimates.length} {departmentEstimates.length === 1 ? 'estimate' : 'estimates'}
                       </Badge>
+                      {department !== 'Uncategorized' && (
+                        <Badge 
+                          variant="outline" 
+                          className={`ml-2 ${
+                            calculateDepartmentWinPercentage(departmentEstimates) >= 50
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                              : calculateDepartmentWinPercentage(departmentEstimates) >= 30
+                              ? 'bg-amber-100 text-amber-800 border-amber-200'
+                              : 'bg-red-100 text-red-800 border-red-200'
+                          }`}
+                        >
+                          {calculateDepartmentWinPercentage(departmentEstimates).toFixed(1)}% win rate
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-slate-500" />
-                      <span className="font-semibold text-slate-900">
-                        {departmentTotal.toLocaleString('en-US', { 
-                          minimumFractionDigits: 2, 
-                          maximumFractionDigits: 2 
-                        })}
-                      </span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-slate-500" />
+                        <span className={`text-sm font-semibold ${
+                          calculateDepartmentWinPercentage(departmentEstimates) >= 50
+                            ? 'text-emerald-700'
+                            : calculateDepartmentWinPercentage(departmentEstimates) >= 30
+                            ? 'text-amber-700'
+                            : 'text-red-700'
+                        }`}>
+                          {calculateDepartmentWinPercentage(departmentEstimates).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-slate-500" />
+                        <span className="font-semibold text-slate-900">
+                          {departmentTotal.toLocaleString('en-US', { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

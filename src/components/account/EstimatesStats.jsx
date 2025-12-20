@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator } from 'lucide-react';
+import { Calculator, Target } from 'lucide-react';
 
 export default function EstimatesStats({ estimates = [] }) {
   const currentYear = new Date().getFullYear();
@@ -9,6 +9,13 @@ export default function EstimatesStats({ estimates = [] }) {
     const estimateYear = new Date(e.estimate_date || e.created_date).getFullYear();
     return estimateYear === currentYear;
   });
+
+  // Calculate win percentage for all estimates
+  const winPercentage = useMemo(() => {
+    if (estimates.length === 0) return 0;
+    const won = estimates.filter(est => est.status === 'won').length;
+    return (won / estimates.length) * 100;
+  }, [estimates]);
 
   return (
     <Card>
@@ -34,11 +41,32 @@ export default function EstimatesStats({ estimates = [] }) {
               {estimates.length}
             </p>
           </div>
+          {estimates.length > 0 && (
+            <div className="pt-3 border-t border-slate-200">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-slate-500" />
+                <div>
+                  <p className="text-sm text-slate-600">WIN RATE</p>
+                  <p className={`text-2xl font-bold mt-1 ${
+                    winPercentage >= 50
+                      ? 'text-emerald-600'
+                      : winPercentage >= 30
+                      ? 'text-amber-600'
+                      : 'text-red-600'
+                  }`}>
+                    {winPercentage.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
+
+
 
 
 
