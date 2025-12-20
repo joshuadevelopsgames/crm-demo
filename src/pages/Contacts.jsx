@@ -43,7 +43,6 @@ import ImportLeadsDialog from '../components/ImportLeadsDialog';
 export default function Contacts() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
@@ -104,19 +103,8 @@ export default function Contacts() {
       contact.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.account_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || contact.role === filterRole;
-    return matchesSearch && matchesRole;
+    return matchesSearch;
   });
-
-  const getRoleColor = (role) => {
-    const colors = {
-      decision_maker: 'bg-purple-100 text-purple-800 border-purple-200',
-      influencer: 'bg-blue-100 text-blue-800 border-blue-200',
-      champion: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      user: 'bg-slate-100 text-slate-800 border-slate-200'
-    };
-    return colors[role] || colors.user;
-  };
 
   return (
     <div className="space-y-6">
@@ -172,18 +160,6 @@ export default function Contacts() {
               className="pl-10"
             />
           </div>
-          <Select value={filterRole} onValueChange={setFilterRole}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="decision_maker">Decision Maker</SelectItem>
-              <SelectItem value="influencer">Influencer</SelectItem>
-              <SelectItem value="champion">Champion</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-            </SelectContent>
-          </Select>
           <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -220,9 +196,6 @@ export default function Contacts() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Account
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Role
                       </th>
                       <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
@@ -277,11 +250,6 @@ export default function Contacts() {
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
                           )}
-                        </td>
-                        <td className="px-4 py-4">
-                          <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''}`}>
-                            {contact.role ? contact.role.replace('_', ' ') : 'user'}
-                          </Badge>
                         </td>
                         <td className="px-0.5 py-4">
                           <a 
@@ -368,11 +336,6 @@ export default function Contacts() {
                           <span className="truncate">{contact.account_name || 'View Account'}</span>
                         </Link>
                       )}
-
-                      {/* Role Badge */}
-                      <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''} w-fit`}>
-                        {contact.role ? contact.role.replace('_', ' ') : 'user'}
-                      </Badge>
 
                       {/* Contact Info */}
                       <div className={`space-y-2 pt-2 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
@@ -436,8 +399,8 @@ export default function Contacts() {
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts found</h3>
               <p className="text-slate-600 mb-4">
-                {searchTerm || filterRole !== 'all'
-                  ? 'Try adjusting your filters'
+                {searchTerm
+                  ? 'Try adjusting your search'
                   : 'Create your first contact to get started'}
               </p>
             </Card>
@@ -457,18 +420,6 @@ export default function Contacts() {
                   className="pl-10"
                 />
               </div>
-              <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="decision_maker">Decision Maker</SelectItem>
-                  <SelectItem value="influencer">Influencer</SelectItem>
-                  <SelectItem value="champion">Champion</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
               <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -505,9 +456,6 @@ export default function Contacts() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Account
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Role
                       </th>
                       <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Email
@@ -562,11 +510,6 @@ export default function Contacts() {
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
                           )}
-                        </td>
-                        <td className="px-4 py-4">
-                          <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''}`}>
-                            {contact.role ? contact.role.replace('_', ' ') : 'user'}
-                          </Badge>
                         </td>
                         <td className="px-0.5 py-4">
                           <a 
@@ -654,11 +597,6 @@ export default function Contacts() {
                         </Link>
                       )}
 
-                      {/* Role Badge */}
-                      <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''} w-fit`}>
-                        {contact.role ? contact.role.replace('_', ' ') : 'user'}
-                      </Badge>
-
                       {/* Contact Info */}
                       <div className={`space-y-2 pt-2 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
                         <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -721,8 +659,8 @@ export default function Contacts() {
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-slate-900 mb-1">No archived contacts found</h3>
               <p className="text-slate-600 mb-4">
-                {searchTerm || filterRole !== 'all'
-                  ? 'Try adjusting your filters'
+                {searchTerm
+                  ? 'Try adjusting your search'
                   : 'No archived contacts'}
               </p>
             </Card>
