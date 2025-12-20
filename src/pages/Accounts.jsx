@@ -306,29 +306,31 @@ export default function Accounts() {
             <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
           </div>
         </TutorialTooltip>
-        <TutorialTooltip
-          tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload both files to create accounts and contacts with complete data."
-          step={2}
-          position="bottom"
-        >
-          <Button 
-            onClick={() => setIsImportDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+        <div className="flex items-center gap-3">
+          <TutorialTooltip
+            tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload both files to create accounts and contacts with complete data."
+            step={2}
+            position="bottom"
           >
-            <Upload className="w-4 h-4 mr-2" />
-            Import from LMN
+            <Button 
+              onClick={() => setIsImportDialogOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import from LMN
+            </Button>
+          </TutorialTooltip>
+          <Button 
+            onClick={handleRecalculateSegments}
+            variant="outline"
+            disabled={recalculateSegmentsMutation.isPending}
+            className="border-slate-300"
+            title="Recalculate revenue segments for all accounts based on current revenue percentages"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${recalculateSegmentsMutation.isPending ? 'animate-spin' : ''}`} />
+            Recalculate Segments
           </Button>
-        </TutorialTooltip>
-        <Button 
-          onClick={handleRecalculateSegments}
-          variant="outline"
-          disabled={recalculateSegmentsMutation.isPending}
-          className="border-slate-300"
-          title="Recalculate revenue segments for all accounts based on current revenue percentages"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${recalculateSegmentsMutation.isPending ? 'animate-spin' : ''}`} />
-          Recalculate Segments
-        </Button>
+        </div>
       </div>
 
       {/* Import Leads Dialog */}
