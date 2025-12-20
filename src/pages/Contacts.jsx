@@ -76,7 +76,6 @@ export default function Contacts() {
     title: '',
     account_id: '',
     account_name: '',
-    role: 'user',
     preferences: '',
     linkedin_url: '',
     status: 'active'
@@ -110,7 +109,7 @@ export default function Contacts() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Contacts page. View all contacts across all accounts, search by name, and filter by role. Each contact belongs to an account and includes contact information and preferences."
+        tip="This is your Contacts page. View all contacts across all accounts and search by name. Each contact belongs to an account and includes contact information and preferences."
         step={2}
         position="bottom"
       >

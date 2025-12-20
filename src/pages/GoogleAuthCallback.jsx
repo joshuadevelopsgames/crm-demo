@@ -8,11 +8,11 @@ import { Capacitor } from '@capacitor/core';
 // App plugin is optional - import dynamically if available
 let App = null;
 if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
-  try {
-    App = require('@capacitor/app').App;
-  } catch (e) {
+  import('@capacitor/app').then((module) => {
+    App = module.App;
+  }).catch((e) => {
     console.log('App plugin not installed, deep linking may not work');
-  }
+  });
 }
 
 export default function GoogleAuthCallback() {

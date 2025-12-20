@@ -3,6 +3,8 @@
  * Connects to your Supabase database and handles authentication
  */
 
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
 // For client-side usage (with auth)
 let supabaseClient = null;
 
@@ -11,8 +13,6 @@ export function getSupabaseClient() {
   // Check if we're in a server environment (Vercel function)
   if (typeof window === 'undefined') {
     // Server-side: Use service role key for admin access
-    const { createClient } = require('@supabase/supabase-js');
-    
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
@@ -20,7 +20,7 @@ export function getSupabaseClient() {
       throw new Error('Supabase environment variables not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.');
     }
     
-    return createClient(supabaseUrl, supabaseServiceKey, {
+    return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -29,8 +29,6 @@ export function getSupabaseClient() {
   } else {
     // Client-side: Use anon key with auth support
     if (!supabaseClient) {
-      const { createClient } = require('@supabase/supabase-js');
-      
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
@@ -39,7 +37,7 @@ export function getSupabaseClient() {
         return null;
       }
       
-      supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      supabaseClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           autoRefreshToken: true,
           persistSession: true,
