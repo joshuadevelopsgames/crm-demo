@@ -20,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function AddInteractionDialog({ open, onClose, accountId, contactId, contacts = [] }) {
+export default function AddInteractionDialog({ open, onClose, accountId, contactId, contacts = [], editingInteraction = null }) {
   const queryClient = useQueryClient();
+  const isEditing = !!editingInteraction;
+  
   const [interaction, setInteraction] = useState({
     type: 'email_sent',
     contact_id: contactId || '',
@@ -33,12 +35,42 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     tags: []
   });
 
-  // Reset form when contactId changes
+  // Load interaction data when editing
   useEffect(() => {
-    if (contactId) {
+    if (editingInteraction) {
+      setInteraction({
+        type: editingInteraction.type || 'email_sent',
+        contact_id: editingInteraction.contact_id || contactId || '',
+        subject: editingInteraction.subject || '',
+        content: editingInteraction.content || '',
+        direction: editingInteraction.direction || 'outbound',
+        sentiment: editingInteraction.sentiment || 'neutral',
+        interaction_date: editingInteraction.interaction_date 
+          ? new Date(editingInteraction.interaction_date).toISOString().slice(0, 16)
+          : new Date().toISOString().slice(0, 16),
+        tags: editingInteraction.tags || []
+      });
+    } else {
+      // Reset form for new interaction
+      setInteraction({
+        type: 'email_sent',
+        contact_id: contactId || '',
+        subject: '',
+        content: '',
+        direction: 'outbound',
+        sentiment: 'neutral',
+        interaction_date: new Date().toISOString().slice(0, 16),
+        tags: []
+      });
+    }
+  }, [editingInteraction, contactId]);
+
+  // Reset form when contactId changes (only for new interactions)
+  useEffect(() => {
+    if (contactId && !isEditing) {
       setInteraction(prev => ({ ...prev, contact_id: contactId }));
     }
-  }, [contactId]);
+  }, [contactId, isEditing]);
 
   const createInteractionMutation = useMutation({
     mutationFn: async (data) => {
@@ -80,6 +112,30 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     }
   });
 
+  const updateInteractionMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      const updatedInteraction = await base44.entities.Interaction.update(id, data);
+      return updatedInteraction;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate queries for both account and contact
+      if (variables.data.account_id) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', variables.data.account_id] });
+        queryClient.invalidateQueries({ queryKey: ['account', variables.data.account_id] });
+      }
+      if (variables.data.contact_id) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', variables.data.contact_id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Interaction updated successfully');
+      onClose();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update interaction');
+    }
+  });
+
   const handleSubmit = async () => {
     const user = await base44.auth.me();
     const interactionData = {
@@ -97,14 +153,21 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
       interactionData.contact_id = interaction.contact_id;
     }
     
-    createInteractionMutation.mutate(interactionData);
+    if (isEditing && editingInteraction) {
+      updateInteractionMutation.mutate({
+        id: editingInteraction.id,
+        data: interactionData
+      });
+    } else {
+      createInteractionMutation.mutate(interactionData);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log Interaction</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Interaction' : 'Log Interaction'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
@@ -215,6 +278,7 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
               <Label>Tags (comma-separated)</Label>
               <Input
                 placeholder="e.g., sales_insight, customer_preference, meeting_summary"
+                value={Array.isArray(interaction.tags) ? interaction.tags.join(', ') : ''}
                 onChange={(e) => setInteraction({ 
                   ...interaction, 
                   tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) 
@@ -228,9 +292,12 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={!interaction.content || !interaction.interaction_date}
+              disabled={!interaction.content || !interaction.interaction_date || createInteractionMutation.isPending || updateInteractionMutation.isPending}
             >
-              Log Interaction
+              {isEditing 
+                ? (updateInteractionMutation.isPending ? 'Updating...' : 'Update Interaction')
+                : (createInteractionMutation.isPending ? 'Logging...' : 'Log Interaction')
+              }
             </Button>
           </div>
         </div>

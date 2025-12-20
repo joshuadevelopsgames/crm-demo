@@ -177,6 +177,16 @@ export const base44 = {
         if (result.success) return result.data;
         throw new Error(result.error || 'Failed to create interaction');
       },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/interactions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update interaction');
+      },
       delete: async (id) => {
         const response = await fetch(`/api/data/interactions?id=${id}`, {
           method: 'DELETE'

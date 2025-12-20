@@ -178,6 +178,76 @@ export default async function handler(req, res) {
       }
     }
     
+    if (req.method === 'PUT') {
+      const { id, ...updateData } = req.body;
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Interaction ID is required'
+        });
+      }
+      
+      // Remove id from update data and add updated_at timestamp
+      const { id: _, ...dataWithoutId } = updateData;
+      const interactionData = {
+        ...dataWithoutId,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Handle account_id lookup if not UUID
+      if (interactionData.account_id) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(interactionData.account_id)) {
+          const { data: account } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('lmn_crm_id', interactionData.account_id)
+            .maybeSingle();
+          if (account) {
+            interactionData.account_id = account.id;
+          } else {
+            delete interactionData.account_id;
+          }
+        }
+      }
+      
+      // Handle contact_id lookup if not UUID
+      if (interactionData.contact_id) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(interactionData.contact_id)) {
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('lmn_contact_id', interactionData.contact_id)
+            .maybeSingle();
+          if (contact) {
+            interactionData.contact_id = contact.id;
+          } else {
+            delete interactionData.contact_id;
+          }
+        }
+      }
+      
+      const { data: updatedInteraction, error } = await supabase
+        .from('interactions')
+        .update(interactionData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating interaction:', error);
+        return res.status(500).json({
+          success: false,
+          error: error.message
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        data: updatedInteraction
+      });
+    }
+    
     if (req.method === 'DELETE') {
       const { id } = req.query;
       

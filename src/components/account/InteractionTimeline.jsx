@@ -14,16 +14,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink, Trash2 } from 'lucide-react';
+import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink, Trash2, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser } from '@/contexts/UserContext';
 import toast from 'react-hot-toast';
+
+import AddInteractionDialog from './AddInteractionDialog';
 
 export default function InteractionTimeline({ interactions, contacts, accountId, contactId }) {
   const { isAdmin } = useUser();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [interactionToDelete, setInteractionToDelete] = useState(null);
+  const [editingInteraction, setEditingInteraction] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const deleteInteractionMutation = useMutation({
     mutationFn: async (id) => {
@@ -58,6 +62,16 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
     if (interactionToDelete) {
       deleteInteractionMutation.mutate(interactionToDelete.id);
     }
+  };
+
+  const handleEditClick = (interaction) => {
+    setEditingInteraction(interaction);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setEditDialogOpen(false);
+    setEditingInteraction(null);
   };
   const getInteractionIcon = (type) => {
     const icons = {
@@ -171,15 +185,26 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                       </div>
                     </div>
                     {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(interaction)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        title="Delete interaction"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(interaction)}
+                          className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                          title="Edit interaction"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(interaction)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete interaction"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   {interaction.content && (
@@ -215,6 +240,16 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
           </Card>
         );
       })}
+
+      {/* Edit Interaction Dialog */}
+      <AddInteractionDialog
+        open={editDialogOpen}
+        onClose={handleEditClose}
+        accountId={accountId}
+        contactId={contactId}
+        contacts={contacts}
+        editingInteraction={editingInteraction}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
