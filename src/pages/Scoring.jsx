@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Navigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useUser } from '@/contexts/UserContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,11 +37,17 @@ import { Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Scoring() {
+  const { isAdmin, isLoading: userLoading } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
 
   const queryClient = useQueryClient();
+  
+  // Redirect non-admin users
+  if (!userLoading && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['scorecard-templates'],

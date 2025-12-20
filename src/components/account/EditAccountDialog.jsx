@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Dialog,
@@ -18,10 +18,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
 
 export default function EditAccountDialog({ open, onClose, account }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
+  const [autoCalculateSegment, setAutoCalculateSegment] = useState(true);
+  
+  // Get all accounts to calculate total revenue for segment assignment
+  const { data: allAccounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list()
+  });
+
+  // Get estimates for this account and all accounts
+  const { data: accountEstimates = [] } = useQuery({
+    queryKey: ['estimates', account?.id],
+    queryFn: async () => {
+      if (!account?.id) return [];
+      const response = await fetch(`/api/data/estimates?account_id=${encodeURIComponent(account.id)}`);
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    enabled: !!account?.id
+  });
+
+  // Get all estimates to calculate total revenue across all accounts
+  const { data: allEstimates = [] } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
   
   useEffect(() => {
     if (account) {
@@ -39,8 +71,46 @@ export default function EditAccountDialog({ open, onClose, account }) {
         assigned_to: account.assigned_to || '',
         notes: account.notes || ''
       });
+      setAutoCalculateSegment(true); // Reset auto-calc when account changes
     }
   }, [account]);
+  
+  // Auto-calculate revenue segment when annual revenue changes
+  useEffect(() => {
+    if (autoCalculateSegment && formData.annual_revenue && allAccounts.length > 0) {
+      const enteredRevenue = parseFloat(formData.annual_revenue);
+      if (!isNaN(enteredRevenue) && enteredRevenue > 0) {
+        // Group estimates by account_id for revenue calculation
+        const estimatesByAccountId = {};
+        allEstimates.forEach(est => {
+          if (est.account_id) {
+            if (!estimatesByAccountId[est.account_id]) {
+              estimatesByAccountId[est.account_id] = [];
+            }
+            estimatesByAccountId[est.account_id].push(est);
+          }
+        });
+        
+        // For the account being edited, use entered revenue value
+        // For all other accounts, use actual revenue from won estimates
+        const currentAccountRevenue = account?.id 
+          ? getAccountRevenue(account, estimatesByAccountId[account.id] || accountEstimates)
+          : 0;
+        
+        // Calculate total revenue using estimates for all accounts
+        const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId);
+        // Adjust: subtract current account's actual revenue, add entered revenue
+        const adjustedTotal = totalRevenue - currentAccountRevenue + enteredRevenue;
+        
+        if (adjustedTotal > 0) {
+          // Use entered revenue for this account's segment calculation
+          const tempAccount = { annual_revenue: enteredRevenue };
+          const segment = calculateRevenueSegment(tempAccount, adjustedTotal);
+          setFormData(prev => ({ ...prev, revenue_segment: segment }));
+        }
+      }
+    }
+  }, [formData.annual_revenue, autoCalculateSegment, allAccounts, allEstimates, account, accountEstimates]);
 
   const updateAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.update(account.id, data),
@@ -109,29 +179,36 @@ export default function EditAccountDialog({ open, onClose, account }) {
               </Select>
             </div>
             <div>
-              <Label>Revenue Segment</Label>
-              <Select
-                value={formData.revenue_segment}
-                onValueChange={(value) => setFormData({ ...formData, revenue_segment: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                  <SelectItem value="mid_market">Mid-Market</SelectItem>
-                  <SelectItem value="smb">SMB</SelectItem>
-                  <SelectItem value="startup">Startup</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Annual Revenue</Label>
               <Input
                 type="number"
                 value={formData.annual_revenue}
                 onChange={(e) => setFormData({ ...formData, annual_revenue: e.target.value })}
+                placeholder="Enter annual revenue"
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Segment will auto-calculate: A (≥15%), B (5-15%), C (0-5%)
+              </p>
+            </div>
+            <div>
+              <Label>Revenue Segment</Label>
+              <Select
+                value={formData.revenue_segment}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, revenue_segment: value });
+                  setAutoCalculateSegment(false); // Disable auto-calc if manually changed
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="enterprise">Enterprise (A: ≥15%)</SelectItem>
+                  <SelectItem value="mid_market">Mid-Market (B: 5-15%)</SelectItem>
+                  <SelectItem value="smb">SMB (C: 0-5%)</SelectItem>
+                  <SelectItem value="startup">Startup</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Industry</Label>

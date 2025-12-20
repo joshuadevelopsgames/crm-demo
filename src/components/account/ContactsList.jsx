@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Mail, Phone, Linkedin, Archive } from 'lucide-react';
+import { Users, Plus, Mail, Phone, Linkedin, Archive, LayoutGrid, List } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -26,6 +26,7 @@ import {
 export default function ContactsList({ contacts, accountId, accountName }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [viewMode, setViewMode] = useState('card'); // 'card' or 'list' - default to card view
   const queryClient = useQueryClient();
 
   const [newContact, setNewContact] = useState({
@@ -337,6 +338,24 @@ export default function ContactsList({ contacts, accountId, accountName }) {
               Show Archived
             </label>
           </div>
+          <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'card' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('card')}
+              className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
           <Button onClick={() => setShowDialog(true)} size="sm">
             <Plus className="w-4 h-4 mr-2" />
             Add Contact
@@ -344,7 +363,8 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {viewMode === 'card' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredContacts.map((contact) => {
           const isArchived = contact.status === 'archived' || contact.archived === true;
           const initials = `${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase();
@@ -442,7 +462,104 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           </Card>
           );
         })}
-      </div>
+        </div>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Phone
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {filteredContacts.map((contact) => {
+                  const isArchived = contact.status === 'archived' || contact.archived === true;
+                  const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+                  
+                  return (
+                    <tr 
+                      key={contact.id}
+                      className={`hover:bg-slate-50 transition-colors ${isArchived ? 'bg-slate-50' : ''}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            isArchived ? 'bg-slate-200' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                          }`}>
+                            {`${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase() ? (
+                              <span className="text-white font-semibold text-sm">
+                                {`${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase()}
+                              </span>
+                            ) : (
+                              <Users className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                                {fullName || 'Unnamed Contact'}
+                              </span>
+                              {isArchived && (
+                                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
+                                  <Archive className="w-3 h-3 mr-1" />
+                                  Archived
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {contact.title || '-'}
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant="outline" className={`${getRoleColor(contact.role)} ${isArchived ? 'opacity-60' : ''}`}>
+                          {contact.role ? contact.role.replace('_', ' ') : 'user'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4">
+                        <a 
+                          href={`mailto:${contact.email}`}
+                          className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                        >
+                          {contact.email}
+                        </a>
+                      </td>
+                      <td className="px-4 py-4">
+                        {contact.phone ? (
+                          <a 
+                            href={`tel:${contact.phone}`}
+                            className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                          >
+                            {contact.phone}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-slate-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl">

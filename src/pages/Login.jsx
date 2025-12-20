@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import toast, { Toaster } from 'react-hot-toast';
 import { createPageUrl } from '../utils';
-import { initGoogleSignIn } from '../services/googleAuthService';
+import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 
@@ -35,23 +35,30 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // For now, just simulate login - replace with actual auth logic
-      // In a real app, you'd call: await base44.auth.login(email, password);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Store auth state (in a real app, this would be handled by base44)
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('authProvider', 'email');
-      
+      const supabase = getSupabaseAuth();
+      if (!supabase) {
+        // Fallback to demo mode if Supabase not configured
+        await new Promise(resolve => setTimeout(resolve, 500));
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('authProvider', 'email');
+        toast.success('Successfully logged in! (Demo mode)');
+        navigate('/dashboard');
+        return;
+      }
+
+      // Sign in with email and password using Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
       toast.success('Successfully logged in!');
-      
-      // Redirect to dashboard
       navigate('/dashboard');
     } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+      toast.error(error.message || 'Login failed. Please check your credentials.');
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
@@ -61,40 +68,36 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      if (!initGoogleSignIn) {
-        toast.error('Google Sign-In is not available.');
+      const supabase = getSupabaseAuth();
+      if (!supabase) {
+        toast.error('Authentication is not configured. Please set up Supabase.');
         setIsGoogleLoading(false);
         return;
       }
+
+      // Get the redirect URL
+      const redirectUrl = window.location.origin + '/google-auth-callback';
       
-      const authUrl = initGoogleSignIn();
-      if (!authUrl) {
-        toast.error('Google Sign-In is not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
-        setIsGoogleLoading(false);
-        return;
+      // Sign in with Google OAuth using Supabase
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
       }
-      
-      // In mobile app, use Capacitor Browser plugin to open OAuth in external browser
-      // This is required because Google OAuth needs to happen in a real browser
-      // The Browser plugin will open Safari/Chrome, complete OAuth, then redirect back
-      if (Capacitor.isNativePlatform() && Browser) {
-        try {
-          // Open in external browser - after OAuth completes, callback page will redirect to app
-          await Browser.open({ 
-            url: authUrl,
-            windowName: '_self'
-          });
-        } catch (error) {
-          console.log('Browser.open failed, falling back to window.location:', error);
-          // Fallback: try to open in webview (may not work for OAuth)
-          window.location.href = authUrl;
-        }
-      } else {
-        // Web browser - direct redirect
-        window.location.href = authUrl;
-      }
+
+      // Supabase will handle the redirect automatically
+      // The user will be redirected to Google, then back to our callback
     } catch (error) {
-      toast.error('Failed to initialize Google Sign-In.');
+      toast.error(error.message || 'Failed to initialize Google Sign-In.');
       console.error('Google Sign-In error:', error);
       setIsGoogleLoading(false);
     }

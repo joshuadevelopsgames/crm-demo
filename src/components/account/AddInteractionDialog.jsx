@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
@@ -19,11 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function AddInteractionDialog({ open, onClose, accountId, contacts }) {
+export default function AddInteractionDialog({ open, onClose, accountId, contactId, contacts = [] }) {
   const queryClient = useQueryClient();
   const [interaction, setInteraction] = useState({
     type: 'email_sent',
-    contact_id: '',
+    contact_id: contactId || '',
     subject: '',
     content: '',
     direction: 'outbound',
@@ -32,22 +33,40 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     tags: []
   });
 
+  // Reset form when contactId changes
+  useEffect(() => {
+    if (contactId) {
+      setInteraction(prev => ({ ...prev, contact_id: contactId }));
+    }
+  }, [contactId]);
+
   const createInteractionMutation = useMutation({
     mutationFn: async (data) => {
-      await base44.entities.Interaction.create(data);
-      // Update account's last interaction date
-      await base44.entities.Account.update(accountId, {
-        last_interaction_date: new Date().toISOString().split('T')[0]
-      });
+      const newInteraction = await base44.entities.Interaction.create(data);
+      // Update account's last interaction date if accountId exists
+      if (data.account_id) {
+        await base44.entities.Account.update(data.account_id, {
+          last_interaction_date: new Date().toISOString().split('T')[0]
+        });
+      }
+      return newInteraction;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interactions', accountId] });
-      queryClient.invalidateQueries({ queryKey: ['account', accountId] });
+    onSuccess: (_, variables) => {
+      // Invalidate queries for both account and contact
+      if (variables.account_id) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', variables.account_id] });
+        queryClient.invalidateQueries({ queryKey: ['account', variables.account_id] });
+      }
+      if (variables.contact_id) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', variables.contact_id] });
+      }
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Interaction logged successfully');
       onClose();
       setInteraction({
         type: 'email_sent',
-        contact_id: '',
+        contact_id: contactId || '',
         subject: '',
         content: '',
         direction: 'outbound',
@@ -55,16 +74,30 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
         interaction_date: new Date().toISOString().slice(0, 16),
         tags: []
       });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to log interaction');
     }
   });
 
   const handleSubmit = async () => {
     const user = await base44.auth.me();
-    createInteractionMutation.mutate({
+    const interactionData = {
       ...interaction,
-      account_id: accountId,
       logged_by: user.email
-    });
+    };
+    
+    // Include account_id if provided
+    if (accountId) {
+      interactionData.account_id = accountId;
+    }
+    
+    // Include contact_id if provided or selected
+    if (interaction.contact_id) {
+      interactionData.contact_id = interaction.contact_id;
+    }
+    
+    createInteractionMutation.mutate(interactionData);
   };
 
   return (
@@ -99,18 +132,28 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
               <Select
                 value={interaction.contact_id}
                 onValueChange={(value) => setInteraction({ ...interaction, contact_id: value })}
+                disabled={!!contactId} // Disable if contactId is provided (from contact page)
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select contact (optional)" />
+                  <SelectValue placeholder={contactId ? "Current contact" : "Select contact (optional)"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {contacts.map(contact => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.first_name} {contact.last_name}
+                  {contacts.length > 0 ? (
+                    contacts.map(contact => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.first_name} {contact.last_name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No contacts available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
+              {contactId && (
+                <p className="text-xs text-slate-500 mt-1">Contact is set from current page</p>
+              )}
             </div>
             <div>
               <Label>Direction</Label>

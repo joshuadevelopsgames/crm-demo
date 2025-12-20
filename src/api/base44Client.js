@@ -135,12 +135,17 @@ export const base44 = {
     },
     Interaction: {
       list: async () => {
-        const data = await getData('interactions');
-        return Array.isArray(data) ? data : [];
+        const response = await fetch('/api/data/interactions');
+        if (!response.ok) return [];
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
       },
       filter: async (filters, sort) => {
-        const data = await getData('interactions');
-        let results = Array.isArray(data) ? [...data] : [];
+        const response = await fetch('/api/data/interactions');
+        if (!response.ok) return [];
+        const result = await response.json();
+        let results = result.success ? (result.data || []) : [];
+        
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(interaction => {
             return Object.entries(filters).every(([key, value]) => {
@@ -163,9 +168,22 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newInteraction = { ...data, id: Date.now().toString() };
-        return newInteraction;
+        const response = await fetch('/api/data/interactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create interaction');
+      },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/interactions?id=${id}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        if (result.success) return true;
+        throw new Error(result.error || 'Failed to delete interaction');
       },
     },
     Task: {
@@ -198,13 +216,24 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        // In staging, we don't persist to mock data - return the data as if created
-        const newTask = { ...data, id: Date.now().toString() };
-        return newTask;
+        const response = await fetch('/api/data/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create task');
       },
       update: async (id, data) => {
-        // In staging, we don't persist to mock data - return the data as if updated
-        return { ...data, id };
+        const response = await fetch('/api/data/tasks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update task');
       },
     },
     Sequence: {

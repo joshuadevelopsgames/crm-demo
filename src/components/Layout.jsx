@@ -19,26 +19,32 @@ import {
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useTutorial } from '../contexts/TutorialContext';
+import { useUser } from '../contexts/UserContext';
 import NotificationBell from './NotificationBell';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { getSupabaseAuth } from '@/services/supabaseClient';
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
   const { isTutorialMode, exitTutorial } = useTutorial();
+  const { isAdmin } = useUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const navigation = [
+  const allNavigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
     { name: 'Accounts', path: 'Accounts', icon: Building2 },
     { name: 'Contacts', path: 'Contacts', icon: Users },
     { name: 'Tasks', path: 'Tasks', icon: CheckSquare },
     { name: 'Sequences', path: 'Sequences', icon: GitBranch },
-    { name: 'Scoring', path: 'Scoring', icon: Award },
+    { name: 'Scoring', path: 'Scoring', icon: Award, adminOnly: true },
   ];
 
-  const handleLogout = () => {
+  // Filter navigation based on user role
+  const navigation = allNavigation.filter(item => !item.adminOnly || isAdmin);
+
+  const handleLogout = async () => {
     // Exit tutorial mode if active
     if (isTutorialMode) {
       exitTutorial();
@@ -47,12 +53,20 @@ export default function Layout({ children, currentPageName }) {
     // Clear React Query cache
     queryClient.clear();
     
-    // Clear any stored auth data
+    // Sign out from Supabase
+    const supabase = getSupabaseAuth();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    
+    // Clear any stored auth data (fallback)
     localStorage.clear();
     sessionStorage.clear();
     
-    // Call base44 logout
-    base44.auth.logout();
+    // Call base44 logout (if it exists)
+    if (base44.auth && base44.auth.logout) {
+      base44.auth.logout();
+    }
     
     // Redirect to login page
     navigate('/login');

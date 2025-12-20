@@ -1,10 +1,64 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUser } from '@/contexts/UserContext';
+import toast from 'react-hot-toast';
 
-export default function InteractionTimeline({ interactions, contacts }) {
+export default function InteractionTimeline({ interactions, contacts, accountId, contactId }) {
+  const { isAdmin } = useUser();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [interactionToDelete, setInteractionToDelete] = useState(null);
+
+  const deleteInteractionMutation = useMutation({
+    mutationFn: async (id) => {
+      await base44.entities.Interaction.delete(id);
+    },
+    onSuccess: () => {
+      // Invalidate queries for both account and contact
+      if (accountId) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', accountId] });
+        queryClient.invalidateQueries({ queryKey: ['account', accountId] });
+      }
+      if (contactId) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', contactId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Interaction deleted successfully');
+      setDeleteDialogOpen(false);
+      setInteractionToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete interaction');
+    }
+  });
+
+  const handleDeleteClick = (interaction) => {
+    setInteractionToDelete(interaction);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (interactionToDelete) {
+      deleteInteractionMutation.mutate(interactionToDelete.id);
+    }
+  };
   const getInteractionIcon = (type) => {
     const icons = {
       email_sent: Mail,
@@ -81,7 +135,7 @@ export default function InteractionTimeline({ interactions, contacts }) {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className={getTypeColor(interaction.type)}>
                           {interaction.type.replace(/_/g, ' ')}
@@ -116,6 +170,17 @@ export default function InteractionTimeline({ interactions, contacts }) {
                         )}
                       </div>
                     </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(interaction)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Delete interaction"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                   {interaction.content && (
                     <div className="bg-slate-50 rounded-lg p-4 mt-3">
@@ -150,6 +215,38 @@ export default function InteractionTimeline({ interactions, contacts }) {
           </Card>
         );
       })}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Interaction</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this interaction? This action cannot be undone.
+              {interactionToDelete?.subject && (
+                <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                  <strong>Subject:</strong> {interactionToDelete.subject}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setInteractionToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteInteractionMutation.isPending}
+            >
+              {deleteInteractionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 /**
  * Supabase Client
- * Connects to your Supabase database
+ * Connects to your Supabase database and handles authentication
  */
 
-// For client-side usage (if needed)
+// For client-side usage (with auth)
 let supabaseClient = null;
 
 // For server-side usage (in API routes)
@@ -27,7 +27,7 @@ export function getSupabaseClient() {
       }
     });
   } else {
-    // Client-side: Use anon key (read-only, with RLS policies)
+    // Client-side: Use anon key with auth support
     if (!supabaseClient) {
       const { createClient } = require('@supabase/supabase-js');
       
@@ -39,7 +39,13 @@ export function getSupabaseClient() {
         return null;
       }
       
-      supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+      supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      });
     }
     
     return supabaseClient;
@@ -54,6 +60,17 @@ export function isSupabaseConfigured() {
     return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   }
 }
+
+// Get the client-side Supabase instance (for auth)
+export function getSupabaseAuth() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return getSupabaseClient();
+}
+
+
+
 
 
 

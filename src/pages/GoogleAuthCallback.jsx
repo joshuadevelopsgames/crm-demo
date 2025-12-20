@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { exchangeGoogleAuthCode, storeGoogleAuthSession } from '../services/googleAuthService';
+import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 
 // App plugin is optional - import dynamically if available
@@ -24,89 +24,100 @@ export default function GoogleAuthCallback() {
   const isMobile = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    // Handle deep links from mobile app (custom URL scheme)
-    let code = searchParams.get('code');
-    let errorParam = searchParams.get('error');
-    
-    // If no code in search params, try to extract from URL hash or full path (mobile app handling)
-    if (!code && !errorParam && isMobile) {
-      const url = new URL(window.location.href);
-      code = url.searchParams.get('code') || url.hash.split('code=')[1]?.split('&')[0];
-      errorParam = url.searchParams.get('error') || url.hash.split('error=')[1]?.split('&')[0];
-    }
+    const handleAuthCallback = async () => {
+      const supabase = getSupabaseAuth();
+      if (!supabase) {
+        setStatus('error');
+        setError('Authentication is not configured. Please set up Supabase.');
+        return;
+      }
 
-    if (errorParam) {
-      setStatus('error');
-      setError(errorParam === 'access_denied' 
-        ? 'Google sign-in was cancelled. Please try again.'
-        : 'An error occurred during Google authentication.'
-      );
-      return;
-    }
+      try {
+        // Supabase automatically handles the OAuth callback
+        // Check for error in URL params
+        const errorParam = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
 
-    if (!code) {
-      setStatus('error');
-      setError('No authorization code received from Google.');
-      return;
-    }
-
-    // Exchange code for token and user info
-    exchangeGoogleAuthCode(code)
-      .then((authData) => {
-        storeGoogleAuthSession(authData);
-        setStatus('success');
-        
-        // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
-        if (isMobile) {
-          // Redirect to mobile app using custom scheme
-          setTimeout(() => {
-            window.location.href = 'com.lecrm.app://dashboard';
-          }, 1000);
-        } else {
-          // Redirect to dashboard after 1.5 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 1500);
+        if (errorParam) {
+          setStatus('error');
+          setError(
+            errorParam === 'access_denied'
+              ? 'Google sign-in was cancelled. Please try again.'
+              : errorDescription || 'An error occurred during Google authentication.'
+          );
+          return;
         }
-      })
-      .catch((err) => {
-        console.error('Error exchanging Google auth code:', err);
+
+        // Get the session from Supabase (it handles the OAuth callback automatically)
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          throw error;
+        }
+
+        if (session) {
+          setStatus('success');
+          
+          // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
+          if (isMobile) {
+            setTimeout(() => {
+              window.location.href = 'com.lecrm.app://dashboard';
+            }, 1000);
+          } else {
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 1500);
+          }
+        } else {
+          // No session found - might need to wait a bit for Supabase to process
+          setTimeout(async () => {
+            const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
+            if (retryError) {
+              setStatus('error');
+              setError(retryError.message || 'Failed to authenticate with Google. Please try again.');
+            } else if (retrySession) {
+              setStatus('success');
+              navigate('/dashboard');
+            } else {
+              setStatus('error');
+              setError('No session found. Please try signing in again.');
+            }
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('Error in Google auth callback:', err);
         setStatus('error');
         setError(err.message || 'Failed to authenticate with Google. Please try again.');
-      });
+      }
+    };
+
+    handleAuthCallback();
   }, [searchParams, navigate, location, isMobile]);
 
   // Listen for app URL open events (mobile deep linking)
   useEffect(() => {
     if (isMobile && App && typeof App.addListener === 'function') {
       const handleAppUrl = async (event) => {
-        const url = new URL(event.url);
-        const code = url.searchParams.get('code');
-        const errorParam = url.searchParams.get('error');
-        
-        if (code || errorParam) {
-          // Handle the OAuth callback
-          if (errorParam) {
+        const supabase = getSupabaseAuth();
+        if (!supabase) return;
+
+        try {
+          // Supabase handles the OAuth callback automatically
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
             setStatus('error');
-            setError(errorParam === 'access_denied' 
-              ? 'Google sign-in was cancelled. Please try again.'
-              : 'An error occurred during Google authentication.'
-            );
-          } else if (code) {
-            try {
-              const authData = await exchangeGoogleAuthCode(code);
-              storeGoogleAuthSession(authData);
-              setStatus('success');
-              // Redirect to app dashboard
-              setTimeout(() => {
-                window.location.href = 'com.lecrm.app://dashboard';
-              }, 1000);
-            } catch (err) {
-              console.error('Error exchanging Google auth code:', err);
-              setStatus('error');
-              setError(err.message || 'Failed to authenticate with Google. Please try again.');
-            }
+            setError(error.message || 'Failed to authenticate with Google. Please try again.');
+          } else if (session) {
+            setStatus('success');
+            setTimeout(() => {
+              window.location.href = 'com.lecrm.app://dashboard';
+            }, 1000);
           }
+        } catch (err) {
+          console.error('Error in mobile app URL handler:', err);
+          setStatus('error');
+          setError(err.message || 'Failed to authenticate with Google. Please try again.');
         }
       };
       

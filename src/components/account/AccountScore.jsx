@@ -9,9 +9,11 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { exportAndDownloadScorecard } from '../../utils/exportToCSV';
+import { useUser } from '../../contexts/UserContext';
 
 export default function AccountScore({ accountId, scorecards, currentScore, accountName }) {
   const [expandedScorecards, setExpandedScorecards] = useState({});
+  const { canManageICP } = useUser();
   
   // Get current ICP template
   const { data: icpTemplate, isLoading: icpLoading } = useQuery({
@@ -73,11 +75,13 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">ICP Scorecard</h3>
-          <Link to={createPageUrl('Scoring')}>
-            <Button variant="outline" size="sm">
-              Manage ICP Template
-            </Button>
-          </Link>
+          {canManageICP && (
+            <Link to={createPageUrl('Scoring')}>
+              <Button variant="outline" size="sm">
+                Manage ICP Template
+              </Button>
+            </Link>
+          )}
         </div>
         
         {icpLoading ? (
@@ -91,13 +95,19 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
             <CardContent className="p-8 text-center">
               <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
-              <p className="text-slate-600 mb-4">Create an ICP template on the Scoring page to start scoring accounts</p>
-              <Link to={createPageUrl('Scoring')}>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create ICP Template
-                </Button>
-              </Link>
+              <p className="text-slate-600 mb-4">
+                {canManageICP 
+                  ? 'Create an ICP template on the Scoring page to start scoring accounts'
+                  : 'Contact your administrator to set up an ICP template'}
+              </p>
+              {canManageICP && (
+                <Link to={createPageUrl('Scoring')}>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create ICP Template
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         ) : (

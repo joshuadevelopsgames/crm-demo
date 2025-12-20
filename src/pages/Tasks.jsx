@@ -206,6 +206,11 @@ export default function Tasks() {
       setIsDialogOpen(false);
       setEditingTask(null);
       resetTaskForm();
+      toast.success('Task created successfully');
+    },
+    onError: (error) => {
+      console.error('Error creating task:', error);
+      toast.error(error.message || 'Failed to create task');
     }
   });
 
@@ -229,6 +234,10 @@ export default function Tasks() {
       setIsDialogOpen(false);
       setEditingTask(null);
       resetTaskForm();
+    },
+    onError: (error) => {
+      console.error('Error updating task:', error);
+      toast.error(error.message || 'Failed to update task');
     }
   });
 

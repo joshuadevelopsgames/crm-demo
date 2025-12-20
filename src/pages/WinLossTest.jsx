@@ -85,31 +85,31 @@ export default function WinLossTest() {
       const customerId = customerName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       if (!stats[customerId]) {
-      stats[customerId] = {
-        id: customerId,
-        name: customerName,
-        totalEstimates: 0,
-        estimatesWon: 0,
-        estimatesLost: 0,
-        totalValue: 0,
-        wonValue: 0,
-        lostValue: 0,
-        estimates: []
-      };
-    }
+        stats[customerId] = {
+          id: customerId,
+          name: customerName,
+          totalEstimates: 0,
+          estimatesWon: 0,
+          estimatesLost: 0,
+          totalValue: 0,
+          wonValue: 0,
+          lostValue: 0,
+          estimates: []
+        };
+      }
 
-    stats[customerId].totalEstimates++;
-    stats[customerId].totalValue += estimate.total_amount || 0;
-    stats[customerId].estimates.push(estimate);
+      stats[customerId].totalEstimates++;
+      stats[customerId].totalValue += estimate.total_amount || 0;
+      stats[customerId].estimates.push(estimate);
 
-    if (estimate.status === 'won') {
-      stats[customerId].estimatesWon++;
-      stats[customerId].wonValue += estimate.total_amount || 0;
+      if (estimate.status === 'won') {
+        stats[customerId].estimatesWon++;
+        stats[customerId].wonValue += estimate.total_amount || 0;
     } else {
       // All non-won estimates (lost, pending, etc.) are treated as lost
-      stats[customerId].estimatesLost++;
-      stats[customerId].lostValue += estimate.total_amount || 0;
-    }
+        stats[customerId].estimatesLost++;
+        stats[customerId].lostValue += estimate.total_amount || 0;
+      }
     });
 
     // Calculate win rate for each customer

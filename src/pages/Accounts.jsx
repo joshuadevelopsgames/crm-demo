@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
@@ -21,7 +21,8 @@ import {
   LayoutGrid,
   List,
   Upload,
-  Archive
+  Archive,
+  RefreshCw
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import {
@@ -41,6 +42,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
+import toast from 'react-hot-toast';
 
 export default function Accounts() {
   const navigate = useNavigate();
@@ -58,6 +61,17 @@ export default function Accounts() {
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list()
+  });
+
+  // Fetch all estimates to calculate actual revenue from won estimates
+  const { data: allEstimates = [] } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
   });
 
   const createAccountMutation = useMutation({
@@ -78,11 +92,90 @@ export default function Accounts() {
     notes: ''
   });
 
+  // Auto-calculate revenue segment when annual revenue changes
+  useEffect(() => {
+    if (newAccount.annual_revenue) {
+      const revenue = parseFloat(newAccount.annual_revenue);
+      if (!isNaN(revenue) && revenue > 0) {
+        // Group estimates by account_id for revenue calculation
+        const estimatesByAccountId = {};
+        allEstimates.forEach(est => {
+          if (est.account_id) {
+            if (!estimatesByAccountId[est.account_id]) {
+              estimatesByAccountId[est.account_id] = [];
+            }
+            estimatesByAccountId[est.account_id].push(est);
+          }
+        });
+        
+        const totalRevenue = calculateTotalRevenue(accounts, estimatesByAccountId);
+        const adjustedTotal = totalRevenue + revenue; // Include new account's revenue
+        
+        // For new account, use the entered revenue value
+        const tempAccount = { annual_revenue: revenue };
+        const segment = calculateRevenueSegment(tempAccount, adjustedTotal);
+        setNewAccount(prev => ({ ...prev, revenue_segment: segment }));
+      }
+    }
+  }, [newAccount.annual_revenue, accounts, allEstimates]);
+
   const handleCreateAccount = () => {
     createAccountMutation.mutate({
       ...newAccount,
       annual_revenue: newAccount.annual_revenue ? parseFloat(newAccount.annual_revenue) : null
     });
+  };
+
+  // Recalculate all revenue segments
+  const recalculateSegmentsMutation = useMutation({
+    mutationFn: async () => {
+      // Group estimates by account_id for revenue calculation
+      const estimatesByAccountId = {};
+      allEstimates.forEach(est => {
+        if (est.account_id) {
+          if (!estimatesByAccountId[est.account_id]) {
+            estimatesByAccountId[est.account_id] = [];
+          }
+          estimatesByAccountId[est.account_id].push(est);
+        }
+      });
+      
+      // Calculate segments for all accounts using actual revenue from estimates
+      const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
+      
+      // Update each account with new segment
+      const updates = updatedAccounts
+        .filter(account => {
+          // Only update if segment actually changed
+          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment || 'smb';
+          return account.revenue_segment !== currentSegment;
+        })
+        .map(account => 
+          base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
+        );
+      
+      await Promise.all(updates);
+      
+      return { updated: updates.length, total: accounts.length };
+    },
+    onSuccess: ({ updated, total }) => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      if (updated > 0) {
+        toast.success(`Revenue segments recalculated: ${updated} of ${total} accounts updated`);
+      } else {
+        toast.success('All revenue segments are already up to date');
+      }
+    },
+    onError: (error) => {
+      console.error('Error recalculating segments:', error);
+      toast.error(error.message || 'Failed to recalculate segments');
+    }
+  });
+
+  const handleRecalculateSegments = () => {
+    if (window.confirm('Recalculate revenue segments for all accounts based on current revenue percentages? This will update all accounts.')) {
+      recalculateSegmentsMutation.mutate();
+    }
   };
 
   // Filter by archived status first
@@ -224,8 +317,18 @@ export default function Accounts() {
           >
             <Upload className="w-4 h-4 mr-2" />
             Import from LMN
-                </Button>
+          </Button>
         </TutorialTooltip>
+        <Button 
+          onClick={handleRecalculateSegments}
+          variant="outline"
+          disabled={recalculateSegmentsMutation.isPending}
+          className="border-slate-300"
+          title="Recalculate revenue segments for all accounts based on current revenue percentages"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${recalculateSegmentsMutation.isPending ? 'animate-spin' : ''}`} />
+          Recalculate Segments
+        </Button>
       </div>
 
       {/* Import Leads Dialog */}
@@ -289,9 +392,9 @@ export default function Accounts() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Segments</SelectItem>
-                <SelectItem value="enterprise">Enterprise</SelectItem>
-                <SelectItem value="mid_market">Mid-Market</SelectItem>
-                <SelectItem value="smb">SMB</SelectItem>
+                <SelectItem value="enterprise">Enterprise (A: ≥15%)</SelectItem>
+                <SelectItem value="mid_market">Mid-Market (B: 5-15%)</SelectItem>
+                <SelectItem value="smb">SMB (C: 0-5%)</SelectItem>
                 <SelectItem value="startup">Startup</SelectItem>
               </SelectContent>
             </Select>

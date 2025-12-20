@@ -16,16 +16,19 @@ import {
   ArrowLeft,
   MessageSquare,
   CheckSquare,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import InteractionTimeline from '../components/account/InteractionTimeline';
+import AddInteractionDialog from '../components/account/AddInteractionDialog';
 
 export default function ContactDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const contactId = urlParams.get('id');
   const navigate = useNavigate();
+  const [showAddInteraction, setShowAddInteraction] = useState(false);
   // const [showEditContact, setShowEditContact] = useState(false);
 
   const queryClient = useQueryClient();
@@ -49,17 +52,40 @@ export default function ContactDetail() {
     enabled: !!contact?.account_id
   });
 
+  // Fetch all contacts from the account for the interaction dialog
+  const { data: accountContacts = [] } = useQuery({
+    queryKey: ['contacts', contact?.account_id],
+    queryFn: () => base44.entities.Contact.filter({ account_id: contact?.account_id }),
+    enabled: !!contact?.account_id
+  });
+
   const { data: interactions = [] } = useQuery({
     queryKey: ['interactions', contactId],
     queryFn: () => base44.entities.Interaction.filter({ contact_id: contactId }, '-interaction_date'),
     enabled: !!contactId
   });
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks', contactId],
-    queryFn: () => base44.entities.Task.filter({ related_contact_id: contactId }),
-    enabled: !!contactId
+  // Also fetch interactions by account_id to show all account interactions
+  const { data: accountInteractions = [] } = useQuery({
+    queryKey: ['interactions', contact?.account_id],
+    queryFn: () => base44.entities.Interaction.filter({ account_id: contact?.account_id }, '-interaction_date'),
+    enabled: !!contact?.account_id
   });
+
+  // Combine and deduplicate interactions
+  const allInteractions = React.useMemo(() => {
+    const interactionMap = new Map();
+    [...interactions, ...(accountInteractions || [])].forEach(interaction => {
+      if (!interactionMap.has(interaction.id)) {
+        interactionMap.set(interaction.id, interaction);
+      }
+    });
+    return Array.from(interactionMap.values()).sort((a, b) => {
+      const dateA = new Date(a.interaction_date || 0);
+      const dateB = new Date(b.interaction_date || 0);
+      return dateB - dateA;
+    });
+  }, [interactions, accountInteractions]);
 
   const getRoleColor = (role) => {
     const colors = {
@@ -142,10 +168,7 @@ export default function ContactDetail() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="interactions">
-            Interactions ({interactions.length})
-          </TabsTrigger>
-          <TabsTrigger value="tasks">
-            Tasks ({tasks.length})
+            Interactions ({allInteractions.length})
           </TabsTrigger>
         </TabsList>
 
@@ -288,49 +311,25 @@ export default function ContactDetail() {
         </TabsContent>
 
         <TabsContent value="interactions" className="space-y-4">
-          <InteractionTimeline interactions={interactions} contacts={[contact]} />
-        </TabsContent>
-
-        <TabsContent value="tasks" className="space-y-4">
-          {tasks.length > 0 ? (
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg">
-                      <CheckSquare className="w-5 h-5 text-slate-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{task.title || 'Untitled Task'}</p>
-                        {task.description && (
-                          <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                        )}
-                        {task.due_date && (
-                          <p className="text-xs text-slate-500 mt-1">
-                            Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
-                          </p>
-                        )}
-                      </div>
-                      {task.status && (
-                        <Badge variant="outline">
-                          {task.status}
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <CheckSquare className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-slate-900 mb-1">No tasks found</h3>
-                <p className="text-slate-600">No tasks are associated with this contact.</p>
-              </CardContent>
-            </Card>
-          )}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">Interaction History</h3>
+            <Button onClick={() => setShowAddInteraction(true)} className="bg-slate-900 hover:bg-slate-800">
+              <Plus className="w-4 h-4 mr-2" />
+              Log Interaction
+            </Button>
+          </div>
+          <InteractionTimeline interactions={allInteractions} contacts={accountContacts.length > 0 ? accountContacts : [contact]} accountId={contact?.account_id} contactId={contactId} />
         </TabsContent>
       </Tabs>
+
+      {/* Add Interaction Dialog */}
+      <AddInteractionDialog
+        open={showAddInteraction}
+        onClose={() => setShowAddInteraction(false)}
+        accountId={contact?.account_id}
+        contactId={contactId}
+        contacts={accountContacts.length > 0 ? accountContacts : (contact ? [contact] : [])}
+      />
 
       {/* Edit Contact Dialog - TODO: Implement EditContactDialog component */}
     </div>

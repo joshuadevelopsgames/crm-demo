@@ -1,7 +1,8 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TutorialProvider } from './contexts/TutorialContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 import Layout from './components/Layout';
 import TutorialBar from './components/TutorialBar';
 import Dashboard from './pages/Dashboard';
@@ -23,6 +24,7 @@ import WinLossTest from './pages/WinLossTest';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
+import { getSupabaseAuth } from './services/supabaseClient';
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -34,9 +36,80 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to get current page name for Layout
+// Component to protect admin routes
+function AdminRoute({ children }) {
+  const { isAdmin, isLoading } = useUser();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
+}
+
+// Component to get current page name for Layout and handle auth
 function AppContent() {
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true/false = result
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/google-auth-callback', '/gmail-callback'];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+  
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = getSupabaseAuth();
+      
+      if (!supabase) {
+        // Fallback: check localStorage for demo mode
+        const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+        setIsAuthenticated(isAuth);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Auth check error:', error);
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(!!session);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+
+      // Listen for auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsAuthenticated(!!session);
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+
+    checkAuth();
+  }, []);
   
   // Extract page name from path
   const getPageName = () => {
@@ -59,6 +132,28 @@ function AppContent() {
     return 'Dashboard';
   };
 
+  // Show loading state while checking auth
+  if (isLoading && !isPublicRoute) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated and trying to access protected route
+  if (!isAuthenticated && !isPublicRoute) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to dashboard if authenticated and on login page
+  if (isAuthenticated && location.pathname === '/login') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <ErrorBoundary>
       <Routes>
@@ -79,7 +174,11 @@ function AppContent() {
               <Route path={createPageUrl('NeglectedAccounts')} element={<NeglectedAccounts />} />
               <Route path={createPageUrl('Tasks')} element={<Tasks />} />
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />
-              <Route path={createPageUrl('Scoring')} element={<Scoring />} />
+              <Route path={createPageUrl('Scoring')} element={
+                <AdminRoute>
+                  <Scoring />
+                </AdminRoute>
+              } />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
               <Route path={createPageUrl('BuildScorecard')} element={<BuildScorecard />} />
               <Route path="*" element={<Dashboard />} />
@@ -95,11 +194,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <TutorialProvider>
-          <TutorialBar />
-          <AppContent />
-          <InstallPrompt />
-        </TutorialProvider>
+        <UserProvider>
+          <TutorialProvider>
+            <TutorialBar />
+            <AppContent />
+            <InstallPrompt />
+          </TutorialProvider>
+        </UserProvider>
       </Router>
     </QueryClientProvider>
   );
