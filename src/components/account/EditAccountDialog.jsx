@@ -61,7 +61,7 @@ export default function EditAccountDialog({ open, onClose, account }) {
         name: account.name || '',
         account_type: account.account_type || 'prospect',
         status: account.status || 'active',
-        revenue_segment: account.revenue_segment || 'smb',
+        revenue_segment: account.revenue_segment || 'C',
         annual_revenue: account.annual_revenue || '',
         industry: account.industry || '',
         website: account.website || '',
@@ -187,7 +187,7 @@ export default function EditAccountDialog({ open, onClose, account }) {
                 placeholder="Enter annual revenue"
               />
               <p className="text-xs text-slate-500 mt-1">
-                Segment will auto-calculate: A (≥15%), B (5-15%), C (0-5%)
+                Segment will auto-calculate: A (≥15%), B (5-15%), C (0-5%), D (Project Only)
               </p>
             </div>
             <div>
@@ -203,10 +203,10 @@ export default function EditAccountDialog({ open, onClose, account }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="enterprise">Enterprise (A: ≥15%)</SelectItem>
-                  <SelectItem value="mid_market">Mid-Market (B: 5-15%)</SelectItem>
-                  <SelectItem value="smb">SMB (C: 0-5%)</SelectItem>
-                  <SelectItem value="startup">Startup</SelectItem>
+                  <SelectItem value="A">Segment A (≥15%)</SelectItem>
+                  <SelectItem value="B">Segment B (5-15%)</SelectItem>
+                  <SelectItem value="C">Segment C (0-5%)</SelectItem>
+                  <SelectItem value="D">Segment D (Project Only)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

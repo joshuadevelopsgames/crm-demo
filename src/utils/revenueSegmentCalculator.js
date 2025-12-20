@@ -1,9 +1,12 @@
 /**
  * Calculate revenue segment based on annual revenue percentage
  * 
- * Segment A (Enterprise): >= 15% of total revenue
- * Segment B (Mid-Market): 5-15% of total revenue
- * Segment C (SMB): 0-5% of total revenue
+ * Segment A: >= 15% of total revenue
+ * Segment B: 5-15% of total revenue
+ * Segment C: 0-5% of total revenue
+ * Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
+ *   - "Standard" = project (one-time)
+ *   - "Service" = ongoing/recurring
  */
 
 /**
@@ -45,29 +48,45 @@ export function getAccountRevenue(account, estimates = []) {
  * @param {Object} account - The account object
  * @param {number} totalRevenue - Total revenue across all accounts
  * @param {Array} estimates - Array of estimate objects for this account (optional)
- * @returns {string} - Revenue segment: 'enterprise', 'mid_market', or 'smb'
+ * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
 export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
+  // Check if account is project only (has "Standard" type estimates but no "Service" type estimates)
+  if (estimates && estimates.length > 0) {
+    const wonEstimates = estimates.filter(est => est.status === 'won' || est.status === 'sold');
+    const hasStandardEstimates = wonEstimates.some(est => 
+      est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
+    );
+    const hasServiceEstimates = wonEstimates.some(est => 
+      est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'service'
+    );
+    
+    // Segment D: Project only - has "Standard" (project) estimates but no "Service" (ongoing) estimates
+    if (hasStandardEstimates && !hasServiceEstimates) {
+      return 'D';
+    }
+  }
+  
   const accountRevenue = getAccountRevenue(account, estimates);
   
   if (accountRevenue <= 0 || !totalRevenue || totalRevenue <= 0) {
-    return 'smb'; // Default to SMB if no revenue data
+    return 'C'; // Default to C if no revenue data
   }
 
   const revenuePercentage = (accountRevenue / totalRevenue) * 100;
 
-  // Segment A (Enterprise): >= 15% of total revenue
+  // Segment A: >= 15% of total revenue
   if (revenuePercentage >= 15) {
-    return 'enterprise';
+    return 'A';
   }
   
-  // Segment B (Mid-Market): 5-15% of total revenue
+  // Segment B: 5-15% of total revenue
   if (revenuePercentage >= 5 && revenuePercentage < 15) {
-    return 'mid_market';
+    return 'B';
   }
   
-  // Segment C (SMB): 0-5% of total revenue
-  return 'smb';
+  // Segment C: 0-5% of total revenue
+  return 'C';
 }
 
 /**
@@ -97,7 +116,7 @@ export function autoAssignRevenueSegments(accounts, estimatesByAccountId = {}) {
     // If no revenue data, return accounts unchanged
     return accounts.map(account => ({
       ...account,
-      revenue_segment: account.revenue_segment || 'smb'
+      revenue_segment: account.revenue_segment || 'C'
     }));
   }
 

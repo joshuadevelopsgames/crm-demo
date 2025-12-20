@@ -184,7 +184,7 @@ export default function AccountDetail() {
               </Badge>
               {account.revenue_segment && (
                 <Badge variant="outline" className="text-slate-700">
-                  {account.revenue_segment.replace('_', ' ')}
+                  {account.revenue_segment}
                 </Badge>
               )}
             </div>

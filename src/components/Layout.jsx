@@ -23,6 +23,8 @@ import { useUser } from '../contexts/UserContext';
 import NotificationBell from './NotificationBell';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getSupabaseAuth } from '@/services/supabaseClient';
+import { clearGoogleAuthSession } from '@/services/googleAuthService';
+import { disconnectGmail } from '@/services/gmailService';
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,32 +46,71 @@ export default function Layout({ children, currentPageName }) {
   // Filter navigation based on user role
   const navigation = allNavigation.filter(item => !item.adminOnly || isAdmin);
 
-  const handleLogout = async () => {
-    // Exit tutorial mode if active
-    if (isTutorialMode) {
-      exitTutorial();
+  const handleLogout = async (e) => {
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
     
-    // Clear React Query cache
-    queryClient.clear();
-    
-    // Sign out from Supabase
-    const supabase = getSupabaseAuth();
-    if (supabase) {
-      await supabase.auth.signOut();
+    try {
+      // Exit tutorial mode if active
+      if (isTutorialMode) {
+        exitTutorial();
+      }
+      
+      // Clear React Query cache
+      queryClient.clear();
+      
+      // Sign out from Supabase
+      try {
+        const supabase = getSupabaseAuth();
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.error('Error signing out from Supabase:', error);
+      }
+      
+      // Clear Google auth session
+      try {
+        clearGoogleAuthSession();
+      } catch (error) {
+        console.error('Error clearing Google auth:', error);
+      }
+      
+      // Disconnect Gmail
+      try {
+        disconnectGmail();
+      } catch (error) {
+        console.error('Error disconnecting Gmail:', error);
+      }
+      
+      // Call base44 logout (if it exists)
+      try {
+        if (base44.auth && base44.auth.logout) {
+          base44.auth.logout();
+        }
+      } catch (error) {
+        console.error('Error calling base44 logout:', error);
+      }
+      
+      // Clear any stored auth data (fallback)
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('authStateChange'));
+      
+      // Redirect to login page
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, try to clear storage and redirect
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate('/login', { replace: true });
     }
-    
-    // Clear any stored auth data (fallback)
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    // Call base44 logout (if it exists)
-    if (base44.auth && base44.auth.logout) {
-      base44.auth.logout();
-    }
-    
-    // Redirect to login page
-    navigate('/login');
   };
 
   return (

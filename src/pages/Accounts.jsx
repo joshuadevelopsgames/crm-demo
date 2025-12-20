@@ -85,7 +85,7 @@ export default function Accounts() {
   const [newAccount, setNewAccount] = useState({
     name: '',
     account_type: 'prospect',
-    revenue_segment: 'smb',
+    revenue_segment: 'C',
     status: 'active',
     annual_revenue: '',
     industry: '',
@@ -147,7 +147,7 @@ export default function Accounts() {
       const updates = updatedAccounts
         .filter(account => {
           // Only update if segment actually changed
-          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment || 'smb';
+          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment || 'C';
           return account.revenue_segment !== currentSegment;
         })
         .map(account => 
@@ -394,10 +394,10 @@ export default function Accounts() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Segments</SelectItem>
-                <SelectItem value="enterprise">Enterprise (A: ≥15%)</SelectItem>
-                <SelectItem value="mid_market">Mid-Market (B: 5-15%)</SelectItem>
-                <SelectItem value="smb">SMB (C: 0-5%)</SelectItem>
-                <SelectItem value="startup">Startup</SelectItem>
+                <SelectItem value="A">Segment A (≥15%)</SelectItem>
+                <SelectItem value="B">Segment B (5-15%)</SelectItem>
+                <SelectItem value="C">Segment C (0-5%)</SelectItem>
+                <SelectItem value="D">Segment D (Project Only)</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
@@ -502,7 +502,7 @@ export default function Accounts() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {account.revenue_segment ? account.revenue_segment.replace('_', '-') : '-'}
+                          {account.revenue_segment || '-'}
                         </td>
                         <td className="px-6 py-4">
                           {account.organization_score !== null && account.organization_score !== undefined ? (
@@ -582,7 +582,7 @@ export default function Accounts() {
                       </Badge>
                       {account.revenue_segment && (
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
-                          {account.revenue_segment.replace('_', '-')}
+                          {account.revenue_segment}
                         </Badge>
                       )}
                     </div>
@@ -676,10 +676,10 @@ export default function Accounts() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Segments</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                    <SelectItem value="mid_market">Mid-Market</SelectItem>
-                    <SelectItem value="smb">SMB</SelectItem>
-                    <SelectItem value="startup">Startup</SelectItem>
+                    <SelectItem value="A">Segment A</SelectItem>
+                    <SelectItem value="B">Segment B</SelectItem>
+                    <SelectItem value="C">Segment C</SelectItem>
+                    <SelectItem value="D">Segment D</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={setSortBy}>
@@ -786,7 +786,7 @@ export default function Accounts() {
                             </Badge>
                           </td>
                           <td className={`px-6 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {account.revenue_segment ? account.revenue_segment.replace('_', '-') : '-'}
+                            {account.revenue_segment || '-'}
                           </td>
                           <td className="px-6 py-4">
                             {account.organization_score !== null && account.organization_score !== undefined ? (

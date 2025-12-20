@@ -71,7 +71,7 @@ export function parseLmnCsv(csvText) {
           name: leadName,
           account_type: 'prospect', // Default to prospect
           status: 'active',
-          revenue_segment: 'smb',
+          revenue_segment: 'C',
           source: 'lmn_import',
           notes: `Imported from LMN on ${new Date().toLocaleDateString()}`,
           created_date: new Date().toISOString(),
@@ -473,6 +473,7 @@ export function previewLmnCsv(csvText, maxRows = 10) {
     return { headers: [], preview: [], totalRows: 0 };
   }
 }
+
 
 
 

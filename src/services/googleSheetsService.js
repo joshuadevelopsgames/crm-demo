@@ -301,7 +301,7 @@ async function parseAccounts() {
           name: contact.account_name,
           account_type: 'customer', // Default
           status: 'active', // Default
-          revenue_segment: 'smb', // Default
+          revenue_segment: 'C', // Default
           organization_score: null,
           last_interaction_date: null,
           renewal_date: null
