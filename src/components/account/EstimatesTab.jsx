@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Plus, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
+import { FileText, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Department names to normalize division values
@@ -253,10 +253,6 @@ export default function EstimatesTab({ estimates = [], accountId }) {
               <SelectItem value="lost">Lost</SelectItem>
             </SelectContent>
           </Select>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" />
-            New Estimate
-          </Button>
         </div>
       </div>
 
@@ -425,12 +421,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
           <p className="text-slate-600 mb-4">
             {filterStatus !== 'all' || filterDepartment !== 'all' || filterYear !== 'all'
               ? 'No estimates match the selected filters'
-              : 'Create your first estimate for this account'}
+              : 'No estimates found for this account'}
           </p>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Estimate
-          </Button>
         </Card>
       )}
     </div>

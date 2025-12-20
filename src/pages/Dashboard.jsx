@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
 import SnoozeDialog from '@/components/SnoozeDialog';
+import ImportLeadsDialog from '../components/ImportLeadsDialog';
 import {
   Building2,
   Users,
@@ -19,7 +20,8 @@ import {
   ArrowRight,
   Clock,
   ExternalLink,
-  BellOff
+  BellOff,
+  Upload
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
@@ -27,6 +29,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -158,9 +161,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
-        <p className="text-slate-600 mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-slate-600 mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
+        </div>
+        <Button 
+          onClick={() => setIsImportDialogOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Import from LMN
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -426,6 +438,12 @@ export default function Dashboard() {
           onSnooze={handleSnooze}
         />
       )}
+
+      {/* Import Leads Dialog */}
+      <ImportLeadsDialog 
+        open={isImportDialogOpen} 
+        onClose={() => setIsImportDialogOpen(false)}
+      />
     </div>
   );
 }
