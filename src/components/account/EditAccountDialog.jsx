@@ -187,7 +187,7 @@ export default function EditAccountDialog({ open, onClose, account }) {
                 placeholder="Enter annual revenue"
               />
               <p className="text-xs text-slate-500 mt-1">
-                Segment will auto-calculate: A (≥15%), B (5-15%), C (0-5%), D (Project Only)
+                Segment will auto-calculate based on rolling 12-month average: A (≥15%), B (5-15%), C (0-5%), D (Project Only)
               </p>
             </div>
             <div>
