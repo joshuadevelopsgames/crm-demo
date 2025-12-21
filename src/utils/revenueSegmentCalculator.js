@@ -7,6 +7,7 @@
  * Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
  *   - "Standard" = project (one-time)
  *   - "Service" = ongoing/recurring
+ *   - If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
  * 
  * Revenue is calculated from won estimates within the last 12 months (rolling average)
  */
@@ -108,8 +109,26 @@ export function getAccountRevenue(account, estimates = []) {
  */
 export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
   // Check if account is project only (has "Standard" type estimates but no "Service" type estimates)
+  // If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
   if (estimates && estimates.length > 0) {
-    const wonEstimates = estimates.filter(est => est.status === 'won' || est.status === 'sold');
+    const now = new Date();
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    
+    // Only consider won estimates from last 12 months for type checking
+    const wonEstimates = estimates.filter(est => {
+      // Must be won
+      if (est.status !== 'won' && est.status !== 'sold') {
+        return false;
+      }
+      
+      // Only consider estimates from last 12 months
+      const relevantDate = getEstimateRelevantDate(est);
+      if (!relevantDate || isNaN(relevantDate.getTime())) return false;
+      
+      return relevantDate >= twelveMonthsAgo && relevantDate <= now;
+    });
+    
     const hasStandardEstimates = wonEstimates.some(est => 
       est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
     );
@@ -117,7 +136,8 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
       est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'service'
     );
     
-    // Segment D: Project only - has "Standard" (project) estimates but no "Service" (ongoing) estimates
+    // Segment D: Project only - has "Standard" (project) estimates but NO "Service" (ongoing) estimates
+    // If it has BOTH Standard and Service, it will be A/B/C based on revenue percentage
     if (hasStandardEstimates && !hasServiceEstimates) {
       return 'D';
     }
