@@ -81,21 +81,19 @@ export function calculateRevenueFromEstimates(estimates = []) {
 }
 
 /**
- * Get account revenue - prefers estimates from last 12 months, falls back to annual_revenue field
+ * Get account revenue - total revenue from last 12 months (rolling window)
  * @param {Object} account - Account object
  * @param {Array} estimates - Array of estimate objects for this account (optional)
- * @returns {number} - Account revenue (rolling 12-month average)
+ * @returns {number} - Account total revenue from last 12 months
  */
 export function getAccountRevenue(account, estimates = []) {
-  // If estimates are provided, calculate from won estimates in last 12 months (actual revenue)
+  // If estimates are provided, always use the calculated revenue (even if 0)
+  // This ensures we use actual 12-month rolling totals, not outdated annual_revenue
   if (estimates && estimates.length > 0) {
-    const revenueFromEstimates = calculateRevenueFromEstimates(estimates);
-    if (revenueFromEstimates > 0) {
-      return revenueFromEstimates;
-    }
+    return calculateRevenueFromEstimates(estimates);
   }
   
-  // Fall back to annual_revenue field (assumes it's already a 12-month average)
+  // Only fall back to annual_revenue if we have no estimates at all
   const annualRevenue = account?.annual_revenue || 0;
   return typeof annualRevenue === 'number' ? annualRevenue : parseFloat(annualRevenue) || 0;
 }
@@ -166,10 +164,10 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 }
 
 /**
- * Calculate total revenue across all accounts (rolling 12-month average)
+ * Calculate total revenue across all accounts (rolling 12-month total)
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional)
- * @returns {number} - Total revenue from last 12 months
+ * @returns {number} - Total revenue from last 12 months (sum of all accounts)
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
   return accounts.reduce((total, account) => {
