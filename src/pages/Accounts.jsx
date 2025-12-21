@@ -303,9 +303,7 @@ export default function Accounts() {
         >
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Accounts</h1>
-            <p className="text-slate-600 mt-1">
-              {filteredAccounts.length} total accounts • Segments based on rolling 12-month average
-            </p>
+            <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
           </div>
         </TutorialTooltip>
         <div className="flex items-center gap-3">
@@ -390,21 +388,18 @@ export default function Accounts() {
                 <SelectItem value="churned">Churned</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex flex-col">
-              <Select value={filterSegment} onValueChange={setFilterSegment}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Segment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Segments</SelectItem>
-                  <SelectItem value="A">Segment A (≥15%)</SelectItem>
-                  <SelectItem value="B">Segment B (5-15%)</SelectItem>
-                  <SelectItem value="C">Segment C (0-5%)</SelectItem>
-                  <SelectItem value="D">Segment D (Project Only)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-1">Based on rolling 12-month average</p>
-            </div>
+            <Select value={filterSegment} onValueChange={setFilterSegment}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Segment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Segments</SelectItem>
+                <SelectItem value="A">Segment A (≥15%)</SelectItem>
+                <SelectItem value="B">Segment B (5-15%)</SelectItem>
+                <SelectItem value="C">Segment C (0-5%)</SelectItem>
+                <SelectItem value="D">Segment D (Project Only)</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48">
                 <ArrowUpDown className="w-4 h-4 mr-2" />
