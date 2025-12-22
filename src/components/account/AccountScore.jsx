@@ -52,7 +52,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
             <div className="text-6xl font-bold text-emerald-600">
               {mostRecentScorecard?.normalized_score !== null && mostRecentScorecard?.normalized_score !== undefined 
                 ? mostRecentScorecard.normalized_score 
-                : (currentScore !== null && currentScore !== undefined ? currentScore : '—')}
+                : '—'}
             </div>
             <div className="text-slate-600">
               <p className="text-sm">Out of 100</p>

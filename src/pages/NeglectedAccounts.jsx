@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -20,6 +20,28 @@ export default function NeglectedAccounts() {
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list()
   });
+
+  // Fetch all scorecards to check which accounts have completed ICP scorecards
+  const { data: allScorecards = [] } = useQuery({
+    queryKey: ['scorecards'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/scorecards');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
+
+  // Create a map of account IDs that have completed scorecards
+  const accountsWithScorecards = useMemo(() => {
+    const accountIds = new Set();
+    allScorecards.forEach(scorecard => {
+      if (scorecard.account_id && scorecard.completed_date) {
+        accountIds.add(scorecard.account_id);
+      }
+    });
+    return accountIds;
+  }, [allScorecards]);
 
   // Neglected accounts (no interaction in 30+ days, not snoozed)
   const neglectedAccounts = accounts.filter(account => {
@@ -196,7 +218,7 @@ export default function NeglectedAccounts() {
                           {account.annual_revenue ? `$${account.annual_revenue.toLocaleString()}` : '-'}
                         </td>
                         <td className="px-4 py-4">
-                          {account.organization_score !== null && account.organization_score !== undefined ? (
+                          {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-slate-900">{account.organization_score}</span>
                               <span className="text-xs text-slate-500">/100</span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
@@ -73,6 +73,28 @@ export default function Accounts() {
       return result.success ? (result.data || []) : [];
     }
   });
+
+  // Fetch all scorecards to check which accounts have completed ICP scorecards
+  const { data: allScorecards = [] } = useQuery({
+    queryKey: ['scorecards'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/scorecards');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
+
+  // Create a map of account IDs that have completed scorecards
+  const accountsWithScorecards = useMemo(() => {
+    const accountIds = new Set();
+    allScorecards.forEach(scorecard => {
+      if (scorecard.account_id && scorecard.completed_date) {
+        accountIds.add(scorecard.account_id);
+      }
+    });
+    return accountIds;
+  }, [allScorecards]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -247,7 +269,15 @@ export default function Accounts() {
 
   filteredAccounts.sort((a, b) => {
     if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
-    if (sortBy === 'score') return (b.organization_score || 0) - (a.organization_score || 0);
+    if (sortBy === 'score') {
+      // Only sort by score if both accounts have completed scorecards
+      const aHasScorecard = accountsWithScorecards.has(a.id);
+      const bHasScorecard = accountsWithScorecards.has(b.id);
+      if (!aHasScorecard && !bHasScorecard) return 0;
+      if (!aHasScorecard) return 1; // Accounts without scorecards go to end
+      if (!bHasScorecard) return -1; // Accounts without scorecards go to end
+      return (b.organization_score || 0) - (a.organization_score || 0);
+    }
     if (sortBy === 'revenue') return (b.annual_revenue || 0) - (a.annual_revenue || 0);
     if (sortBy === 'last_interaction') {
       if (!a.last_interaction_date) return 1;
@@ -499,7 +529,7 @@ export default function Accounts() {
                           {account.revenue_segment || '-'}
                         </td>
                         <td className="px-6 py-4">
-                          {account.organization_score !== null && account.organization_score !== undefined ? (
+                          {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                               <span className="font-semibold text-emerald-600">{account.organization_score}</span>
@@ -582,7 +612,7 @@ export default function Accounts() {
                     </div>
 
                     {/* Score */}
-                    {account.organization_score !== null && account.organization_score !== undefined && (
+                    {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined && (
                       <div className="flex items-center gap-2">
                           <TrendingUp className={`w-4 h-4 ${isArchived ? 'text-slate-400' : 'text-emerald-600'}`} />
                           <span className={`text-sm font-medium ${isArchived ? 'text-slate-400' : 'text-slate-700'}`}>Score:</span>
@@ -783,7 +813,7 @@ export default function Accounts() {
                             {account.revenue_segment || '-'}
                           </td>
                           <td className="px-6 py-4">
-                            {account.organization_score !== null && account.organization_score !== undefined ? (
+                            {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                               <div className="flex items-center gap-2">
                                 <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isArchived ? 'text-slate-400' : 'text-emerald-600'}`} />
                                 <span className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-emerald-600'}`}>{account.organization_score}</span>
@@ -860,7 +890,7 @@ export default function Accounts() {
                       </div>
 
                       {/* Score */}
-                      {account.organization_score !== null && account.organization_score !== undefined && (
+                      {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined && (
                         <div className="flex items-center gap-2">
                           <TrendingUp className={`w-4 h-4 ${isArchived ? 'text-slate-400' : 'text-emerald-600'}`} />
                           <span className={`text-sm font-medium ${isArchived ? 'text-slate-400' : 'text-slate-700'}`}>Score:</span>

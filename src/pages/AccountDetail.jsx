@@ -79,6 +79,9 @@ export default function AccountDetail() {
     queryFn: () => base44.entities.ScorecardResponse.filter({ account_id: accountId }, '-completed_date')
   });
 
+  // Check if account has any completed scorecards
+  const hasCompletedScorecard = scorecards.some(sc => sc.completed_date);
+
   const { data: salesInsights = [] } = useQuery({
     queryKey: ['sales-insights', accountId],
     queryFn: () => base44.entities.SalesInsight.filter({ account_id: accountId }, '-recorded_date')
@@ -299,7 +302,9 @@ export default function AccountDetail() {
               <div className="flex items-center justify-between">
                 <CardTitle>Organization Score</CardTitle>
                 <Badge className="bg-emerald-100 text-emerald-800">
-                  {account.organization_score || 0} / 100
+                  {hasCompletedScorecard && account.organization_score !== null && account.organization_score !== undefined 
+                    ? account.organization_score 
+                    : '—'} / 100
                 </Badge>
               </div>
             </CardHeader>
@@ -307,7 +312,7 @@ export default function AccountDetail() {
               <AccountScore 
                 accountId={accountId}
                 scorecards={scorecards}
-                currentScore={account.organization_score}
+                currentScore={hasCompletedScorecard ? account.organization_score : null}
                 accountName={account.name}
                 compact={true}
               />
