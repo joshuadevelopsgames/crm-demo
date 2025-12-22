@@ -215,15 +215,31 @@ export default function TakeScorecard() {
       return sum + score;
     }, 0);
     
+    // Calculate total possible score excluding "Win Rate" section
+    // This ensures normalized score is calculated correctly
+    const totalPossibleScore = activeTemplate.questions
+      .filter((q) => {
+        const section = q.section || q.category || 'Other';
+        return section !== 'Win Rate';
+      })
+      .reduce((sum, q) => {
+        const maxAnswer = q.answer_type === 'yes_no' ? 1 : 
+                         q.answer_type === 'scale_1_5' ? 5 : 
+                         q.answer_type === 'scale_1_10' ? 10 : 1;
+        return sum + (q.weight * maxAnswer);
+      }, 0);
+    
     // Debug logging
     console.log('📊 Score Calculation:', {
       sectionScores,
       totalScore,
-      sectionCount: Object.keys(sectionScores).length
+      totalPossibleScore,
+      sectionCount: Object.keys(sectionScores).length,
+      originalTotalPossible: activeTemplate.total_possible_score
     });
     
-    const normalizedScore = activeTemplate.total_possible_score > 0 
-      ? Math.round((totalScore / activeTemplate.total_possible_score) * 100)
+    const normalizedScore = totalPossibleScore > 0 
+      ? Math.round((totalScore / totalPossibleScore) * 100)
       : 0;
     const passThreshold = activeTemplate.pass_threshold || 70;
     const isPass = normalizedScore >= passThreshold;
