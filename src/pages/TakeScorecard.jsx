@@ -209,7 +209,8 @@ export default function TakeScorecard() {
       }, 0);
     });
 
-    const totalScore = responses.reduce((sum, r) => sum + r.weighted_score, 0);
+    // Total score should be the sum of all section scores (sub-totals)
+    const totalScore = Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0);
     const normalizedScore = activeTemplate.total_possible_score > 0 
       ? Math.round((totalScore / activeTemplate.total_possible_score) * 100)
       : 0;
@@ -249,8 +250,7 @@ export default function TakeScorecard() {
   const passThreshold = activeTemplate?.pass_threshold || 70;
 
   // Show loading state while fetching
-  // Only show loading if we're actually fetching a template (not using customTemplate)
-  if ((templateLoading && !isCustom && !shouldUseCustomTemplate) || accountLoading) {
+  if (templateLoading || accountLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
