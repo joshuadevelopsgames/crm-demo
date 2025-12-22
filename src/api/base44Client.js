@@ -579,10 +579,11 @@ export const base44 = {
     Notification: {
       list: async () => {
         const data = await getData('notifications');
-        return Array.isArray(data) ? data : mockNotifications;
+        return Array.isArray(data) ? data : [];
       },
       filter: async (filters, sort) => {
-        let results = [...mockNotifications];
+        const data = await getData('notifications');
+        let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(notification => {
             return Object.entries(filters).every(([key, value]) => {
@@ -604,38 +605,48 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        const newNotification = { 
-          ...data, 
-          id: Date.now().toString(),
-          is_read: false,
-          created_at: new Date().toISOString()
-        };
-        mockNotifications.push(newNotification);
-        return newNotification;
+        const response = await fetch('/api/data/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create notification');
       },
       update: async (id, data) => {
-        const index = mockNotifications.findIndex(n => n.id === id);
-        if (index !== -1) {
-          mockNotifications[index] = { ...mockNotifications[index], ...data };
-          return mockNotifications[index];
-        }
-        return data;
+        const response = await fetch('/api/data/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update notification');
       },
       markAsRead: async (id) => {
-        const index = mockNotifications.findIndex(n => n.id === id);
-        if (index !== -1) {
-          mockNotifications[index].is_read = true;
-          return mockNotifications[index];
-        }
-        return null;
+        const response = await fetch('/api/data/notifications', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, is_read: true })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to mark notification as read');
       },
       markAllAsRead: async (userId) => {
-        mockNotifications.forEach(n => {
-          if (n.user_id === userId) {
-            n.is_read = true;
-          }
-        });
-        return mockNotifications.filter(n => n.user_id === userId);
+        const data = await getData('notifications');
+        const userNotifications = Array.isArray(data) ? data.filter(n => n.user_id === userId) : [];
+        await Promise.all(
+          userNotifications.map(n => 
+            fetch('/api/data/notifications', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: n.id, is_read: true })
+            })
+          )
+        );
+        return userNotifications;
       },
     },
     Estimate: {

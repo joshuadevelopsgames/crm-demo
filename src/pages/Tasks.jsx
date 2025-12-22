@@ -395,10 +395,9 @@ export default function Tasks() {
   };
 
   const handleCreateOrUpdate = async () => {
-    const user = await base44.auth.me();
     const taskData = {
       ...newTask,
-      assigned_to: newTask.assigned_to || user.email
+      assigned_to: newTask.assigned_to || null
     };
     
     // If creating a new task and due_date is blank, default to today
