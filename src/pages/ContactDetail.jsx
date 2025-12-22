@@ -148,11 +148,16 @@ export default function ContactDetail() {
               {contact.title && (
                 <p className="text-slate-600 mt-1">{contact.title}</p>
               )}
-              {isArchived && (
-                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300 mt-2">
-                  Archived
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {isArchived && (
+                  <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
+                    Archived
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 font-mono text-xs">
+                  ID: {contact.id}
                 </Badge>
-              )}
+              </div>
             </div>
           </div>
         </div>

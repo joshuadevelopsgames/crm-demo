@@ -190,6 +190,9 @@ export default function AccountDetail() {
                   {account.revenue_segment}
                 </Badge>
               )}
+              <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 font-mono text-xs">
+                ID: {account.id}
+              </Badge>
             </div>
           </div>
         </div>
