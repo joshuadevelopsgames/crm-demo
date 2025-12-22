@@ -99,9 +99,10 @@ export default function ImportLeads() {
         errors: []
       };
 
-      // Import accounts first
+      // Import accounts first (segments will be calculated after import)
       for (const account of parsedData.accounts) {
         try {
+          // Don't set default segment - will be calculated based on 12-month rolling revenue
           await base44.entities.Account.create(account);
           results.accountsCreated++;
         } catch (err) {
@@ -127,6 +128,8 @@ export default function ImportLeads() {
       // Refresh account and contact lists
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      
+      // Note: Segments will need to be recalculated after import to assign based on 12-month rolling revenue
 
     } catch (err) {
       setError(`Import failed: ${err.message}`);
@@ -435,6 +438,8 @@ export default function ImportLeads() {
     </div>
   );
 }
+
+
 
 
 

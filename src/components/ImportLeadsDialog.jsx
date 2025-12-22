@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
 import { parseContactsExport } from '@/utils/lmnContactsExportParser';
 import { parseLeadsList } from '@/utils/lmnLeadsListParser';
 import { parseEstimatesList } from '@/utils/lmnEstimatesListParser';
@@ -794,6 +795,38 @@ export default function ImportLeadsDialog({ open, onClose }) {
       
       // Force refetch all active queries
       await queryClient.refetchQueries({ type: 'active' });
+      
+      // Calculate and assign revenue segments based on 12-month rolling revenue
+      try {
+        console.log('📊 Calculating revenue segments for all accounts...');
+        const allAccounts = await base44.entities.Account.list();
+        const allEstimates = await base44.entities.Estimate.list();
+        
+        // Group estimates by account_id
+        const estimatesByAccountId = {};
+        allEstimates.forEach(est => {
+          if (est.account_id) {
+            if (!estimatesByAccountId[est.account_id]) {
+              estimatesByAccountId[est.account_id] = [];
+            }
+            estimatesByAccountId[est.account_id].push(est);
+          }
+        });
+        
+        // Calculate segments for all accounts
+        const updatedAccounts = autoAssignRevenueSegments(allAccounts, estimatesByAccountId);
+        
+        // Update all accounts with their calculated segments
+        const segmentUpdates = updatedAccounts.map(account => 
+          base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
+        );
+        
+        await Promise.all(segmentUpdates);
+        console.log(`✅ Assigned revenue segments to ${segmentUpdates.length} accounts based on 12-month rolling revenue`);
+      } catch (segmentError) {
+        console.error('⚠️ Error calculating revenue segments:', segmentError);
+        // Don't fail the import if segment calculation fails
+      }
 
     } catch (err) {
       setError(`Import failed: ${err.message}`);

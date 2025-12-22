@@ -146,16 +146,11 @@ export default function Accounts() {
       // Calculate segments for all accounts using actual revenue from estimates
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
-      // Update each account with new segment (ensure every account has a segment)
-      const updates = updatedAccounts
-        .filter(account => {
-          // Update if segment changed OR if account doesn't have a segment
-          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment;
-          return !currentSegment || account.revenue_segment !== currentSegment;
-        })
-        .map(account => 
-          base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
-        );
+      // Update ALL accounts to ensure every account has the correct segment
+      // This ensures accounts without segments get assigned, and accounts with wrong segments get corrected
+      const updates = updatedAccounts.map(account => 
+        base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
+      );
       
       await Promise.all(updates);
       
@@ -163,11 +158,7 @@ export default function Accounts() {
     },
     onSuccess: ({ updated, total }) => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      if (updated > 0) {
-        toast.success(`Revenue segments recalculated: ${updated} of ${total} accounts updated`);
-      } else {
-        toast.success('All revenue segments are already up to date');
-      }
+      toast.success(`Revenue segments recalculated: All ${total} accounts now have segments assigned`);
     },
     onError: (error) => {
       console.error('Error recalculating segments:', error);
