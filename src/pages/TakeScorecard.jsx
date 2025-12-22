@@ -210,7 +210,18 @@ export default function TakeScorecard() {
     });
 
     // Total score should be the sum of all section scores (sub-totals)
-    const totalScore = Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0);
+    const totalScore = Object.values(sectionScores).reduce((sum, sectionScore) => {
+      const score = Number(sectionScore) || 0;
+      return sum + score;
+    }, 0);
+    
+    // Debug logging
+    console.log('📊 Score Calculation:', {
+      sectionScores,
+      totalScore,
+      sectionCount: Object.keys(sectionScores).length
+    });
+    
     const normalizedScore = activeTemplate.total_possible_score > 0 
       ? Math.round((totalScore / activeTemplate.total_possible_score) * 100)
       : 0;
@@ -242,9 +253,21 @@ export default function TakeScorecard() {
     exportAndDownloadScorecard(scorecardData, activeTemplate, account);
   };
 
-  const isComplete = activeTemplate?.questions?.every((_, index) => answers[index] !== undefined);
-  const answeredCount = Object.keys(answers).length;
-  const totalQuestions = activeTemplate?.questions?.length || 0;
+  // Filter out "Win Rate" questions for counting
+  const validQuestionsForCounting = activeTemplate?.questions?.filter((q, index) => {
+    const section = q.section || q.category || 'Other';
+    return section !== 'Win Rate';
+  }) || [];
+  
+  const isComplete = validQuestionsForCounting.every((q, index) => {
+    const originalIndex = activeTemplate.questions.indexOf(q);
+    return answers[originalIndex] !== undefined;
+  });
+  const answeredCount = validQuestionsForCounting.filter((q) => {
+    const originalIndex = activeTemplate.questions.indexOf(q);
+    return answers[originalIndex] !== undefined;
+  }).length;
+  const totalQuestions = validQuestionsForCounting.length;
   const progress = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
   const scoreData = calculateScore();
   const passThreshold = activeTemplate?.pass_threshold || 70;
@@ -561,7 +584,10 @@ export default function TakeScorecard() {
             </div>
             <div className="col-span-2 text-right">
               <div className="text-3xl font-bold mb-2">
-                {scoreData.normalized > 0 ? scoreData.normalized : '—'}
+                {scoreData.total > 0 ? scoreData.total : '—'}
+              </div>
+              <div className="text-sm text-slate-500">
+                ({scoreData.normalized}% normalized)
               </div>
               {isComplete && (
                 <Badge 
