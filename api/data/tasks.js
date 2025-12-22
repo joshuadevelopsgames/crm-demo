@@ -108,6 +108,14 @@ export default async function handler(req, res) {
           taskData.completed_date = null;
         }
         
+        // Convert empty strings to null for UUID fields
+        if (taskData.related_account_id === '' || taskData.related_account_id === null || taskData.related_account_id === undefined) {
+          taskData.related_account_id = null;
+        }
+        if (taskData.related_contact_id === '' || taskData.related_contact_id === null || taskData.related_contact_id === undefined) {
+          taskData.related_contact_id = null;
+        }
+        
         // Only include id if it's a valid UUID format
         if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
           taskData.id = id;
@@ -153,6 +161,14 @@ export default async function handler(req, res) {
       }
       if (updateData.completed_date === '' || updateData.completed_date === null || updateData.completed_date === undefined) {
         updateData.completed_date = null;
+      }
+      
+      // Convert empty strings to null for UUID fields
+      if (updateData.related_account_id === '' || updateData.related_account_id === null || updateData.related_account_id === undefined) {
+        updateData.related_account_id = null;
+      }
+      if (updateData.related_contact_id === '' || updateData.related_contact_id === null || updateData.related_contact_id === undefined) {
+        updateData.related_contact_id = null;
       }
       
       const { data: updated, error } = await supabase
