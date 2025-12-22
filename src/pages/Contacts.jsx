@@ -44,6 +44,7 @@ export default function Contacts() {
   const navigate = useNavigate();
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
+  const [sortBy, setSortBy] = useState('name'); // 'name' or 'account'
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
@@ -109,6 +110,24 @@ export default function Contacts() {
       contact.account_id === filterAccount;
     
     return matchesName && matchesAccount;
+  });
+
+  // Sort contacts
+  filteredContacts.sort((a, b) => {
+    if (sortBy === 'name') {
+      const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
+      const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    } else if (sortBy === 'account') {
+      // Sort by account name, with contacts without accounts at the end
+      const accountA = a.account_name || '';
+      const accountB = b.account_name || '';
+      if (!accountA && !accountB) return 0;
+      if (!accountA) return 1; // No account goes to end
+      if (!accountB) return -1; // No account goes to end
+      return accountA.localeCompare(accountB);
+    }
+    return 0;
   });
 
   return (
@@ -180,6 +199,15 @@ export default function Contacts() {
                         {account.name}
                       </SelectItem>
                     ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                  <SelectItem value="account">Account A-Z</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
@@ -457,6 +485,15 @@ export default function Contacts() {
                         {account.name}
                       </SelectItem>
                     ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                  <SelectItem value="account">Account A-Z</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
