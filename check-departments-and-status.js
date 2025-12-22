@@ -8,7 +8,6 @@
 
 // Exact division categories from Google Sheet (matching EstimatesTab.jsx)
 const DIVISION_CATEGORIES = [
-  '[Unassigned]',
   'LE Irrigation',
   'LE Landscapes',
   'LE Maintenance (Summer/Winter)',
@@ -43,25 +42,36 @@ const KNOWN_LOST_STATUSES = [
   'lost'
 ];
 
-// Use division value exactly as it appears in the Google Sheet
+// Match division value to exact categories, or return "Uncategorized"
 function normalizeDepartment(division) {
-  if (!division) return '[Unassigned]';
+  if (!division) return 'Uncategorized';
   
   const trimmed = division.trim();
   
-  // Handle empty/null-like values - map to [Unassigned]
+  // Handle empty/null-like values - map to Uncategorized
   if (trimmed === '' || 
       trimmed.toLowerCase() === '<unassigned>' || 
       trimmed.toLowerCase() === 'unassigned' ||
+      trimmed.toLowerCase() === '[unassigned]' ||
       trimmed.toLowerCase() === 'null' ||
       trimmed.toLowerCase() === 'undefined' ||
       trimmed.toLowerCase() === 'n/a' ||
       trimmed.toLowerCase() === 'na') {
-    return '[Unassigned]';
+    return 'Uncategorized';
   }
   
-  // Return the division value exactly as it appears in the sheet
-  return trimmed;
+  // Check if the trimmed value exactly matches one of the known categories (case-insensitive)
+  const matchedCategory = DIVISION_CATEGORIES.find(
+    category => category.toLowerCase() === trimmed.toLowerCase()
+  );
+  
+  if (matchedCategory) {
+    // Return the exact category from the list (preserves exact casing)
+    return matchedCategory;
+  }
+  
+  // If no match found, return "Uncategorized"
+  return 'Uncategorized';
 }
 
 // Test mapStatus function
@@ -257,9 +267,9 @@ const categorizedDepartments = [];
 
 departmentTestCases.forEach(dept => {
   const result = normalizeDepartment(dept);
-  if (result === '[Unassigned]') {
+  if (result === 'Uncategorized') {
     uncategorizedDepartments.push(dept);
-    console.log(`❌ "${dept}" → [Unassigned]`);
+    console.log(`❌ "${dept}" → Uncategorized`);
   } else {
     categorizedDepartments.push({ original: dept, normalized: result });
     if (DIVISION_CATEGORIES.includes(result)) {
@@ -272,14 +282,14 @@ departmentTestCases.forEach(dept => {
 
 console.log(`\n📈 Summary:`);
 console.log(`   Categorized: ${categorizedDepartments.length}`);
-console.log(`   [Unassigned]: ${uncategorizedDepartments.length}`);
+console.log(`   Uncategorized: ${uncategorizedDepartments.length}`);
 
 if (uncategorizedDepartments.length > 0) {
-  console.log(`\n⚠️  Potential unassigned departments found:`);
+  console.log(`\n⚠️  Potential uncategorized departments found:`);
   uncategorizedDepartments.forEach(dept => {
     console.log(`   - "${dept}"`);
   });
-  console.log(`\n💡 These will all be grouped under "[Unassigned]" which is correct.`);
+  console.log(`\n💡 These will all be grouped under "Uncategorized" which is correct.`);
 }
 
 // Test statuses

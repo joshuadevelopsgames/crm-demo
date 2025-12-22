@@ -42,7 +42,8 @@ import ImportLeadsDialog from '../components/ImportLeadsDialog';
 
 export default function Contacts() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filterName, setFilterName] = useState('');
+  const [filterAccount, setFilterAccount] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
@@ -97,12 +98,17 @@ export default function Contacts() {
 
   // Then apply other filters
   let filteredContacts = contactsByStatus.filter(contact => {
-    const matchesSearch = 
-      contact.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.account_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    // Name filter (first name or last name)
+    const matchesName = filterName === '' || 
+      contact.first_name?.toLowerCase().includes(filterName.toLowerCase()) ||
+      contact.last_name?.toLowerCase().includes(filterName.toLowerCase()) ||
+      `${contact.first_name || ''} ${contact.last_name || ''}`.toLowerCase().includes(filterName.toLowerCase());
+    
+    // Account filter
+    const matchesAccount = filterAccount === 'all' || 
+      contact.account_id === filterAccount;
+    
+    return matchesName && matchesAccount;
   });
 
   return (
@@ -149,36 +155,53 @@ export default function Contacts() {
         <TabsContent value="active" className="mt-0 space-y-4">
           {/* Filters */}
           <Card className="p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <Input
-              placeholder="Search contacts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
-            >
-              <List className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'card' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('card')}
-              className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </Card>
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Input
+                  placeholder="Search by name..."
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterAccount} onValueChange={setFilterAccount}>
+                <SelectTrigger className="w-48">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="All Accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {accounts
+                    .filter(acc => acc.status !== 'archived' && acc.archived !== true)
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .map(account => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'card' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('card')}
+                  className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
 
           {/* Contacts List/Card View for Active Tab */}
           {viewMode === 'list' ? (
@@ -398,8 +421,8 @@ export default function Contacts() {
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts found</h3>
               <p className="text-slate-600 mb-4">
-                {searchTerm
-                  ? 'Try adjusting your search'
+                {(filterName || filterAccount !== 'all')
+                  ? 'Try adjusting your filters'
                   : 'Create your first contact to get started'}
               </p>
             </Card>
@@ -413,12 +436,29 @@ export default function Contacts() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
-                  placeholder="Search archived contacts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name..."
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
                   className="pl-10"
                 />
               </div>
+              <Select value={filterAccount} onValueChange={setFilterAccount}>
+                <SelectTrigger className="w-48">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="All Accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {accounts
+                    .filter(acc => acc.status !== 'archived' && acc.archived !== true)
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .map(account => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <div className="flex items-center gap-1 border border-slate-300 rounded-lg p-1">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -658,8 +698,8 @@ export default function Contacts() {
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-slate-900 mb-1">No archived contacts found</h3>
               <p className="text-slate-600 mb-4">
-                {searchTerm
-                  ? 'Try adjusting your search'
+                {(filterName || filterAccount !== 'all')
+                  ? 'Try adjusting your filters'
                   : 'No archived contacts'}
               </p>
             </Card>
