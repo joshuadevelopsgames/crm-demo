@@ -7,6 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus,
   Search,
   Calendar,
@@ -28,7 +38,8 @@ import {
   ChevronsDown,
   Minus,
   Ban,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
 import {
@@ -246,6 +257,55 @@ export default function Tasks() {
     }
   });
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tasksToDelete, setTasksToDelete] = useState([]);
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskIds) => {
+      const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
+      await Promise.all(
+        taskIdsArray.map(async (taskId) => {
+          await base44.entities.Task.delete(taskId);
+          await cleanupTaskNotifications(taskId);
+        })
+      );
+    },
+    onSuccess: (_, taskIds) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setDeleteDialogOpen(false);
+      const count = Array.isArray(taskIds) ? taskIds.length : 1;
+      if (count === 1) {
+        toast.success('✓ Task deleted');
+      } else {
+        toast.success(`✓ Deleted ${count} tasks`);
+      }
+      setTasksToDelete([]);
+    },
+    onError: (error) => {
+      console.error('Error deleting task:', error);
+      toast.error(error.message || 'Failed to delete task');
+    }
+  });
+
+  const handleDeleteTasks = (taskIds) => {
+    const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
+    const tasksToCheck = taskIdsArray.map(id => tasks.find(t => t.id === id)).filter(Boolean);
+    const needsConfirmation = taskIdsArray.length > 1 || tasksToCheck.some(t => t?.assigned_to);
+    
+    if (needsConfirmation) {
+      setTasksToDelete(taskIdsArray);
+      setDeleteDialogOpen(true);
+    } else {
+      // Delete immediately without confirmation
+      deleteTaskMutation.mutate(taskIdsArray);
+    }
+  };
+
+  const confirmDelete = async () => {
+    deleteTaskMutation.mutate(tasksToDelete);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -340,6 +400,16 @@ export default function Tasks() {
       ...newTask,
       assigned_to: newTask.assigned_to || user.email
     };
+    
+    // If creating a new task and due_date is blank, default to today
+    if (!editingTask && (!taskData.due_date || taskData.due_date === '')) {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      taskData.due_date = `${year}-${month}-${day}`;
+    }
+    
     if (editingTask) {
       updateTaskMutation.mutate({ id: editingTask.id, data: taskData });
     } else {
@@ -1018,6 +1088,13 @@ export default function Tasks() {
                 Complete
               </Button>
               <Button
+                onClick={() => handleDeleteTasks(selectedTasks)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+              <Button
                 variant="ghost"
                 onClick={clearSelection}
                 className="text-white hover:bg-blue-700"
@@ -1103,6 +1180,19 @@ export default function Tasks() {
                                 <SelectItem value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
+                            {!bulkActionMode && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTasks([task.id]);
+                                }}
+                                className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
                           </div>
                         
                         {/* Centered content area */}
@@ -1344,6 +1434,19 @@ export default function Tasks() {
                                 <SelectItem value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
+                            {!bulkActionMode && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTasks([task.id]);
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
@@ -1441,6 +1544,46 @@ export default function Tasks() {
         </Card>
       )}
       </TutorialTooltip>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {tasksToDelete.length > 1 ? 'Delete Multiple Tasks' : 'Delete Task'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {tasksToDelete.length > 1 ? (
+                `Are you sure you want to delete ${tasksToDelete.length} tasks? This action cannot be undone.`
+              ) : (
+                <>
+                  Are you sure you want to delete this task? This action cannot be undone.
+                  {tasksToDelete.length === 1 && tasks.find(t => t.id === tasksToDelete[0])?.assigned_to && (
+                    <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                      <strong>Task assigned to:</strong> {tasks.find(t => t.id === tasksToDelete[0])?.assigned_to}
+                    </div>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setTasksToDelete([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteTaskMutation.isPending}
+            >
+              {deleteTaskMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
