@@ -461,6 +461,15 @@ export const base44 = {
         if (result.success) return result.data;
         throw new Error(result.error || 'Failed to update scorecard response');
       },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/scorecards?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) return result.message;
+        throw new Error(result.error || 'Failed to delete scorecard response');
+      },
     },
     SalesInsight: {
       list: async () => {

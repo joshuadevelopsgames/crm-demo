@@ -4,16 +4,30 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Award, Plus, Check, X, Download, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Award, Plus, Check, X, Download, Sparkles, FileText, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { exportAndDownloadScorecard } from '../../utils/exportToCSV';
 import { useUser } from '../../contexts/UserContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 
 export default function AccountScore({ accountId, scorecards, currentScore, accountName }) {
   const [expandedScorecards, setExpandedScorecards] = useState({});
-  const { canManageICP } = useUser();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [scorecardToDelete, setScorecardToDelete] = useState(null);
+  const { canManageICP, isAdmin } = useUser();
+  const queryClient = useQueryClient();
   
   // Get current ICP template
   const { data: icpTemplate, isLoading: icpLoading } = useQuery({
@@ -26,6 +40,33 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
     queryKey: ['scorecard-templates'],
     queryFn: () => base44.entities.ScorecardTemplate.list(true) // Include versions
   });
+
+  // Delete scorecard mutation
+  const deleteScorecardMutation = useMutation({
+    mutationFn: (id) => base44.entities.ScorecardResponse.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scorecards'] });
+      queryClient.invalidateQueries({ queryKey: ['scorecard', accountId] });
+      setDeleteDialogOpen(false);
+      setScorecardToDelete(null);
+      toast.success('✓ Scorecard deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting scorecard:', error);
+      toast.error(error.message || 'Failed to delete scorecard');
+    }
+  });
+
+  const handleDeleteClick = (scorecard) => {
+    setScorecardToDelete(scorecard);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (scorecardToDelete) {
+      deleteScorecardMutation.mutate(scorecardToDelete.id);
+    }
+  };
 
   // All scorecards are now per-client (manual)
   // Show the most recent scorecard as the current score
@@ -366,14 +407,27 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                           </div>
                           <div className="text-xs text-slate-500">out of 100</div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleExport}
-                          title="Export to CSV"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExport}
+                            title="Export to CSV"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteClick(scorecard)}
+                              title="Delete scorecard"
+                              className="hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -383,6 +437,42 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scorecard</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this scorecard submission? This action cannot be undone.
+              {scorecardToDelete && (
+                <div className="mt-2 text-sm">
+                  <p className="font-medium">Scorecard Details:</p>
+                  <p className="text-slate-600">
+                    Date: {scorecardToDelete.scorecard_date 
+                      ? format(new Date(scorecardToDelete.scorecard_date), 'MMM d, yyyy')
+                      : format(new Date(scorecardToDelete.completed_date), 'MMM d, yyyy')}
+                  </p>
+                  <p className="text-slate-600">
+                    Score: {scorecardToDelete.normalized_score} / 100
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setScorecardToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
