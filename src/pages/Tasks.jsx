@@ -1148,51 +1148,40 @@ export default function Tasks() {
                       <CardContent className="px-3 pt-2 pb-0 flex flex-col h-full">
                         {/* Header with priority and status */}
                         <div className="flex items-start justify-between mb-4">
-                            <div 
-                            className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0`}
-                              onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
-                              title={`Click to change priority (currently ${priorityFlag.label})`}
-                            >
-                            <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
-                            </div>
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) => {
-                                handleStatusChange(task.id, value);
-                              }}
-                            >
-                            <SelectTrigger 
-                              className="w-[130px] h-6 px-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <StatusIcon className={`w-3 h-3 ${getStatusColor(task.status)} flex-shrink-0`} />
-                              <SelectValue className="text-xs font-medium" />
-                              </SelectTrigger>
-                            <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
-                                <SelectItem value="todo">To Do</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="blocked">Blocked</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {!bulkActionMode && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                            <div className="flex items-center gap-2">
+                              <div 
+                              className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0`}
+                                onClick={(e) => handlePriorityClick(task.id, task.priority, e)}
+                                title={`Click to change priority (currently ${priorityFlag.label})`}
+                              >
+                              <PriorityIcon className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`} />
+                              </div>
+                              <Select
+                                value={task.status}
+                                onValueChange={(value) => {
+                                  handleStatusChange(task.id, value);
+                                }}
+                              >
+                              <SelectTrigger 
+                                className="w-[130px] h-6 px-1.5 border-0 hover:bg-slate-100 flex items-center justify-center gap-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDeleteTasks([task.id]);
                                 }}
-                                className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600"
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            )}
+                                <StatusIcon className={`w-3 h-3 ${getStatusColor(task.status)} flex-shrink-0`} />
+                                <SelectValue className="text-xs font-medium" />
+                                </SelectTrigger>
+                              <SelectContent position="item-aligned" onClick={(e) => e.stopPropagation()}>
+                                  <SelectItem value="todo">To Do</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="blocked">Blocked</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         
                         {/* Centered content area */}
@@ -1216,31 +1205,46 @@ export default function Tasks() {
                         
                         {/* Metadata badges */}
                         <div className="mt-auto pt-0.5 border-t border-slate-100">
-                          <div className="flex flex-wrap items-center gap-1 text-xs">
-                          {task.due_date && (
-                            <Badge 
-                              variant="outline" 
-                                className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 ${
-                                  isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 
-                                  isTaskToday(task) ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                  'text-slate-600 bg-slate-50 border-slate-200'
-                              }`}
-                            >
-                                <Calendar className="w-2.5 h-2.5" />
-                              {isTaskToday(task) ? 'Today' : format(new Date(task.due_date), 'MMM d')}
-                            </Badge>
-                          )}
-                            {task.estimated_time && (
-                              <Badge variant="outline" className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5">
-                                <Clock className="w-2.5 h-2.5" />
-                                {task.estimated_time}m
-                            </Badge>
-                          )}
-                          {accountName && (
-                              <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-0.5 px-1.5 py-0.5 truncate max-w-[100px]">
-                                <Building2 className="w-2.5 h-2.5 flex-shrink-0" />
-                                <span className="truncate text-xs">{accountName}</span>
-                            </Badge>
+                          <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {task.due_date && (
+                                <Badge 
+                                  variant="outline" 
+                                    className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 ${
+                                      isOverdue ? 'bg-red-50 text-red-700 border-red-200' : 
+                                      isTaskToday(task) ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                      'text-slate-600 bg-slate-50 border-slate-200'
+                                  }`}
+                                >
+                                    <Calendar className="w-2.5 h-2.5" />
+                                  {isTaskToday(task) ? 'Today' : format(new Date(task.due_date), 'MMM d')}
+                                </Badge>
+                              )}
+                                {task.estimated_time && (
+                                  <Badge variant="outline" className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {task.estimated_time}m
+                                </Badge>
+                              )}
+                              {accountName && (
+                                  <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-0.5 px-1.5 py-0.5 truncate max-w-[100px]">
+                                    <Building2 className="w-2.5 h-2.5 flex-shrink-0" />
+                                    <span className="truncate text-xs">{accountName}</span>
+                                </Badge>
+                              )}
+                            </div>
+                            {!bulkActionMode && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTasks([task.id]);
+                                }}
+                                className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600 flex-shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             )}
                           </div>
                           {/* Labels row */}
@@ -1434,19 +1438,6 @@ export default function Tasks() {
                                 <SelectItem value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
-                            {!bulkActionMode && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteTasks([task.id]);
-                                }}
-                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
@@ -1465,6 +1456,19 @@ export default function Tasks() {
                                   <p className="text-sm text-slate-600 mt-1 line-clamp-2">{task.description}</p>
                                 )}
                               </div>
+                              {!bulkActionMode && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTasks([task.id]);
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 ml-2 flex-shrink-0"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                               {task.estimated_time && (
