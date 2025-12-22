@@ -59,7 +59,10 @@ export default function TakeScorecard() {
     
     const grouped = {};
     activeTemplate.questions.forEach((question, index) => {
-      const section = question.section || 'Other';
+      const section = question.section || question.category || 'Other';
+      // Filter out "Win Rate" section
+      if (section === 'Win Rate') return;
+      
       if (!grouped[section]) {
         grouped[section] = [];
       }
@@ -171,18 +174,30 @@ export default function TakeScorecard() {
       return { total: 0, normalized: 0, responses: [], section_scores: {}, is_pass: false };
     }
 
-    const responses = activeTemplate.questions.map((question, index) => {
-      const answer = answers[index] || 0;
-      const weightedScore = answer * question.weight;
-      
-      return {
-        question_text: question.question_text,
-        answer: answer,
-        weight: question.weight,
-        weighted_score: weightedScore,
-        section: question.section || 'Other'
-      };
+    // Filter out "Win Rate" section questions
+    const validQuestions = activeTemplate.questions.filter((q, index) => {
+      const section = q.section || q.category || 'Other';
+      return section !== 'Win Rate';
     });
+
+    const responses = activeTemplate.questions
+      .map((question, index) => {
+        const section = question.section || question.category || 'Other';
+        // Skip "Win Rate" section
+        if (section === 'Win Rate') return null;
+        
+        const answer = answers[index] || 0;
+        const weightedScore = answer * question.weight;
+        
+        return {
+          question_text: question.question_text,
+          answer: answer,
+          weight: question.weight,
+          weighted_score: weightedScore,
+          section: section
+        };
+      })
+      .filter(r => r !== null);
 
     // Calculate section sub-totals
     const sectionScores = {};
