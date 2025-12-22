@@ -15,6 +15,8 @@ import { Edit2, Save, X } from 'lucide-react';
 
 export default function TrackingAssignment({ account, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
+  // Check if account was imported (has lmn_crm_id)
+  const isImported = account?.lmn_crm_id ? true : false;
   const [formData, setFormData] = useState({
     account_type: account.account_type || 'prospect',
     classification: account.classification || 'commercial',
@@ -82,21 +84,27 @@ export default function TrackingAssignment({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">Type</Label>
             {isEditing ? (
-              <Select
-                value={formData.account_type}
-                onValueChange={(value) => setFormData({ ...formData, account_type: value })}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="prospect">Prospect</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="renewal">Renewal</SelectItem>
-                  <SelectItem value="churned">Churned</SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                <Select
+                  value={formData.account_type}
+                  onValueChange={(value) => setFormData({ ...formData, account_type: value })}
+                  disabled={isImported}
+                >
+                  <SelectTrigger className={`mt-1 ${isImported ? 'bg-slate-50 cursor-not-allowed' : ''}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="renewal">Renewal</SelectItem>
+                    <SelectItem value="churned">Churned</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1 capitalize">
                 {formData.account_type || '—'}
@@ -107,21 +115,27 @@ export default function TrackingAssignment({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">Classification</Label>
             {isEditing ? (
-              <Select
-                value={formData.classification}
-                onValueChange={(value) => setFormData({ ...formData, classification: value })}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                  <SelectItem value="residential">Residential</SelectItem>
-                  <SelectItem value="industrial">Industrial</SelectItem>
-                  <SelectItem value="government">Government</SelectItem>
-                  <SelectItem value="non_profit">Non-Profit</SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                <Select
+                  value={formData.classification}
+                  onValueChange={(value) => setFormData({ ...formData, classification: value })}
+                  disabled={isImported}
+                >
+                  <SelectTrigger className={`mt-1 ${isImported ? 'bg-slate-50 cursor-not-allowed' : ''}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="industrial">Industrial</SelectItem>
+                    <SelectItem value="government">Government</SelectItem>
+                    <SelectItem value="non_profit">Non-Profit</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1 capitalize">
                 {formData.classification?.replace('_', ' ') || '—'}

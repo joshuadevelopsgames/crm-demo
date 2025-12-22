@@ -232,14 +232,127 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                 </>
                               )}
                             </Button>
-                            {isExpanded && templateVersion && (
-                              <div className="mt-3 p-3 bg-slate-50 rounded border border-slate-200">
-                                <p className="text-xs font-semibold text-slate-700 mb-2">Template Version Details:</p>
-                                <p className="text-xs text-slate-600">
-                                  Version {templateVersion.version_number} • Created {format(new Date(templateVersion.created_at), 'MMM d, yyyy')}
-                                </p>
-                                {templateVersion.description && (
-                                  <p className="text-xs text-slate-600 mt-1">{templateVersion.description}</p>
+                            {isExpanded && (
+                              <div className="mt-3 space-y-3">
+                                {/* Template Version Details */}
+                                {templateVersion && (
+                                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                                    <p className="text-xs font-semibold text-slate-700 mb-2">Template Version Details:</p>
+                                    <p className="text-xs text-slate-600">
+                                      Version {templateVersion.version_number} • Created {format(new Date(templateVersion.created_at), 'MMM d, yyyy')}
+                                    </p>
+                                    {templateVersion.description && (
+                                      <p className="text-xs text-slate-600 mt-1">{templateVersion.description}</p>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Questions and Answers */}
+                                {scorecard.responses && scorecard.responses.length > 0 && (
+                                  <div className="space-y-3">
+                                    <p className="text-xs font-semibold text-slate-700">Questions & Answers:</p>
+                                    
+                                    {/* Group responses by section */}
+                                    {(() => {
+                                      const responsesBySection = {};
+                                      scorecard.responses.forEach(response => {
+                                        const section = response.section || 'Other';
+                                        if (!responsesBySection[section]) {
+                                          responsesBySection[section] = [];
+                                        }
+                                        responsesBySection[section].push(response);
+                                      });
+                                      
+                                      return Object.entries(responsesBySection).map(([section, responses]) => (
+                                        <div key={section} className="border border-slate-200 rounded-lg overflow-hidden">
+                                          {/* Section Header */}
+                                          <div className="bg-slate-100 px-3 py-2 border-b border-slate-200">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-sm font-semibold text-slate-900">{section}</span>
+                                              {scorecard.section_scores && scorecard.section_scores[section] !== undefined && (
+                                                <Badge variant="outline" className="text-xs">
+                                                  Section Score: {scorecard.section_scores[section]}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
+                                          
+                                          {/* Questions in this section */}
+                                          <div className="divide-y divide-slate-100">
+                                            {responses.map((response, idx) => {
+                                              // Get answer text - prefer answer_text if available, otherwise map numeric answer
+                                              let answerText;
+                                              if (response.answer_text) {
+                                                answerText = response.answer_text;
+                                              } else if (response.answer === 0) {
+                                                answerText = 'No';
+                                              } else if (response.answer === 1) {
+                                                // Could be "Yes" for yes_no or "1" for scale
+                                                answerText = 'Yes / 1';
+                                              } else {
+                                                // For scale answers, just show the number
+                                                answerText = response.answer?.toString() || '—';
+                                              }
+                                              
+                                              // Determine badge color based on answer value
+                                              const getBadgeColor = () => {
+                                                if (response.answer_text) {
+                                                  // For text answers, use neutral color
+                                                  return 'bg-slate-50 text-slate-700 border-slate-200';
+                                                }
+                                                const numAnswer = response.answer || 0;
+                                                if (numAnswer >= 4) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                                if (numAnswer >= 3) return 'bg-blue-50 text-blue-700 border-blue-200';
+                                                if (numAnswer >= 2) return 'bg-amber-50 text-amber-700 border-amber-200';
+                                                if (numAnswer === 1) return 'bg-slate-50 text-slate-700 border-slate-200';
+                                                return 'bg-red-50 text-red-700 border-red-200'; // 0 or No
+                                              };
+                                              
+                                              return (
+                                                <div key={idx} className="px-3 py-2.5 hover:bg-slate-50">
+                                                  <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className="text-sm text-slate-900 font-medium mb-1">
+                                                        {response.question_text}
+                                                      </p>
+                                                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        <div className="flex items-center gap-1.5">
+                                                          <span className="text-xs text-slate-600">Answer:</span>
+                                                          <Badge 
+                                                            variant="outline" 
+                                                            className={`text-xs ${getBadgeColor()}`}
+                                                          >
+                                                            {answerText}
+                                                          </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                          <span className="text-xs text-slate-600">Weight:</span>
+                                                          <span className="text-xs font-medium text-slate-700">{response.weight || 1}</span>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                      <div className="text-sm font-semibold text-slate-900">
+                                                        {response.weighted_score || 0}
+                                                      </div>
+                                                      <div className="text-xs text-slate-500">points</div>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                )}
+                                
+                                {/* Fallback if no responses */}
+                                {(!scorecard.responses || scorecard.responses.length === 0) && (
+                                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                                    <p className="text-xs text-slate-600">No question details available for this scorecard.</p>
+                                  </div>
                                 )}
                               </div>
                             )}
