@@ -23,13 +23,14 @@ import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import InteractionTimeline from '../components/account/InteractionTimeline';
 import AddInteractionDialog from '../components/account/AddInteractionDialog';
+import EditContactDialog from '../components/contact/EditContactDialog';
 
 export default function ContactDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const contactId = urlParams.get('id');
   const navigate = useNavigate();
   const [showAddInteraction, setShowAddInteraction] = useState(false);
-  // const [showEditContact, setShowEditContact] = useState(false);
+  const [showEditContact, setShowEditContact] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -161,11 +162,10 @@ export default function ContactDetail() {
             </div>
           </div>
         </div>
-        {/* TODO: Add Edit Contact functionality */}
-        {/* <Button onClick={() => setShowEditContact(true)} variant="outline">
+        <Button onClick={() => setShowEditContact(true)} variant="outline">
           <Edit className="w-4 h-4 mr-2" />
           Edit Contact
-        </Button> */}
+        </Button>
       </div>
 
       {/* Main Content */}
@@ -336,7 +336,12 @@ export default function ContactDetail() {
         contacts={accountContacts.length > 0 ? accountContacts : (contact ? [contact] : [])}
       />
 
-      {/* Edit Contact Dialog - TODO: Implement EditContactDialog component */}
+      {/* Edit Contact Dialog */}
+      <EditContactDialog
+        open={showEditContact}
+        onClose={() => setShowEditContact(false)}
+        contact={contact}
+      />
     </div>
   );
 }

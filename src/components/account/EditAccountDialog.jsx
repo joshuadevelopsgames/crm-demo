@@ -25,6 +25,9 @@ export default function EditAccountDialog({ open, onClose, account }) {
   const [formData, setFormData] = useState({});
   const [autoCalculateSegment, setAutoCalculateSegment] = useState(true);
   
+  // Check if account was imported (has lmn_crm_id)
+  const isImported = account?.lmn_crm_id ? true : false;
+  
   // Get all accounts to calculate total revenue for segment assignment
   const { data: allAccounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -141,15 +144,21 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import. Update the source data to change it.</p>
+              )}
             </div>
             <div>
               <Label>Account Type</Label>
               <Select
                 value={formData.account_type}
                 onValueChange={(value) => setFormData({ ...formData, account_type: value })}
+                disabled={isImported}
               >
-                <SelectTrigger>
+                <SelectTrigger className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,14 +168,18 @@ export default function EditAccountDialog({ open, onClose, account }) {
                   <SelectItem value="churned">Churned</SelectItem>
                 </SelectContent>
               </Select>
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div>
               <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) => setFormData({ ...formData, status: value })}
+                disabled={isImported}
               >
-                <SelectTrigger>
+                <SelectTrigger className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -177,6 +190,9 @@ export default function EditAccountDialog({ open, onClose, account }) {
                   <SelectItem value="churned">Churned</SelectItem>
                 </SelectContent>
               </Select>
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div>
               <Label>Annual Revenue</Label>
@@ -185,9 +201,15 @@ export default function EditAccountDialog({ open, onClose, account }) {
                 value={formData.annual_revenue}
                 onChange={(e) => setFormData({ ...formData, annual_revenue: e.target.value })}
                 placeholder="Enter annual revenue"
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
               <p className="text-xs text-slate-500 mt-1">
-                Segment will auto-calculate based on rolling 12-month average: A (≥15%), B (5-15%), C (0-5%), D (Project Only)
+                {isImported ? (
+                  'This field is managed by import.'
+                ) : (
+                  'Segment will auto-calculate based on rolling 12-month average: A (≥15%), B (5-15%), C (0-5%), D (Project Only)'
+                )}
               </p>
             </div>
             <div>
@@ -215,7 +237,12 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Input
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div>
               <Label>Assigned To (email)</Label>
@@ -229,14 +256,24 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Input
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div>
               <Label>Phone</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div>
               <Label>Renewal Date</Label>
@@ -251,7 +288,12 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Input
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                disabled={isImported}
+                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
               />
+              {isImported && (
+                <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+              )}
             </div>
             <div className="col-span-2">
               <Label>Notes</Label>

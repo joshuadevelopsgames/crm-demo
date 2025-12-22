@@ -7,6 +7,8 @@ import { Lock, Edit2, Save, X } from 'lucide-react';
 
 export default function GeneralInformation({ account, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
+  // Check if account was imported (has lmn_crm_id)
+  const isImported = account?.lmn_crm_id ? true : false;
   const [formData, setFormData] = useState({
     name: account.name || '',
     address_1: account.address_1 || '',
@@ -83,11 +85,17 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div className="md:col-span-2">
             <Label className="text-slate-600">Name</Label>
             {isEditing ? (
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1"
-              />
+              <>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1"
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import. Update the source data to change it.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.name || '—'}</p>
             )}
@@ -96,12 +104,18 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div className="md:col-span-2">
             <Label className="text-slate-600">Address 1</Label>
             {isEditing ? (
-              <Input
-                value={formData.address_1}
-                onChange={(e) => setFormData({ ...formData, address_1: e.target.value })}
-                className="mt-1"
-                placeholder="Street address, P.O. box"
-              />
+              <>
+                <Input
+                  value={formData.address_1}
+                  onChange={(e) => setFormData({ ...formData, address_1: e.target.value })}
+                  className="mt-1"
+                  placeholder="Street address, P.O. box"
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.address_1 || '—'}</p>
             )}
@@ -110,12 +124,18 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div className="md:col-span-2">
             <Label className="text-slate-600">Address 2</Label>
             {isEditing ? (
-              <Input
-                value={formData.address_2}
-                onChange={(e) => setFormData({ ...formData, address_2: e.target.value })}
-                className="mt-1"
-                placeholder="Apartment, suite, unit, building, floor, etc."
-              />
+              <>
+                <Input
+                  value={formData.address_2}
+                  onChange={(e) => setFormData({ ...formData, address_2: e.target.value })}
+                  className="mt-1"
+                  placeholder="Apartment, suite, unit, building, floor, etc."
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.address_2 || '—'}</p>
             )}
@@ -124,11 +144,17 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">City</Label>
             {isEditing ? (
-              <Input
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="mt-1"
-              />
+              <>
+                <Input
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="mt-1"
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.city || '—'}</p>
             )}
@@ -137,12 +163,18 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">State/Prov</Label>
             {isEditing ? (
-              <Input
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="mt-1"
-                placeholder="AB"
-              />
+              <>
+                <Input
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  className="mt-1"
+                  placeholder="AB"
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.state || '—'}</p>
             )}
@@ -151,12 +183,18 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">Postal/Zip</Label>
             {isEditing ? (
-              <Input
-                value={formData.postal_code}
-                onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                className="mt-1"
-                placeholder="T2P 1A1"
-              />
+              <>
+                <Input
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                  className="mt-1"
+                  placeholder="T2P 1A1"
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.postal_code || '—'}</p>
             )}
@@ -165,13 +203,19 @@ export default function GeneralInformation({ account, onUpdate }) {
           <div>
             <Label className="text-slate-600">Country</Label>
             {isEditing ? (
-              <Input
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                className="mt-1"
-                placeholder="CA"
-                maxLength={2}
-              />
+              <>
+                <Input
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  className="mt-1"
+                  placeholder="CA"
+                  maxLength={2}
+                  disabled={isImported}
+                />
+                {isImported && (
+                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                )}
+              </>
             ) : (
               <p className="font-medium text-slate-900 mt-1">{formData.country || '—'}</p>
             )}
