@@ -21,6 +21,7 @@ import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
 import WinLossTest from './pages/WinLossTest';
+import ListDivisions from './pages/ListDivisions';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
@@ -152,6 +153,7 @@ function AppContent() {
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
     if (path === '/google-auth-callback') return null; // Google auth callback doesn't use Layout
+    if (path === '/list-divisions') return 'ListDivisions';
     return 'Dashboard';
   };
 
@@ -204,6 +206,7 @@ function AppContent() {
               } />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
               <Route path={createPageUrl('BuildScorecard')} element={<BuildScorecard />} />
+              <Route path="/list-divisions" element={<ListDivisions />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </Layout>

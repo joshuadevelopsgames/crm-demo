@@ -12,51 +12,47 @@ import {
 import { FileText, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Department names to normalize division values
-const DEPARTMENT_NAMES = [
-  'Snow and Ice Maintenance',
-  'Landscape Maintenance',
-  'Paving and concrete',
-  'Landscape Construction',
-  'Tree Care',
-  'Irrigation'
+// Exact division categories from Google Sheet
+const DIVISION_CATEGORIES = [
+  '[Unassigned]',
+  'LE Irrigation',
+  'LE Landscapes',
+  'LE Maintenance (Summer/Winter)',
+  'LE Maintenance Enchancements',
+  'LE Paving',
+  'LE Tree Care',
+  'Line Painting',
+  'Parking Lot Sweeping',
+  'Snow',
+  'Warranty'
 ];
 
-// Normalize division value to match department names
+// Use division value exactly as it appears in the Google Sheet
 function normalizeDepartment(division) {
-  if (!division) return 'Uncategorized';
+  if (!division) return '[Unassigned]';
   
-  const divisionLower = division.toLowerCase().trim();
+  const trimmed = division.trim();
   
-  // Handle unassigned/empty-like values
-  if (divisionLower === '' || 
-      divisionLower === '<unassigned>' || 
-      divisionLower === 'unassigned' ||
-      divisionLower === 'null' ||
-      divisionLower === 'undefined' ||
-      divisionLower === 'n/a' ||
-      divisionLower === 'na') {
-    return 'Uncategorized';
+  // Handle empty/null-like values - map to [Unassigned]
+  if (trimmed === '' || 
+      trimmed.toLowerCase() === '<unassigned>' || 
+      trimmed.toLowerCase() === 'unassigned' ||
+      trimmed.toLowerCase() === 'null' ||
+      trimmed.toLowerCase() === 'undefined' ||
+      trimmed.toLowerCase() === 'n/a' ||
+      trimmed.toLowerCase() === 'na') {
+    return '[Unassigned]';
   }
   
-  // Try to match against known department names
-  for (const dept of DEPARTMENT_NAMES) {
-    if (divisionLower === dept.toLowerCase() || 
-        divisionLower.includes(dept.toLowerCase()) ||
-        dept.toLowerCase().includes(divisionLower)) {
-      return dept;
-    }
-  }
-  
-  // Return Uncategorized for any unrecognized value
-  return 'Uncategorized';
+  // Return the division value exactly as it appears in the sheet
+  return trimmed;
 }
 
 export default function EstimatesTab({ estimates = [], accountId }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
-  // Initialize with all departments expanded, including Uncategorized
-  const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DEPARTMENT_NAMES, 'Uncategorized']));
+  // Initialize with all divisions expanded, including [Unassigned]
+  const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DIVISION_CATEGORIES]));
   const [filterDepartment, setFilterDepartment] = useState('all');
 
   // Get available years from estimates
@@ -118,14 +114,14 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       });
     });
     
-    // Sort departments: Uncategorized always first, then known departments, then others alphabetically
+    // Sort departments: [Unassigned] always first, then known divisions, then others alphabetically
     const sortedDepartments = Object.keys(grouped).sort((a, b) => {
-      // Uncategorized always comes first
-      if (a === 'Uncategorized') return -1;
-      if (b === 'Uncategorized') return 1;
+      // [Unassigned] always comes first
+      if (a === '[Unassigned]') return -1;
+      if (b === '[Unassigned]') return 1;
       
-      const aIndex = DEPARTMENT_NAMES.indexOf(a);
-      const bIndex = DEPARTMENT_NAMES.indexOf(b);
+      const aIndex = DIVISION_CATEGORIES.indexOf(a);
+      const bIndex = DIVISION_CATEGORIES.indexOf(b);
       
       if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
       if (aIndex !== -1) return -1;
@@ -236,10 +232,9 @@ export default function EstimatesTab({ estimates = [], accountId }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
-              {DEPARTMENT_NAMES.map(dept => (
+              {DIVISION_CATEGORIES.map(dept => (
                 <SelectItem key={dept} value={dept}>{dept}</SelectItem>
               ))}
-              <SelectItem value="Uncategorized">Uncategorized</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -271,7 +266,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                 {/* Department Header */}
                 <div 
                   className={`border-b px-4 py-3 cursor-pointer transition-colors ${
-                    department === 'Uncategorized' 
+                    department === '[Unassigned]' 
                       ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' 
                       : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -281,19 +276,19 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                     <div className="flex items-center gap-2">
                       {isExpanded ? (
                         <ChevronDown className={`w-4 h-4 ${
-                          department === 'Uncategorized' 
+                          department === '[Unassigned]' 
                             ? 'text-amber-600' 
                             : 'text-slate-600'
                         }`} />
                       ) : (
                         <ChevronRight className={`w-4 h-4 ${
-                          department === 'Uncategorized' 
+                          department === '[Unassigned]' 
                             ? 'text-amber-600' 
                             : 'text-slate-600'
                         }`} />
                       )}
                       <h4 className={`font-semibold ${
-                        department === 'Uncategorized' 
+                        department === '[Unassigned]' 
                           ? 'text-amber-900' 
                           : 'text-slate-900'
                       }`}>
@@ -302,7 +297,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                       <Badge variant="outline" className="ml-2">
                         {departmentEstimates.length} {departmentEstimates.length === 1 ? 'estimate' : 'estimates'}
                       </Badge>
-                      {department !== 'Uncategorized' && (
+                      {department !== '[Unassigned]' && (
                         <Badge 
                           variant="outline" 
                           className={`ml-2 ${

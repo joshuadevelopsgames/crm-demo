@@ -6,14 +6,19 @@
  * 2. Any status values that might not be handled by the win/loss algorithm
  */
 
-// Known departments from EstimatesTab.jsx
-const DEPARTMENT_NAMES = [
-  'Snow and Ice Maintenance',
-  'Landscape Maintenance',
-  'Paving and concrete',
-  'Landscape Construction',
-  'Tree Care',
-  'Irrigation'
+// Exact division categories from Google Sheet (matching EstimatesTab.jsx)
+const DIVISION_CATEGORIES = [
+  '[Unassigned]',
+  'LE Irrigation',
+  'LE Landscapes',
+  'LE Maintenance (Summer/Winter)',
+  'LE Maintenance Enchancements',
+  'LE Paving',
+  'LE Tree Care',
+  'Line Painting',
+  'Parking Lot Sweeping',
+  'Snow',
+  'Warranty'
 ];
 
 // Known statuses from the updated algorithm
@@ -38,34 +43,25 @@ const KNOWN_LOST_STATUSES = [
   'lost'
 ];
 
-// Test normalizeDepartment function
+// Use division value exactly as it appears in the Google Sheet
 function normalizeDepartment(division) {
-  if (!division) return 'Uncategorized';
+  if (!division) return '[Unassigned]';
   
-  const divisionLower = division.toLowerCase().trim();
+  const trimmed = division.trim();
   
-  // Handle unassigned/empty-like values
-  if (divisionLower === '' || 
-      divisionLower === '<unassigned>' || 
-      divisionLower === 'unassigned' ||
-      divisionLower === 'null' ||
-      divisionLower === 'undefined' ||
-      divisionLower === 'n/a' ||
-      divisionLower === 'na') {
-    return 'Uncategorized';
+  // Handle empty/null-like values - map to [Unassigned]
+  if (trimmed === '' || 
+      trimmed.toLowerCase() === '<unassigned>' || 
+      trimmed.toLowerCase() === 'unassigned' ||
+      trimmed.toLowerCase() === 'null' ||
+      trimmed.toLowerCase() === 'undefined' ||
+      trimmed.toLowerCase() === 'n/a' ||
+      trimmed.toLowerCase() === 'na') {
+    return '[Unassigned]';
   }
   
-  // Try to match against known department names
-  for (const dept of DEPARTMENT_NAMES) {
-    if (divisionLower === dept.toLowerCase() || 
-        divisionLower.includes(dept.toLowerCase()) ||
-        dept.toLowerCase().includes(divisionLower)) {
-      return dept;
-    }
-  }
-  
-  // Return Uncategorized for any unrecognized value
-  return 'Uncategorized';
+  // Return the division value exactly as it appears in the sheet
+  return trimmed;
 }
 
 // Test mapStatus function
@@ -261,29 +257,29 @@ const categorizedDepartments = [];
 
 departmentTestCases.forEach(dept => {
   const result = normalizeDepartment(dept);
-  if (result === 'Uncategorized') {
+  if (result === '[Unassigned]') {
     uncategorizedDepartments.push(dept);
-    console.log(`❌ "${dept}" → Uncategorized`);
+    console.log(`❌ "${dept}" → [Unassigned]`);
   } else {
     categorizedDepartments.push({ original: dept, normalized: result });
-    if (DEPARTMENT_NAMES.includes(result)) {
+    if (DIVISION_CATEGORIES.includes(result)) {
       console.log(`✅ "${dept}" → ${result}`);
     } else {
-      console.log(`⚠️  "${dept}" → ${result} (not in DEPARTMENT_NAMES list)`);
+      console.log(`⚠️  "${dept}" → ${result} (not in DIVISION_CATEGORIES list)`);
     }
   }
 });
 
 console.log(`\n📈 Summary:`);
 console.log(`   Categorized: ${categorizedDepartments.length}`);
-console.log(`   Uncategorized: ${uncategorizedDepartments.length}`);
+console.log(`   [Unassigned]: ${uncategorizedDepartments.length}`);
 
 if (uncategorizedDepartments.length > 0) {
-  console.log(`\n⚠️  Potential uncategorized departments found:`);
+  console.log(`\n⚠️  Potential unassigned departments found:`);
   uncategorizedDepartments.forEach(dept => {
     console.log(`   - "${dept}"`);
   });
-  console.log(`\n💡 These will all be grouped under "Uncategorized" which is correct.`);
+  console.log(`\n💡 These will all be grouped under "[Unassigned]" which is correct.`);
 }
 
 // Test statuses
