@@ -120,10 +120,13 @@ export default function Accounts() {
   }, [newAccount.annual_revenue, accounts, allEstimates]);
 
   const handleCreateAccount = () => {
-    createAccountMutation.mutate({
+    // Ensure account has a segment before creating (default to C if not set)
+    const accountData = {
       ...newAccount,
-      annual_revenue: newAccount.annual_revenue ? parseFloat(newAccount.annual_revenue) : null
-    });
+      annual_revenue: newAccount.annual_revenue ? parseFloat(newAccount.annual_revenue) : null,
+      revenue_segment: newAccount.revenue_segment || 'C'
+    };
+    createAccountMutation.mutate(accountData);
   };
 
   // Recalculate all revenue segments
@@ -143,12 +146,12 @@ export default function Accounts() {
       // Calculate segments for all accounts using actual revenue from estimates
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
-      // Update each account with new segment
+      // Update each account with new segment (ensure every account has a segment)
       const updates = updatedAccounts
         .filter(account => {
-          // Only update if segment actually changed
-          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment || 'C';
-          return account.revenue_segment !== currentSegment;
+          // Update if segment changed OR if account doesn't have a segment
+          const currentSegment = accounts.find(a => a.id === account.id)?.revenue_segment;
+          return !currentSegment || account.revenue_segment !== currentSegment;
         })
         .map(account => 
           base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
