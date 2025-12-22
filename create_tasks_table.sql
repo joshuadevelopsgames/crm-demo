@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   estimated_time integer DEFAULT 30,
   labels text[] DEFAULT '{}',
   subtasks jsonb DEFAULT '[]',
-  order integer DEFAULT 0,
+  "order" integer DEFAULT 0,
   completed_date timestamptz,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

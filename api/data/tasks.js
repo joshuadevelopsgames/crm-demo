@@ -97,6 +97,17 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString()
         };
         
+        // Convert empty strings to null for date/time fields
+        if (taskData.due_date === '' || taskData.due_date === null || taskData.due_date === undefined) {
+          taskData.due_date = null;
+        }
+        if (taskData.due_time === '' || taskData.due_time === null || taskData.due_time === undefined) {
+          taskData.due_time = null;
+        }
+        if (taskData.completed_date === '' || taskData.completed_date === null || taskData.completed_date === undefined) {
+          taskData.completed_date = null;
+        }
+        
         // Only include id if it's a valid UUID format
         if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
           taskData.id = id;
@@ -108,7 +119,13 @@ export default async function handler(req, res) {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          // Provide more helpful error message if table doesn't exist
+          if (error.message && error.message.includes('schema cache')) {
+            throw new Error('Tasks table not found. Please ensure the tasks table has been created in Supabase. Run the create_tasks_table.sql file in your Supabase SQL Editor.');
+          }
+          throw error;
+        }
         
         return res.status(201).json({
           success: true,
@@ -126,6 +143,17 @@ export default async function handler(req, res) {
       // Update task by ID in Supabase
       const { id, ...updateData } = req.body;
       updateData.updated_at = new Date().toISOString();
+      
+      // Convert empty strings to null for date/time fields
+      if (updateData.due_date === '' || updateData.due_date === null || updateData.due_date === undefined) {
+        updateData.due_date = null;
+      }
+      if (updateData.due_time === '' || updateData.due_time === null || updateData.due_time === undefined) {
+        updateData.due_time = null;
+      }
+      if (updateData.completed_date === '' || updateData.completed_date === null || updateData.completed_date === undefined) {
+        updateData.completed_date = null;
+      }
       
       const { data: updated, error } = await supabase
         .from('tasks')

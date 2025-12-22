@@ -16,6 +16,7 @@ import Sequences from './pages/Sequences';
 import Scoring from './pages/Scoring';
 import TakeScorecard from './pages/TakeScorecard';
 import BuildScorecard from './pages/BuildScorecard';
+import Permissions from './pages/Permissions';
 import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
@@ -149,6 +150,7 @@ function AppContent() {
     if (path === '/scoring') return 'Scoring';
     if (path === '/take-scorecard') return 'TakeScorecard';
     if (path === '/build-scorecard') return 'BuildScorecard';
+    if (path === '/permissions') return 'Permissions';
     if (path === '/tutorial') return null; // Tutorial doesn't use Layout
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
@@ -206,6 +208,11 @@ function AppContent() {
               } />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
               <Route path={createPageUrl('BuildScorecard')} element={<BuildScorecard />} />
+              <Route path={createPageUrl('Permissions')} element={
+                <AdminRoute>
+                  <Permissions />
+                </AdminRoute>
+              } />
               <Route path="/list-divisions" element={<ListDivisions />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>

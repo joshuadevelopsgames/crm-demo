@@ -117,7 +117,12 @@ export default function Tasks() {
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [lastCompletedTask, setLastCompletedTask] = useState(null);
   const queryClient = useQueryClient();
-  const { isPWA, isMobile, isNativeApp } = useDeviceDetection();
+  const { isPWA, isMobile, isNativeApp, isDesktop } = useDeviceDetection();
+  
+  // Detect if running on Mac
+  const isMac = typeof window !== 'undefined' && 
+    (navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
+     navigator.userAgent.toUpperCase().indexOf('MAC') >= 0);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -628,9 +633,13 @@ export default function Tasks() {
                activeFilter === 'inbox' ? 'tasks in inbox' :
                activeFilter === 'upcoming' ? 'upcoming tasks' :
                activeFilter === 'completed' ? 'completed tasks' : 'tasks'}
-              <span className="ml-3 text-xs text-slate-400">
-                Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600">⌘K</kbd> to quick add
-              </span>
+              {!isMobile && isDesktop && (
+                <span className="ml-3 text-xs text-slate-400">
+                  Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600">
+                    {isMac ? '⌘K' : 'Ctrl K'}
+                  </kbd> to quick add
+                </span>
+              )}
             </p>
           </div>
         </TutorialTooltip>

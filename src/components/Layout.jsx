@@ -10,6 +10,7 @@ import {
   CheckSquare, 
   GitBranch, 
   Award,
+  Shield,
   Menu,
   X,
   LogOut,
@@ -41,6 +42,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Tasks', path: 'Tasks', icon: CheckSquare },
     { name: 'Sequences', path: 'Sequences', icon: GitBranch },
     { name: 'Scoring', path: 'Scoring', icon: Award, adminOnly: true },
+    { name: 'Permissions', path: 'Permissions', icon: Shield, adminOnly: true },
   ];
 
   // Filter navigation based on user role
