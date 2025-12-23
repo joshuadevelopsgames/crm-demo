@@ -248,12 +248,15 @@ export default async function handler(req, res) {
                       .insert(accountData);
                     if (!singleError) successCount++;
                   } catch (e) {
+                    console.warn('Failed to insert account:', accountData.id || accountData.name, e);
                     // Skip duplicates
                   }
                 }
                 created += successCount;
               } else {
                 console.error('Bulk insert error:', insertError);
+                console.error('Error details:', JSON.stringify(insertError, null, 2));
+                console.error('Sample account data:', JSON.stringify(toInsert[0], null, 2));
                 throw insertError;
               }
             } else {
@@ -380,9 +383,12 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Error in accounts API:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return res.status(500).json({
       success: false,
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
