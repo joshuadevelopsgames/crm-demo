@@ -59,17 +59,69 @@ export function UserProvider({ children }) {
               role: data.role || (isSystemAdmin ? 'admin' : 'user')
             });
           } else {
-            // Profile doesn't exist, create default profile
-            setProfile({
-              id: session.user.id,
-              email: session.user.email,
-              role: defaultRole
-            });
+            // Profile doesn't exist in database - create it
+            try {
+              const { data: newProfile, error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                  role: defaultRole
+                })
+                .select()
+                .single();
+              
+              if (insertError) {
+                console.error('Error creating profile:', insertError);
+                // Fallback: use in-memory profile
+                setProfile({
+                  id: session.user.id,
+                  email: session.user.email,
+                  role: defaultRole
+                });
+              } else {
+                setProfile(newProfile);
+              }
+            } catch (err) {
+              console.error('Error creating profile:', err);
+              // Fallback: use in-memory profile
+              setProfile({
+                id: session.user.id,
+                email: session.user.email,
+                role: defaultRole
+              });
+            }
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
           // Fallback: check if it's System Admin email
           const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'admin' : 'user';
+          
+          // Try to create profile in database
+          if (supabase) {
+            try {
+              const { data: newProfile, error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                  role: defaultRole
+                })
+                .select()
+                .single();
+              
+              if (!insertError && newProfile) {
+                setProfile(newProfile);
+                return;
+              }
+            } catch (insertErr) {
+              console.error('Error creating profile in catch block:', insertErr);
+            }
+          }
+          
+          // Final fallback: use in-memory profile
           setProfile({
             id: session.user.id,
             email: session.user.email,
@@ -111,8 +163,9 @@ export function UserProvider({ children }) {
   }, [supabase]);
 
   // Determine admin status - check role or email fallback
+  // System Admin email always has admin access, regardless of database role
   const isAdmin = profile?.role === 'admin' || 
-                  (profile?.email === 'jrsschroeder@gmail.com' && profile?.role !== 'user');
+                  profile?.email === 'jrsschroeder@gmail.com';
 
   // Debug logging (can be removed later)
   if (profile?.email === 'jrsschroeder@gmail.com') {
