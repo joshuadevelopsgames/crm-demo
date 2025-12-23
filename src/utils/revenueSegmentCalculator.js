@@ -14,8 +14,57 @@
  */
 
 /**
- * Get the year an estimate applies to and its value for the current year
- * For multi-year contracts, assign the full amount to the start year (not annualized)
+ * Calculate contract duration in months between two dates
+ * @param {Date} startDate - Contract start date
+ * @param {Date} endDate - Contract end date
+ * @returns {number} - Duration in months
+ */
+function calculateDurationMonths(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Calculate year and month differences
+  const yearDiff = end.getFullYear() - start.getFullYear();
+  const monthDiff = end.getMonth() - start.getMonth();
+  const dayDiff = end.getDate() - start.getDate();
+  
+  // Total months = years * 12 + months
+  // If end day is on or after start day, count that month
+  let totalMonths = yearDiff * 12 + monthDiff;
+  
+  // If the end date is on or after the start day of the month, count that month
+  if (dayDiff >= 0) {
+    totalMonths += 1; // Include the end month
+  }
+  
+  return totalMonths;
+}
+
+/**
+ * Determine number of contract years based on duration in months
+ * Rules:
+ * - duration_months ≤ 12 → years_count = 1
+ * - 12 < duration_months ≤ 24 → years_count = 2
+ * - 24 < duration_months ≤ 36 → years_count = 3
+ * - Exact multiples of 12 do NOT round up (24 months = 2 years, not 3)
+ * - Otherwise: ceil(duration_months / 12)
+ * @param {number} durationMonths - Duration in months
+ * @returns {number} - Number of contract years
+ */
+function getContractYears(durationMonths) {
+  if (durationMonths <= 12) return 1;
+  if (durationMonths <= 24) return 2;
+  if (durationMonths <= 36) return 3;
+  // For longer contracts, use ceil but exact multiples of 12 don't round up
+  if (durationMonths % 12 === 0) {
+    return durationMonths / 12;
+  }
+  return Math.ceil(durationMonths / 12);
+}
+
+/**
+ * Get the year an estimate applies to and its allocated value for the current year
+ * Uses contract-year allocation logic: revenue allocated by contract years, not calendar year coverage
  * @param {Object} estimate - Estimate object
  * @param {number} currentYear - Current year (e.g., 2024)
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
@@ -29,19 +78,34 @@ function getEstimateYearData(estimate, currentYear) {
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
-  // Assign full amount to the start year (e.g., Oct 1, 2024 to Sept 30, 2025 = 2024)
+  // Use contract-year allocation logic
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
     const startYear = contractStart.getFullYear();
-    const endYear = contractEnd.getFullYear();
     
-    if (endYear < startYear) return null;
+    // STEP 1: Calculate duration in months
+    const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+    if (durationMonths <= 0) return null;
     
-    // Full amount assigned to start year (not annualized)
-    const appliesToCurrentYear = currentYear === startYear;
+    // STEP 2: Determine number of contract years
+    const yearsCount = getContractYears(durationMonths);
+    
+    // STEP 3: Determine which calendar years receive allocation
+    // years_applied = [start_year, start_year+1, ..., start_year+(years_count-1)]
+    const yearsApplied = [];
+    for (let i = 0; i < yearsCount; i++) {
+      yearsApplied.push(startYear + i);
+    }
+    
+    // Check if current year is in years_applied
+    const appliesToCurrentYear = yearsApplied.includes(currentYear);
+    
+    // STEP 4: Allocate revenue
+    // annual_amount = total_price / years_count
+    const annualAmount = totalPrice / yearsCount;
     
     return {
       appliesToCurrentYear,
-      value: totalPrice // Full amount, not annualized
+      value: appliesToCurrentYear ? annualAmount : 0
     };
   }
   
