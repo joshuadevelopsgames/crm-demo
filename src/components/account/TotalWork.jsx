@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 /**
  * Get the year(s) an estimate applies to and its annualized value for the current year
@@ -60,9 +61,27 @@ function getEstimateYearData(estimate, currentYear) {
   return null;
 }
 
+/**
+ * Get readable estimate ID (prefer estimate_number, then lmn_estimate_id, then formatted id)
+ */
+function getReadableEstimateId(estimate) {
+  if (estimate.estimate_number) return estimate.estimate_number;
+  if (estimate.lmn_estimate_id) return estimate.lmn_estimate_id;
+  if (estimate.id) {
+    // If it's a UUID, try to extract a meaningful part or use a short version
+    if (estimate.id.includes('-') && estimate.id.length > 20) {
+      // It's likely a UUID, use first 8 chars
+      return `EST${estimate.id.substring(0, 8).toUpperCase()}`;
+    }
+    return estimate.id;
+  }
+  return 'Unknown';
+}
+
 export default function TotalWork({ estimates = [] }) {
   const currentYear = new Date().getFullYear();
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Calculate breakdown for ESTIMATED
   const estimatedBreakdown = useMemo(() => {
@@ -234,6 +253,98 @@ export default function TotalWork({ estimates = [] }) {
             </Button>
             {showBreakdown && (
               <div className="space-y-4 mt-3 pt-3 border-t border-slate-200">
+              {/* Copy to Clipboard Button */}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const currentYear = new Date().getFullYear();
+                    let text = `Total Work Breakdown - ${currentYear}\n`;
+                    text += `Generated: ${new Date().toLocaleString()}\n\n`;
+                    
+                    text += `ESTIMATED TOTAL: $${totalEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                    text += `SOLD TOTAL: $${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                    text += `SOLD PERCENTAGE: ${soldPercentage}%\n\n`;
+                    
+                    text += `=== ESTIMATED BREAKDOWN ===\n\n`;
+                    text += `INCLUDED (${estimatedBreakdown.included.length} estimates):\n`;
+                    estimatedBreakdown.included.forEach((item, idx) => {
+                      text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
+                      text += `   Method: ${item.determinationMethod}\n`;
+                      text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                      if (item.annualizedValue !== item.totalPrice) {
+                        text += `   Annualized Value: $${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                      }
+                      text += `\n`;
+                    });
+                    
+                    if (estimatedBreakdown.excluded.length > 0) {
+                      text += `EXCLUDED (${estimatedBreakdown.excluded.length} estimates):\n`;
+                      estimatedBreakdown.excluded.forEach((item, idx) => {
+                        text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
+                        if (item.determinationMethod) {
+                          text += `   Method: ${item.determinationMethod}\n`;
+                        }
+                        if (item.totalPrice > 0) {
+                          text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                        }
+                        text += `   Reason: ${item.reason}\n\n`;
+                      });
+                    }
+                    
+                    text += `\n=== SOLD BREAKDOWN (Won Estimates Only) ===\n\n`;
+                    text += `INCLUDED (${soldBreakdown.included.length} estimates):\n`;
+                    soldBreakdown.included.forEach((item, idx) => {
+                      text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
+                      text += `   Method: ${item.determinationMethod}\n`;
+                      text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                      if (item.annualizedValue !== item.totalPrice) {
+                        text += `   Annualized Value: $${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                      }
+                      text += `\n`;
+                    });
+                    
+                    if (soldBreakdown.excluded.length > 0) {
+                      text += `EXCLUDED (${soldBreakdown.excluded.length} estimates):\n`;
+                      soldBreakdown.excluded.forEach((item, idx) => {
+                        text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
+                        if (item.determinationMethod) {
+                          text += `   Method: ${item.determinationMethod}\n`;
+                        }
+                        if (item.totalPrice > 0) {
+                          text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                        }
+                        text += `   Reason: ${item.reason}\n\n`;
+                      });
+                    }
+                    
+                    try {
+                      await navigator.clipboard.writeText(text);
+                      setCopied(true);
+                      toast.success('✓ Breakdown copied to clipboard');
+                      setTimeout(() => setCopied(false), 2000);
+                    } catch (err) {
+                      console.error('Failed to copy:', err);
+                      toast.error('Failed to copy to clipboard');
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3 h-3 mr-1" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy breakdown to clipboard
+                    </>
+                  )}
+                </Button>
+              </div>
+              
               {/* ESTIMATED Breakdown */}
               <div>
                 <h4 className="text-sm font-semibold text-slate-900 mb-2">ESTIMATED Breakdown</h4>
@@ -247,7 +358,7 @@ export default function TotalWork({ estimates = [] }) {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <p className="font-medium text-slate-900">
-                                  ID: {item.estimate.id || item.estimate.lmn_estimate_id || `Estimate ${idx + 1}`}
+                                  ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
                                 <p className="text-slate-500 mt-0.5">
@@ -275,7 +386,7 @@ export default function TotalWork({ estimates = [] }) {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <p className="font-medium text-slate-900">
-                                  ID: {item.estimate.id || item.estimate.lmn_estimate_id || `Estimate ${idx + 1}`}
+                                  ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (
                                   <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
@@ -309,7 +420,7 @@ export default function TotalWork({ estimates = [] }) {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <p className="font-medium text-slate-900">
-                                  ID: {item.estimate.id || item.estimate.lmn_estimate_id || `Estimate ${idx + 1}`}
+                                  ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
                                 <p className="text-slate-500 mt-0.5">
@@ -337,7 +448,7 @@ export default function TotalWork({ estimates = [] }) {
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <p className="font-medium text-slate-900">
-                                  ID: {item.estimate.id || item.estimate.lmn_estimate_id || `Estimate ${idx + 1}`}
+                                  ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (
                                   <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
