@@ -22,6 +22,9 @@ function getSupabase() {
 }
 
 export default async function handler(req, res) {
+  const timestamp = new Date().toISOString();
+  const requestId = Math.random().toString(36).substring(7);
+  
   // CORS headers
   const allowedOrigins = [
     'http://localhost:5173',
@@ -31,120 +34,277 @@ export default async function handler(req, res) {
     'https://lecrm.vercel.app'
   ];
   
+  console.log(`\n🔐 [${timestamp}] [${requestId}] API endpoint called:`, req.method, req.url);
+  
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`🔐 [${requestId}] CORS origin allowed:`, origin);
+  } else {
+    console.log(`⚠️ [${requestId}] CORS origin not in allowed list:`, origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   if (req.method === 'OPTIONS') {
+    console.log(`✅ [${requestId}] OPTIONS preflight request, returning 200`);
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
+    console.error(`❌ [${requestId}] Invalid method:`, req.method);
     return res.status(405).json({
       success: false,
-      error: 'Method not allowed'
+      error: 'Method not allowed',
+      requestId
     });
   }
 
   try {
-    const { email, password, full_name, role = 'user' } = req.body;
-
-    // Validate input
-    if (!email || !password) {
+    console.log(`\n🔐 [${requestId}] ========== CREATE USER REQUEST START ==========`);
+    console.log(`🔐 [${requestId}] Request method:`, req.method);
+    console.log(`🔐 [${requestId}] Request URL:`, req.url);
+    console.log(`🔐 [${requestId}] Request headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`🔐 [${requestId}] Request body type:`, typeof req.body);
+    console.log(`🔐 [${requestId}] Request body:`, JSON.stringify(req.body, null, 2));
+    
+    // Check if body is parsed - Vercel should auto-parse JSON, but let's handle it
+    let body = req.body;
+    console.log(`🔐 [${requestId}] Step 1: Body parsing - type: ${typeof body}`);
+    
+    // If body is a string, try to parse it
+    if (typeof body === 'string') {
+      console.log(`🔐 [${requestId}] Body is string, attempting to parse JSON...`);
+      try {
+        body = JSON.parse(body);
+        console.log(`✅ [${requestId}] Successfully parsed JSON body`);
+      } catch (parseError) {
+        console.error(`❌ [${requestId}] Failed to parse request body as JSON:`, parseError.message);
+        console.error(`❌ [${requestId}] Body content:`, body);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid JSON in request body',
+          requestId,
+          details: parseError.message
+        });
+      }
+    }
+    
+    if (!body || typeof body !== 'object') {
+      console.error(`❌ [${requestId}] Request body validation failed:`);
+      console.error(`   - Body exists:`, !!body);
+      console.error(`   - Body type:`, typeof body);
+      console.error(`   - Body value:`, body);
       return res.status(400).json({
         success: false,
-        error: 'Email and password are required'
+        error: 'Request body is required and must be a JSON object',
+        requestId,
+        received: { type: typeof body, exists: !!body }
+      });
+    }
+
+    console.log(`✅ [${requestId}] Step 2: Body validation passed`);
+    
+    const { email, password, full_name, role = 'user' } = body;
+    
+    console.log(`🔐 [${requestId}] Step 3: Extracted values:`);
+    console.log(`   - email:`, email ? `${email.substring(0, 3)}***` : 'MISSING');
+    console.log(`   - hasPassword:`, !!password);
+    console.log(`   - passwordLength:`, password?.length || 0);
+    console.log(`   - full_name:`, full_name || 'not provided');
+    console.log(`   - role:`, role);
+
+    // Validate input
+    console.log(`🔐 [${requestId}] Step 4: Validating required fields...`);
+    if (!email || !password) {
+      console.error(`❌ [${requestId}] VALIDATION FAILED: Missing required fields`);
+      console.error(`   - email provided:`, !!email);
+      console.error(`   - password provided:`, !!password);
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required',
+        requestId,
+        received: { hasEmail: !!email, hasPassword: !!password }
       });
     }
 
     // Validate email format
+    console.log(`🔐 [${requestId}] Step 5: Validating email format...`);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.error(`❌ [${requestId}] VALIDATION FAILED: Invalid email format`);
+      console.error(`   - email:`, email);
       return res.status(400).json({
         success: false,
-        error: 'Invalid email format'
+        error: 'Invalid email format',
+        requestId,
+        received: { email }
       });
     }
+    console.log(`✅ [${requestId}] Email format valid`);
 
     // Validate password length
+    console.log(`🔐 [${requestId}] Step 6: Validating password length...`);
     if (password.length < 6) {
+      console.error(`❌ [${requestId}] VALIDATION FAILED: Password too short`);
+      console.error(`   - password length:`, password.length);
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 6 characters'
+        error: 'Password must be at least 6 characters',
+        requestId,
+        received: { passwordLength: password.length }
       });
     }
+    console.log(`✅ [${requestId}] Password length valid (${password.length} chars)`);
 
     // Validate role
+    console.log(`🔐 [${requestId}] Step 7: Validating role...`);
     if (role !== 'admin' && role !== 'user') {
+      console.error(`❌ [${requestId}] VALIDATION FAILED: Invalid role`);
+      console.error(`   - role:`, role);
       return res.status(400).json({
         success: false,
-        error: 'Role must be either "admin" or "user"'
+        error: 'Role must be either "admin" or "user"',
+        requestId,
+        received: { role }
       });
     }
+    console.log(`✅ [${requestId}] Role valid:`, role);
 
+    console.log(`🔐 [${requestId}] Step 8: Initializing Supabase client...`);
     const supabase = getSupabase();
+    console.log(`✅ [${requestId}] Supabase client created`);
+    console.log(`🔐 [${requestId}] Environment check:`);
+    console.log(`   - SUPABASE_URL:`, process.env.SUPABASE_URL ? `Set (${process.env.SUPABASE_URL.substring(0, 20)}...)` : '❌ Missing');
+    console.log(`   - SUPABASE_SERVICE_ROLE_KEY:`, process.env.SUPABASE_SERVICE_ROLE_KEY ? `Set (${process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 20)}...)` : '❌ Missing');
+    console.log(`🔐 [${requestId}] Step 9: Attempting to create user in auth.users...`);
 
     // Create user in auth.users using admin API
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        full_name: full_name || '',
-        name: full_name || ''
+    // Note: admin API requires service role key and is only available server-side
+    try {
+      console.log('🔐 Calling supabase.auth.admin.createUser...');
+      
+      // Check if admin API is available
+      if (!supabase.auth.admin) {
+        console.error('❌ supabase.auth.admin is not available');
+        return res.status(500).json({
+          success: false,
+          error: 'Admin API not available. Make sure you are using the service role key.'
+        });
       }
-    });
 
-    if (authError) {
-      console.error('Error creating user in auth:', authError);
-      return res.status(400).json({
-        success: false,
-        error: authError.message || 'Failed to create user'
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          full_name: full_name || '',
+          name: full_name || ''
+        }
       });
-    }
 
-    // The trigger should automatically create the profile, but let's ensure it exists
-    // and update the role if needed
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: authData.user.email,
-        full_name: full_name || '',
-        role: role
-      }, {
-        onConflict: 'id'
-      })
-      .select()
-      .single();
+      if (authError) {
+        console.error(`❌ [${requestId}] ERROR creating user in auth.users:`);
+        console.error(`   - Error message:`, authError.message);
+        console.error(`   - Error status:`, authError.status);
+        console.error(`   - Full error:`, JSON.stringify(authError, null, 2));
+        return res.status(400).json({
+          success: false,
+          error: authError.message || 'Failed to create user',
+          requestId,
+          details: {
+            status: authError.status,
+            message: authError.message,
+            error: authError
+          }
+        });
+      }
 
-    if (profileError) {
-      console.error('Error creating/updating profile:', profileError);
-      // User was created but profile failed - this is not critical, the trigger should handle it
-      // But we'll still return success since the user exists
-    }
+      if (!authData || !authData.user) {
+        console.error(`❌ [${requestId}] No user data returned from createUser`);
+        console.error(`   - authData:`, authData);
+        return res.status(500).json({
+          success: false,
+          error: 'User creation succeeded but no user data returned',
+          requestId
+        });
+      }
 
-    return res.status(201).json({
-      success: true,
-      data: {
-        user: authData.user,
-        profile: profileData || {
+      console.log(`✅ [${requestId}] User created in auth.users:`);
+      console.log(`   - User ID:`, authData.user.id);
+      console.log(`   - Email:`, authData.user.email);
+      
+      // The trigger should automatically create the profile, but let's ensure it exists
+      // and update the role if needed
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
           id: authData.user.id,
           email: authData.user.email,
           full_name: full_name || '',
           role: role
-        }
+        }, {
+          onConflict: 'id'
+        })
+        .select()
+        .single();
+
+      console.log(`🔐 [${requestId}] Step 10: Creating/updating profile...`);
+      if (profileError) {
+        console.error(`⚠️ [${requestId}] Error creating/updating profile (non-critical):`, profileError.message);
+        console.error(`   - Profile error details:`, JSON.stringify(profileError, null, 2));
+        // User was created but profile failed - this is not critical, the trigger should handle it
+      } else {
+        console.log(`✅ [${requestId}] Profile created/updated successfully`);
+        console.log(`   - Profile ID:`, profileData?.id);
+        console.log(`   - Profile role:`, profileData?.role);
       }
-    });
+
+      console.log(`✅ [${requestId}] ========== CREATE USER REQUEST SUCCESS ==========\n`);
+      return res.status(201).json({
+        success: true,
+        requestId,
+        data: {
+          user: authData.user,
+          profile: profileData || {
+            id: authData.user.id,
+            email: authData.user.email,
+            full_name: full_name || '',
+            role: role
+          }
+        }
+      });
+    } catch (adminError) {
+      console.error(`❌ [${requestId}] EXCEPTION in user creation:`);
+      console.error(`   - Error message:`, adminError.message);
+      console.error(`   - Error name:`, adminError.name);
+      console.error(`   - Error stack:`, adminError.stack);
+      console.error(`   - Full error:`, adminError);
+      return res.status(500).json({
+        success: false,
+        error: adminError.message || 'Failed to create user',
+        requestId,
+        details: {
+          name: adminError.name,
+          message: adminError.message,
+          stack: adminError.stack
+        }
+      });
+    }
 
   } catch (error) {
-    console.error('Error in createUser API:', error);
+    console.error(`❌ [${requestId}] TOP-LEVEL ERROR in createUser API:`);
+    console.error(`   - Error message:`, error.message);
+    console.error(`   - Error name:`, error.name);
+    console.error(`   - Error stack:`, error.stack);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      requestId,
+      details: {
+        name: error.name,
+        message: error.message
+      }
     });
   }
 }

@@ -104,11 +104,11 @@ export function UserProvider({ children }) {
             } catch (err) {
               console.error('Error creating profile:', err);
               // Fallback: use in-memory profile
-              setProfile({
-                id: session.user.id,
-                email: session.user.email,
-                role: defaultRole
-              });
+            setProfile({
+              id: session.user.id,
+              email: session.user.email,
+              role: defaultRole
+            });
             }
           }
         } catch (error) {
@@ -192,9 +192,9 @@ export function UserProvider({ children }) {
     hasProfile: !!profile,
     profileEmail: profile?.email,
     profileRole: profile?.role,
-    isAdmin,
+      isAdmin,
     supabaseConfigured: !!supabase
-  });
+    });
 
   const value = {
     user,

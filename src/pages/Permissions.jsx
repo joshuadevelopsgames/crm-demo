@@ -224,26 +224,98 @@ export default function Permissions() {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData) => {
-      const response = await fetch('/api/admin/createUser', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
+      const requestId = Math.random().toString(36).substring(7);
+      const timestamp = new Date().toISOString();
+      
+      console.log(`\n🔐 [CLIENT ${requestId}] ========== CREATE USER REQUEST START ==========`);
+      console.log(`🔐 [CLIENT ${requestId}] Timestamp:`, timestamp);
+      console.log(`🔐 [CLIENT ${requestId}] User data:`, {
+        email: userData.email,
+        hasPassword: !!userData.password,
+        passwordLength: userData.password?.length,
+        full_name: userData.full_name,
+        role: userData.role
       });
+      
+      try {
+        console.log(`🔐 [CLIENT ${requestId}] Sending POST request to /api/admin/createUser...`);
+        const response = await fetch('/api/admin/createUser', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
 
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create user');
+        console.log(`🔐 [CLIENT ${requestId}] Response received:`);
+        console.log(`   - Status:`, response.status, response.statusText);
+        console.log(`   - OK:`, response.ok);
+        console.log(`   - Headers:`, Object.fromEntries(response.headers.entries()));
+
+        let result;
+        const contentType = response.headers.get('content-type');
+        console.log(`🔐 [CLIENT ${requestId}] Content-Type:`, contentType);
+        
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+            console.log(`✅ [CLIENT ${requestId}] Successfully parsed JSON response:`, result);
+          } else {
+            const text = await response.text();
+            console.error(`❌ [CLIENT ${requestId}] Response is not JSON, got:`, text);
+            throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}. Body: ${text.substring(0, 200)}`);
+          }
+        } catch (jsonError) {
+          console.error(`❌ [CLIENT ${requestId}] Failed to parse response:`, jsonError);
+          const text = await response.text().catch(() => 'Could not read response body');
+          console.error(`❌ [CLIENT ${requestId}] Response text:`, text);
+          throw new Error(`Server error: ${response.status} ${response.statusText}. ${text.substring(0, 200)}`);
+        }
+
+        if (!response.ok) {
+          const errorMsg = result?.error || result?.message || `HTTP ${response.status}: Failed to create user`;
+          const requestIdFromServer = result?.requestId || 'unknown';
+          console.error(`❌ [CLIENT ${requestId}] API returned error:`);
+          console.error(`   - Status:`, response.status);
+          console.error(`   - Error message:`, errorMsg);
+          console.error(`   - Server request ID:`, requestIdFromServer);
+          console.error(`   - Full response:`, result);
+          throw new Error(errorMsg);
+        }
+
+        if (!result.success) {
+          console.error(`❌ [CLIENT ${requestId}] Response indicates failure:`);
+          console.error(`   - Success flag:`, result.success);
+          console.error(`   - Error:`, result.error);
+          throw new Error(result.error || 'Failed to create user');
+        }
+        
+        console.log(`✅ [CLIENT ${requestId}] User created successfully!`);
+        console.log(`   - User ID:`, result.data?.user?.id);
+        console.log(`   - Email:`, result.data?.user?.email);
+        console.log(`✅ [CLIENT ${requestId}] ========== CREATE USER REQUEST SUCCESS ==========\n`);
+        return result.data;
+      } catch (error) {
+        console.error(`❌ [CLIENT ${requestId}] Error in createUserMutation:`);
+        console.error(`   - Error name:`, error.name);
+        console.error(`   - Error message:`, error.message);
+        console.error(`   - Error stack:`, error.stack);
+        console.error(`❌ [CLIENT ${requestId}] ========== CREATE USER REQUEST FAILED ==========\n`);
+        throw error;
       }
-      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      toast.success('User created successfully');
+      toast.success('✅ User created successfully');
       setIsCreateDialogOpen(false);
       setNewUser({ email: '', password: '', full_name: '', role: 'user' });
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create user');
+      console.error('❌ Error creating user:', error);
+      const errorMessage = error.message || error.toString() || 'Failed to create user';
+      console.error('❌ Full error object:', error);
+      toast.error(errorMessage, { duration: 5000 });
     }
   });
 
