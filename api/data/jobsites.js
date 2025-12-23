@@ -192,6 +192,15 @@ export default async function handler(req, res) {
             }
           });
           
+          // Get all contact IDs that exist in the database to validate references
+          const contactIdsInBatch = batch.map(j => j.contact_id).filter(Boolean);
+          const { data: existingContacts } = await supabase
+            .from('contacts')
+            .select('id')
+            .in('id', contactIdsInBatch);
+          
+          const validContactIds = new Set(existingContacts?.map(c => c.id) || []);
+          
           const toInsert = [];
           const toUpdate = [];
           const seenInBatch = new Set(); // Track duplicates within batch
@@ -232,10 +241,14 @@ export default async function handler(req, res) {
               jobsiteData.account_id = null;
             }
             
-            // Include contact_id if provided (should be text like "lmn-contact-XXXXX")
-            if (contact_id) {
+            // Include contact_id if provided AND the contact exists in the database
+            // If contact doesn't exist, set to null to avoid foreign key constraint violation
+            if (contact_id && validContactIds.has(contact_id)) {
               jobsiteData.contact_id = contact_id;
             } else {
+              if (contact_id && !validContactIds.has(contact_id)) {
+                console.warn(`Jobsite ${jobsite.lmn_jobsite_id || jobsite.id} references non-existent contact ${contact_id}, setting to null`);
+              }
               jobsiteData.contact_id = null;
             }
             
