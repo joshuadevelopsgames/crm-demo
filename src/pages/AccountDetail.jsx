@@ -27,7 +27,6 @@ import AccountScore from '../components/account/AccountScore';
 import SalesInsights from '../components/account/SalesInsights';
 import ResearchNotes from '../components/account/ResearchNotes';
 import KeyDates from '../components/account/KeyDates';
-import PaymentMethod from '../components/account/PaymentMethod';
 import EstimatesStats from '../components/account/EstimatesStats';
 import TotalWork from '../components/account/TotalWork';
 import GeneralInformation from '../components/account/GeneralInformation';
@@ -261,12 +260,8 @@ export default function AccountDetail() {
         {/* Info Tab - LMN Style Overview */}
         <TabsContent value="info" className="space-y-6 mt-6">
           {/* Top Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <KeyDates account={account} />
-            <PaymentMethod 
-              account={account} 
-              onAddPayment={() => alert('Payment method feature coming soon')}
-            />
             <EstimatesStats estimates={estimates} />
             <TotalWork estimates={estimates} />
           </div>
