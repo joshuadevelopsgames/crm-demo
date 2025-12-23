@@ -572,6 +572,19 @@ export default function ImportLeadsDialog({ open, onClose }) {
               data: { accounts: validAccounts, lookupField: 'lmn_crm_id' } 
             })
           });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `HTTP ${response.status}: ${errorText}`;
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.error || errorMessage;
+            } catch (e) {
+              // If not JSON, use the text as-is
+            }
+            throw new Error(errorMessage);
+          }
+          
           const result = await response.json();
           if (result.success) {
             results.accountsCreated = result.created;
@@ -582,7 +595,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
           }
         } catch (err) {
           results.accountsFailed = validAccounts.length;
-          results.errors.push(`Accounts bulk import: ${err.message}`);
+          const errorMsg = `Accounts bulk import: ${err.message}`;
+          results.errors.push(errorMsg);
+          console.error('Accounts import error:', err);
+          console.error('Sample account data:', validAccounts[0]);
         }
       }
 
