@@ -53,9 +53,81 @@ export const mappingRules = [
     question_keywords: ['annual budget', 'budget'],
     data_field: 'revenue',
     mapping_function: (account, estimates) => {
+      // Use contract-year allocation logic for current year revenue
+      const currentYear = new Date().getFullYear();
+      
+      // Import the helper functions from revenueSegmentCalculator
+      // For now, we'll calculate inline to avoid circular dependencies
+      const calculateDurationMonths = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const yearDiff = end.getFullYear() - start.getFullYear();
+        const monthDiff = end.getMonth() - start.getMonth();
+        const dayDiff = end.getDate() - start.getDate();
+        let totalMonths = yearDiff * 12 + monthDiff;
+        if (dayDiff >= 0) {
+          totalMonths += 1;
+        }
+        return totalMonths;
+      };
+      
+      const getContractYears = (durationMonths) => {
+        if (durationMonths <= 12) return 1;
+        if (durationMonths <= 24) return 2;
+        if (durationMonths <= 36) return 3;
+        if (durationMonths % 12 === 0) {
+          return durationMonths / 12;
+        }
+        return Math.ceil(durationMonths / 12);
+      };
+      
+      const getEstimateYearData = (estimate, currentYear) => {
+        const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+        const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+        const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
+        
+        const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
+        if (totalPrice === 0) return null;
+        
+        // Case 1: Both contract_start and contract_end exist
+        if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+          const startYear = contractStart.getFullYear();
+          const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+          if (durationMonths <= 0) return null;
+          
+          const yearsCount = getContractYears(durationMonths);
+          const yearsApplied = [];
+          for (let i = 0; i < yearsCount; i++) {
+            yearsApplied.push(startYear + i);
+          }
+          
+          const appliesToCurrentYear = yearsApplied.includes(currentYear);
+          const annualAmount = totalPrice / yearsCount;
+          
+          return appliesToCurrentYear ? annualAmount : 0;
+        }
+        
+        // Case 2: Only contract_start exists
+        if (contractStart && !isNaN(contractStart.getTime())) {
+          const startYear = contractStart.getFullYear();
+          return currentYear === startYear ? totalPrice : 0;
+        }
+        
+        // Case 3: No contract dates, use estimate_date
+        if (estimateDate && !isNaN(estimateDate.getTime())) {
+          const estimateYear = estimateDate.getFullYear();
+          return currentYear === estimateYear ? totalPrice : 0;
+        }
+        
+        return null;
+      };
+      
       const totalRevenue = estimates
         .filter(est => est.status === 'won')
-        .reduce((sum, est) => sum + (parseFloat(est.total_price_with_tax || est.total_price) || 0), 0);
+        .reduce((sum, est) => {
+          const yearData = getEstimateYearData(est, currentYear);
+          return sum + (yearData !== null ? yearData : 0);
+        }, 0);
       
       // Check if under $200K (common threshold)
       if (totalRevenue > 0 && totalRevenue < 200000) {
