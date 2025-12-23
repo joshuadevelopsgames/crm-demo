@@ -30,30 +30,50 @@ export SUPABASE_URL="$SUPABASE_URL"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_KEY"
 
 echo ""
-echo "✅ Environment variables set!"
+echo "✅ Environment variables set for this session!"
 echo ""
 echo "You can now run:"
 echo "  npm run compare:estimates"
 echo ""
-echo "⚠️  Note: These variables are only set for this terminal session."
-echo "   To make them permanent, add them to your ~/.zshrc or ~/.bash_profile"
+echo "🔒 RECOMMENDED: Create a .env file (more secure than shell profile)"
 echo ""
-echo "Would you like to add them to your ~/.zshrc file? (y/n)"
-read -p "> " ADD_TO_PROFILE
+echo "Would you like to create a .env file in your project? (y/n)"
+read -p "> " CREATE_ENV
 
-if [ "$ADD_TO_PROFILE" = "y" ] || [ "$ADD_TO_PROFILE" = "Y" ]; then
-  PROFILE_FILE="$HOME/.zshrc"
-  if [ ! -f "$PROFILE_FILE" ]; then
-    PROFILE_FILE="$HOME/.bash_profile"
+if [ "$CREATE_ENV" = "y" ] || [ "$CREATE_ENV" = "Y" ]; then
+  ENV_FILE=".env"
+  
+  # Check if .env already exists
+  if [ -f "$ENV_FILE" ]; then
+    echo ""
+    echo "⚠️  .env file already exists. Append to it? (y/n)"
+    read -p "> " APPEND
+    if [ "$APPEND" != "y" ] && [ "$APPEND" != "Y" ]; then
+      echo "Skipping .env file creation."
+    else
+      echo "" >> "$ENV_FILE"
+      echo "# Supabase credentials for estimates comparison script" >> "$ENV_FILE"
+      echo "SUPABASE_URL=$SUPABASE_URL" >> "$ENV_FILE"
+      echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> "$ENV_FILE"
+      echo ""
+      echo "✅ Added to existing .env file"
+    fi
+  else
+    echo "# Supabase credentials for estimates comparison script" > "$ENV_FILE"
+    echo "# This file is in .gitignore and will NOT be committed to git" >> "$ENV_FILE"
+    echo "" >> "$ENV_FILE"
+    echo "SUPABASE_URL=$SUPABASE_URL" >> "$ENV_FILE"
+    echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> "$ENV_FILE"
+    echo ""
+    echo "✅ Created .env file"
+    echo "   This is more secure than storing in your shell profile!"
   fi
-  
-  echo "" >> "$PROFILE_FILE"
-  echo "# Supabase environment variables for LECRM" >> "$PROFILE_FILE"
-  echo "export SUPABASE_URL=\"$SUPABASE_URL\"" >> "$PROFILE_FILE"
-  echo "export SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_KEY\"" >> "$PROFILE_FILE"
-  
-  echo ""
-  echo "✅ Added to $PROFILE_FILE"
-  echo "   Run 'source $PROFILE_FILE' or restart your terminal to use them."
 fi
+
+echo ""
+echo "⚠️  SECURITY NOTE:"
+echo "   - The service role key has FULL admin access to your database"
+echo "   - Storing it in ~/.zshrc is NOT recommended (visible to all processes)"
+echo "   - Using a .env file is safer (project-specific, already in .gitignore)"
+echo "   - Never commit the service role key to git!"
 

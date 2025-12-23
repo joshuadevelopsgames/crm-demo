@@ -17,9 +17,32 @@
 
 import XLSX from 'xlsx';
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+
+// Try to load .env file if it exists (for local development)
+// This is safer than storing secrets in shell profile
+try {
+  const envPath = join(process.cwd(), '.env');
+  if (existsSync(envPath)) {
+    const envContent = readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').replace(/^["']|["']$/g, ''); // Remove quotes
+          if (!process.env[key]) {
+            process.env[key] = value;
+          }
+        }
+      }
+    });
+  }
+} catch (error) {
+  // Silently fail if .env doesn't exist or can't be read
+}
 
 // Get Supabase credentials from environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -28,10 +51,14 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing environment variables!');
   console.error('Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
-  console.error('\nYou can set them like this:');
-  console.error('  export SUPABASE_URL="https://your-project.supabase.co"');
-  console.error('  export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"');
-  console.error('\nOr create a .env file with these variables.');
+  console.error('\n📋 Recommended: Create a .env file in your project root:');
+  console.error('   SUPABASE_URL=https://vtnaqheddlvnlcgwwssc.supabase.co');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key');
+  console.error('\n   (The .env file is already in .gitignore, so it won\'t be committed)');
+  console.error('\n⚠️  Alternative (less secure): Set them in your terminal:');
+  console.error('   export SUPABASE_URL="https://vtnaqheddlvnlcgwwssc.supabase.co"');
+  console.error('   export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"');
+  console.error('\n   Note: Storing secrets in ~/.zshrc is NOT recommended for security reasons.');
   process.exit(1);
 }
 

@@ -45,27 +45,38 @@ npm run compare:estimates
 
 **Note:** These will only work in this terminal window. Close the terminal and you'll need to set them again.
 
-#### Option B: Add to Your Shell Profile (Permanent)
+#### Option B: Create a `.env` File (Recommended - More Secure)
 
-Add these lines to your `~/.zshrc` (or `~/.bash_profile` if using bash):
+**Why `.env` is better than shell profile:**
+- ✅ Project-specific (not system-wide)
+- ✅ Already in `.gitignore` (won't be committed)
+- ✅ Only loaded when working on this project
+- ✅ Less likely to be accidentally shared
 
-```bash
-# Supabase environment variables for LECRM
-export SUPABASE_URL="https://vtnaqheddlvnlcgwwssc.supabase.co"
-export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key-here"
-```
+**Setup:**
 
-Then reload your profile:
-```bash
-source ~/.zshrc
-```
+1. Create a `.env` file in your project root:
+   ```bash
+   cd /Users/joshua/LECRM
+   ```
 
-Or just restart your terminal.
+2. Add your credentials:
+   ```bash
+   SUPABASE_URL=https://vtnaqheddlvnlcgwwssc.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+   ```
 
-Now you can run the comparison script anytime:
-```bash
-npm run compare:estimates
-```
+3. The script will automatically load from `.env` if it exists
+
+4. Now you can run the comparison script anytime:
+   ```bash
+   npm run compare:estimates
+   ```
+
+**⚠️ Security Note:** The `.env` file is already in `.gitignore`, so it won't be committed to git. This is much safer than storing secrets in your shell profile (`~/.zshrc`), which:
+- Is visible to all processes on your system
+- Could be accidentally synced if you back up your dotfiles
+- Is accessible to anyone with access to your user account
 
 ---
 
