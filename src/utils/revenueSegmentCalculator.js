@@ -14,10 +14,11 @@
  */
 
 /**
- * Get the year(s) an estimate applies to and its annualized value for the current year
+ * Get the year an estimate applies to and its value for the current year
+ * For multi-year contracts, assign the full amount to the start year (not annualized)
  * @param {Object} estimate - Estimate object
  * @param {number} currentYear - Current year (e.g., 2024)
- * @returns {Object|null} - { appliesToCurrentYear: boolean, annualizedValue: number } or null if no valid date
+ * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -28,19 +29,19 @@ function getEstimateYearData(estimate, currentYear) {
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
+  // Assign full amount to the start year (e.g., Oct 1, 2024 to Sept 30, 2025 = 2024)
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
     const startYear = contractStart.getFullYear();
     const endYear = contractEnd.getFullYear();
-    const numberOfYears = endYear - startYear + 1;
     
-    if (numberOfYears <= 0) return null;
+    if (endYear < startYear) return null;
     
-    const annualizedValue = totalPrice / numberOfYears;
-    const appliesToCurrentYear = currentYear >= startYear && currentYear <= endYear;
+    // Full amount assigned to start year (not annualized)
+    const appliesToCurrentYear = currentYear === startYear;
     
     return {
       appliesToCurrentYear,
-      annualizedValue
+      value: totalPrice // Full amount, not annualized
     };
   }
   
@@ -51,7 +52,7 @@ function getEstimateYearData(estimate, currentYear) {
     
     return {
       appliesToCurrentYear,
-      annualizedValue: totalPrice
+      value: totalPrice
     };
   }
   
@@ -62,7 +63,7 @@ function getEstimateYearData(estimate, currentYear) {
     
     return {
       appliesToCurrentYear,
-      annualizedValue: totalPrice
+      value: totalPrice
     };
   }
   
@@ -93,7 +94,7 @@ export function calculateRevenueFromEstimates(estimates = []) {
     .reduce((sum, est) => {
       const yearData = getEstimateYearData(est, currentYear);
       if (!yearData) return sum;
-      return sum + (isNaN(yearData.annualizedValue) ? 0 : yearData.annualizedValue);
+      return sum + (isNaN(yearData.value) ? 0 : yearData.value);
     }, 0);
 }
 

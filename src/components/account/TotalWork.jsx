@@ -5,10 +5,11 @@ import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check } from 'lucide-re
 import toast from 'react-hot-toast';
 
 /**
- * Get the year(s) an estimate applies to and its annualized value for the current year
+ * Get the year an estimate applies to and its value for the current year
+ * For multi-year contracts, assign the full amount to the start year
  * @param {Object} estimate - Estimate object
  * @param {number} currentYear - Current year (e.g., 2024)
- * @returns {Object|null} - { appliesToCurrentYear: boolean, annualizedValue: number } or null if no valid date
+ * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number, determinationMethod: string } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -19,6 +20,7 @@ function getEstimateYearData(estimate, currentYear) {
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
+  // Assign full amount to the start year (e.g., Oct 1, 2024 to Sept 30, 2025 = 2024)
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
     const startYear = contractStart.getFullYear();
     const endYear = contractEnd.getFullYear();
@@ -26,12 +28,16 @@ function getEstimateYearData(estimate, currentYear) {
     
     if (numberOfYears <= 0) return null;
     
-    const annualizedValue = totalPrice / numberOfYears;
-    const appliesToCurrentYear = currentYear >= startYear && currentYear <= endYear;
+    // Full amount assigned to start year (not annualized)
+    const appliesToCurrentYear = currentYear === startYear;
+    const determinationMethod = numberOfYears > 1 
+      ? `Contract: ${startYear}-${endYear} (${numberOfYears} years, full amount to ${startYear})`
+      : `Contract Start: ${startYear}`;
     
     return {
       appliesToCurrentYear,
-      annualizedValue
+      value: totalPrice, // Full amount, not annualized
+      determinationMethod
     };
   }
   
@@ -42,7 +48,8 @@ function getEstimateYearData(estimate, currentYear) {
     
     return {
       appliesToCurrentYear,
-      annualizedValue: totalPrice
+      value: totalPrice,
+      determinationMethod: `Contract Start: ${startYear}`
     };
   }
   
@@ -53,7 +60,8 @@ function getEstimateYearData(estimate, currentYear) {
     
     return {
       appliesToCurrentYear,
-      annualizedValue: totalPrice
+      value: totalPrice,
+      determinationMethod: `Estimate Date: ${estimateYear}`
     };
   }
   
@@ -92,44 +100,31 @@ export default function TotalWork({ estimates = [] }) {
       const yearData = getEstimateYearData(est, currentYear);
       const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
       
-      let reason = '';
-      let determinationMethod = '';
-      
-      if (totalPrice === 0) {
-        reason = 'Total price is $0';
-        excluded.push({ estimate: est, reason, determinationMethod });
-        return;
-      }
-      
-      const contractStart = est.contract_start ? new Date(est.contract_start) : null;
-      const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
-      const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
-      
-      if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-        const startYear = contractStart.getFullYear();
-        const endYear = contractEnd.getFullYear();
-        determinationMethod = `Contract: ${startYear}-${endYear} (${endYear - startYear + 1} years)`;
-      } else if (contractStart && !isNaN(contractStart.getTime())) {
-        determinationMethod = `Contract Start: ${contractStart.getFullYear()}`;
-      } else if (estimateDate && !isNaN(estimateDate.getTime())) {
-        determinationMethod = `Estimate Date: ${estimateDate.getFullYear()}`;
-      } else {
-        reason = 'No valid date found (no contract_start, contract_end, or estimate_date)';
-        excluded.push({ estimate: est, reason, determinationMethod });
-        return;
-      }
-      
-      if (yearData && yearData.appliesToCurrentYear) {
-        included.push({
-          estimate: est,
-          totalPrice,
-          annualizedValue: yearData.annualizedValue,
-          determinationMethod
-        });
-      } else {
-        reason = `Does not apply to ${currentYear}`;
-        excluded.push({ estimate: est, reason, determinationMethod, totalPrice });
-      }
+        let reason = '';
+        
+        if (totalPrice === 0) {
+          reason = 'Total price is $0';
+          excluded.push({ estimate: est, reason, determinationMethod: '' });
+          return;
+        }
+        
+        if (!yearData) {
+          reason = 'No valid date found (no contract_start, contract_end, or estimate_date)';
+          excluded.push({ estimate: est, reason, determinationMethod: '', totalPrice });
+          return;
+        }
+        
+        if (yearData.appliesToCurrentYear) {
+          included.push({
+            estimate: est,
+            totalPrice,
+            value: yearData.value,
+            determinationMethod: yearData.determinationMethod
+          });
+        } else {
+          reason = `Does not apply to ${currentYear}`;
+          excluded.push({ estimate: est, reason, determinationMethod: yearData.determinationMethod, totalPrice });
+        }
     });
     
     return { included, excluded };
@@ -147,42 +142,29 @@ export default function TotalWork({ estimates = [] }) {
         const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
         
         let reason = '';
-        let determinationMethod = '';
         
         if (totalPrice === 0) {
           reason = 'Total price is $0';
-          excluded.push({ estimate: est, reason, determinationMethod });
+          excluded.push({ estimate: est, reason, determinationMethod: '' });
           return;
         }
         
-        const contractStart = est.contract_start ? new Date(est.contract_start) : null;
-        const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
-        const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
-        
-        if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-          const startYear = contractStart.getFullYear();
-          const endYear = contractEnd.getFullYear();
-          determinationMethod = `Contract: ${startYear}-${endYear} (${endYear - startYear + 1} years)`;
-        } else if (contractStart && !isNaN(contractStart.getTime())) {
-          determinationMethod = `Contract Start: ${contractStart.getFullYear()}`;
-        } else if (estimateDate && !isNaN(estimateDate.getTime())) {
-          determinationMethod = `Estimate Date: ${estimateDate.getFullYear()}`;
-        } else {
-          reason = 'No valid date found';
-          excluded.push({ estimate: est, reason, determinationMethod });
+        if (!yearData) {
+          reason = 'No valid date found (no contract_start, contract_end, or estimate_date)';
+          excluded.push({ estimate: est, reason, determinationMethod: '', totalPrice });
           return;
         }
         
-        if (yearData && yearData.appliesToCurrentYear) {
+        if (yearData.appliesToCurrentYear) {
           included.push({
             estimate: est,
             totalPrice,
-            annualizedValue: yearData.annualizedValue,
-            determinationMethod
+            value: yearData.value,
+            determinationMethod: yearData.determinationMethod
           });
         } else {
           reason = `Does not apply to ${currentYear}`;
-          excluded.push({ estimate: est, reason, determinationMethod, totalPrice });
+          excluded.push({ estimate: est, reason, determinationMethod: yearData.determinationMethod, totalPrice });
         }
       });
     
@@ -191,11 +173,11 @@ export default function TotalWork({ estimates = [] }) {
   
   // Calculate totals
   const totalEstimated = useMemo(() => {
-    return estimatedBreakdown.included.reduce((sum, item) => sum + item.annualizedValue, 0);
+    return estimatedBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [estimatedBreakdown]);
   
   const totalSold = useMemo(() => {
-    return soldBreakdown.included.reduce((sum, item) => sum + item.annualizedValue, 0);
+    return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [soldBreakdown]);
   
   // Calculate sold percentage
@@ -273,9 +255,7 @@ export default function TotalWork({ estimates = [] }) {
                       text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
                       text += `   Method: ${item.determinationMethod}\n`;
                       text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-                      if (item.annualizedValue !== item.totalPrice) {
-                        text += `   Annualized Value: $${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-                      }
+                      text += `   Value (assigned to ${currentYear}): $${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
                       text += `\n`;
                     });
                     
@@ -299,9 +279,7 @@ export default function TotalWork({ estimates = [] }) {
                       text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
                       text += `   Method: ${item.determinationMethod}\n`;
                       text += `   Total Price: $${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-                      if (item.annualizedValue !== item.totalPrice) {
-                        text += `   Annualized Value: $${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-                      }
+                      text += `   Value (assigned to ${currentYear}): $${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
                       text += `\n`;
                     });
                     
@@ -363,8 +341,8 @@ export default function TotalWork({ estimates = [] }) {
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
                                 <p className="text-slate-500 mt-0.5">
                                   Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  {item.annualizedValue !== item.totalPrice && (
-                                    <span> → Annualized: ${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  {item.value !== item.totalPrice && (
+                                    <span> → Value: ${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                   )}
                                 </p>
                               </div>
@@ -425,8 +403,8 @@ export default function TotalWork({ estimates = [] }) {
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
                                 <p className="text-slate-500 mt-0.5">
                                   Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  {item.annualizedValue !== item.totalPrice && (
-                                    <span> → Annualized: ${item.annualizedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  {item.value !== item.totalPrice && (
+                                    <span> → Value: ${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                   )}
                                 </p>
                               </div>

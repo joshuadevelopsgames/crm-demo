@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
   Upload,
   FileText,
@@ -710,10 +711,19 @@ export default function ImportLeadsDialog({ open, onClose }) {
           {importStatus === 'importing' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <RefreshCw className="w-12 h-12 text-emerald-600 animate-spin" />
-              <div className="text-center">
+              <div className="text-center w-full max-w-md">
                 <p className="text-lg font-semibold text-slate-900">Importing Data...</p>
                 <p className="text-sm text-slate-600 mt-2">{importProgress.currentStep}</p>
-                <p className="text-xs text-slate-500 mt-3">Please wait while we import your data</p>
+                <div className="mt-4 space-y-2">
+                  <Progress value={(importProgress.completedSteps / importProgress.totalSteps) * 100} className="w-full" />
+                  <p className="text-xs text-slate-500">
+                    Step {importProgress.completedSteps} of {importProgress.totalSteps}
+                  </p>
+                </div>
+                <p className="text-xs text-amber-600 mt-4 font-medium">
+                  ⏱️ This process typically takes approximately 10 minutes to complete
+                </p>
+                <p className="text-xs text-slate-500 mt-2">Please wait while we import your data</p>
               </div>
             </div>
           )}
@@ -1428,14 +1438,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   <p className="text-2xl font-bold text-emerald-600">{importResults.accountsCreated}</p>
                   <p className="text-xs text-slate-600 mt-1">Accounts Created</p>
                   {importResults.accountsUpdated > 0 && (
-                    <p className="text-xs text-blue-600 mt-1">+{importResults.accountsUpdated} Updated</p>
+                    <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.accountsUpdated} Updated</p>
                   )}
                 </div>
                 <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
                   <p className="text-2xl font-bold text-purple-600">{importResults.contactsCreated}</p>
                   <p className="text-xs text-slate-600 mt-1">Contacts Created</p>
                   {importResults.contactsUpdated > 0 && (
-                    <p className="text-xs text-blue-600 mt-1">+{importResults.contactsUpdated} Updated</p>
+                    <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.contactsUpdated} Updated</p>
                   )}
                 </div>
                 {(importResults.estimatesCreated > 0 || importResults.estimatesUpdated > 0) && (
@@ -1443,7 +1453,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                     <p className="text-2xl font-bold text-amber-600">{importResults.estimatesCreated}</p>
                     <p className="text-xs text-slate-600 mt-1">Estimates Created</p>
                     {importResults.estimatesUpdated > 0 && (
-                      <p className="text-xs text-blue-600 mt-1">+{importResults.estimatesUpdated} Updated</p>
+                      <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.estimatesUpdated} Updated</p>
                     )}
                   </div>
                 )}
@@ -1452,7 +1462,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                     <p className="text-2xl font-bold text-teal-600">{importResults.jobsitesCreated}</p>
                     <p className="text-xs text-slate-600 mt-1">Jobsites Created</p>
                     {importResults.jobsitesUpdated > 0 && (
-                      <p className="text-xs text-blue-600 mt-1">+{importResults.jobsitesUpdated} Updated</p>
+                      <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.jobsitesUpdated} Updated</p>
                     )}
                   </div>
                 )}
