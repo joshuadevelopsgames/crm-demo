@@ -1,15 +1,31 @@
 -- Test script to check if accounts can be inserted manually
 -- This will help identify if the issue is with the data or the table schema
 
--- First, check the accounts table schema
+-- First, check the accounts table schema - ESPECIALLY the id column
 SELECT 
   column_name,
   data_type,
   column_default,
-  is_nullable
+  is_nullable,
+  character_maximum_length
 FROM information_schema.columns
 WHERE table_name = 'accounts'
 ORDER BY ordinal_position;
+
+-- CRITICAL: Check if id column is text or uuid
+SELECT 
+  'ID Column Type Check' as check_type,
+  column_name,
+  data_type,
+  column_default,
+  CASE 
+    WHEN data_type = 'text' OR data_type = 'character varying' THEN '✅ CORRECT - Text type'
+    WHEN data_type = 'uuid' THEN '❌ WRONG - Still UUID, needs migration!'
+    ELSE '⚠️ UNEXPECTED TYPE: ' || data_type
+  END as status
+FROM information_schema.columns
+WHERE table_name = 'accounts'
+  AND column_name = 'id';
 
 -- Try inserting a test account with the format we expect from imports
 INSERT INTO accounts (
