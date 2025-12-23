@@ -143,10 +143,15 @@ export default function Permissions() {
         .order('email');
       
       if (error) {
-        console.error('Error fetching profiles:', error);
+        console.error('❌ Error fetching profiles:', error);
+        console.error('   - Error code:', error.code);
+        console.error('   - Error message:', error.message);
+        console.error('   - Error details:', error);
+        toast.error(`Failed to load users: ${error.message}`);
         return [];
       }
       
+      console.log(`✅ Loaded ${data?.length || 0} profiles from database`);
       return data || [];
     },
     enabled: isAdmin // Only fetch if user is admin
