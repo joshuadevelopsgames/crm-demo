@@ -76,8 +76,8 @@ function getEstimateYearData(estimate, currentYear) {
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   
-  // Use total_price (pre-tax) consistently, not total_price_with_tax
-  const totalPrice = parseFloat(estimate.total_price) || 0;
+  // Use total_price_with_tax consistently
+  const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
@@ -175,8 +175,8 @@ export default function TotalWork({ estimates = [] }) {
     
     estimates.forEach(est => {
       const yearData = getEstimateYearData(est, currentYear);
-      // Use total_price (pre-tax) consistently
-      const totalPrice = parseFloat(est.total_price) || 0;
+      // Use total_price_with_tax consistently
+      const totalPrice = parseFloat(est.total_price_with_tax) || 0;
       
         let reason = '';
         
@@ -217,8 +217,8 @@ export default function TotalWork({ estimates = [] }) {
       .filter(est => est.status === 'won')
       .forEach(est => {
         const yearData = getEstimateYearData(est, currentYear);
-        // Use total_price (pre-tax) consistently
-        const totalPrice = parseFloat(est.total_price) || 0;
+        // Use total_price_with_tax consistently
+        const totalPrice = parseFloat(est.total_price_with_tax) || 0;
         
         let reason = '';
         
