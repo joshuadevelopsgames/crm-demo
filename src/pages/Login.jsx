@@ -25,8 +25,18 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Login form submitted with email:', email);
       const supabase = getSupabaseAuth();
+      console.log('🔐 Supabase client:', supabase ? '✅ Found' : '❌ Not found');
+      console.log('🔐 Environment check:', {
+        hasUrl: !!import.meta.env.VITE_SUPABASE_URL,
+        hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+        url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
+        key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+      });
+      
       if (!supabase) {
+        console.warn('⚠️ Supabase not configured, falling back to demo mode');
         // Fallback to demo mode if Supabase not configured
         await new Promise(resolve => setTimeout(resolve, 500));
         localStorage.setItem('isAuthenticated', 'true');
@@ -42,18 +52,31 @@ export default function Login() {
       }
 
       // Sign in with email and password using Supabase
+      console.log('🔐 Attempting Supabase login with email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Login error:', error);
+        toast.error(error.message || 'Login failed. Please check your credentials.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('✅ Login successful:', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        session: !!data.session,
+        hasSession: !!data.session
+      });
 
       toast.success('Successfully logged in!');
       navigate('/dashboard');
     } catch (error) {
+      console.error('❌ Login exception:', error);
       toast.error(error.message || 'Login failed. Please check your credentials.');
-      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }

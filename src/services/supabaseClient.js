@@ -32,11 +32,25 @@ export function getSupabaseClient() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
+      console.log('🔧 Supabase client initialization:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseAnonKey,
+        urlLength: supabaseUrl?.length || 0,
+        keyLength: supabaseAnonKey?.length || 0,
+        urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
+        keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'missing'
+      });
+      
       if (!supabaseUrl || !supabaseAnonKey) {
-        console.warn('Supabase client-side keys not configured. Using API endpoints instead.');
+        console.warn('⚠️ Supabase client-side keys not configured. Using API endpoints instead.');
+        console.warn('⚠️ Missing:', {
+          url: !supabaseUrl,
+          key: !supabaseAnonKey
+        });
         return null;
       }
       
+      console.log('✅ Creating Supabase client with provided keys');
       supabaseClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           autoRefreshToken: true,
@@ -44,6 +58,7 @@ export function getSupabaseClient() {
           detectSessionInUrl: true
         }
       });
+      console.log('✅ Supabase client created successfully');
     }
     
     return supabaseClient;

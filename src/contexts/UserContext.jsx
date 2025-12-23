@@ -37,12 +37,15 @@ export function UserProvider({ children }) {
 
       // Fetch profile from profiles table
       if (supabase) {
+        console.log('📋 Fetching profile for user:', session.user.id, session.user.email);
         try {
           const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
+
+          console.log('📋 Profile fetch result:', { data, error: error?.message, errorCode: error?.code });
 
           if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
             console.error('Error fetching profile:', error);
@@ -52,14 +55,25 @@ export function UserProvider({ children }) {
           const isSystemAdmin = session.user.email === 'jrsschroeder@gmail.com';
           const defaultRole = isSystemAdmin ? 'admin' : 'user';
           
+          console.log('👤 User check:', { 
+            email: session.user.email, 
+            isSystemAdmin, 
+            defaultRole,
+            profileExists: !!data,
+            profileRole: data?.role
+          });
+          
           // If profile exists but role is missing/null, ensure System Admin gets admin role
           if (data) {
+            const finalRole = data.role || (isSystemAdmin ? 'admin' : 'user');
+            console.log('✅ Setting profile with role:', finalRole);
             setProfile({
               ...data,
-              role: data.role || (isSystemAdmin ? 'admin' : 'user')
+              role: finalRole
             });
           } else {
             // Profile doesn't exist in database - create it
+            console.log('🆕 Profile not found, creating new profile with role:', defaultRole);
             try {
               const { data: newProfile, error: insertError } = await supabase
                 .from('profiles')
@@ -72,15 +86,19 @@ export function UserProvider({ children }) {
                 .select()
                 .single();
               
+              console.log('🆕 Profile creation result:', { newProfile, insertError: insertError?.message });
+              
               if (insertError) {
-                console.error('Error creating profile:', insertError);
+                console.error('❌ Error creating profile:', insertError);
                 // Fallback: use in-memory profile
+                console.log('⚠️ Using in-memory profile fallback');
                 setProfile({
                   id: session.user.id,
                   email: session.user.email,
                   role: defaultRole
                 });
               } else {
+                console.log('✅ Profile created successfully:', newProfile);
                 setProfile(newProfile);
               }
             } catch (err) {
@@ -167,15 +185,16 @@ export function UserProvider({ children }) {
   const isAdmin = profile?.role === 'admin' || 
                   profile?.email === 'jrsschroeder@gmail.com';
 
-  // Debug logging (can be removed later)
-  if (profile?.email === 'jrsschroeder@gmail.com') {
-    console.log('🔍 System Admin Debug:', {
-      email: profile?.email,
-      role: profile?.role,
-      isAdmin,
-      profileExists: !!profile
-    });
-  }
+  // Debug logging for all users (can be removed later)
+  console.log('🔍 UserContext Debug:', {
+    hasSession: !!session,
+    userEmail: session?.user?.email,
+    hasProfile: !!profile,
+    profileEmail: profile?.email,
+    profileRole: profile?.role,
+    isAdmin,
+    supabaseConfigured: !!supabase
+  });
 
   const value = {
     user,
