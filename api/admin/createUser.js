@@ -66,15 +66,28 @@ export default async function handler(req, res) {
     console.log(`🔐 [${requestId}] Request URL:`, req.url);
     console.log(`🔐 [${requestId}] Request headers:`, JSON.stringify(req.headers, null, 2));
     console.log(`🔐 [${requestId}] Request body type:`, typeof req.body);
-    console.log(`🔐 [${requestId}] Request body:`, JSON.stringify(req.body, null, 2));
+    console.log(`🔐 [${requestId}] Request body raw:`, req.body);
     
     // Check if body is parsed - Vercel should auto-parse JSON, but let's handle it
     let body = req.body;
-    console.log(`🔐 [${requestId}] Step 1: Body parsing - type: ${typeof body}`);
+    console.log(`🔐 [${requestId}] Step 1: Body parsing - type: ${typeof body}, value:`, body);
+    
+    // If body is undefined or null, try to read from stream (Vercel edge case)
+    if (body === undefined || body === null) {
+      console.log(`⚠️ [${requestId}] Body is undefined/null, this shouldn't happen in Vercel`);
+      return res.status(400).json({
+        success: false,
+        error: 'Request body is missing',
+        requestId,
+        received: { type: typeof body, value: body }
+      });
+    }
     
     // If body is a string, try to parse it
     if (typeof body === 'string') {
       console.log(`🔐 [${requestId}] Body is string, attempting to parse JSON...`);
+      console.log(`🔐 [${requestId}] String length:`, body.length);
+      console.log(`🔐 [${requestId}] String content:`, body.substring(0, 200));
       try {
         body = JSON.parse(body);
         console.log(`✅ [${requestId}] Successfully parsed JSON body`);
@@ -90,18 +103,27 @@ export default async function handler(req, res) {
       }
     }
     
-    if (!body || typeof body !== 'object') {
+    // Check if body is an object (not array, not null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
       console.error(`❌ [${requestId}] Request body validation failed:`);
       console.error(`   - Body exists:`, !!body);
       console.error(`   - Body type:`, typeof body);
+      console.error(`   - Is array:`, Array.isArray(body));
       console.error(`   - Body value:`, body);
       return res.status(400).json({
         success: false,
         error: 'Request body is required and must be a JSON object',
         requestId,
-        received: { type: typeof body, exists: !!body }
+        received: { 
+          type: typeof body, 
+          exists: !!body,
+          isArray: Array.isArray(body),
+          value: body
+        }
       });
     }
+    
+    console.log(`🔐 [${requestId}] Request body (parsed):`, JSON.stringify(body, null, 2));
 
     console.log(`✅ [${requestId}] Step 2: Body validation passed`);
     
@@ -217,6 +239,119 @@ export default async function handler(req, res) {
         console.error(`   - Error message:`, authError.message);
         console.error(`   - Error status:`, authError.status);
         console.error(`   - Full error:`, JSON.stringify(authError, null, 2));
+        
+        // Check if user already exists - if so, try to create/update their profile
+        if (authError.message && authError.message.includes('already been registered')) {
+          console.log(`⚠️ [${requestId}] User already exists, attempting to find and create profile...`);
+          
+          // Try to find the user by email using admin API
+          const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
+          
+          if (listError) {
+            console.error(`❌ [${requestId}] Error listing users:`, listError);
+            return res.status(400).json({
+              success: false,
+              error: authError.message || 'Failed to create user',
+              requestId,
+              details: {
+                status: authError.status,
+                message: authError.message,
+                error: authError
+              }
+            });
+          }
+          
+          const existingUser = existingUsers.users.find(u => u.email === emailTrimmed);
+          
+          if (existingUser) {
+            console.log(`✅ [${requestId}] Found existing user:`, existingUser.id);
+            
+            // Check if profile exists
+            const { data: existingProfile, error: profileCheckError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', existingUser.id)
+              .single();
+            
+            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+              // PGRST116 is "not found" which is fine
+              console.error(`❌ [${requestId}] Error checking profile:`, profileCheckError);
+            }
+            
+            if (!existingProfile) {
+              console.log(`🔐 [${requestId}] Profile doesn't exist, creating it...`);
+              // Create the profile
+              const { data: newProfile, error: profileCreateError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: existingUser.id,
+                  email: existingUser.email,
+                  full_name: full_name?.trim() || '',
+                  role: role
+                })
+                .select()
+                .single();
+              
+              if (profileCreateError) {
+                console.error(`❌ [${requestId}] Error creating profile:`, profileCreateError);
+                return res.status(400).json({
+                  success: false,
+                  error: 'User exists but failed to create profile. Please contact support.',
+                  requestId,
+                  details: {
+                    authError: authError.message,
+                    profileError: profileCreateError.message
+                  }
+                });
+              }
+              
+              console.log(`✅ [${requestId}] Profile created for existing user`);
+              return res.status(200).json({
+                success: true,
+                message: 'User already existed, profile created successfully',
+                requestId,
+                data: {
+                  user: existingUser,
+                  profile: newProfile
+                }
+              });
+            } else {
+              // Profile exists, just update it
+              console.log(`🔐 [${requestId}] Profile exists, updating it...`);
+              const { data: updatedProfile, error: profileUpdateError } = await supabase
+                .from('profiles')
+                .update({
+                  full_name: full_name?.trim() || existingProfile.full_name || '',
+                  role: role
+                })
+                .eq('id', existingUser.id)
+                .select()
+                .single();
+              
+              if (profileUpdateError) {
+                console.error(`❌ [${requestId}] Error updating profile:`, profileUpdateError);
+                return res.status(400).json({
+                  success: false,
+                  error: 'User exists but failed to update profile',
+                  requestId
+                });
+              }
+              
+              console.log(`✅ [${requestId}] Profile updated for existing user`);
+              return res.status(200).json({
+                success: true,
+                message: 'User already existed, profile updated successfully',
+                requestId,
+                data: {
+                  user: existingUser,
+                  profile: updatedProfile
+                }
+              });
+            }
+          }
+        }
+        
+        // If it's not a "user exists" error, return the original error
         return res.status(400).json({
           success: false,
           error: authError.message || 'Failed to create user',
@@ -306,15 +441,24 @@ export default async function handler(req, res) {
     console.error(`   - Error message:`, error.message);
     console.error(`   - Error name:`, error.name);
     console.error(`   - Error stack:`, error.stack);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Internal server error',
-      requestId,
-      details: {
-        name: error.name,
-        message: error.message
-      }
-    });
+    console.error(`   - Full error:`, error);
+    
+    // Make sure we always return a valid JSON response
+    try {
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Internal server error',
+        requestId,
+        details: {
+          name: error.name,
+          message: error.message
+        }
+      });
+    } catch (responseError) {
+      // If we can't send JSON, at least log it
+      console.error(`❌ [${requestId}] Failed to send error response:`, responseError);
+      return res.status(500).end('Internal server error');
+    }
   }
 }
 
