@@ -23,7 +23,7 @@ INSERT INTO profiles (id, email, full_name, role)
 SELECT 
   id,
   email,
-  COALESCE(full_name, 'System Admin'),
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', 'System Admin'),
   'admin'
 FROM auth.users
 WHERE email = 'jrsschroeder@gmail.com'

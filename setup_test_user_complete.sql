@@ -19,12 +19,13 @@ INSERT INTO profiles (id, email, full_name, role)
 SELECT 
   id,
   email,
-  COALESCE(full_name, 'System Admin'),
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', 'System Admin'),
   'admin'
 FROM auth.users
 WHERE email = 'jrsschroeder@gmail.com'
 ON CONFLICT (id) DO UPDATE
-SET role = 'admin', email = 'jrsschroeder@gmail.com', full_name = COALESCE(profiles.full_name, 'System Admin');
+SET role = 'admin', email = 'jrsschroeder@gmail.com', 
+    full_name = COALESCE(profiles.full_name, EXCLUDED.full_name, 'System Admin');
 
 -- Step 3: Verify the user was set up correctly
 SELECT 
