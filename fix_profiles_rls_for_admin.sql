@@ -5,6 +5,8 @@
 -- Drop the existing restrictive policies
 DROP POLICY IF EXISTS profiles_select_own ON profiles;
 DROP POLICY IF EXISTS profiles_update_own ON profiles;
+DROP POLICY IF EXISTS profiles_select_all_authenticated ON profiles;
+DROP POLICY IF EXISTS profiles_update_all_authenticated ON profiles;
 
 -- Option 1: Allow all authenticated users to read all profiles
 -- This is simpler and works well for internal/admin tools

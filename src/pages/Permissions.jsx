@@ -647,7 +647,7 @@ export default function Permissions() {
                                   onCheckedChange={(checked) => {
                                     handlePermissionToggle(perm.id, checked);
                                   }}
-                                  disabled={selectedUser.role === 'system_admin' && !isSystemAdmin}
+                                  disabled={false}
                                 />
                               </div>
                             </div>
@@ -727,7 +727,7 @@ export default function Permissions() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin (System Admin)</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-500">
