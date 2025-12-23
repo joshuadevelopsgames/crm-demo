@@ -48,10 +48,12 @@ export function UserProvider({ children }) {
             console.error('Error fetching profile:', error);
           }
 
+          // If profile doesn't exist, check if it's the System Admin email
+          const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'admin' : 'user';
           setProfile(data || {
             id: session.user.id,
             email: session.user.email,
-            role: 'user' // Default role
+            role: defaultRole // Default role (admin for System Admin, user for others)
           });
         } catch (error) {
           console.error('Error fetching profile:', error);
