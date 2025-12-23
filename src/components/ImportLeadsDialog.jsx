@@ -88,8 +88,8 @@ export default function ImportLeadsDialog({ open, onClose }) {
   // State for manually linking orphaned jobsites
   const [orphanedJobsiteLinks, setOrphanedJobsiteLinks] = useState({});
 
-  // Convert XLSX file to CSV text
-  const convertXlsxToCsv = (file) => {
+  // Convert XLSX file to array of arrays (same format as parser expects)
+  const convertXlsxToRows = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -98,8 +98,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const csvText = XLSX.utils.sheet_to_csv(worksheet);
-          resolve(csvText);
+          // Convert to array of arrays (header: 1 means first row is headers)
+          // This matches the format that parsers expect
+          const rows = XLSX.utils.sheet_to_json(worksheet, { 
+            header: 1, 
+            defval: '',
+            raw: false // Convert dates/numbers to strings
+          });
+          resolve(rows);
         } catch (err) {
           reject(err);
         }
@@ -109,29 +115,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
     });
   };
 
-  // Process Contacts Export file (CSV or XLSX)
+  // Process Contacts Export file (XLSX only)
   const processContactsFile = async (file) => {
     if (!file) return;
     
-    // Check file type
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    
     try {
-      let csvText;
-      
-      if (isXlsx) {
-        csvText = await convertXlsxToCsv(file);
-      } else {
-        // Read CSV file as text
-        csvText = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsText(file);
-        });
-      }
-      
-      const parsed = parseContactsExport(csvText);
+      // Parse XLSX directly to array of arrays
+      const data = await convertXlsxToRows(file);
+      const parsed = parseContactsExport(data);
       
       if (parsed.stats.error) {
         setError(`Contacts Export: ${parsed.stats.error}`);
@@ -148,29 +139,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }
   };
 
-  // Process Leads List file (CSV or XLSX)
+  // Process Leads List file (XLSX only)
   const processLeadsFile = async (file) => {
     if (!file) return;
     
-    // Check file type
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    
     try {
-      let csvText;
-      
-      if (isXlsx) {
-        csvText = await convertXlsxToCsv(file);
-      } else {
-        // Read CSV file as text
-        csvText = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsText(file);
-        });
-      }
-      
-      const parsed = parseLeadsList(csvText);
+      // Parse XLSX directly to array of arrays
+      const data = await convertXlsxToRows(file);
+      const parsed = parseLeadsList(data);
       
       if (parsed.stats.error) {
         setError(`Leads List: ${parsed.stats.error}`);
@@ -187,27 +163,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }
   };
 
-  // Process Estimates List file (CSV or XLSX)
+  // Process Estimates List file (XLSX only)
   const processEstimatesFile = async (file) => {
     if (!file) return;
     
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    
     try {
-      let csvText;
-      
-      if (isXlsx) {
-        csvText = await convertXlsxToCsv(file);
-      } else {
-        csvText = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsText(file);
-        });
-      }
-      
-      const parsed = parseEstimatesList(csvText);
+      // Parse XLSX directly to array of arrays
+      const data = await convertXlsxToRows(file);
+      const parsed = parseEstimatesList(data);
       
       if (parsed.stats.error) {
         setError(`Estimates List: ${parsed.stats.error}`);
@@ -224,27 +187,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }
   };
 
-  // Process Jobsite Export file (CSV or XLSX)
+  // Process Jobsite Export file (XLSX only)
   const processJobsitesFile = async (file) => {
     if (!file) return;
     
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    
     try {
-      let csvText;
-      
-      if (isXlsx) {
-        csvText = await convertXlsxToCsv(file);
-      } else {
-        csvText = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsText(file);
-        });
-      }
-      
-      const parsed = parseJobsiteExport(csvText);
+      // Parse XLSX directly to array of arrays
+      const data = await convertXlsxToRows(file);
+      const parsed = parseJobsiteExport(data);
       
       if (parsed.stats.error) {
         setError(`Jobsite Export: ${parsed.stats.error}`);
@@ -370,9 +320,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
     setContactsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
       if (!isValidFile) {
-        setError('Please upload a CSV or XLSX file');
+        setError('Please upload an XLSX file');
         return;
       }
       processContactsFile(file);
@@ -398,9 +348,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
     setLeadsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
       if (!isValidFile) {
-        setError('Please upload a CSV or XLSX file');
+        setError('Please upload an XLSX file');
         return;
       }
       processLeadsFile(file);
@@ -426,9 +376,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
     setEstimatesDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
       if (!isValidFile) {
-        setError('Please upload a CSV or XLSX file');
+        setError('Please upload an XLSX file');
         return;
       }
       processEstimatesFile(file);
@@ -454,9 +404,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
     setJobsitesDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
       if (!isValidFile) {
-        setError('Please upload a CSV or XLSX file');
+        setError('Please upload an XLSX file');
         return;
       }
       processJobsitesFile(file);
@@ -776,14 +726,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">Required files (CSV or XLSX):</p>
+                    <p className="font-semibold mb-1">Required files (XLSX):</p>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li><strong>Contacts Export</strong> - Has CRM IDs, Contact IDs, Tags, Archived status</li>
                       <li><strong>Leads List</strong> - Has Position, Do Not Email/Mail/Call preferences</li>
                       <li><strong>Estimates List</strong> - Has Estimate IDs, Dates, Status, Pricing (required)</li>
                       <li><strong>Jobsite Export</strong> - Has Jobsite IDs, Addresses, Contact links (required)</li>
                     </ol>
-                    <p className="mt-2">All four files are required. Estimates and Jobsites are needed to calculate revenue and account scores. Both CSV and XLSX formats are supported.</p>
+                    <p className="mt-2">All four files are required. Estimates and Jobsites are needed to calculate revenue and account scores. XLSX format is required.</p>
                   </div>
                 </div>
               </Card>
@@ -840,13 +790,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+                              const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
                               if (!isValidFile) {
-                                setError('Please upload a CSV or XLSX file');
+                                setError('Please upload an XLSX file');
                                 return;
                               }
                               processContactsFile(file);
@@ -862,7 +812,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </label>
                         </Button>
                         <p className="text-xs text-slate-500 mt-2">
-                          CSV or XLSX format
+                          XLSX format
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
                           Has: CRM ID, Contact ID, Tags, Archived
@@ -922,13 +872,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+                              const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
                               if (!isValidFile) {
-                                setError('Please upload a CSV or XLSX file');
+                                setError('Please upload an XLSX file');
                                 return;
                               }
                               processLeadsFile(file);
@@ -944,7 +894,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </label>
                         </Button>
                         <p className="text-xs text-slate-500 mt-2">
-                          CSV or XLSX format
+                          XLSX format
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
                           Has: Position, Do Not Email/Mail/Call
@@ -1006,13 +956,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+                              const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
                               if (!isValidFile) {
-                                setError('Please upload a CSV or XLSX file');
+                                setError('Please upload an XLSX file');
                                 return;
                               }
                               processEstimatesFile(file);
@@ -1028,7 +978,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </label>
                         </Button>
                         <p className="text-xs text-slate-500 mt-2">
-                          CSV or XLSX format
+                          XLSX format
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
                           Has: Estimate ID, Date, Status, Pricing
@@ -1090,13 +1040,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              const isValidFile = file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+                              const isValidFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
                               if (!isValidFile) {
-                                setError('Please upload a CSV or XLSX file');
+                                setError('Please upload an XLSX file');
                                 return;
                               }
                               processJobsitesFile(file);
@@ -1112,7 +1062,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </label>
                         </Button>
                         <p className="text-xs text-slate-500 mt-2">
-                          CSV or XLSX format
+                          XLSX format
                         </p>
                         <p className="text-xs text-slate-400 mt-1">
                           Has: Jobsite ID, Address, Contact links
@@ -1392,6 +1342,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                                         <SelectItem value="__unlink__">None (Leave unlinked)</SelectItem>
                                         {accounts
                                           .filter(acc => !acc.archived && acc.status !== 'archived')
+                                          .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                                           .map(account => (
                                             <SelectItem key={account.id} value={account.id}>
                                               {account.name}

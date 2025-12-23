@@ -6,12 +6,17 @@
 import { parseCSV } from './csvParser';
 
 /**
- * Parse Leads List CSV
+ * Parse Leads List CSV/XLSX
+ * Accepts either CSV text string or array of arrays (from XLSX)
  * Returns: { contactsData: [], stats: {} }
  */
-export function parseLeadsList(csvText) {
+export function parseLeadsList(csvTextOrRows) {
   try {
-    const rows = parseCSV(csvText);
+    // If it's already an array of arrays (from XLSX), use it directly
+    // Otherwise, parse CSV text
+    const rows = Array.isArray(csvTextOrRows) && Array.isArray(csvTextOrRows[0])
+      ? csvTextOrRows
+      : parseCSV(csvTextOrRows);
     
     if (!rows || rows.length < 2) {
       return { contactsData: [], stats: { error: 'Empty or invalid CSV' } };

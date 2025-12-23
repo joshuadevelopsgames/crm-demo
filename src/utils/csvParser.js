@@ -8,6 +8,23 @@
  * Handles quoted fields with commas properly
  * Returns array of arrays (not objects) for better compatibility
  */
+/**
+ * Detect delimiter (tab vs comma) by analyzing first line
+ */
+function detectDelimiter(firstLine) {
+  if (!firstLine || typeof firstLine !== 'string') return ',';
+  
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  
+  // If tabs significantly outnumber commas, use tabs
+  // Otherwise default to comma (safer for existing files)
+  if (tabCount > commaCount * 1.5) {
+    return '\t';
+  }
+  return ',';
+}
+
 export function parseCSV(csvText) {
   if (!csvText || typeof csvText !== 'string') {
     console.error('Invalid CSV text provided');
@@ -17,19 +34,33 @@ export function parseCSV(csvText) {
   const lines = csvText.split('\n');
   if (lines.length < 1) return [];
 
+  // Detect delimiter from first non-empty line
+  const firstLine = lines.find(line => line.trim());
+  const delimiter = firstLine ? detectDelimiter(firstLine) : ',';
+
   const rows = [];
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
-    const values = parseCSVLine(line);
+    // Use appropriate parser based on delimiter
+    const values = delimiter === '\t' 
+      ? parseTSVLine(line)
+      : parseCSVLine(line);
     if (values.length === 0) continue;
     
     rows.push(values);
   }
   
   return rows;
+}
+
+/**
+ * Parse a TSV (tab-separated) line
+ */
+function parseTSVLine(line) {
+  return line.split('\t').map(val => val.trim());
 }
 
 /**

@@ -5,11 +5,16 @@
 
 /**
  * Parse Jobsite Export CSV/XLSX data
+ * Accepts either CSV text string or array of arrays (from XLSX)
  * Returns: { jobsites: [], stats: {} }
  */
-export function parseJobsiteExport(csvText) {
+export function parseJobsiteExport(csvTextOrRows) {
   try {
-    const rows = parseCSV(csvText);
+    // If it's already an array of arrays (from XLSX), use it directly
+    // Otherwise, parse CSV text
+    const rows = Array.isArray(csvTextOrRows) && Array.isArray(csvTextOrRows[0])
+      ? csvTextOrRows
+      : parseCSV(csvTextOrRows);
     
     if (!rows || rows.length < 2) {
       return { jobsites: [], stats: { error: 'Empty or invalid file' } };
@@ -93,6 +98,23 @@ export function parseJobsiteExport(csvText) {
 }
 
 /**
+ * Detect delimiter (tab vs comma) by analyzing first line
+ */
+function detectDelimiter(firstLine) {
+  if (!firstLine || typeof firstLine !== 'string') return ',';
+  
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  
+  // If tabs significantly outnumber commas, use tabs
+  // Otherwise default to comma (safer for existing files)
+  if (tabCount > commaCount * 1.5) {
+    return '\t';
+  }
+  return ',';
+}
+
+/**
  * Parse CSV text into array of arrays
  */
 function parseCSV(csvText) {
@@ -103,16 +125,30 @@ function parseCSV(csvText) {
   const lines = csvText.split('\n');
   if (lines.length < 1) return [];
 
+  // Detect delimiter from first non-empty line
+  const firstLine = lines.find(line => line.trim());
+  const delimiter = firstLine ? detectDelimiter(firstLine) : ',';
+
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
-    const values = parseCSVLine(line);
+    // Use appropriate parser based on delimiter
+    const values = delimiter === '\t' 
+      ? parseTSVLine(line)
+      : parseCSVLine(line);
     if (values.length === 0) continue;
     rows.push(values);
   }
   return rows;
+}
+
+/**
+ * Parse a TSV (tab-separated) line
+ */
+function parseTSVLine(line) {
+  return line.split('\t').map(val => val.trim());
 }
 
 /**

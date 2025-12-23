@@ -6,12 +6,17 @@
 import { parseCSV } from './csvParser';
 
 /**
- * Parse Contacts Export CSV
+ * Parse Contacts Export CSV/XLSX
+ * Accepts either CSV text string or array of arrays (from XLSX)
  * Returns: { accounts: Map, contacts: [], stats: {} }
  */
-export function parseContactsExport(csvText) {
+export function parseContactsExport(csvTextOrRows) {
   try {
-    const rows = parseCSV(csvText);
+    // If it's already an array of arrays (from XLSX), use it directly
+    // Otherwise, parse CSV text
+    const rows = Array.isArray(csvTextOrRows) && Array.isArray(csvTextOrRows[0])
+      ? csvTextOrRows
+      : parseCSV(csvTextOrRows);
     
     if (!rows || rows.length < 2) {
       return { accounts: new Map(), contacts: [], stats: { error: 'Empty or invalid CSV' } };
