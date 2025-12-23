@@ -6,7 +6,9 @@ import toast from 'react-hot-toast';
 
 /**
  * Calculate contract duration in months between two dates
- * Example: 2024-10-01 → 2025-09-30 counts as ≤ 12 months
+ * For exactly 12-month contracts (same day, one year apart), returns 12, not 13
+ * Example: Apr 15, 2025 → Apr 15, 2026 = 12 months (1 year)
+ * Example: Oct 1, 2024 → Sept 30, 2025 = 12 months (1 year)
  * @param {Date} startDate - Contract start date
  * @param {Date} endDate - Contract end date
  * @returns {number} - Duration in months
@@ -23,14 +25,19 @@ function calculateDurationMonths(startDate, endDate) {
   // Total months = years * 12 + months
   let totalMonths = yearDiff * 12 + monthDiff;
   
-  // If the end date is on or after the start day of the month, count that month
-  // Example: Oct 1, 2024 to Sept 30, 2025:
+  // Only add 1 month if the end date is AFTER the start day (not same day)
+  // This prevents exact 12-month contracts from being counted as 13 months
+  // Example: Apr 15, 2025 → Apr 15, 2026:
+  //   yearDiff = 1, monthDiff = 0, dayDiff = 0
+  //   totalMonths = 12 + 0 = 12 (correct, not 13)
+  // Example: Oct 1, 2024 → Sept 30, 2025:
   //   yearDiff = 1, monthDiff = -1, dayDiff = 29
   //   totalMonths = 12 + (-1) = 11
-  //   Since dayDiff >= 0, add 1 → 12 months
-  if (dayDiff >= 0) {
-    totalMonths += 1; // Include the end month
+  //   Since dayDiff > 0 (not same day), add 1 → 12 months (correct)
+  if (dayDiff > 0) {
+    totalMonths += 1; // Include the end month only if end day is after start day
   }
+  // If dayDiff === 0 (same day), don't add 1 - it's exactly N*12 months
   
   return totalMonths;
 }
@@ -69,7 +76,8 @@ function getEstimateYearData(estimate, currentYear) {
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   
-  const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
+  // Use total_price (pre-tax) consistently, not total_price_with_tax
+  const totalPrice = parseFloat(estimate.total_price) || 0;
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
@@ -167,7 +175,8 @@ export default function TotalWork({ estimates = [] }) {
     
     estimates.forEach(est => {
       const yearData = getEstimateYearData(est, currentYear);
-      const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+      // Use total_price (pre-tax) consistently
+      const totalPrice = parseFloat(est.total_price) || 0;
       
         let reason = '';
         
@@ -208,7 +217,8 @@ export default function TotalWork({ estimates = [] }) {
       .filter(est => est.status === 'won')
       .forEach(est => {
         const yearData = getEstimateYearData(est, currentYear);
-        const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+        // Use total_price (pre-tax) consistently
+        const totalPrice = parseFloat(est.total_price) || 0;
         
         let reason = '';
         

@@ -1,0 +1,1699 @@
+{
+  "account": "Triovest Realty Advisors Ltd",
+  "currentYear": 2025,
+  "estimated": {
+    "total": 788104.3000000003,
+    "included": [
+      {
+        "id": "EST5562797",
+        "totalPrice": 151491.69,
+        "value": 151491.69,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5562364",
+        "totalPrice": 142877.8,
+        "value": 142877.8,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST2949022",
+        "totalPrice": 108455.42,
+        "value": 108455.42,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5567905",
+        "totalPrice": 68154.94,
+        "value": 68154.94,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST2949003",
+        "totalPrice": 43997.7,
+        "value": 43997.7,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5457122",
+        "totalPrice": 31078.04,
+        "value": 31078.04,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5482169",
+        "totalPrice": 26600.58,
+        "value": 26600.58,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3015636",
+        "totalPrice": 52995.21,
+        "value": 26497.605,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST2948972",
+        "totalPrice": 21912.2,
+        "value": 21912.2,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3270794",
+        "totalPrice": 17395.25,
+        "value": 17395.25,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3299572",
+        "totalPrice": 17340.32,
+        "value": 17340.32,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5436938",
+        "totalPrice": 16274.26,
+        "value": 16274.26,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5560678",
+        "totalPrice": 15863.26,
+        "value": 15863.26,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3270334",
+        "totalPrice": 13860,
+        "value": 13860,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5206145",
+        "totalPrice": 8958.58,
+        "value": 8958.58,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3270368",
+        "totalPrice": 8955,
+        "value": 8955,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5367065",
+        "totalPrice": 8304.88,
+        "value": 8304.88,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3015813",
+        "totalPrice": 9608.02,
+        "value": 4804.01,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST3015462",
+        "totalPrice": 8942.21,
+        "value": 4471.105,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST5814054",
+        "totalPrice": 4274.13,
+        "value": 4274.13,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5333954",
+        "totalPrice": 4252.5,
+        "value": 4252.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5263149",
+        "totalPrice": 4252.5,
+        "value": 4252.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3270381",
+        "totalPrice": 3727.5,
+        "value": 3727.5,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5456796",
+        "totalPrice": 3256.18,
+        "value": 3256.18,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5450635",
+        "totalPrice": 2939.92,
+        "value": 2939.92,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5599711",
+        "totalPrice": 2717.04,
+        "value": 2717.04,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5838658",
+        "totalPrice": 2691.79,
+        "value": 2691.79,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5432422",
+        "totalPrice": 2442.59,
+        "value": 2442.59,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5507681",
+        "totalPrice": 2317.42,
+        "value": 2317.42,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST3015715",
+        "totalPrice": 3405.52,
+        "value": 1702.76,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST5432414",
+        "totalPrice": 1114.46,
+        "value": 1114.46,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5575757",
+        "totalPrice": 1059.23,
+        "value": 1059.23,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334084",
+        "totalPrice": 704.55,
+        "value": 704.55,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334122",
+        "totalPrice": 699.32,
+        "value": 699.32,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5770259",
+        "totalPrice": 684.45,
+        "value": 684.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5492918",
+        "totalPrice": 682.5,
+        "value": 682.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5669679",
+        "totalPrice": 664.27,
+        "value": 664.27,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5770273",
+        "totalPrice": 638.57,
+        "value": 638.57,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5552200",
+        "totalPrice": 616.27,
+        "value": 616.27,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5255410",
+        "totalPrice": 472.5,
+        "value": 472.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5669644",
+        "totalPrice": 442.85,
+        "value": 442.85,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5649036",
+        "totalPrice": 442.85,
+        "value": 442.85,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5450865",
+        "totalPrice": 442.85,
+        "value": 442.85,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334226",
+        "totalPrice": 430.5,
+        "value": 430.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5609396",
+        "totalPrice": 422.49,
+        "value": 422.49,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5455650",
+        "totalPrice": 421.94,
+        "value": 421.94,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5255379",
+        "totalPrice": 404.25,
+        "value": 404.25,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850874",
+        "totalPrice": 367.5,
+        "value": 367.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334250",
+        "totalPrice": 341.26,
+        "value": 341.26,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334273",
+        "totalPrice": 315.03,
+        "value": 315.03,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5492965",
+        "totalPrice": 315,
+        "value": 315,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850859",
+        "totalPrice": 315,
+        "value": 315,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850908",
+        "totalPrice": 315,
+        "value": 315,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850941",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850958",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850652",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850683",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850702",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850726",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5554724",
+        "totalPrice": 221.42,
+        "value": 221.42,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5554750",
+        "totalPrice": 221.42,
+        "value": 221.42,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334039",
+        "totalPrice": 217.14,
+        "value": 217.14,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850755",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850780",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850796",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5497919",
+        "totalPrice": 179.81,
+        "value": 179.81,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334065",
+        "totalPrice": 177.45,
+        "value": 177.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334212",
+        "totalPrice": 177.45,
+        "value": 177.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850973",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850994",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850847",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850892",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850929",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      }
+    ],
+    "excluded": [
+      {
+        "id": "EST3277347",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 18454.62
+      },
+      {
+        "id": "EST3307351",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 18352.81
+      },
+      {
+        "id": "EST3017129",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 10193.16
+      },
+      {
+        "id": "EST3015786",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3612.92
+      },
+      {
+        "id": "EST3015579",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9486.79
+      },
+      {
+        "id": "EST3015670",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 56222.62
+      },
+      {
+        "id": "EST3277343",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17917.11
+      },
+      {
+        "id": "EST3015527",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9210.48
+      },
+      {
+        "id": "EST3015782",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3507.69
+      },
+      {
+        "id": "EST3017119",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9896.27
+      },
+      {
+        "id": "EST3015659",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 54585.07
+      },
+      {
+        "id": "EST3307342",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17839.27
+      },
+      {
+        "id": "EST2949024",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 111707.79
+      },
+      {
+        "id": "EST2948973",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 22657.62
+      },
+      {
+        "id": "EST2949012",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 44968.98
+      },
+      {
+        "id": "EST2765325",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 24027.76
+      },
+      {
+        "id": "EST2740619",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 14767.78
+      },
+      {
+        "id": "EST2740592",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17398.85
+      },
+      {
+        "id": "EST2708000",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6617.95
+      },
+      {
+        "id": "EST2657640",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 10832.2
+      },
+      {
+        "id": "EST2563469",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1247.4
+      },
+      {
+        "id": "EST2563449",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2037
+      },
+      {
+        "id": "EST2948962",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 21274.33
+      },
+      {
+        "id": "EST2948996",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 42417.45
+      },
+      {
+        "id": "EST2949019",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 105296.67
+      },
+      {
+        "id": "EST1507807",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1050
+      },
+      {
+        "id": "EST1443721",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4614.76
+      },
+      {
+        "id": "EST1245129",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 12967.51
+      },
+      {
+        "id": "EST1245203",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 12757.5
+      },
+      {
+        "id": "EST1245226",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5040
+      },
+      {
+        "id": "EST1245244",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 165689.82
+      },
+      {
+        "id": "EST1232536",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 57225.09
+      },
+      {
+        "id": "EST1067347",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 34644.69
+      },
+      {
+        "id": "EST1035053",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 441734.4
+      },
+      {
+        "id": "EST1034106",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 21315
+      },
+      {
+        "id": "EST990266",
+        "reason": "Total price is $0",
+        "totalPrice": 0
+      },
+      {
+        "id": "EST978802",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5386.51
+      },
+      {
+        "id": "EST877410",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 64197.18
+      },
+      {
+        "id": "EST5333992",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4252.5
+      },
+      {
+        "id": "EST4133131",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 168.12
+      },
+      {
+        "id": "EST4095238",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 718.67
+      },
+      {
+        "id": "EST4006792",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4936.33
+      },
+      {
+        "id": "EST3987775",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 323.31
+      },
+      {
+        "id": "EST3987696",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1207.42
+      },
+      {
+        "id": "EST3980789",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5408.39
+      },
+      {
+        "id": "EST2370687",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 8958.57
+      },
+      {
+        "id": "EST2343621",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 865.24
+      },
+      {
+        "id": "EST2280329",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6267.3
+      },
+      {
+        "id": "EST2280383",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2733.19
+      },
+      {
+        "id": "EST2270380",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1794.8
+      },
+      {
+        "id": "EST2256372",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4836.2
+      },
+      {
+        "id": "EST2256395",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4836.2
+      },
+      {
+        "id": "EST2253970",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3092.19
+      },
+      {
+        "id": "EST2253979",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2010.34
+      },
+      {
+        "id": "EST2253985",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2010.34
+      },
+      {
+        "id": "EST2253988",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3281.44
+      },
+      {
+        "id": "EST2253096",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2132.23
+      },
+      {
+        "id": "EST2228582",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3055.74
+      },
+      {
+        "id": "EST5566837",
+        "reason": "Total price is $0",
+        "totalPrice": 0
+      },
+      {
+        "id": "EST5068685",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1046.85
+      },
+      {
+        "id": "EST5060542",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 14476.14
+      },
+      {
+        "id": "EST5060532",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9236.01
+      },
+      {
+        "id": "EST5019068",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5910.48
+      },
+      {
+        "id": "EST4949568",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 580.31
+      },
+      {
+        "id": "EST4945526",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1550.76
+      },
+      {
+        "id": "EST4945545",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1605.44
+      },
+      {
+        "id": "EST4945561",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1988.19
+      },
+      {
+        "id": "EST4933604",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 323.31
+      },
+      {
+        "id": "EST4924407",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 795.88
+      },
+      {
+        "id": "EST4874130",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2313.26
+      },
+      {
+        "id": "EST4872766",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 258.02
+      },
+      {
+        "id": "EST4866677",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6370.8
+      },
+      {
+        "id": "EST4864607",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1362.57
+      },
+      {
+        "id": "EST4746040",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 357.02
+      },
+      {
+        "id": "EST4810880",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1806.49
+      },
+      {
+        "id": "EST4791445",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 674.1
+      },
+      {
+        "id": "EST4780464",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 898.34
+      },
+      {
+        "id": "EST4771606",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5591.19
+      },
+      {
+        "id": "EST4701939",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 7800.91
+      },
+      {
+        "id": "EST4582281",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 755.31
+      },
+      {
+        "id": "EST4569623",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 447.3
+      },
+      {
+        "id": "EST4563770",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 292.78
+      },
+      {
+        "id": "EST4563801",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 222.39
+      },
+      {
+        "id": "EST4563815",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 292.78
+      },
+      {
+        "id": "EST4559399",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2082.5
+      },
+      {
+        "id": "EST4559790",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 641.67
+      },
+      {
+        "id": "EST4492511",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2136.75
+      },
+      {
+        "id": "EST4485661",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5120.85
+      },
+      {
+        "id": "EST4485831",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5182.45
+      },
+      {
+        "id": "EST4486019",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3742.65
+      },
+      {
+        "id": "EST4471154",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3259.69
+      },
+      {
+        "id": "EST4471232",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3290.47
+      },
+      {
+        "id": "EST3296428",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 466.28
+      },
+      {
+        "id": "EST3249522",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1100.4
+      },
+      {
+        "id": "EST3178923",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2191.14
+      },
+      {
+        "id": "EST2955435",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2019.82
+      },
+      {
+        "id": "EST2953934",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1789.2
+      },
+      {
+        "id": "EST2150881",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2102.07
+      },
+      {
+        "id": "EST2831249",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 31816.01
+      },
+      {
+        "id": "EST2822039",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1905.75
+      },
+      {
+        "id": "EST2796767",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1260.59
+      },
+      {
+        "id": "EST2780925",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4192.58
+      },
+      {
+        "id": "EST2780912",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6063.17
+      },
+      {
+        "id": "EST2732303",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 47200.85
+      },
+      {
+        "id": "EST2713358",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6523.62
+      },
+      {
+        "id": "EST2680629",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 421.58
+      },
+      {
+        "id": "EST2680683",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3755.64
+      },
+      {
+        "id": "EST2613613",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1155.53
+      },
+      {
+        "id": "EST2598192",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3033.33
+      },
+      {
+        "id": "EST2598051",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 8605.69
+      },
+      {
+        "id": "EST2580233",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 892.5
+      },
+      {
+        "id": "EST2542915",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5546.25
+      },
+      {
+        "id": "EST2520236",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5273.44
+      },
+      {
+        "id": "EST2520244",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5941.4
+      },
+      {
+        "id": "EST2520282",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2531.25
+      },
+      {
+        "id": "EST2518710",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4587.89
+      },
+      {
+        "id": "EST2518569",
+        "reason": "Total price is $0",
+        "totalPrice": 0
+      },
+      {
+        "id": "EST2500294",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 573.07
+      },
+      {
+        "id": "EST2500797",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 573.07
+      },
+      {
+        "id": "EST2500814",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 405.52
+      },
+      {
+        "id": "EST2488403",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2639.75
+      },
+      {
+        "id": "EST2488530",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4725
+      },
+      {
+        "id": "EST2488623",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1905.75
+      },
+      {
+        "id": "EST2481928",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2481943",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2481974",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2481990",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2482011",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2482032",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2482051",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2482063",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2482084",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 209.99
+      },
+      {
+        "id": "EST2482119",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 209.99
+      },
+      {
+        "id": "EST2482126",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 420
+      },
+      {
+        "id": "EST2469838",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2047.5
+      },
+      {
+        "id": "EST2440988",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3801
+      },
+      {
+        "id": "EST2114308",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 708.6
+      },
+      {
+        "id": "EST2081883",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 127.47
+      },
+      {
+        "id": "EST2002237",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1021.26
+      },
+      {
+        "id": "EST1933652",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1428.06
+      },
+      {
+        "id": "EST1840645",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 892.48
+      },
+      {
+        "id": "EST1841751",
+        "reason": "Total price is $0",
+        "totalPrice": 0
+      },
+      {
+        "id": "EST1841757",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2898.04
+      },
+      {
+        "id": "EST1818749",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4893.04
+      },
+      {
+        "id": "EST1797115",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 165.75
+      },
+      {
+        "id": "EST1792721",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 293.27
+      },
+      {
+        "id": "EST1792796",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1512.95
+      }
+    ]
+  },
+  "sold": {
+    "total": 318215.32000000007,
+    "included": [
+      {
+        "id": "EST3299572",
+        "totalPrice": 17340.32,
+        "value": 17340.32,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3270381",
+        "totalPrice": 3727.5,
+        "value": 3727.5,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3270794",
+        "totalPrice": 17395.25,
+        "value": 17395.25,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3270334",
+        "totalPrice": 13860,
+        "value": 13860,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3270368",
+        "totalPrice": 8955,
+        "value": 8955,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST3015813",
+        "totalPrice": 9608.02,
+        "value": 4804.01,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST3015715",
+        "totalPrice": 3405.52,
+        "value": 1702.76,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST3015636",
+        "totalPrice": 52995.21,
+        "value": 26497.605,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST3015462",
+        "totalPrice": 8942.21,
+        "value": 4471.105,
+        "method": "Contract: 2025-2026 (2 years)"
+      },
+      {
+        "id": "EST2949022",
+        "totalPrice": 108455.42,
+        "value": 108455.42,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST2949003",
+        "totalPrice": 43997.7,
+        "value": 43997.7,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST2948972",
+        "totalPrice": 21912.2,
+        "value": 21912.2,
+        "method": "Contract: 2025 (1 year)"
+      },
+      {
+        "id": "EST5333954",
+        "totalPrice": 4252.5,
+        "value": 4252.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5770259",
+        "totalPrice": 684.45,
+        "value": 684.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5770273",
+        "totalPrice": 638.57,
+        "value": 638.57,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5669679",
+        "totalPrice": 664.27,
+        "value": 664.27,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5649036",
+        "totalPrice": 442.85,
+        "value": 442.85,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850941",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5436938",
+        "totalPrice": 16274.26,
+        "value": 16274.26,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5432414",
+        "totalPrice": 1114.46,
+        "value": 1114.46,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5432422",
+        "totalPrice": 2442.59,
+        "value": 2442.59,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334039",
+        "totalPrice": 217.14,
+        "value": 217.14,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334065",
+        "totalPrice": 177.45,
+        "value": 177.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334084",
+        "totalPrice": 704.55,
+        "value": 704.55,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334122",
+        "totalPrice": 699.32,
+        "value": 699.32,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334212",
+        "totalPrice": 177.45,
+        "value": 177.45,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334226",
+        "totalPrice": 430.5,
+        "value": 430.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5609396",
+        "totalPrice": 422.49,
+        "value": 422.49,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5599711",
+        "totalPrice": 2717.04,
+        "value": 2717.04,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5554724",
+        "totalPrice": 221.42,
+        "value": 221.42,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5552200",
+        "totalPrice": 616.27,
+        "value": 616.27,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5497919",
+        "totalPrice": 179.81,
+        "value": 179.81,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850755",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850958",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850973",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850994",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5450635",
+        "totalPrice": 2939.92,
+        "value": 2939.92,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5450865",
+        "totalPrice": 442.85,
+        "value": 442.85,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850652",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850683",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850702",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850726",
+        "totalPrice": 262.5,
+        "value": 262.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850780",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850796",
+        "totalPrice": 210,
+        "value": 210,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850847",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850859",
+        "totalPrice": 315,
+        "value": 315,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850874",
+        "totalPrice": 367.5,
+        "value": 367.5,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850892",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850908",
+        "totalPrice": 315,
+        "value": 315,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5850929",
+        "totalPrice": 105,
+        "value": 105,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334250",
+        "totalPrice": 341.26,
+        "value": 341.26,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5334273",
+        "totalPrice": 315.03,
+        "value": 315.03,
+        "method": "Estimate Date: 2025"
+      },
+      {
+        "id": "EST5263149",
+        "totalPrice": 4252.5,
+        "value": 4252.5,
+        "method": "Estimate Date: 2025"
+      }
+    ],
+    "excluded": [
+      {
+        "id": "EST3277347",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 18454.62
+      },
+      {
+        "id": "EST3307351",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 18352.81
+      },
+      {
+        "id": "EST3017129",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 10193.16
+      },
+      {
+        "id": "EST3015786",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3612.92
+      },
+      {
+        "id": "EST3015579",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9486.79
+      },
+      {
+        "id": "EST3015670",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 56222.62
+      },
+      {
+        "id": "EST3277343",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17917.11
+      },
+      {
+        "id": "EST3015527",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9210.48
+      },
+      {
+        "id": "EST3015782",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3507.69
+      },
+      {
+        "id": "EST3017119",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9896.27
+      },
+      {
+        "id": "EST3015659",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 54585.07
+      },
+      {
+        "id": "EST3307342",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17839.27
+      },
+      {
+        "id": "EST2949024",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 111707.79
+      },
+      {
+        "id": "EST2948973",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 22657.62
+      },
+      {
+        "id": "EST2949012",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 44968.98
+      },
+      {
+        "id": "EST2765325",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 24027.76
+      },
+      {
+        "id": "EST2740619",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 14767.78
+      },
+      {
+        "id": "EST2740592",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 17398.85
+      },
+      {
+        "id": "EST2708000",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6617.95
+      },
+      {
+        "id": "EST2657640",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 10832.2
+      },
+      {
+        "id": "EST2563469",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1247.4
+      },
+      {
+        "id": "EST2563449",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2037
+      },
+      {
+        "id": "EST2948962",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 21274.33
+      },
+      {
+        "id": "EST2948996",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 42417.45
+      },
+      {
+        "id": "EST2949019",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 105296.67
+      },
+      {
+        "id": "EST5333992",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 4252.5
+      },
+      {
+        "id": "EST5060532",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 9236.01
+      },
+      {
+        "id": "EST4945526",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1550.76
+      },
+      {
+        "id": "EST4945545",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1605.44
+      },
+      {
+        "id": "EST4945561",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 1988.19
+      },
+      {
+        "id": "EST4874130",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2313.26
+      },
+      {
+        "id": "EST4866677",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 6370.8
+      },
+      {
+        "id": "EST4746040",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 357.02
+      },
+      {
+        "id": "EST4701939",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 7800.91
+      },
+      {
+        "id": "EST4563801",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 222.39
+      },
+      {
+        "id": "EST4492511",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 2136.75
+      },
+      {
+        "id": "EST4485831",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 5182.45
+      },
+      {
+        "id": "EST4486019",
+        "reason": "Does not apply to 2025",
+        "totalPrice": 3742.65
+      }
+    ]
+  }
+}

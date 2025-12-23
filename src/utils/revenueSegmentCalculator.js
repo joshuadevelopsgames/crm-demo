@@ -29,13 +29,15 @@ function calculateDurationMonths(startDate, endDate) {
   const dayDiff = end.getDate() - start.getDate();
   
   // Total months = years * 12 + months
-  // If end day is on or after start day, count that month
   let totalMonths = yearDiff * 12 + monthDiff;
   
-  // If the end date is on or after the start day of the month, count that month
-  if (dayDiff >= 0) {
-    totalMonths += 1; // Include the end month
+  // Only add 1 month if the end date is AFTER the start day (not same day)
+  // This prevents exact 12-month contracts from being counted as 13 months
+  // Example: Apr 15, 2025 → Apr 15, 2026 = 12 months (not 13)
+  if (dayDiff > 0) {
+    totalMonths += 1; // Include the end month only if end day is after start day
   }
+  // If dayDiff === 0 (same day), don't add 1 - it's exactly N*12 months
   
   return totalMonths;
 }
@@ -74,7 +76,8 @@ function getEstimateYearData(estimate, currentYear) {
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   
-  const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
+  // Use total_price (pre-tax) consistently, not total_price_with_tax
+  const totalPrice = parseFloat(estimate.total_price) || 0;
   if (totalPrice === 0) return null;
   
   // Case 1: Both contract_start and contract_end exist
