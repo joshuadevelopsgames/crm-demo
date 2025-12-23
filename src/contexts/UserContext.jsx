@@ -57,10 +57,12 @@ export function UserProvider({ children }) {
           });
         } catch (error) {
           console.error('Error fetching profile:', error);
+          // Fallback: check if it's System Admin email
+          const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'admin' : 'user';
           setProfile({
             id: session.user.id,
             email: session.user.email,
-            role: 'user'
+            role: defaultRole
           });
         }
       } else {
