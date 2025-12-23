@@ -197,22 +197,33 @@ export default async function handler(req, res) {
             seenInBatch.add(lookupValue);
             
             // Use the imported ID directly (e.g., "lmn-account-6857868")
-            const { id, ...accountWithoutId } = account;
+            const { id: importedId, ...accountWithoutId } = account;
             const accountData = {
               ...accountWithoutId,
               updated_at: new Date().toISOString()
             };
             
-            // Include id if provided (should be from import like "lmn-account-XXXXX")
-            if (id) {
-              accountData.id = id;
+            // Always use the imported ID if provided (should be from import like "lmn-account-XXXXX")
+            if (importedId) {
+              accountData.id = importedId;
             }
             
             if (existingMap.has(lookupValue)) {
-              // Update existing - use the ID from database
-              toUpdate.push({ id: existingMap.get(lookupValue), data: accountData });
+              // Update existing account - use the existing database ID for the update
+              const existingId = existingMap.get(lookupValue);
+              
+              // If the imported ID is different from the existing ID, log a warning
+              // We can't easily change primary keys, so we keep the existing ID
+              // but ensure lmn_crm_id is set correctly for future matching
+              if (importedId && importedId !== existingId) {
+                console.warn(`Account ${lookupValue} has different ID: existing=${existingId}, imported=${importedId}. Keeping existing ID.`);
+              }
+              
+              // Don't include id in update data (can't update primary key)
+              const { id, ...updateDataWithoutId } = accountData;
+              toUpdate.push({ id: existingId, data: updateDataWithoutId });
             } else {
-              // Create new - use the imported ID
+              // Create new - use the imported ID (must be included for new accounts)
               accountData.created_at = new Date().toISOString();
               toInsert.push(accountData);
             }
