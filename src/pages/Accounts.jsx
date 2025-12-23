@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
+import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
 import toast from 'react-hot-toast';
 
 export default function Accounts() {
@@ -95,6 +95,20 @@ export default function Accounts() {
     });
     return accountIds;
   }, [allScorecards]);
+
+  // Group estimates by account_id for revenue calculation
+  const estimatesByAccountId = useMemo(() => {
+    const grouped = {};
+    allEstimates.forEach(est => {
+      if (est.account_id) {
+        if (!grouped[est.account_id]) {
+          grouped[est.account_id] = [];
+        }
+        grouped[est.account_id].push(est);
+      }
+    });
+    return grouped;
+  }, [allEstimates]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -278,7 +292,11 @@ export default function Accounts() {
       if (!bHasScorecard) return -1; // Accounts without scorecards go to end
       return (b.organization_score || 0) - (a.organization_score || 0);
     }
-    if (sortBy === 'revenue') return (b.annual_revenue || 0) - (a.annual_revenue || 0);
+    if (sortBy === 'revenue') {
+      const aRevenue = getAccountRevenue(a, estimatesByAccountId[a.id] || []);
+      const bRevenue = getAccountRevenue(b, estimatesByAccountId[b.id] || []);
+      return bRevenue - aRevenue;
+    }
     if (sortBy === 'last_interaction') {
       if (!a.last_interaction_date) return 1;
       if (!b.last_interaction_date) return -1;
@@ -550,7 +568,10 @@ export default function Accounts() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 font-medium">
-                          {account.annual_revenue ? `$${account.annual_revenue.toLocaleString()}` : '-'}
+                          {(() => {
+                            const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                            return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
+                          })()}
                         </td>
                       </tr>
                     );
@@ -834,7 +855,10 @@ export default function Accounts() {
                             </div>
                           </td>
                           <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
-                            {account.annual_revenue ? `$${account.annual_revenue.toLocaleString()}` : '-'}
+                            {(() => {
+                              const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                              return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
+                            })()}
                           </td>
                         </tr>
                       );
