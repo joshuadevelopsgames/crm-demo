@@ -238,14 +238,17 @@ export default function Permissions() {
       });
       
       try {
+        const requestBody = JSON.stringify(userData);
         console.log(`🔐 [CLIENT ${requestId}] Sending POST request to /api/admin/createUser...`);
+        console.log(`🔐 [CLIENT ${requestId}] Request body (JSON):`, requestBody);
+        console.log(`🔐 [CLIENT ${requestId}] Request body (parsed):`, JSON.parse(requestBody));
         const response = await fetch('/api/admin/createUser', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify(userData)
+          body: requestBody
         });
 
         console.log(`🔐 [CLIENT ${requestId}] Response received:`);

@@ -116,46 +116,55 @@ export default async function handler(req, res) {
 
     // Validate input
     console.log(`🔐 [${requestId}] Step 4: Validating required fields...`);
-    if (!email || !password) {
+    // Check for empty strings as well as falsy values
+    const emailTrimmed = email?.trim();
+    const passwordTrimmed = password?.trim();
+    
+    if (!emailTrimmed || !passwordTrimmed) {
       console.error(`❌ [${requestId}] VALIDATION FAILED: Missing required fields`);
-      console.error(`   - email provided:`, !!email);
-      console.error(`   - password provided:`, !!password);
+      console.error(`   - email:`, email, `(trimmed: "${emailTrimmed}")`);
+      console.error(`   - password:`, password ? `[${password.length} chars]` : 'missing', `(trimmed: "${passwordTrimmed}")`);
       return res.status(400).json({
         success: false,
         error: 'Email and password are required',
         requestId,
-        received: { hasEmail: !!email, hasPassword: !!password }
+        received: { 
+          hasEmail: !!emailTrimmed, 
+          hasPassword: !!passwordTrimmed,
+          emailLength: email?.length || 0,
+          passwordLength: password?.length || 0
+        }
       });
     }
 
     // Validate email format
     console.log(`🔐 [${requestId}] Step 5: Validating email format...`);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(emailTrimmed)) {
       console.error(`❌ [${requestId}] VALIDATION FAILED: Invalid email format`);
-      console.error(`   - email:`, email);
+      console.error(`   - email:`, emailTrimmed);
       return res.status(400).json({
         success: false,
         error: 'Invalid email format',
         requestId,
-        received: { email }
+        received: { email: emailTrimmed }
       });
     }
     console.log(`✅ [${requestId}] Email format valid`);
 
     // Validate password length
     console.log(`🔐 [${requestId}] Step 6: Validating password length...`);
-    if (password.length < 6) {
+    if (passwordTrimmed.length < 6) {
       console.error(`❌ [${requestId}] VALIDATION FAILED: Password too short`);
-      console.error(`   - password length:`, password.length);
+      console.error(`   - password length:`, passwordTrimmed.length);
       return res.status(400).json({
         success: false,
         error: 'Password must be at least 6 characters',
         requestId,
-        received: { passwordLength: password.length }
+        received: { passwordLength: passwordTrimmed.length }
       });
     }
-    console.log(`✅ [${requestId}] Password length valid (${password.length} chars)`);
+    console.log(`✅ [${requestId}] Password length valid (${passwordTrimmed.length} chars)`);
 
     // Validate role
     console.log(`🔐 [${requestId}] Step 7: Validating role...`);
@@ -194,12 +203,12 @@ export default async function handler(req, res) {
       }
 
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password,
+        email: emailTrimmed,
+        password: passwordTrimmed,
         email_confirm: true, // Auto-confirm email
         user_metadata: {
-          full_name: full_name || '',
-          name: full_name || ''
+          full_name: full_name?.trim() || '',
+          name: full_name?.trim() || ''
         }
       });
 
