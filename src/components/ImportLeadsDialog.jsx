@@ -563,6 +563,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Import/Update accounts using bulk upsert (much faster)
       // Only import accounts that are in the sheets (validAccounts)
       if (validAccounts.length > 0) {
+        console.log(`📤 Starting accounts import: ${validAccounts.length} accounts`);
+        console.log('First account sample:', {
+          id: validAccounts[0].id,
+          lmn_crm_id: validAccounts[0].lmn_crm_id,
+          name: validAccounts[0].name
+        });
+        
         try {
           const response = await fetch('/api/data/accounts', {
             method: 'POST',
@@ -573,37 +580,50 @@ export default function ImportLeadsDialog({ open, onClose }) {
             })
           });
           
+          console.log(`📥 Accounts API response status: ${response.status} ${response.statusText}`);
+          
           if (!response.ok) {
             const errorText = await response.text();
+            console.error('❌ Accounts API error response:', errorText);
             let errorMessage = `HTTP ${response.status}: ${errorText}`;
             try {
               const errorJson = JSON.parse(errorText);
               errorMessage = errorJson.error || errorMessage;
+              console.error('Parsed error:', errorJson);
             } catch (e) {
+              console.error('Could not parse error as JSON:', e);
               // If not JSON, use the text as-is
             }
             throw new Error(errorMessage);
           }
           
           const result = await response.json();
+          console.log('Accounts API result:', result);
+          
           if (result.success) {
             results.accountsCreated = result.created;
             results.accountsUpdated = result.updated;
             console.log(`✅ Bulk imported ${result.total} accounts (${result.created} created, ${result.updated} updated)`);
           } else {
+            console.error('Accounts API returned success=false:', result);
             throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
           results.accountsFailed = validAccounts.length;
           const errorMsg = `Accounts bulk import: ${err.message}`;
           results.errors.push(errorMsg);
-          console.error('❌ Accounts import error:', err);
+          console.error('❌❌❌ ACCOUNTS IMPORT FAILED ❌❌❌');
+          console.error('Error object:', err);
           console.error('Error message:', err.message);
+          console.error('Error name:', err.name);
           console.error('Error stack:', err.stack);
           console.error('Sample account data (first account):', JSON.stringify(validAccounts[0], null, 2));
           console.error('Total accounts to import:', validAccounts.length);
-          console.error('First 3 account IDs:', validAccounts.slice(0, 3).map(a => a.id || a.lmn_crm_id));
+          console.error('First 3 account IDs:', validAccounts.slice(0, 3).map(a => ({ id: a.id, lmn_crm_id: a.lmn_crm_id })));
+          console.error('First 3 account names:', validAccounts.slice(0, 3).map(a => a.name));
         }
+      } else {
+        console.warn('⚠️ No valid accounts to import');
       }
 
       // Import/Update contacts using bulk upsert
