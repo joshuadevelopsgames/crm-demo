@@ -65,7 +65,9 @@ export const mappingRules = [
         const monthDiff = end.getMonth() - start.getMonth();
         const dayDiff = end.getDate() - start.getDate();
         let totalMonths = yearDiff * 12 + monthDiff;
-        if (dayDiff >= 0) {
+        // Only add 1 month if end day is AFTER start day (not same day)
+        // This prevents exact 12-month contracts from being counted as 13 months
+        if (dayDiff > 0) {
           totalMonths += 1;
         }
         return totalMonths;
@@ -86,7 +88,8 @@ export const mappingRules = [
         const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
         const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
         
-        const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
+        // Use total_price_with_tax consistently
+        const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
         if (totalPrice === 0) return null;
         
         // Case 1: Both contract_start and contract_end exist
