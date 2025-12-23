@@ -650,14 +650,17 @@ export default function Accounts() {
                           {neglectStatus.label}
                         </span>
                       </div>
-                      {account.annual_revenue && (
-                        <div className="flex items-center justify-between text-sm mt-2">
+                      {(() => {
+                        const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                        return revenue > 0 ? (
+                          <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
                             <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
-                            ${account.annual_revenue.toLocaleString()}
-                          </span>
-                        </div>
-                      )}
+                              ${revenue.toLocaleString()}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
 
                     {/* Warnings */}
