@@ -22,12 +22,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 
-export default function AccountScore({ accountId, scorecards, currentScore, accountName }) {
+export default function AccountScore({ accountId, scorecards, currentScore, accountName, account }) {
   const [expandedScorecards, setExpandedScorecards] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [scorecardToDelete, setScorecardToDelete] = useState(null);
   const { canManageICP, isAdmin } = useUser();
   const queryClient = useQueryClient();
+  
+  // Check if account has ICP status = 'na' (should hide ICP section)
+  const isICPNA = account && account.icp_status === 'na';
   
   // Get current ICP template
   const { data: icpTemplate, isLoading: icpLoading } = useQuery({
@@ -112,20 +115,21 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
         </CardContent>
       </Card>
 
-      {/* Complete ICP Scorecard */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">ICP Scorecard</h3>
-          {canManageICP && (
-            <Link to={createPageUrl('Scoring')}>
-              <Button variant="outline" size="sm">
-                Manage ICP Template
-              </Button>
-            </Link>
-          )}
-        </div>
-        
-        {icpLoading ? (
+      {/* Complete ICP Scorecard - Hide if N/A */}
+      {!isICPNA && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">ICP Scorecard</h3>
+            {canManageICP && (
+              <Link to={createPageUrl('Scoring')}>
+                <Button variant="outline" size="sm">
+                  Manage ICP Template
+                </Button>
+              </Link>
+            )}
+          </div>
+          
+          {icpLoading ? (
           <Card>
             <CardContent className="p-8 text-center">
               <p className="text-slate-600">Loading ICP template...</p>
@@ -171,8 +175,25 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                   </div>
                 </CardContent>
               </Card>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+      
+      {/* Show message if ICP is N/A */}
+      {isICPNA && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                ICP Status: N/A
+              </Badge>
+              <p className="text-sm text-slate-600">
+                This account is marked as N/A and is excluded from ICP scoring requirements.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Scorecard History */}
       {scorecards.length > 0 && (

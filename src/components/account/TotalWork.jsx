@@ -11,7 +11,7 @@ export default function TotalWork({ estimates = [] }) {
   
   // Calculate total sold value (won estimates)
   const totalSold = estimates
-    .filter(est => est.status === 'won' || est.status === 'sold')
+    .filter(est => est.status === 'won')
     .reduce((sum, est) => {
       const price = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
       return sum + price;

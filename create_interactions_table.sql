@@ -1,8 +1,8 @@
 -- Create interactions table
 CREATE TABLE IF NOT EXISTS interactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  account_id uuid REFERENCES accounts(id) ON DELETE CASCADE,
-  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  account_id text REFERENCES accounts(id) ON DELETE CASCADE,
+  contact_id text REFERENCES contacts(id) ON DELETE SET NULL,
   type text NOT NULL,
   subject text,
   content text,

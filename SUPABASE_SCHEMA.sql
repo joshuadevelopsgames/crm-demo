@@ -3,7 +3,7 @@
 
 -- Create accounts table
 CREATE TABLE IF NOT EXISTS accounts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id text PRIMARY KEY,
   lmn_crm_id text UNIQUE,
   name text,
   account_type text,
@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 -- Create contacts table
 CREATE TABLE IF NOT EXISTS contacts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id text PRIMARY KEY,
   lmn_contact_id text UNIQUE,
-  account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
   account_name text,
   first_name text,
   last_name text,
@@ -71,8 +71,8 @@ CREATE TABLE IF NOT EXISTS estimates (
   contract_end timestamptz,
   project_name text,
   version text,
-  account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
-  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
+  contact_id text REFERENCES contacts(id) ON DELETE SET NULL,
   lmn_contact_id text,
   contact_name text,
   address text,
@@ -121,9 +121,9 @@ CREATE TABLE IF NOT EXISTS estimates (
 CREATE TABLE IF NOT EXISTS jobsites (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lmn_jobsite_id text UNIQUE,
-  account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
   lmn_contact_id text,
-  contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  contact_id text REFERENCES contacts(id) ON DELETE SET NULL,
   contact_name text,
   name text,
   address_1 text,

@@ -62,7 +62,7 @@ export function calculateRevenueFromEstimates(estimates = []) {
   return estimates
     .filter(est => {
       // Only include won estimates
-      if (est.status !== 'won' && est.status !== 'sold') {
+      if (est.status !== 'won') {
         return false;
       }
       
@@ -116,7 +116,7 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     // Only consider won estimates from last 12 months for type checking
     const wonEstimates = estimates.filter(est => {
       // Must be won
-      if (est.status !== 'won' && est.status !== 'sold') {
+      if (est.status !== 'won') {
         return false;
       }
       

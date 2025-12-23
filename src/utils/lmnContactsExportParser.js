@@ -77,17 +77,25 @@ export function parseContactsExport(csvText) {
         // Ensure account always has a unique, stable ID based on LMN CRM ID
         const accountId = `lmn-account-${crmId}`;
         
+        const classificationLower = classification.toLowerCase();
+        // Set ICP status: residential accounts default to N/A
+        const icpStatus = classificationLower === 'residential' ? 'na' : 'required';
+        const icpRequired = classificationLower !== 'residential';
+        
         accountsMap.set(crmId, {
           id: accountId, // Stable ID for merging
           lmn_crm_id: crmId, // Original LMN ID for future lookups
           name: crmName,
           account_type: type.toLowerCase(), // lead, client, other
-          classification: classification.toLowerCase(),
+          classification: classificationLower,
           status: archived ? 'archived' : 'active',
           archived: archived, // Boolean field for consistency
           tags: tags ? tags.split(',').map(t => t.trim()) : [],
           source: 'lmn_contacts_export',
           created_date: new Date().toISOString(),
+          // ICP status: residential defaults to N/A
+          icp_status: icpStatus,
+          icp_required: icpRequired,
           // Address from first contact
           address_1: row[colMap.address1]?.trim() || '',
           address_2: row[colMap.address2]?.trim() || '',

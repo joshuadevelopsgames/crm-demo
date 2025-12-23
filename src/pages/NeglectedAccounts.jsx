@@ -43,10 +43,13 @@ export default function NeglectedAccounts() {
     return accountIds;
   }, [allScorecards]);
 
-  // Neglected accounts (no interaction in 30+ days, not snoozed)
+  // Neglected accounts (no interaction in 30+ days, not snoozed, not N/A)
   const neglectedAccounts = accounts.filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
+    
+    // Skip accounts with ICP status = 'na' (permanently excluded)
+    if (account.icp_status === 'na') return false;
     
     // Skip if snoozed
     if (account.snoozed_until) {

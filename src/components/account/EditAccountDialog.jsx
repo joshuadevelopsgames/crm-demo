@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
 
 export default function EditAccountDialog({ open, onClose, account }) {
@@ -72,7 +73,9 @@ export default function EditAccountDialog({ open, onClose, account }) {
         address: account.address || '',
         renewal_date: account.renewal_date || '',
         assigned_to: account.assigned_to || '',
-        notes: account.notes || ''
+        notes: account.notes || '',
+        icp_required: account.icp_required !== undefined ? account.icp_required : true,
+        icp_status: account.icp_status || 'required'
       });
       setAutoCalculateSegment(true); // Reset auto-calc when account changes
     }
@@ -125,10 +128,15 @@ export default function EditAccountDialog({ open, onClose, account }) {
   });
 
   const handleSubmit = () => {
-    updateAccountMutation.mutate({
+    const updateData = {
       ...formData,
       annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null
-    });
+    };
+    // If setting to N/A, also clear last_interaction_date
+    if (updateData.icp_status === 'na') {
+      updateData.last_interaction_date = null;
+    }
+    updateAccountMutation.mutate(updateData);
   };
 
   return (
@@ -302,6 +310,55 @@ export default function EditAccountDialog({ open, onClose, account }) {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
               />
+            </div>
+            <div>
+              <Label>ICP Status</Label>
+              <Select
+                value={formData.icp_status}
+                onValueChange={(value) => {
+                  const updateData = { 
+                    ...formData, 
+                    icp_status: value,
+                    icp_required: value !== 'na'
+                  };
+                  // If setting to N/A, also clear last_interaction_date
+                  if (value === 'na') {
+                    updateData.last_interaction_date = null;
+                  }
+                  setFormData(updateData);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="required">Required</SelectItem>
+                  <SelectItem value="not_required">Not Required</SelectItem>
+                  <SelectItem value="na">N/A</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2 mt-2">
+                <Switch
+                  id="icp-required-edit"
+                  checked={formData.icp_required}
+                  onCheckedChange={(checked) => {
+                    const newStatus = checked ? 'required' : 'not_required';
+                    setFormData({ 
+                      ...formData, 
+                      icp_required: checked,
+                      icp_status: newStatus
+                    });
+                  }}
+                />
+                <Label htmlFor="icp-required-edit" className="text-xs text-slate-600">
+                  ICP Required
+                </Label>
+              </div>
+              {formData.icp_status === 'na' && (
+                <p className="text-xs text-amber-600 mt-1">
+                  N/A accounts are permanently excluded from neglected accounts.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4">

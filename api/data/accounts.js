@@ -102,15 +102,15 @@ export default async function handler(req, res) {
           throw findError;
         }
         
-        // Remove id if it's not a valid UUID - let Supabase generate it
+        // Use the imported ID directly (e.g., "lmn-account-6857868")
         const { id, ...accountWithoutId } = account;
         const accountData = {
           ...accountWithoutId,
           updated_at: new Date().toISOString()
         };
         
-        // Only include id if it's a valid UUID format
-        if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        // Include id if provided (should be from import like "lmn-account-XXXXX")
+        if (id) {
           accountData.id = id;
         }
         
@@ -196,23 +196,23 @@ export default async function handler(req, res) {
             }
             seenInBatch.add(lookupValue);
             
-            // Remove id if it's not a valid UUID - let Supabase generate it
+            // Use the imported ID directly (e.g., "lmn-account-6857868")
             const { id, ...accountWithoutId } = account;
             const accountData = {
               ...accountWithoutId,
               updated_at: new Date().toISOString()
             };
             
-            // Only include id if it's a valid UUID format
-            if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+            // Include id if provided (should be from import like "lmn-account-XXXXX")
+            if (id) {
               accountData.id = id;
             }
             
             if (existingMap.has(lookupValue)) {
-              // Update existing - use the UUID from database
+              // Update existing - use the ID from database
               toUpdate.push({ id: existingMap.get(lookupValue), data: accountData });
             } else {
-              // Create new - let Supabase generate UUID
+              // Create new - use the imported ID
               accountData.created_at = new Date().toISOString();
               toInsert.push(accountData);
             }
@@ -276,7 +276,7 @@ export default async function handler(req, res) {
       
       if (action === 'create') {
         // Create new account in Supabase
-        // Remove id if it's not a valid UUID - let Supabase generate it
+        // Use the imported ID directly (e.g., "lmn-account-6857868")
         const { id, ...dataWithoutId } = data;
         const accountData = { 
           ...dataWithoutId,
@@ -284,8 +284,8 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString()
         };
         
-        // Only include id if it's a valid UUID format
-        if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        // Include id if provided (should be from import like "lmn-account-XXXXX")
+        if (id) {
           accountData.id = id;
         }
         

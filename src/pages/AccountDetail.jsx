@@ -97,11 +97,6 @@ export default function AccountDetail() {
     queryKey: ['estimates', accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      // Validate accountId is a valid UUID
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)) {
-        console.warn('Invalid accountId format:', accountId);
-        return [];
-      }
       // Use server-side filtering for accurate results
       const response = await fetch(`/api/data/estimates?account_id=${encodeURIComponent(accountId)}`);
       if (!response.ok) return [];
@@ -119,11 +114,6 @@ export default function AccountDetail() {
     queryKey: ['jobsites', accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      // Validate accountId is a valid UUID
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)) {
-        console.warn('Invalid accountId format:', accountId);
-        return [];
-      }
       // Use server-side filtering for accurate results
       const response = await fetch(`/api/data/jobsites?account_id=${encodeURIComponent(accountId)}`);
       if (!response.ok) return [];
@@ -317,6 +307,7 @@ export default function AccountDetail() {
                 scorecards={scorecards}
                 currentScore={hasCompletedScorecard ? account.organization_score : null}
                 accountName={account.name}
+                account={account}
                 compact={true}
               />
             </CardContent>

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Edit2, Save, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 export default function TrackingAssignment({ account, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -22,12 +24,19 @@ export default function TrackingAssignment({ account, onUpdate }) {
     classification: account.classification || 'commercial',
     assigned_to: account.assigned_to || '',
     referral: account.referral || '',
-    referral_note: account.referral_note || ''
+    referral_note: account.referral_note || '',
+    icp_required: account.icp_required !== undefined ? account.icp_required : true,
+    icp_status: account.icp_status || 'required'
   });
 
   const handleSave = () => {
     if (onUpdate) {
-      onUpdate(formData);
+      const updateData = { ...formData };
+      // If setting to N/A, also clear last_interaction_date
+      if (updateData.icp_status === 'na') {
+        updateData.last_interaction_date = null;
+      }
+      onUpdate(updateData);
     }
     setIsEditing(false);
   };
@@ -38,9 +47,26 @@ export default function TrackingAssignment({ account, onUpdate }) {
       classification: account.classification || 'commercial',
       assigned_to: account.assigned_to || '',
       referral: account.referral || '',
-      referral_note: account.referral_note || ''
+      referral_note: account.referral_note || '',
+      icp_required: account.icp_required !== undefined ? account.icp_required : true,
+      icp_status: account.icp_status || 'required'
     });
     setIsEditing(false);
+  };
+
+  const handleICPStatusChange = (newStatus) => {
+    const updatedData = {
+      ...formData,
+      icp_status: newStatus,
+      icp_required: newStatus !== 'na'
+    };
+    
+    // If setting to N/A, also clear last_interaction_date in the update
+    if (newStatus === 'na') {
+      updatedData.last_interaction_date = null;
+    }
+    
+    setFormData(updatedData);
   };
 
   return (
@@ -185,6 +211,62 @@ export default function TrackingAssignment({ account, onUpdate }) {
               <p className="font-medium text-slate-900 mt-1 whitespace-pre-wrap">
                 {formData.referral_note || '—'}
               </p>
+            )}
+          </div>
+
+          <div>
+            <Label className="text-slate-600">ICP Status</Label>
+            {isEditing ? (
+              <div className="mt-1 space-y-2">
+                <Select
+                  value={formData.icp_status}
+                  onValueChange={handleICPStatusChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="required">Required</SelectItem>
+                    <SelectItem value="not_required">Not Required</SelectItem>
+                    <SelectItem value="na">N/A</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="icp-required"
+                    checked={formData.icp_required}
+                    onCheckedChange={(checked) => {
+                      const newStatus = checked ? 'required' : 'not_required';
+                      handleICPStatusChange(newStatus);
+                    }}
+                  />
+                  <Label htmlFor="icp-required" className="text-xs text-slate-600">
+                    ICP Required
+                  </Label>
+                </div>
+                {formData.icp_status === 'na' && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    N/A accounts are permanently excluded from neglected accounts until status is changed.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="mt-1">
+                <Badge 
+                  variant="outline" 
+                  className={
+                    formData.icp_status === 'na' 
+                      ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                      : formData.icp_status === 'required'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                  }
+                >
+                  {formData.icp_status === 'na' ? 'N/A' : 
+                   formData.icp_status === 'required' ? 'Required' : 
+                   'Not Required'}
+                </Badge>
+              </div>
             )}
           </div>
         </div>

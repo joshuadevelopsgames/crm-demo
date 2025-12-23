@@ -47,14 +47,6 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // Support filtering by account_id via query parameter
       const accountId = req.query.account_id;
-      
-      // Validate account_id is a valid UUID if provided
-      if (accountId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid account_id format. Must be a valid UUID.'
-        });
-      }
 
       // Fetch jobsites using pagination to bypass Supabase's 1000 row limit
       let allJobsites = [];
@@ -116,7 +108,7 @@ export default async function handler(req, res) {
           throw findError;
         }
         
-        // Remove id if it's not a valid UUID - let Supabase generate it
+        // Use the imported ID directly (e.g., from import)
         // Also remove internal tracking fields that don't exist in the schema
         const { id, account_id, contact_id, _is_orphaned, _link_method, ...jobsiteWithoutId } = jobsite;
         const jobsiteData = {
@@ -124,22 +116,22 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString()
         };
         
-        // Only include account_id if it's a valid UUID format (foreign key constraint)
-        if (account_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(account_id)) {
+        // Include account_id if provided (should be text like "lmn-account-XXXXX")
+        if (account_id) {
           jobsiteData.account_id = account_id;
         } else {
           jobsiteData.account_id = null;
         }
         
-        // Only include contact_id if it's a valid UUID format (foreign key constraint)
-        if (contact_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contact_id)) {
+        // Include contact_id if provided (should be text like "lmn-contact-XXXXX")
+        if (contact_id) {
           jobsiteData.contact_id = contact_id;
         } else {
           jobsiteData.contact_id = null;
         }
         
-        // Only include id if it's a valid UUID format
-        if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        // Include id if provided (should be from import)
+        if (id) {
           jobsiteData.id = id;
         }
         
@@ -220,7 +212,7 @@ export default async function handler(req, res) {
             }
             seenInBatch.add(lookupValue);
             
-            // Remove id if it's not a valid UUID - let Supabase generate it
+            // Use the imported ID directly (e.g., from import)
             // Also remove internal tracking fields that don't exist in the schema
             const { id, account_id, contact_id, _is_orphaned, _link_method, ...jobsiteWithoutIds } = jobsite;
             const jobsiteData = {
@@ -228,20 +220,20 @@ export default async function handler(req, res) {
               updated_at: new Date().toISOString()
             };
             
-            // Only include id if it's a valid UUID format
-            if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+            // Include id if provided (should be from import)
+            if (id) {
               jobsiteData.id = id;
             }
             
-            // Only include account_id if it's a valid UUID format (foreign key constraint)
-            if (account_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(account_id)) {
+            // Include account_id if provided (should be text like "lmn-account-XXXXX")
+            if (account_id) {
               jobsiteData.account_id = account_id;
             } else {
               jobsiteData.account_id = null;
             }
             
-            // Only include contact_id if it's a valid UUID format (foreign key constraint)
-            if (contact_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(contact_id)) {
+            // Include contact_id if provided (should be text like "lmn-contact-XXXXX")
+            if (contact_id) {
               jobsiteData.contact_id = contact_id;
             } else {
               jobsiteData.contact_id = null;
