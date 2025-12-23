@@ -597,8 +597,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
           results.accountsFailed = validAccounts.length;
           const errorMsg = `Accounts bulk import: ${err.message}`;
           results.errors.push(errorMsg);
-          console.error('Accounts import error:', err);
-          console.error('Sample account data:', validAccounts[0]);
+          console.error('❌ Accounts import error:', err);
+          console.error('Error message:', err.message);
+          console.error('Error stack:', err.stack);
+          console.error('Sample account data (first account):', JSON.stringify(validAccounts[0], null, 2));
+          console.error('Total accounts to import:', validAccounts.length);
+          console.error('First 3 account IDs:', validAccounts.slice(0, 3).map(a => a.id || a.lmn_crm_id));
         }
       }
 
