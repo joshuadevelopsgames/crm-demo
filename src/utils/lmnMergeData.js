@@ -544,12 +544,73 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       est.account_id === account.id
     );
 
-    // Calculate revenue from won estimates
+    // Calculate revenue from won estimates for current year using contract-year allocation
+    // Import the calculation function (using inline version to avoid circular dependencies)
+    const currentYear = new Date().getFullYear();
+    const calculateDurationMonths = (startDate, endDate) => {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const yearDiff = end.getFullYear() - start.getFullYear();
+      const monthDiff = end.getMonth() - start.getMonth();
+      const dayDiff = end.getDate() - start.getDate();
+      let totalMonths = yearDiff * 12 + monthDiff;
+      if (dayDiff > 0) {
+        totalMonths += 1;
+      }
+      return totalMonths;
+    };
+    const getContractYears = (durationMonths) => {
+      if (durationMonths <= 12) return 1;
+      if (durationMonths <= 24) return 2;
+      if (durationMonths <= 36) return 3;
+      if (durationMonths % 12 === 0) {
+        return durationMonths / 12;
+      }
+      return Math.ceil(durationMonths / 12);
+    };
+    const getEstimateYearData = (estimate, currentYear) => {
+      const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+      const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+      const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
+      const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
+      if (totalPrice === 0) return null;
+      if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+        const startYear = contractStart.getFullYear();
+        const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+        if (durationMonths <= 0) return null;
+        const yearsCount = getContractYears(durationMonths);
+        const yearsApplied = [];
+        for (let i = 0; i < yearsCount; i++) {
+          yearsApplied.push(startYear + i);
+        }
+        const appliesToCurrentYear = yearsApplied.includes(currentYear);
+        const annualAmount = totalPrice / yearsCount;
+        return {
+          appliesToCurrentYear,
+          value: appliesToCurrentYear ? annualAmount : 0
+        };
+      }
+      if (contractStart && !isNaN(contractStart.getTime())) {
+        const startYear = contractStart.getFullYear();
+        return {
+          appliesToCurrentYear: currentYear === startYear,
+          value: totalPrice
+        };
+      }
+      if (estimateDate && !isNaN(estimateDate.getTime())) {
+        const estimateYear = estimateDate.getFullYear();
+        return {
+          appliesToCurrentYear: currentYear === estimateYear,
+          value: totalPrice
+        };
+      }
+      return null;
+    };
     const wonEstimates = accountEstimates.filter(est => est.status === 'won');
     const totalRevenue = wonEstimates.reduce((sum, est) => {
-      // Use total_price_with_tax if available, otherwise total_price
-      const revenue = est.total_price_with_tax || est.total_price || 0;
-      return sum + revenue;
+      const yearData = getEstimateYearData(est, currentYear);
+      if (!yearData || !yearData.appliesToCurrentYear) return sum;
+      return sum + (isNaN(yearData.value) ? 0 : yearData.value);
     }, 0);
 
     // Count jobsites for this account (now using account_id field from jobsites)
