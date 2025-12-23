@@ -181,14 +181,33 @@ async function fetchDatabaseEstimates() {
   try {
     console.log('🔍 Fetching estimates from database...');
     
-    const { data, error } = await supabase
-      .from('estimates')
-      .select('*')
-      .order('lmn_estimate_id', { ascending: true });
+    // Supabase has a default limit of 1000 rows, so we need to fetch in batches
+    let allEstimates = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
     
-    if (error) {
-      throw error;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('estimates')
+        .select('*')
+        .order('lmn_estimate_id', { ascending: true })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        allEstimates = allEstimates.concat(data);
+        page++;
+        hasMore = data.length === pageSize;
+      } else {
+        hasMore = false;
+      }
     }
+    
+    const data = allEstimates;
     
     const estimates = new Map();
     
