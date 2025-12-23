@@ -231,11 +231,18 @@ export function compareWithExisting(
     if (!validIds.accountIds.has(lookupId)) {
       // Check if account has imported data (has lmn_crm_id)
       if (existingAccount.lmn_crm_id) {
-        comparison.accounts.orphaned.push(existingAccount);
+        const source = determineDataSource(existingAccount, 'account');
+        comparison.accounts.orphaned.push({
+          ...existingAccount,
+          _source: source.source,
+          _sourceNote: source.note
+        });
         comparison.warnings.push({
           type: 'orphaned_account',
           message: `Account "${existingAccount.name}" (ID: ${existingAccount.lmn_crm_id}) exists in database but not in import sheets`,
-          account: existingAccount
+          account: existingAccount,
+          source: source.source,
+          sourceNote: source.note
         });
       }
     }
@@ -269,11 +276,18 @@ export function compareWithExisting(
     const lookupId = existingContact.lmn_contact_id || existingContact.id;
     if (!validIds.contactIds.has(lookupId)) {
       if (existingContact.lmn_contact_id) {
-        comparison.contacts.orphaned.push(existingContact);
+        const source = determineDataSource(existingContact, 'contact');
+        comparison.contacts.orphaned.push({
+          ...existingContact,
+          _source: source.source,
+          _sourceNote: source.note
+        });
         comparison.warnings.push({
           type: 'orphaned_contact',
           message: `Contact "${existingContact.first_name} ${existingContact.last_name}" (ID: ${existingContact.lmn_contact_id}) exists in database but not in import sheets`,
-          contact: existingContact
+          contact: existingContact,
+          source: source.source,
+          sourceNote: source.note
         });
       }
     }
@@ -307,11 +321,18 @@ export function compareWithExisting(
     const lookupId = existingEstimate.lmn_estimate_id || existingEstimate.id;
     if (!validIds.estimateIds.has(lookupId)) {
       if (existingEstimate.lmn_estimate_id) {
-        comparison.estimates.orphaned.push(existingEstimate);
+        const source = determineDataSource(existingEstimate, 'estimate');
+        comparison.estimates.orphaned.push({
+          ...existingEstimate,
+          _source: source.source,
+          _sourceNote: source.note
+        });
         comparison.warnings.push({
           type: 'orphaned_estimate',
           message: `Estimate "${existingEstimate.estimate_number || existingEstimate.lmn_estimate_id}" exists in database but not in import sheets`,
-          estimate: existingEstimate
+          estimate: existingEstimate,
+          source: source.source,
+          sourceNote: source.note
         });
       }
     }
@@ -345,11 +366,18 @@ export function compareWithExisting(
     const lookupId = existingJobsite.lmn_jobsite_id || existingJobsite.id;
     if (!validIds.jobsiteIds.has(lookupId)) {
       if (existingJobsite.lmn_jobsite_id) {
-        comparison.jobsites.orphaned.push(existingJobsite);
+        const source = determineDataSource(existingJobsite, 'jobsite');
+        comparison.jobsites.orphaned.push({
+          ...existingJobsite,
+          _source: source.source,
+          _sourceNote: source.note
+        });
         comparison.warnings.push({
           type: 'orphaned_jobsite',
           message: `Jobsite "${existingJobsite.name || existingJobsite.lmn_jobsite_id}" exists in database but not in import sheets`,
-          jobsite: existingJobsite
+          jobsite: existingJobsite,
+          source: source.source,
+          sourceNote: source.note
         });
       }
     }
@@ -495,6 +523,76 @@ function normalizeValue(value) {
     return value.toISOString().split('T')[0];
   }
   return String(value).trim().toLowerCase();
+}
+
+/**
+ * Determine the data source for a record
+ * @param {Object} record - The database record
+ * @param {string} type - Type of record ('account', 'contact', 'estimate', 'jobsite')
+ * @returns {Object} - Object with source and note
+ */
+export function determineDataSource(record, type) {
+  // Check for LMN import IDs (indicates previous import)
+  if (type === 'account' && record.lmn_crm_id) {
+    return {
+      source: 'previous_import',
+      note: `Imported from LMN (Account ID: ${record.lmn_crm_id}). This record was created during a previous import but is no longer present in the current import sheets.`
+    };
+  }
+  
+  if (type === 'contact' && record.lmn_contact_id) {
+    return {
+      source: 'previous_import',
+      note: `Imported from LMN (Contact ID: ${record.lmn_contact_id}). This record was created during a previous import but is no longer present in the current import sheets.`
+    };
+  }
+  
+  if (type === 'estimate' && record.lmn_estimate_id) {
+    // Check if it has a source field indicating import
+    if (record.source === 'lmn_estimates_list') {
+      return {
+        source: 'previous_import',
+        note: `Imported from LMN Estimates List (Estimate ID: ${record.lmn_estimate_id}). This record was created during a previous import but is no longer present in the current import sheets.`
+      };
+    }
+    return {
+      source: 'previous_import',
+      note: `Imported from LMN (Estimate ID: ${record.lmn_estimate_id}). This record was created during a previous import but is no longer present in the current import sheets.`
+    };
+  }
+  
+  if (type === 'jobsite' && record.lmn_jobsite_id) {
+    return {
+      source: 'previous_import',
+      note: `Imported from LMN (Jobsite ID: ${record.lmn_jobsite_id}). This record was created during a previous import but is no longer present in the current import sheets.`
+    };
+  }
+  
+  // Check for UUID format (indicates system-generated, possibly mock data)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (record.id && uuidRegex.test(record.id)) {
+    // Check if created_at is recent (within last few days) - might be test data
+    if (record.created_at) {
+      const createdDate = new Date(record.created_at);
+      const daysSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceCreation < 30) {
+        return {
+          source: 'possibly_mock',
+          note: `This record has a UUID ID and was created recently (${Math.round(daysSinceCreation)} days ago). It may be test/mock data added during development.`
+        };
+      }
+    }
+    return {
+      source: 'unknown',
+      note: `This record has a UUID ID format. It may have been created manually or through a previous system version. Source cannot be definitively determined.`
+    };
+  }
+  
+  // Default: unknown source
+  return {
+    source: 'unknown',
+    note: `Unable to determine the source of this record. It may have been created manually or through a previous system version.`
+  };
 }
 
 /**

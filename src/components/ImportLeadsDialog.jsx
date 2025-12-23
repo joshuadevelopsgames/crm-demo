@@ -34,7 +34,9 @@ import {
   FileCheck,
   MapPin,
   User,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Trash2,
+  Info
 } from 'lucide-react';
 import {
   Select,
@@ -44,6 +46,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import toast from 'react-hot-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ImportLeadsDialog({ open, onClose }) {
   // File 1: Contacts Export
@@ -783,6 +796,118 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }
   };
 
+  // Delete orphaned record
+  const handleDeleteOrphaned = async (type, id) => {
+    if (!confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const endpoint = `/api/data/${type === 'account' ? 'accounts' : type === 'contact' ? 'contacts' : type === 'estimate' ? 'estimates' : 'jobsites'}`;
+      const response = await fetch(`${endpoint}?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete record');
+      }
+
+      // Remove from validation results
+      if (validationResults) {
+        const updatedResults = { ...validationResults };
+        const orphanedList = updatedResults[`${type}s`].orphaned.filter(item => item.id !== id);
+        updatedResults[`${type}s`] = {
+          ...updatedResults[`${type}s`],
+          orphaned: orphanedList
+        };
+        setValidationResults(updatedResults);
+      }
+
+      // Refresh existing data
+      await fetchExistingData();
+      
+      // Re-run validation
+      if (contactsData && leadsData && estimatesData && jobsitesData) {
+        await checkAndMergeAllFiles(contactsData, leadsData, estimatesData, jobsitesData);
+      }
+
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
+    } catch (err) {
+      console.error('Error deleting orphaned record:', err);
+      toast.error(`Failed to delete ${type}: ${err.message}`);
+    }
+  };
+
+  // Delete all orphaned records
+  const handleDeleteAllOrphaned = async () => {
+    const totalOrphaned = 
+      validationResults.accounts.orphaned.length +
+      validationResults.contacts.orphaned.length +
+      validationResults.estimates.orphaned.length +
+      validationResults.jobsites.orphaned.length;
+
+    if (!confirm(`Are you sure you want to delete all ${totalOrphaned} orphaned records? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = [];
+
+      // Delete all orphaned estimates
+      validationResults.estimates.orphaned.forEach(est => {
+        deletePromises.push(
+          fetch(`/api/data/estimates?id=${est.id}`, { method: 'DELETE' })
+        );
+      });
+
+      // Delete all orphaned accounts
+      validationResults.accounts.orphaned.forEach(acc => {
+        deletePromises.push(
+          fetch(`/api/data/accounts?id=${acc.id}`, { method: 'DELETE' })
+        );
+      });
+
+      // Delete all orphaned contacts
+      validationResults.contacts.orphaned.forEach(contact => {
+        deletePromises.push(
+          fetch(`/api/data/contacts?id=${contact.id}`, { method: 'DELETE' })
+        );
+      });
+
+      // Delete all orphaned jobsites
+      validationResults.jobsites.orphaned.forEach(jobsite => {
+        deletePromises.push(
+          fetch(`/api/data/jobsites?id=${jobsite.id}`, { method: 'DELETE' })
+        );
+      });
+
+      await Promise.all(deletePromises);
+
+      // Clear validation results
+      setValidationResults({
+        accounts: { ...validationResults.accounts, orphaned: [] },
+        contacts: { ...validationResults.contacts, orphaned: [] },
+        estimates: { ...validationResults.estimates, orphaned: [] },
+        jobsites: { ...validationResults.jobsites, orphaned: [] },
+        warnings: validationResults.warnings.filter(w => !w.type?.startsWith('orphaned_')),
+        errors: validationResults.errors
+      });
+
+      // Refresh existing data
+      await fetchExistingData();
+      
+      // Re-run validation
+      if (contactsData && leadsData && estimatesData && jobsitesData) {
+        await checkAndMergeAllFiles(contactsData, leadsData, estimatesData, jobsitesData);
+      }
+
+      toast.success(`Deleted ${totalOrphaned} orphaned records`);
+    } catch (err) {
+      console.error('Error deleting orphaned records:', err);
+      toast.error(`Failed to delete some records: ${err.message}`);
+    }
+  };
+
   // Reset
   const handleReset = () => {
     setContactsFile(null);
@@ -797,6 +922,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
     setImportStatus('idle');
     setImportResults(null);
     setError(null);
+    setValidationResults(null);
   };
 
   const handleClose = () => {
@@ -1549,64 +1675,195 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         validationResults.contacts.orphaned.length > 0 || 
                         validationResults.estimates.orphaned.length > 0 || 
                         validationResults.jobsites.orphaned.length > 0) && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="font-semibold text-red-900 mb-2">⚠️ Orphaned Records Found</p>
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-semibold text-red-900">⚠️ Orphaned Records Found</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDeleteAllOrphaned}
+                              className="text-red-700 border-red-300 hover:bg-red-100"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Delete All Orphaned
+                            </Button>
+                          </div>
                           <p className="text-sm text-red-800 mb-3">
                             These records exist in your database but are NOT in the import sheets. 
-                            They will remain in the database but won't be updated by this import.
+                            You can delete them if they're inconsistent or no longer needed.
                           </p>
                           
-                          {validationResults.accounts.orphaned.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs font-semibold text-red-900">Orphaned Accounts ({validationResults.accounts.orphaned.length}):</p>
-                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
-                                {validationResults.accounts.orphaned.slice(0, 10).map(acc => (
-                                  <p key={acc.id} className="text-xs text-red-700">
-                                    • {acc.name} (ID: {acc.lmn_crm_id || acc.id})
-                                  </p>
+                          {validationResults.estimates.orphaned.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-red-900 mb-2">
+                                Orphaned Estimates ({validationResults.estimates.orphaned.length}):
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.estimates.orphaned.map(est => (
+                                  <div key={est.id} className="bg-white p-2 rounded border border-red-200 flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-medium text-red-900">
+                                          {est.estimate_number || est.lmn_estimate_id}
+                                        </p>
+                                        {est._source && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {est._source === 'previous_import' ? 'Previous Import' : 
+                                             est._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        {est.contact_name || 'Unknown'} 
+                                        {est.total_price_with_tax ? ` • $${est.total_price_with_tax.toLocaleString()}` : ''}
+                                      </p>
+                                      {est._sourceNote && (
+                                        <div className="mt-1 flex items-start gap-1">
+                                          <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                          <p className="text-xs text-red-600 italic">{est._sourceNote}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteOrphaned('estimate', est.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 ))}
-                                {validationResults.accounts.orphaned.length > 10 && (
-                                  <p className="text-xs text-red-600 italic">
-                                    ... and {validationResults.accounts.orphaned.length - 10} more
-                                  </p>
-                                )}
                               </div>
                             </div>
                           )}
 
-                          {validationResults.estimates.orphaned.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs font-semibold text-red-900">Orphaned Estimates ({validationResults.estimates.orphaned.length}):</p>
-                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
-                                {validationResults.estimates.orphaned.slice(0, 10).map(est => (
-                                  <p key={est.id} className="text-xs text-red-700">
-                                    • {est.estimate_number || est.lmn_estimate_id} - {est.contact_name || 'Unknown'} 
-                                    {est.total_price_with_tax ? ` ($${est.total_price_with_tax.toLocaleString()})` : ''}
-                                  </p>
+                          {validationResults.accounts.orphaned.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-red-900 mb-2">
+                                Orphaned Accounts ({validationResults.accounts.orphaned.length}):
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.accounts.orphaned.map(acc => (
+                                  <div key={acc.id} className="bg-white p-2 rounded border border-red-200 flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-medium text-red-900">{acc.name}</p>
+                                        {acc._source && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {acc._source === 'previous_import' ? 'Previous Import' : 
+                                             acc._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        ID: {acc.lmn_crm_id || acc.id}
+                                      </p>
+                                      {acc._sourceNote && (
+                                        <div className="mt-1 flex items-start gap-1">
+                                          <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                          <p className="text-xs text-red-600 italic">{acc._sourceNote}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteOrphaned('account', acc.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 ))}
-                                {validationResults.estimates.orphaned.length > 10 && (
-                                  <p className="text-xs text-red-600 italic">
-                                    ... and {validationResults.estimates.orphaned.length - 10} more
-                                  </p>
-                                )}
                               </div>
                             </div>
                           )}
 
                           {validationResults.contacts.orphaned.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs font-semibold text-red-900">Orphaned Contacts ({validationResults.contacts.orphaned.length}):</p>
-                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
-                                {validationResults.contacts.orphaned.slice(0, 10).map(contact => (
-                                  <p key={contact.id} className="text-xs text-red-700">
-                                    • {contact.first_name} {contact.last_name} (ID: {contact.lmn_contact_id || contact.id})
-                                  </p>
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-red-900 mb-2">
+                                Orphaned Contacts ({validationResults.contacts.orphaned.length}):
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.contacts.orphaned.map(contact => (
+                                  <div key={contact.id} className="bg-white p-2 rounded border border-red-200 flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-medium text-red-900">
+                                          {contact.first_name} {contact.last_name}
+                                        </p>
+                                        {contact._source && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {contact._source === 'previous_import' ? 'Previous Import' : 
+                                             contact._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        ID: {contact.lmn_contact_id || contact.id}
+                                      </p>
+                                      {contact._sourceNote && (
+                                        <div className="mt-1 flex items-start gap-1">
+                                          <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                          <p className="text-xs text-red-600 italic">{contact._sourceNote}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteOrphaned('contact', contact.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 ))}
-                                {validationResults.contacts.orphaned.length > 10 && (
-                                  <p className="text-xs text-red-600 italic">
-                                    ... and {validationResults.contacts.orphaned.length - 10} more
-                                  </p>
-                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.jobsites.orphaned.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-red-900 mb-2">
+                                Orphaned Jobsites ({validationResults.jobsites.orphaned.length}):
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.jobsites.orphaned.map(jobsite => (
+                                  <div key={jobsite.id} className="bg-white p-2 rounded border border-red-200 flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-xs font-medium text-red-900">
+                                          {jobsite.name || jobsite.lmn_jobsite_id}
+                                        </p>
+                                        {jobsite._source && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {jobsite._source === 'previous_import' ? 'Previous Import' : 
+                                             jobsite._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-red-700 mt-1">
+                                        ID: {jobsite.lmn_jobsite_id || jobsite.id}
+                                      </p>
+                                      {jobsite._sourceNote && (
+                                        <div className="mt-1 flex items-start gap-1">
+                                          <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                          <p className="text-xs text-red-600 italic">{jobsite._sourceNote}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteOrphaned('jobsite', jobsite.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}
