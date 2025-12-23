@@ -8,6 +8,7 @@ import { parseEstimatesList } from '@/utils/lmnEstimatesListParser';
 import { parseJobsiteExport } from '@/utils/lmnJobsiteExportParser';
 import { mergeContactData } from '@/utils/lmnMergeData';
 import { autoScoreAccount } from '@/utils/autoScoreAccount';
+import { extractValidIds, compareWithExisting, validateReferences } from '@/utils/importValidation';
 // Data is now stored server-side via API endpoints, no Google Sheets needed
 import * as XLSX from 'xlsx';
 import {
@@ -75,6 +76,16 @@ export default function ImportLeadsDialog({ open, onClose }) {
     progress: 0,
     totalSteps: 0,
     completedSteps: 0
+  });
+
+  // Validation and comparison state
+  const [validationResults, setValidationResults] = useState(null);
+  const [showValidation, setShowValidation] = useState(false);
+  const [existingData, setExistingData] = useState({
+    accounts: [],
+    contacts: [],
+    estimates: [],
+    jobsites: []
   });
   
   const queryClient = useQueryClient();
@@ -212,8 +223,31 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }
   };
 
+  // Fetch existing data from database for comparison
+  const fetchExistingData = async () => {
+    try {
+      const [accountsRes, contactsRes, estimatesRes, jobsitesRes] = await Promise.all([
+        fetch('/api/data/accounts'),
+        fetch('/api/data/contacts'),
+        fetch('/api/data/estimates'),
+        fetch('/api/data/jobsites')
+      ]);
+
+      const accounts = accountsRes.ok ? (await accountsRes.json()).data || [] : [];
+      const contacts = contactsRes.ok ? (await contactsRes.json()).data || [] : [];
+      const estimates = estimatesRes.ok ? (await estimatesRes.json()).data || [] : [];
+      const jobsites = jobsitesRes.ok ? (await jobsitesRes.json()).data || [] : [];
+
+      setExistingData({ accounts, contacts, estimates, jobsites });
+      return { accounts, contacts, estimates, jobsites };
+    } catch (err) {
+      console.error('Error fetching existing data:', err);
+      return { accounts: [], contacts: [], estimates: [], jobsites: [] };
+    }
+  };
+
   // Check if all required files are loaded and merge them
-  const checkAndMergeAllFiles = (contacts, leads, estimates, jobsites) => {
+  const checkAndMergeAllFiles = async (contacts, leads, estimates, jobsites) => {
     // Require all 4 files: contacts, leads, estimates, and jobsites
     if (!contacts || !leads || !estimates || !jobsites) return;
     
@@ -221,6 +255,22 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Merge contacts and leads first
       const merged = mergeContactData(contacts, leads, estimates, jobsites);
       
+      // Extract valid IDs from the sheets
+      const validIds = extractValidIds(contacts, leads, estimates, jobsites);
+      
+      // Fetch existing data and run validation
+      setImportStatus('validating');
+      const existing = await fetchExistingData();
+      
+      // Compare imported data with existing data
+      const comparison = compareWithExisting(merged, existing.accounts, existing.contacts, existing.estimates, existing.jobsites, validIds);
+      
+      // Validate references
+      const referenceValidation = validateReferences(merged, validIds);
+      comparison.errors.push(...referenceValidation.errors);
+      comparison.warnings.push(...referenceValidation.warnings);
+      
+      setValidationResults(comparison);
       setMergedData(merged);
       setImportStatus('ready');
       setError(null);
@@ -228,6 +278,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
       setOrphanedJobsiteLinks({});
     } catch (err) {
       setError(`Error merging data: ${err.message}`);
+      setImportStatus('idle');
     }
   };
 
@@ -415,18 +466,62 @@ export default function ImportLeadsDialog({ open, onClose }) {
   };
 
   // Import merged data with automatic merge/update
+  // Only imports data that exists in the sheets (no orphaned/mock data)
   const handleImport = async () => {
     if (!mergedData) return;
 
     setImportStatus('importing');
     setError(null);
     
+    // Extract valid IDs to ensure we only import data from sheets
+    const validIds = extractValidIds(contactsData, leadsData, estimatesData, jobsitesData);
+    
+    // Filter estimates to only include those with valid IDs from sheets
+    // This prevents importing orphaned estimates that reference accounts/contacts not in sheets
+    const validEstimates = mergedData.estimates?.filter(est => {
+      const estId = est.lmn_estimate_id || est.id;
+      if (!validIds.estimateIds.has(estId)) {
+        console.warn(`Skipping estimate ${estId} - not in import sheets`);
+        return false;
+      }
+      // Also validate that referenced accounts/contacts are in sheets
+      if (est.account_id) {
+        const accountId = est.account_id.split('-').pop();
+        if (!validIds.accountIds.has(est.account_id) && !validIds.accountIds.has(accountId)) {
+          console.warn(`Skipping estimate ${estId} - references account ${est.account_id} not in sheets`);
+          return false;
+        }
+      }
+      return true;
+    }) || [];
+
+    // Filter jobsites similarly
+    const validJobsites = mergedData.jobsites?.filter(jobsite => {
+      const jobsiteId = jobsite.lmn_jobsite_id || jobsite.id;
+      if (!validIds.jobsiteIds.has(jobsiteId)) {
+        console.warn(`Skipping jobsite ${jobsiteId} - not in import sheets`);
+        return false;
+      }
+      return true;
+    }) || [];
+
+    // Filter accounts and contacts to only include those from sheets
+    const validAccounts = mergedData.accounts?.filter(acc => {
+      const accId = acc.lmn_crm_id || acc.id;
+      return validIds.accountIds.has(accId);
+    }) || [];
+
+    const validContacts = mergedData.contacts?.filter(contact => {
+      const contactId = contact.lmn_contact_id || contact.id;
+      return validIds.contactIds.has(contactId);
+    }) || [];
+
     // Calculate total steps for progress tracking
     const totalSteps = 
-      (mergedData.accounts?.length > 0 ? 1 : 0) +
-      (mergedData.contacts?.length > 0 ? Math.ceil(mergedData.contacts.length / 500) : 0) +
-      (mergedData.estimates?.length > 0 ? Math.ceil(mergedData.estimates.length / 500) : 0) +
-      (mergedData.jobsites?.length > 0 ? Math.ceil(mergedData.jobsites.length / 500) : 0);
+      (validAccounts.length > 0 ? 1 : 0) +
+      (validContacts.length > 0 ? Math.ceil(validContacts.length / 500) : 0) +
+      (validEstimates.length > 0 ? Math.ceil(validEstimates.length / 500) : 0) +
+      (validJobsites.length > 0 ? Math.ceil(validJobsites.length / 500) : 0);
     
     setImportProgress({
       currentStep: 'Starting import...',
@@ -453,15 +548,15 @@ export default function ImportLeadsDialog({ open, onClose }) {
       };
 
       // Import/Update accounts using bulk upsert (much faster)
-      // Accounts already have IDs like "lmn-account-6857868" from the parser
-      if (mergedData.accounts && mergedData.accounts.length > 0) {
+      // Only import accounts that are in the sheets (validAccounts)
+      if (validAccounts.length > 0) {
         try {
           const response = await fetch('/api/data/accounts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               action: 'bulk_upsert', 
-              data: { accounts: mergedData.accounts, lookupField: 'lmn_crm_id' } 
+              data: { accounts: validAccounts, lookupField: 'lmn_crm_id' } 
             })
           });
           const result = await response.json();
@@ -473,18 +568,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
             throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
-          results.accountsFailed = mergedData.accounts.length;
+          results.accountsFailed = validAccounts.length;
           results.errors.push(`Accounts bulk import: ${err.message}`);
         }
       }
 
       // Import/Update contacts using bulk upsert
-      // Contacts already have account_id set to "lmn-account-XXXXX" format, which matches account IDs
-      if (mergedData.contacts && mergedData.contacts.length > 0) {
+      // Only import contacts that are in the sheets (validContacts)
+      if (validContacts.length > 0) {
         // Contacts already have the correct account_id format (e.g., "lmn-account-6857868")
         // No need to map UUIDs - just use the IDs directly
-        const linkedCount = mergedData.contacts.filter(c => c.account_id).length;
-        console.log(`✅ Linking ${linkedCount} of ${mergedData.contacts.length} contacts to accounts`);
+        const linkedCount = validContacts.filter(c => c.account_id).length;
+        console.log(`✅ Linking ${linkedCount} of ${validContacts.length} contacts to accounts`);
         
         try {
           const response = await fetch('/api/data/contacts', {
@@ -492,7 +587,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               action: 'bulk_upsert', 
-              data: { contacts: mergedData.contacts, lookupField: 'lmn_contact_id' } 
+              data: { contacts: validContacts, lookupField: 'lmn_contact_id' } 
             })
           });
           
@@ -510,15 +605,16 @@ export default function ImportLeadsDialog({ open, onClose }) {
             throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
-          results.contactsFailed = mergedData.contacts.length;
+          results.contactsFailed = validContacts.length;
           results.errors.push(`Contacts bulk import: ${err.message}`);
           console.error('Contacts import error:', err);
         }
       }
 
       // Import/Update estimates using bulk upsert
+      // Only import estimates that are in the sheets (validEstimates)
       // Split into smaller chunks to avoid 413 (Content Too Large) errors
-      if (mergedData.estimates && mergedData.estimates.length > 0) {
+      if (validEstimates.length > 0) {
         try {
           const CHUNK_SIZE = 500; // Process 500 at a time to avoid payload size limits
           let totalCreated = 0;
@@ -526,13 +622,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
           
           // Estimates already have account_id in the correct format (e.g., "lmn-account-XXXXX")
           // No need to map UUIDs - just use the IDs directly
-          const linkedCount = mergedData.estimates.filter(e => e.account_id).length;
-          console.log(`✅ Linking ${linkedCount} of ${mergedData.estimates.length} estimates to accounts`);
+          const linkedCount = validEstimates.filter(e => e.account_id).length;
+          console.log(`✅ Linking ${linkedCount} of ${validEstimates.length} estimates to accounts`);
           
-          for (let i = 0; i < mergedData.estimates.length; i += CHUNK_SIZE) {
-            const chunk = mergedData.estimates.slice(i, i + CHUNK_SIZE);
+          for (let i = 0; i < validEstimates.length; i += CHUNK_SIZE) {
+            const chunk = validEstimates.slice(i, i + CHUNK_SIZE);
             const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-            const totalChunks = Math.ceil(mergedData.estimates.length / CHUNK_SIZE);
+            const totalChunks = Math.ceil(validEstimates.length / CHUNK_SIZE);
             
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
             
@@ -562,21 +658,22 @@ export default function ImportLeadsDialog({ open, onClose }) {
           
           results.estimatesCreated = totalCreated;
           results.estimatesUpdated = totalUpdated;
-          console.log(`✅ Bulk imported ${mergedData.estimates.length} estimates (${totalCreated} created, ${totalUpdated} updated)`);
+          console.log(`✅ Bulk imported ${validEstimates.length} estimates (${totalCreated} created, ${totalUpdated} updated)`);
         } catch (err) {
-          results.estimatesFailed = mergedData.estimates.length;
+          results.estimatesFailed = validEstimates.length;
           results.errors.push(`Estimates bulk import: ${err.message}`);
           console.error('Estimates import error:', err);
         }
       }
 
       // Import/Update jobsites using bulk upsert
+      // Only import jobsites that are in the sheets (validJobsites)
       // Jobsites already have account_id in the correct format (e.g., "lmn-account-XXXXX")
-      if (mergedData.jobsites && mergedData.jobsites.length > 0) {
+      if (validJobsites.length > 0) {
         // Jobsites already have the correct account_id format
         // No need to map UUIDs - just use the IDs directly
-        const linkedCount = mergedData.jobsites.filter(j => j.account_id).length;
-        console.log(`✅ Linking ${linkedCount} of ${mergedData.jobsites.length} jobsites to accounts`);
+        const linkedCount = validJobsites.filter(j => j.account_id).length;
+        console.log(`✅ Linking ${linkedCount} of ${validJobsites.length} jobsites to accounts`);
         
         try {
           const response = await fetch('/api/data/jobsites', {
@@ -584,7 +681,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               action: 'bulk_upsert', 
-              data: { jobsites: mergedData.jobsites, lookupField: 'lmn_jobsite_id' } 
+              data: { jobsites: validJobsites, lookupField: 'lmn_jobsite_id' } 
             })
           });
           
@@ -602,7 +699,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
             throw new Error(result.error || 'Bulk import failed');
           }
         } catch (err) {
-          results.jobsitesFailed = mergedData.jobsites.length;
+          results.jobsitesFailed = validJobsites.length;
           results.errors.push(`Jobsites bulk import: ${err.message}`);
           console.error('Jobsites import error:', err);
         }
@@ -610,12 +707,25 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
       // Data is automatically saved to Supabase via API calls above
       console.log('✅ All imported data saved to Supabase');
-      console.log('🔍 Imported data counts:', {
-        accounts: mergedData?.accounts?.length || 0,
-        contacts: mergedData?.contacts?.length || 0,
-        estimates: mergedData?.estimates?.length || 0,
-        jobsites: mergedData?.jobsites?.length || 0
+      console.log('🔍 Imported data counts (only from sheets):', {
+        accounts: validAccounts.length,
+        contacts: validContacts.length,
+        estimates: validEstimates.length,
+        jobsites: validJobsites.length
       });
+      
+      // Log filtered out records
+      const filteredOut = {
+        estimates: (mergedData.estimates?.length || 0) - validEstimates.length,
+        jobsites: (mergedData.jobsites?.length || 0) - validJobsites.length,
+        accounts: (mergedData.accounts?.length || 0) - validAccounts.length,
+        contacts: (mergedData.contacts?.length || 0) - validContacts.length
+      };
+      
+      if (filteredOut.estimates > 0 || filteredOut.jobsites > 0 || filteredOut.accounts > 0 || filteredOut.contacts > 0) {
+        console.warn('⚠️ Filtered out records not in import sheets:', filteredOut);
+        results.errors.push(`Filtered out ${filteredOut.estimates} estimates, ${filteredOut.jobsites} jobsites, ${filteredOut.accounts} accounts, ${filteredOut.contacts} contacts that were not in import sheets`);
+      }
 
       setImportResults(results);
       setImportStatus('success');
@@ -707,6 +817,17 @@ export default function ImportLeadsDialog({ open, onClose }) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Validating State */}
+          {importStatus === 'validating' && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <RefreshCw className="w-12 h-12 text-blue-600 animate-spin" />
+              <div className="text-center">
+                <p className="text-lg font-semibold text-slate-900">Validating Data...</p>
+                <p className="text-sm text-slate-600 mt-2">Comparing imported data with existing records</p>
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {importStatus === 'importing' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -1372,6 +1493,223 @@ export default function ImportLeadsDialog({ open, onClose }) {
                 </Card>
               )}
 
+              {/* Validation Results */}
+              {validationResults && importStatus === 'ready' && (
+                <Card className="p-4 border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <h3 className="font-semibold text-slate-900">Data Validation Results</h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowValidation(!showValidation)}
+                    >
+                      {showValidation ? 'Hide Details' : 'Show Details'}
+                    </Button>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {validationResults.accounts.new.length + validationResults.contacts.new.length + 
+                         validationResults.estimates.new.length + validationResults.jobsites.new.length}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">New Records</p>
+                    </div>
+                    <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-2xl font-bold text-amber-600">
+                        {validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
+                         validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">Will Be Updated</p>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                      <p className="text-2xl font-bold text-red-600">
+                        {validationResults.accounts.orphaned.length + validationResults.contacts.orphaned.length + 
+                         validationResults.estimates.orphaned.length + validationResults.jobsites.orphaned.length}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">Orphaned (Not in Sheets)</p>
+                    </div>
+                    <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <p className="text-2xl font-bold text-slate-600">
+                        {validationResults.warnings.length + validationResults.errors.length}
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">Warnings/Errors</p>
+                    </div>
+                  </div>
+
+                  {/* Detailed Results */}
+                  {showValidation && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-slate-200">
+                      {/* Orphaned Records Warning */}
+                      {(validationResults.accounts.orphaned.length > 0 || 
+                        validationResults.contacts.orphaned.length > 0 || 
+                        validationResults.estimates.orphaned.length > 0 || 
+                        validationResults.jobsites.orphaned.length > 0) && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="font-semibold text-red-900 mb-2">⚠️ Orphaned Records Found</p>
+                          <p className="text-sm text-red-800 mb-3">
+                            These records exist in your database but are NOT in the import sheets. 
+                            They will remain in the database but won't be updated by this import.
+                          </p>
+                          
+                          {validationResults.accounts.orphaned.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-red-900">Orphaned Accounts ({validationResults.accounts.orphaned.length}):</p>
+                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
+                                {validationResults.accounts.orphaned.slice(0, 10).map(acc => (
+                                  <p key={acc.id} className="text-xs text-red-700">
+                                    • {acc.name} (ID: {acc.lmn_crm_id || acc.id})
+                                  </p>
+                                ))}
+                                {validationResults.accounts.orphaned.length > 10 && (
+                                  <p className="text-xs text-red-600 italic">
+                                    ... and {validationResults.accounts.orphaned.length - 10} more
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.estimates.orphaned.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-red-900">Orphaned Estimates ({validationResults.estimates.orphaned.length}):</p>
+                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
+                                {validationResults.estimates.orphaned.slice(0, 10).map(est => (
+                                  <p key={est.id} className="text-xs text-red-700">
+                                    • {est.estimate_number || est.lmn_estimate_id} - {est.contact_name || 'Unknown'} 
+                                    {est.total_price_with_tax ? ` ($${est.total_price_with_tax.toLocaleString()})` : ''}
+                                  </p>
+                                ))}
+                                {validationResults.estimates.orphaned.length > 10 && (
+                                  <p className="text-xs text-red-600 italic">
+                                    ... and {validationResults.estimates.orphaned.length - 10} more
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.contacts.orphaned.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-semibold text-red-900">Orphaned Contacts ({validationResults.contacts.orphaned.length}):</p>
+                              <div className="max-h-32 overflow-y-auto mt-1 space-y-1">
+                                {validationResults.contacts.orphaned.slice(0, 10).map(contact => (
+                                  <p key={contact.id} className="text-xs text-red-700">
+                                    • {contact.first_name} {contact.last_name} (ID: {contact.lmn_contact_id || contact.id})
+                                  </p>
+                                ))}
+                                {validationResults.contacts.orphaned.length > 10 && (
+                                  <p className="text-xs text-red-600 italic">
+                                    ... and {validationResults.contacts.orphaned.length - 10} more
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Field Differences */}
+                      {(validationResults.accounts.updated.length > 0 || 
+                        validationResults.contacts.updated.length > 0 || 
+                        validationResults.estimates.updated.length > 0) && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="font-semibold text-amber-900 mb-2">📝 Records with Field Differences</p>
+                          <p className="text-sm text-amber-800 mb-3">
+                            These records will be updated with new values from the import sheets.
+                          </p>
+                          
+                          {validationResults.accounts.updated.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-amber-900 mb-1">
+                                Accounts ({validationResults.accounts.updated.length}):
+                              </p>
+                              <div className="max-h-40 overflow-y-auto space-y-2">
+                                {validationResults.accounts.updated.slice(0, 5).map((item, idx) => (
+                                  <div key={idx} className="text-xs bg-white p-2 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">{item.account.name}</p>
+                                    {item.differences.slice(0, 3).map((diff, dIdx) => (
+                                      <p key={dIdx} className="text-amber-700 mt-1">
+                                        • {diff.field}: "{diff.existing}" → "{diff.imported}"
+                                      </p>
+                                    ))}
+                                    {item.differences.length > 3 && (
+                                      <p className="text-amber-600 italic mt-1">
+                                        ... and {item.differences.length - 3} more changes
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                                {validationResults.accounts.updated.length > 5 && (
+                                  <p className="text-xs text-amber-600 italic">
+                                    ... and {validationResults.accounts.updated.length - 5} more accounts
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.estimates.updated.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-semibold text-amber-900 mb-1">
+                                Estimates ({validationResults.estimates.updated.length}):
+                              </p>
+                              <div className="max-h-40 overflow-y-auto space-y-2">
+                                {validationResults.estimates.updated.slice(0, 5).map((item, idx) => (
+                                  <div key={idx} className="text-xs bg-white p-2 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">
+                                      {item.estimate.estimate_number || item.estimate.lmn_estimate_id}
+                                    </p>
+                                    {item.differences.slice(0, 3).map((diff, dIdx) => (
+                                      <p key={dIdx} className="text-amber-700 mt-1">
+                                        • {diff.field}: "{diff.existing}" → "{diff.imported}"
+                                      </p>
+                                    ))}
+                                  </div>
+                                ))}
+                                {validationResults.estimates.updated.length > 5 && (
+                                  <p className="text-xs text-amber-600 italic">
+                                    ... and {validationResults.estimates.updated.length - 5} more estimates
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Warnings and Errors */}
+                      {(validationResults.warnings.length > 0 || validationResults.errors.length > 0) && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="font-semibold text-red-900 mb-2">⚠️ Warnings & Errors</p>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {validationResults.errors.map((err, idx) => (
+                              <p key={idx} className="text-xs text-red-800">
+                                ❌ {err.message || err}
+                              </p>
+                            ))}
+                            {validationResults.warnings.slice(0, 10).map((warn, idx) => (
+                              <p key={idx} className="text-xs text-red-700">
+                                ⚠️ {warn.message || warn}
+                              </p>
+                            ))}
+                            {validationResults.warnings.length > 10 && (
+                              <p className="text-xs text-red-600 italic">
+                                ... and {validationResults.warnings.length - 10} more warnings
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              )}
+
               {/* Action Buttons */}
               {allFilesUploaded && (
                 <div className="flex gap-3 justify-end">
@@ -1380,7 +1718,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   </Button>
                   <Button
                     onClick={handleImport}
-                    disabled={!mergedData || importStatus === 'importing'}
+                    disabled={!mergedData || importStatus === 'importing' || importStatus === 'validating'}
                     className="bg-emerald-600 hover:bg-emerald-700"
                   >
                     {importStatus === 'importing' ? (
