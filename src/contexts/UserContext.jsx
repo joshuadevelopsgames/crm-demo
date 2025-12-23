@@ -48,13 +48,24 @@ export function UserProvider({ children }) {
             console.error('Error fetching profile:', error);
           }
 
-          // If profile doesn't exist, check if it's the System Admin email
-          const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'admin' : 'user';
-          setProfile(data || {
-            id: session.user.id,
-            email: session.user.email,
-            role: defaultRole // Default role (admin for System Admin, user for others)
-          });
+          // If profile doesn't exist or role is missing, check if it's the System Admin email
+          const isSystemAdmin = session.user.email === 'jrsschroeder@gmail.com';
+          const defaultRole = isSystemAdmin ? 'admin' : 'user';
+          
+          // If profile exists but role is missing/null, ensure System Admin gets admin role
+          if (data) {
+            setProfile({
+              ...data,
+              role: data.role || (isSystemAdmin ? 'admin' : 'user')
+            });
+          } else {
+            // Profile doesn't exist, create default profile
+            setProfile({
+              id: session.user.id,
+              email: session.user.email,
+              role: defaultRole
+            });
+          }
         } catch (error) {
           console.error('Error fetching profile:', error);
           // Fallback: check if it's System Admin email
@@ -99,12 +110,16 @@ export function UserProvider({ children }) {
     };
   }, [supabase]);
 
+  // Determine admin status - check role or email fallback
+  const isAdmin = profile?.role === 'admin' || 
+                  (profile?.email === 'jrsschroeder@gmail.com' && profile?.role !== 'user');
+
   const value = {
     user,
     profile,
     isLoading,
-    isAdmin: profile?.role === 'admin',
-    canManageICP: profile?.role === 'admin',
+    isAdmin,
+    canManageICP: isAdmin,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
