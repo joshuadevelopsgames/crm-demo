@@ -1,63 +1,83 @@
 /**
- * Calculate revenue segment based on rolling 12-month average revenue percentage
+ * Calculate revenue segment based on current year revenue percentage
  * 
- * Segment A: >= 15% of total revenue (last 12 months)
- * Segment B: 5-15% of total revenue (last 12 months)
- * Segment C: 0-5% of total revenue (last 12 months)
+ * Segment A: >= 15% of total revenue (current year)
+ * Segment B: 5-15% of total revenue (current year)
+ * Segment C: 0-5% of total revenue (current year)
  * Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
  *   - "Standard" = project (one-time)
  *   - "Service" = ongoing/recurring
  *   - If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
  * 
- * Revenue is calculated from won estimates within the last 12 months (rolling average)
+ * Revenue is calculated from won estimates for the current year only
+ * Multi-year contracts are annualized (total price divided by number of years)
  */
 
 /**
- * Check if a date is within the last 12 months
- * @param {string|Date} date - Date to check
- * @returns {boolean} - True if date is within last 12 months
- */
-function isWithinLast12Months(date) {
-  if (!date) return false;
-  
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(dateObj.getTime())) return false;
-  
-  const now = new Date();
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-  
-  return dateObj >= twelveMonthsAgo && dateObj <= now;
-}
-
-/**
- * Get the relevant date for an estimate (won_date if available, otherwise estimate_date)
+ * Get the year(s) an estimate applies to and its annualized value for the current year
  * @param {Object} estimate - Estimate object
- * @returns {Date|null} - Relevant date or null
+ * @param {number} currentYear - Current year (e.g., 2024)
+ * @returns {Object|null} - { appliesToCurrentYear: boolean, annualizedValue: number } or null if no valid date
  */
-function getEstimateRelevantDate(estimate) {
-  // For won estimates, prefer won_date, then estimate_close_date, then estimate_date
-  if (estimate.won_date) {
-    return new Date(estimate.won_date);
+function getEstimateYearData(estimate, currentYear) {
+  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+  const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+  const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
+  
+  const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
+  if (totalPrice === 0) return null;
+  
+  // Case 1: Both contract_start and contract_end exist
+  if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+    const startYear = contractStart.getFullYear();
+    const endYear = contractEnd.getFullYear();
+    const numberOfYears = endYear - startYear + 1;
+    
+    if (numberOfYears <= 0) return null;
+    
+    const annualizedValue = totalPrice / numberOfYears;
+    const appliesToCurrentYear = currentYear >= startYear && currentYear <= endYear;
+    
+    return {
+      appliesToCurrentYear,
+      annualizedValue
+    };
   }
-  if (estimate.estimate_close_date) {
-    return new Date(estimate.estimate_close_date);
+  
+  // Case 2: Only contract_start exists
+  if (contractStart && !isNaN(contractStart.getTime())) {
+    const startYear = contractStart.getFullYear();
+    const appliesToCurrentYear = currentYear === startYear;
+    
+    return {
+      appliesToCurrentYear,
+      annualizedValue: totalPrice
+    };
   }
-  if (estimate.estimate_date) {
-    return new Date(estimate.estimate_date);
+  
+  // Case 3: No contract dates, use estimate_date
+  if (estimateDate && !isNaN(estimateDate.getTime())) {
+    const estimateYear = estimateDate.getFullYear();
+    const appliesToCurrentYear = currentYear === estimateYear;
+    
+    return {
+      appliesToCurrentYear,
+      annualizedValue: totalPrice
+    };
   }
+  
+  // No valid date found
   return null;
 }
 
 /**
- * Calculate actual revenue from won estimates within the last 12 months
+ * Calculate actual revenue from won estimates for the current year
+ * Multi-year contracts are annualized (divided by number of years)
  * @param {Array} estimates - Array of estimate objects
- * @returns {number} - Total revenue from won estimates in last 12 months
+ * @returns {number} - Total revenue from won estimates in current year (annualized for multi-year contracts)
  */
 export function calculateRevenueFromEstimates(estimates = []) {
-  const now = new Date();
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const currentYear = new Date().getFullYear();
   
   return estimates
     .filter(est => {
@@ -66,29 +86,26 @@ export function calculateRevenueFromEstimates(estimates = []) {
         return false;
       }
       
-      // Check if estimate is within last 12 months
-      const relevantDate = getEstimateRelevantDate(est);
-      if (!relevantDate || isNaN(relevantDate.getTime())) {
-        return false;
-      }
-      
-      return relevantDate >= twelveMonthsAgo && relevantDate <= now;
+      // Check if estimate applies to current year
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
     })
     .reduce((sum, est) => {
-      const revenue = parseFloat(est.total_price_with_tax || est.total_price || 0);
-      return sum + (isNaN(revenue) ? 0 : revenue);
+      const yearData = getEstimateYearData(est, currentYear);
+      if (!yearData) return sum;
+      return sum + (isNaN(yearData.annualizedValue) ? 0 : yearData.annualizedValue);
     }, 0);
 }
 
 /**
- * Get account revenue - total revenue from last 12 months (rolling window)
+ * Get account revenue - total revenue from current year
  * @param {Object} account - Account object
  * @param {Array} estimates - Array of estimate objects for this account (optional)
- * @returns {number} - Account total revenue from last 12 months
+ * @returns {number} - Account total revenue from current year (annualized for multi-year contracts)
  */
 export function getAccountRevenue(account, estimates = []) {
   // If estimates are provided, always use the calculated revenue (even if 0)
-  // This ensures we use actual 12-month rolling totals, not outdated annual_revenue
+  // This ensures we use actual current year totals, not outdated annual_revenue
   if (estimates && estimates.length > 0) {
     return calculateRevenueFromEstimates(estimates);
   }
@@ -109,22 +126,18 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
   // Check if account is project only (has "Standard" type estimates but no "Service" type estimates)
   // If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
   if (estimates && estimates.length > 0) {
-    const now = new Date();
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const currentYear = new Date().getFullYear();
     
-    // Only consider won estimates from last 12 months for type checking
+    // Only consider won estimates from current year for type checking
     const wonEstimates = estimates.filter(est => {
       // Must be won
       if (est.status !== 'won') {
         return false;
       }
       
-      // Only consider estimates from last 12 months
-      const relevantDate = getEstimateRelevantDate(est);
-      if (!relevantDate || isNaN(relevantDate.getTime())) return false;
-      
-      return relevantDate >= twelveMonthsAgo && relevantDate <= now;
+      // Only consider estimates that apply to current year
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
     });
     
     const hasStandardEstimates = wonEstimates.some(est => 
@@ -164,10 +177,10 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 }
 
 /**
- * Calculate total revenue across all accounts (rolling 12-month total)
+ * Calculate total revenue across all accounts (current year total)
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional)
- * @returns {number} - Total revenue from last 12 months (sum of all accounts)
+ * @returns {number} - Total revenue from current year (sum of all accounts, annualized for multi-year contracts)
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
   return accounts.reduce((total, account) => {
@@ -178,13 +191,13 @@ export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
 }
 
 /**
- * Auto-assign revenue segments for all accounts based on rolling 12-month revenue percentages
+ * Auto-assign revenue segments for all accounts based on current year revenue percentages
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional)
  * @returns {Array} - Array of accounts with updated revenue_segment
  */
 export function autoAssignRevenueSegments(accounts, estimatesByAccountId = {}) {
-  // Calculate total revenue from last 12 months across all accounts
+  // Calculate total revenue from current year across all accounts
   const totalRevenue = calculateTotalRevenue(accounts, estimatesByAccountId);
   
   if (totalRevenue <= 0) {
