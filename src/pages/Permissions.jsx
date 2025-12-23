@@ -17,7 +17,8 @@ import {
   FileText,
   Search,
   Save,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import toast from 'react-hot-toast';
@@ -28,6 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Define all permissions in the system
 const PERMISSIONS = [
@@ -112,6 +121,14 @@ export default function Permissions() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPermissions, setUserPermissions] = useState({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    role: 'user'
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   // Fetch all users/profiles
   const { data: users = [], isLoading: usersLoading } = useQuery({
@@ -205,6 +222,44 @@ export default function Permissions() {
     }));
   };
 
+  const createUserMutation = useMutation({
+    mutationFn: async (userData) => {
+      const response = await fetch('/api/admin/createUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+      return result.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      toast.success('User created successfully');
+      setIsCreateDialogOpen(false);
+      setNewUser({ email: '', password: '', full_name: '', role: 'user' });
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create user');
+    }
+  });
+
+  const handleCreateUser = () => {
+    if (!newUser.email || !newUser.password) {
+      toast.error('Email and password are required');
+      return;
+    }
+    setIsCreating(true);
+    createUserMutation.mutate(newUser, {
+      onSettled: () => {
+        setIsCreating(false);
+      }
+    });
+  };
+
   // Filter users by search term
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -240,10 +295,20 @@ export default function Permissions() {
         {/* Users List */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Users
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Users
+              </CardTitle>
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                Create User
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Search */}
@@ -412,6 +477,103 @@ export default function Permissions() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. The user will be able to log in with the email and password you provide.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-user-email">Email *</Label>
+              <Input
+                id="new-user-email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-user-password">Password *</Label>
+              <Input
+                id="new-user-password"
+                type="password"
+                placeholder="Minimum 6 characters"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                disabled={isCreating}
+              />
+              <p className="text-xs text-slate-500">Password must be at least 6 characters long</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-user-name">Full Name</Label>
+              <Input
+                id="new-user-name"
+                type="text"
+                placeholder="John Doe"
+                value={newUser.full_name}
+                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                disabled={isCreating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-user-role">Role</Label>
+              <Select
+                value={newUser.role}
+                onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                disabled={isCreating}
+              >
+                <SelectTrigger id="new-user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin (System Admin)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {newUser.role === 'admin' 
+                  ? 'Admin users have full access including Scoring and Permissions management'
+                  : 'Regular users have access to most features except admin functions'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreateDialogOpen(false);
+                setNewUser({ email: '', password: '', full_name: '', role: 'user' });
+              }}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={isCreating || !newUser.email || !newUser.password}
+            >
+              {isCreating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create User
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

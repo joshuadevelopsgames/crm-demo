@@ -14,7 +14,9 @@ import {
   Menu,
   X,
   LogOut,
-  HelpCircle
+  HelpCircle,
+  ChevronDown,
+  Settings
 } from 'lucide-react';
 
 import { base44 } from '@/api/base44Client';
@@ -26,6 +28,7 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { clearGoogleAuthSession } from '@/services/googleAuthService';
 import { disconnectGmail } from '@/services/gmailService';
+import { SimpleDropdown, SimpleDropdownItem } from '@/components/ui/simple-dropdown';
 
 export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,18 +38,23 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const allNavigation = [
+  const regularNavigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
     { name: 'Accounts', path: 'Accounts', icon: Building2 },
     { name: 'Contacts', path: 'Contacts', icon: Users },
     { name: 'Tasks', path: 'Tasks', icon: CheckSquare },
     { name: 'Sequences', path: 'Sequences', icon: GitBranch },
-    { name: 'Scoring', path: 'Scoring', icon: Award, adminOnly: true },
-    { name: 'Permissions', path: 'Permissions', icon: Shield, adminOnly: true },
   ];
 
-  // Filter navigation based on user role
-  const navigation = allNavigation.filter(item => !item.adminOnly || isAdmin);
+  const adminNavigation = [
+    { name: 'Scoring', path: 'Scoring', icon: Award },
+    { name: 'Permissions', path: 'Permissions', icon: Shield },
+  ];
+
+  // Combine regular navigation with admin items if user is admin
+  const navigation = isAdmin 
+    ? [...regularNavigation, ...adminNavigation]
+    : regularNavigation;
 
   const handleLogout = async (e) => {
     // Prevent any default behavior
@@ -176,7 +184,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex md:items-center md:space-x-1">
-              {navigation.map((item) => {
+              {regularNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPageName === item.path;
                 return (
@@ -194,6 +202,46 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 );
               })}
+              
+              {/* Admin Dropdown */}
+              {isAdmin && (
+                <SimpleDropdown
+                  trigger={
+                    <button
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                        adminNavigation.some(item => currentPageName === item.path)
+                          ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                      }`}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Admin
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  }
+                >
+                  <div className="py-1 min-w-[160px]">
+                    {adminNavigation.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = currentPageName === item.path;
+                      return (
+                        <SimpleDropdownItem
+                          key={item.name}
+                          onClick={() => {
+                            navigate(createPageUrl(item.path));
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 ${
+                            isActive ? 'bg-slate-100 font-medium' : ''
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          {item.name}
+                        </SimpleDropdownItem>
+                      );
+                    })}
+                  </div>
+                </SimpleDropdown>
+              )}
               <Link
                 to="/tutorial"
                 className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -265,7 +313,7 @@ export default function Layout({ children, currentPageName }) {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white">
             <div className="px-4 py-3 space-y-1">
-              {navigation.map((item) => {
+              {regularNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPageName === item.path;
                 return (
@@ -289,6 +337,39 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 );
               })}
+              
+              {/* Admin Section in Mobile */}
+              {isAdmin && (
+                <>
+                  <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Admin
+                  </div>
+                  {adminNavigation.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentPageName === item.path;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={createPageUrl(item.path)}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                          isActive
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                        style={(isPWA || isNativeApp) ? {
+                          minHeight: '48px',
+                          WebkitTapHighlightColor: 'transparent',
+                          touchAction: 'manipulation'
+                        } : {}}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
               <Link
                 to="/tutorial"
                 onClick={() => setMobileMenuOpen(false)}
