@@ -114,6 +114,16 @@ export function UserProvider({ children }) {
   const isAdmin = profile?.role === 'admin' || 
                   (profile?.email === 'jrsschroeder@gmail.com' && profile?.role !== 'user');
 
+  // Debug logging (can be removed later)
+  if (profile?.email === 'jrsschroeder@gmail.com') {
+    console.log('🔍 System Admin Debug:', {
+      email: profile?.email,
+      role: profile?.role,
+      isAdmin,
+      profileExists: !!profile
+    });
+  }
+
   const value = {
     user,
     profile,
