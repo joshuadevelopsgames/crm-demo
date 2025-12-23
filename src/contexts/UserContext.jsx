@@ -53,7 +53,7 @@ export function UserProvider({ children }) {
 
           // If profile doesn't exist or role is missing, check if it's the System Admin email
           const isSystemAdmin = session.user.email === 'jrsschroeder@gmail.com';
-          const defaultRole = isSystemAdmin ? 'admin' : 'user';
+          const defaultRole = isSystemAdmin ? 'system_admin' : 'user';
           
           console.log('👤 User check:', { 
             email: session.user.email, 
@@ -63,9 +63,9 @@ export function UserProvider({ children }) {
             profileRole: data?.role
           });
           
-          // If profile exists but role is missing/null, ensure System Admin gets admin role
+          // If profile exists but role is missing/null, ensure System Admin gets system_admin role
           if (data) {
-            const finalRole = data.role || (isSystemAdmin ? 'admin' : 'user');
+            const finalRole = data.role || (isSystemAdmin ? 'system_admin' : 'user');
             console.log('✅ Setting profile with role:', finalRole);
             setProfile({
               ...data,
@@ -114,7 +114,7 @@ export function UserProvider({ children }) {
         } catch (error) {
           console.error('Error fetching profile:', error);
           // Fallback: check if it's System Admin email
-          const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'admin' : 'user';
+          const defaultRole = session.user.email === 'jrsschroeder@gmail.com' ? 'system_admin' : 'user';
           
           // Try to create profile in database
           if (supabase) {
@@ -152,7 +152,7 @@ export function UserProvider({ children }) {
         setProfile({
           id: session.user.id,
           email: email,
-          role: email === 'jrsschroeder@gmail.com' ? 'admin' : 'user'
+          role: email === 'jrsschroeder@gmail.com' ? 'system_admin' : 'user'
         });
       }
 
@@ -182,8 +182,14 @@ export function UserProvider({ children }) {
 
   // Determine admin status - check role or email fallback
   // System Admin email always has admin access, regardless of database role
-  const isAdmin = profile?.role === 'admin' || 
+  // Admin access: both system_admin and admin roles have admin privileges
+  const isAdmin = profile?.role === 'system_admin' || 
+                  profile?.role === 'admin' || 
                   profile?.email === 'jrsschroeder@gmail.com';
+  
+  // Check if user is specifically the system admin (cannot be deleted, has special privileges)
+  const isSystemAdmin = profile?.role === 'system_admin' || 
+                        profile?.email === 'jrsschroeder@gmail.com';
 
   // Debug logging for all users (can be removed later)
   console.log('🔍 UserContext Debug:', {
@@ -192,7 +198,8 @@ export function UserProvider({ children }) {
     hasProfile: !!profile,
     profileEmail: profile?.email,
     profileRole: profile?.role,
-      isAdmin,
+    isAdmin,
+    isSystemAdmin,
     supabaseConfigured: !!supabase
     });
 

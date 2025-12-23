@@ -188,18 +188,29 @@ export default async function handler(req, res) {
     }
     console.log(`✅ [${requestId}] Password length valid (${passwordTrimmed.length} chars)`);
 
-    // Validate role
+    // Validate role (system_admin cannot be assigned via API, only for jrsschroeder@gmail.com)
     console.log(`🔐 [${requestId}] Step 7: Validating role...`);
-    if (role !== 'admin' && role !== 'user') {
+    if (role !== 'admin' && role !== 'user' && role !== 'system_admin') {
       console.error(`❌ [${requestId}] VALIDATION FAILED: Invalid role`);
       console.error(`   - role:`, role);
       return res.status(400).json({
         success: false,
-        error: 'Role must be either "admin" or "user"',
+        error: 'Role must be either "admin" or "user" (system_admin is reserved)',
         requestId,
         received: { role }
       });
     }
+    
+    // Prevent creating system_admin role for non-system-admin emails
+    if (role === 'system_admin' && emailTrimmed !== 'jrsschroeder@gmail.com') {
+      console.error(`❌ [${requestId}] VALIDATION FAILED: system_admin role can only be assigned to jrsschroeder@gmail.com`);
+      return res.status(400).json({
+        success: false,
+        error: 'system_admin role is reserved and cannot be assigned to other users',
+        requestId
+      });
+    }
+    
     console.log(`✅ [${requestId}] Role valid:`, role);
 
     console.log(`🔐 [${requestId}] Step 8: Initializing Supabase client...`);

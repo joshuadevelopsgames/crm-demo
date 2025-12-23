@@ -18,7 +18,8 @@ import {
   Search,
   Save,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import toast from 'react-hot-toast';
@@ -37,6 +38,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Define all permissions in the system
 const PERMISSIONS = [
@@ -116,7 +127,7 @@ const PERMISSIONS_BY_CATEGORY = PERMISSIONS.reduce((acc, perm) => {
 }, {});
 
 export default function Permissions() {
-  const { isAdmin, profile } = useUser();
+  const { isAdmin, isSystemAdmin, profile } = useUser();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -129,6 +140,8 @@ export default function Permissions() {
     role: 'user'
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // Fetch all users/profiles
   const { data: users = [], isLoading: usersLoading } = useQuery({
@@ -157,29 +170,44 @@ export default function Permissions() {
     enabled: isAdmin // Only fetch if user is admin
   });
 
-  // Fetch permissions for selected user
+  // Fetch permissions for selected user from database
   const { data: userPerms, isLoading: permsLoading } = useQuery({
     queryKey: ['user-permissions', selectedUser?.id],
     queryFn: async () => {
       if (!selectedUser) return {};
       
-      // For now, permissions are based on role
-      // In the future, this could be a separate permissions table
-      const isUserAdmin = selectedUser.role === 'admin';
-      
-      // Map permissions based on role
-      const perms = {};
+      // First, get role-based defaults
+      const isUserAdmin = selectedUser.role === 'admin' || selectedUser.role === 'system_admin';
+      const roleBasedPerms = {};
       PERMISSIONS.forEach(perm => {
         if (perm.id === 'manage_permissions') {
-          perms[perm.id] = isUserAdmin; // Only admins can manage permissions
+          roleBasedPerms[perm.id] = isUserAdmin;
         } else if (perm.id === 'access_scoring' || perm.id === 'manage_icp_template') {
-          perms[perm.id] = isUserAdmin; // Only admins can access scoring
+          roleBasedPerms[perm.id] = isUserAdmin;
         } else {
-          perms[perm.id] = true; // All users have other permissions
+          roleBasedPerms[perm.id] = perm.checkedByDefault !== false; // Use checkedByDefault or default to true
         }
       });
       
-      return perms;
+      // Then, fetch custom permissions from database
+      try {
+        const response = await fetch(`/api/admin/userPermissions?userId=${selectedUser.id}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // Merge: database permissions override role-based defaults
+            return {
+              ...roleBasedPerms,
+              ...result.data
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user permissions:', error);
+      }
+      
+      // Fallback to role-based permissions
+      return roleBasedPerms;
     },
     enabled: !!selectedUser
   });
@@ -220,11 +248,46 @@ export default function Permissions() {
     updateUserRoleMutation.mutate({ userId, role: newRole });
   };
 
+  const updatePermissionMutation = useMutation({
+    mutationFn: async ({ userId, permissionId, enabled }) => {
+      const response = await fetch('/api/admin/userPermissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, permissionId, enabled })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update permission');
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-permissions', selectedUser?.id] });
+      toast.success('✅ Permission updated');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update permission');
+      console.error('❌ Error updating permission:', error);
+    }
+  });
+
   const handlePermissionToggle = (permissionId, enabled) => {
+    if (!selectedUser) return;
+    
+    // Optimistically update UI
     setUserPermissions(prev => ({
       ...prev,
       [permissionId]: enabled
     }));
+    
+    // Save to database
+    updatePermissionMutation.mutate({
+      userId: selectedUser.id,
+      permissionId,
+      enabled
+    });
   };
 
   const createUserMutation = useMutation({
@@ -340,6 +403,48 @@ export default function Permissions() {
     });
   };
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId) => {
+      const response = await fetch(`/api/admin/deleteUser?userId=${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to delete user');
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      toast.success('✅ User deleted successfully');
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      // Clear selected user if it was the deleted user
+      if (selectedUser?.id === userToDelete?.id) {
+        setSelectedUser(null);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete user');
+      console.error('❌ Error deleting user:', error);
+    }
+  });
+
+  const handleDeleteClick = (user, e) => {
+    e.stopPropagation(); // Prevent selecting the user when clicking delete
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
+  };
+
   // Filter users by search term
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -424,7 +529,7 @@ export default function Permissions() {
                         : 'bg-white border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 truncate">
                           {user.full_name || user.email}
@@ -433,12 +538,25 @@ export default function Permissions() {
                           <p className="text-sm text-slate-500 truncate">{user.email}</p>
                         )}
                       </div>
-                      <Badge 
-                        variant={user.role === 'admin' ? 'default' : 'outline'}
-                        className={user.role === 'admin' ? 'bg-blue-600' : ''}
-                      >
-                        {user.role === 'admin' ? 'Admin' : 'User'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={user.role === 'admin' || user.role === 'system_admin' ? 'default' : 'outline'}
+                          className={user.role === 'system_admin' ? 'bg-purple-600' : user.role === 'admin' ? 'bg-blue-600' : ''}
+                        >
+                          {user.role === 'system_admin' ? 'System Admin' : user.role === 'admin' ? 'Admin' : 'User'}
+                        </Badge>
+                        {user.id !== profile?.id && user.role !== 'system_admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleDeleteClick(user, e)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -480,11 +598,16 @@ export default function Permissions() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin (System Admin)</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      {selectedUser.role === 'system_admin' && (
+                        <SelectItem value="system_admin" disabled>System Admin (Reserved)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-500 mt-2">
-                    {selectedUser.role === 'admin' 
+                    {selectedUser.role === 'system_admin'
+                      ? 'System Admin has full access and cannot be modified'
+                      : selectedUser.role === 'admin'
                       ? 'Admin users have full access to all features including Scoring and Permissions management'
                       : 'Regular users have access to most features except Scoring and Permissions management'}
                   </p>
@@ -501,9 +624,6 @@ export default function Permissions() {
                         {perms.map(perm => {
                           const Icon = perm.icon;
                           const isEnabled = userPermissions[perm.id] || false;
-                          const isRoleBased = perm.id === 'access_scoring' || 
-                                            perm.id === 'manage_icp_template' || 
-                                            perm.id === 'manage_permissions';
                           
                           return (
                             <div
@@ -525,15 +645,9 @@ export default function Permissions() {
                                 <Switch
                                   checked={isEnabled}
                                   onCheckedChange={(checked) => {
-                                    if (isRoleBased) {
-                                      // For role-based permissions, update the role
-                                      const newRole = checked ? 'admin' : 'user';
-                                      handleRoleChange(selectedUser.id, newRole);
-                                    } else {
-                                      handlePermissionToggle(perm.id, checked);
-                                    }
+                                    handlePermissionToggle(perm.id, checked);
                                   }}
-                                  disabled={isRoleBased && selectedUser.role !== 'admin'}
+                                  disabled={selectedUser.role === 'system_admin' && !isSystemAdmin}
                                 />
                               </div>
                             </div>
@@ -547,9 +661,8 @@ export default function Permissions() {
                 {/* Info Note */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> Some permissions are role-based. Changing a user's role to "Admin" 
-                    automatically grants access to Scoring and Permissions management. Individual permission 
-                    toggles are for future granular control.
+                    <strong>Note:</strong> As System Admin, you can enable or disable any permission for any user. 
+                    Permissions are stored individually and override role-based defaults. Changes are saved immediately.
                   </p>
                 </div>
               </div>
@@ -622,6 +735,9 @@ export default function Permissions() {
                   ? 'Admin users have full access including Scoring and Permissions management'
                   : 'Regular users have access to most features except admin functions'}
               </p>
+              <p className="text-xs text-slate-400 italic">
+                Note: System Admin role is reserved for jrsschroeder@gmail.com and cannot be assigned to other users.
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -654,6 +770,44 @@ export default function Permissions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{userToDelete?.email}</strong>? 
+              This action cannot be undone. The user will be permanently removed from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setUserToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleteUserMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteUserMutation.isPending ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete User
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
