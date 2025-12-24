@@ -57,32 +57,30 @@ export default function NotificationBell() {
     enabled: !!currentUser?.id
   });
 
-  // Fetch snoozes for current user
+  // Fetch universal snoozes (applies to all users)
   const { data: snoozes = [] } = useQuery({
-    queryKey: ['notificationSnoozes', currentUser?.id],
+    queryKey: ['notificationSnoozes'],
     queryFn: async () => {
-      if (!currentUser?.id) return [];
       try {
-        const response = await fetch(`/api/data/notificationSnoozes?user_id=${currentUser.id}`);
+        const response = await fetch('/api/data/notificationSnoozes');
         const result = await response.json();
         return result.success ? (result.data || []) : [];
       } catch (error) {
         console.error('Error fetching snoozes:', error);
         return [];
       }
-    },
-    enabled: !!currentUser?.id
+    }
   });
 
-  // Filter out snoozed notifications
+  // Filter out snoozed notifications (universal - if any user snoozed, hide for everyone)
   const activeNotifications = allNotifications.filter(notification => {
-    // Check if this notification is snoozed
+    // Check if this notification is snoozed (universal)
     const now = new Date();
     const isSnoozed = snoozes.some(snooze => 
       snooze.notification_type === notification.type &&
       (notification.related_account_id 
         ? snooze.related_account_id === notification.related_account_id
-        : snooze.related_account_id === null) &&
+        : (snooze.related_account_id === null || snooze.related_account_id === 'null')) &&
       new Date(snooze.snoozed_until) > now
     );
     return !isSnoozed;
@@ -112,7 +110,7 @@ export default function NotificationBell() {
 
   const unreadCount = activeNotifications.filter(n => !n.is_read).length;
 
-  // Snooze notification mutation
+  // Snooze notification mutation (universal - affects all users)
   const snoozeNotificationMutation = useMutation({
     mutationFn: async ({ notification, duration, unit }) => {
       if (!currentUser?.id) throw new Error('Not authenticated');
@@ -136,14 +134,15 @@ export default function NotificationBell() {
           snoozedUntil = addWeeks(now, duration);
       }
       
+      // Snooze universally (for all users)
       await snoozeNotification(
-        currentUser.id,
         notification.type,
         notification.related_account_id || null,
-        snoozedUntil
+        snoozedUntil,
+        currentUser.id // Track who snoozed it (optional)
       );
       
-      // Mark notification as read when snoozed
+      // Mark notification as read for current user when snoozed
       await base44.entities.Notification.markAsRead(notification.id);
     },
     onSuccess: () => {

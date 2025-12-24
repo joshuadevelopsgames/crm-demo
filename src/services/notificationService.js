@@ -223,9 +223,9 @@ export async function createRenewalNotifications() {
       for (const user of usersToNotify) {
         if (!user?.id) continue;
         
-        // Check if user has snoozed this notification
-        const isSnoozed = await checkNotificationSnoozed(user.id, 'renewal_reminder', account.id);
-        if (isSnoozed) continue; // User has snoozed this notification
+        // Check if this notification is snoozed (universal - any user can snooze for everyone)
+        const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
+        if (isSnoozed) continue; // Notification is snoozed for all users
         
         // Check if notification already exists
         const existingNotifications = await base44.entities.Notification.filter({
@@ -255,15 +255,14 @@ export async function createRenewalNotifications() {
 }
 
 /**
- * Check if a notification is snoozed for a user
- * @param {string} userId - User ID
+ * Check if a notification is snoozed (universal - applies to all users)
  * @param {string} notificationType - Type of notification
  * @param {string} accountId - Account ID (optional)
  * @returns {Promise<boolean>} - True if snoozed
  */
-export async function checkNotificationSnoozed(userId, notificationType, accountId = null) {
+export async function checkNotificationSnoozed(notificationType, accountId = null) {
   try {
-    let url = `/api/data/notificationSnoozes?user_id=${encodeURIComponent(userId)}&notification_type=${encodeURIComponent(notificationType)}`;
+    let url = `/api/data/notificationSnoozes?notification_type=${encodeURIComponent(notificationType)}`;
     if (accountId) {
       url += `&related_account_id=${encodeURIComponent(accountId)}`;
     } else {
@@ -281,21 +280,9 @@ export async function checkNotificationSnoozed(userId, notificationType, account
     if (!result.success) return false;
     
     const snoozes = result.data || [];
-    const now = new Date();
     
-    // Find active snooze for this user, type, and account
-    const activeSnooze = snoozes.find(snooze => {
-      const matchesUser = snooze.user_id === userId;
-      const matchesType = snooze.notification_type === notificationType;
-      const matchesAccount = accountId 
-        ? snooze.related_account_id === accountId 
-        : (snooze.related_account_id === null || snooze.related_account_id === 'null' || !snooze.related_account_id);
-      const isActive = new Date(snooze.snoozed_until) > now;
-      
-      return matchesUser && matchesType && matchesAccount && isActive;
-    });
-    
-    return !!activeSnooze;
+    // If any active snooze exists, the notification is snoozed for everyone
+    return snoozes.length > 0;
   } catch (error) {
     console.error('Error checking notification snooze:', error);
     return false;
@@ -303,14 +290,14 @@ export async function checkNotificationSnoozed(userId, notificationType, account
 }
 
 /**
- * Snooze a notification for a user
- * @param {string} userId - User ID
+ * Snooze a notification (universal - applies to all users)
  * @param {string} notificationType - Type of notification
  * @param {string} accountId - Account ID (optional)
  * @param {Date} snoozedUntil - Date until which to snooze
+ * @param {string} snoozedBy - User ID who snoozed it (optional, for audit)
  * @returns {Promise<Object>} - The snooze record
  */
-export async function snoozeNotification(userId, notificationType, accountId = null, snoozedUntil) {
+export async function snoozeNotification(notificationType, accountId = null, snoozedUntil, snoozedBy = null) {
   try {
     const response = await fetch('/api/data/notificationSnoozes', {
       method: 'POST',
@@ -318,10 +305,10 @@ export async function snoozeNotification(userId, notificationType, accountId = n
       body: JSON.stringify({
         action: 'snooze',
         data: {
-          user_id: userId,
           notification_type: notificationType,
           related_account_id: accountId,
-          snoozed_until: snoozedUntil.toISOString()
+          snoozed_until: snoozedUntil.toISOString(),
+          snoozed_by: snoozedBy
         }
       })
     });

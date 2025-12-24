@@ -41,14 +41,15 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Get all snoozes (filtered by user_id if provided)
-      const { user_id, notification_type, related_account_id } = req.query;
+      // Get all active snoozes (universal - not per-user)
+      const { notification_type, related_account_id } = req.query;
       
       let query = supabase.from('notification_snoozes').select('*');
       
-      if (user_id) {
-        query = query.eq('user_id', user_id);
-      }
+      // Only return active snoozes (snoozed_until > now)
+      const now = new Date().toISOString();
+      query = query.gt('snoozed_until', now);
+      
       if (notification_type) {
         query = query.eq('notification_type', notification_type);
       }
@@ -80,28 +81,28 @@ export default async function handler(req, res) {
       const { action, data } = req.body;
       
       if (action === 'snooze') {
-        // Upsert snooze (create or update)
-        const { user_id, notification_type, related_account_id, snoozed_until } = data;
+        // Upsert universal snooze (any user can snooze for everyone)
+        const { notification_type, related_account_id, snoozed_until, snoozed_by } = data;
         
-        if (!user_id || !notification_type || !snoozed_until) {
+        if (!notification_type || !snoozed_until) {
           return res.status(400).json({
             success: false,
-            error: 'user_id, notification_type, and snoozed_until are required'
+            error: 'notification_type and snoozed_until are required'
           });
         }
         
         const snoozeData = {
-          user_id,
           notification_type,
           related_account_id: related_account_id || null,
           snoozed_until,
+          snoozed_by: snoozed_by || null, // Optional: track who snoozed it
           updated_at: new Date().toISOString()
         };
         
         const { data: snooze, error } = await supabase
           .from('notification_snoozes')
           .upsert(snoozeData, {
-            onConflict: 'user_id,notification_type,related_account_id'
+            onConflict: 'notification_type,related_account_id'
           })
           .select()
           .single();
@@ -127,20 +128,19 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      // Delete snooze
-      const { user_id, notification_type, related_account_id } = req.query;
+      // Delete universal snooze (any user can delete)
+      const { notification_type, related_account_id } = req.query;
       
-      if (!user_id || !notification_type) {
+      if (!notification_type) {
         return res.status(400).json({
           success: false,
-          error: 'user_id and notification_type are required'
+          error: 'notification_type is required'
         });
       }
       
       let query = supabase
         .from('notification_snoozes')
         .delete()
-        .eq('user_id', user_id)
         .eq('notification_type', notification_type);
       
       if (related_account_id !== undefined) {
