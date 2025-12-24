@@ -307,12 +307,13 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     }
   });
 
-  // STEP 1: Group all data by contact_id/account_id FIRST (ID-based grouping)
-  // This ensures we prioritize ID-based relationships before any other matching
+  // STEP 1: Group all data by account_id FIRST (ID-based grouping)
+  // NOTE: In Estimates List, "Contact ID" is actually the CRM ID (Account ID), not a contact ID!
+  // Priority: account_id (direct) > lmn_contact_id as CRM ID (account_id) > contact_id (maps to account_id)
   
-  // Group estimates by contact_id first (all estimates with same contact_id should link to same account)
-  const estimatesByContactId = new Map(); // contact_id -> [estimates]
+  // Group estimates by account_id (treating lmn_contact_id as CRM ID first)
   const estimatesByAccountId = new Map(); // account_id -> [estimates]
+  const estimatesByContactId = new Map(); // contact_id -> [estimates] (for actual contact IDs)
   const ungroupedEstimates = [];
   
   estimates.forEach(estimate => {
@@ -324,14 +325,25 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
       estimatesByAccountId.get(estAccountId).push(estimate);
     } 
-    // Then check for contact_id
+    // Then check for lmn_contact_id - treat it as CRM ID (Account ID) first
     else if (estimate.lmn_contact_id) {
       const contactId = String(estimate.lmn_contact_id).trim();
       if (contactId) {
-        if (!estimatesByContactId.has(contactId)) {
-          estimatesByContactId.set(contactId, []);
+        // First, try treating it as a CRM ID (Account ID) - this is the primary use case
+        const mappedAccountId = accountIdMap.get(contactId) || accountIdMap.get(contactId.toLowerCase());
+        if (mappedAccountId) {
+          // It's a CRM ID - group by account_id
+          if (!estimatesByAccountId.has(mappedAccountId)) {
+            estimatesByAccountId.set(mappedAccountId, []);
+          }
+          estimatesByAccountId.get(mappedAccountId).push(estimate);
+        } else {
+          // It's not a CRM ID, so treat it as a contact_id
+          if (!estimatesByContactId.has(contactId)) {
+            estimatesByContactId.set(contactId, []);
+          }
+          estimatesByContactId.get(contactId).push(estimate);
         }
-        estimatesByContactId.get(contactId).push(estimate);
       } else {
         ungroupedEstimates.push(estimate);
       }
@@ -343,7 +355,7 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Link grouped estimates to accounts
   const estimatesWithAccountId = [];
   
-  // First: Link estimates grouped by account_id
+  // First: Link estimates grouped by account_id (including those matched via CRM ID)
   estimatesByAccountId.forEach((estimateGroup, accountId) => {
     let linkedAccountId = null;
     // Check if it's a direct account.id match
@@ -362,13 +374,13 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       estimatesWithAccountId.push({
         ...estimate,
         account_id: linkedAccountId,
-        _link_method: linkedAccountId ? 'direct_account_id' : null,
+        _link_method: linkedAccountId ? 'crm_id_direct' : null,
         _is_orphaned: !linkedAccountId
       });
     });
   });
 
-  // Second: Link estimates grouped by contact_id (all with same contact_id get same account)
+  // Second: Link estimates grouped by contact_id (actual contact IDs, not CRM IDs)
   estimatesByContactId.forEach((estimateGroup, contactId) => {
     // Find account_id for this contact_id
     let linkedAccountId = contactIdToAccountMap.get(contactId) || 
