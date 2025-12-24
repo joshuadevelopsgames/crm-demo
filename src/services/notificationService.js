@@ -226,24 +226,41 @@ export async function createRenewalNotifications() {
       // Calculate renewal date from estimates
       const renewalDate = calculateRenewalDate(accountEstimates);
       
-      if (!renewalDate) continue; // No renewal date found
+      if (!renewalDate) {
+        // No renewal date - if account is at_risk only because of renewal, consider removing it
+        // But we'll be conservative and only remove if it was explicitly set to at_risk
+        // (we don't want to remove manually set at_risk statuses)
+        continue;
+      }
       
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
       
-      // Only create notification if renewal is within 6 months (180 days) and in the future
-      if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
-      
-      // Mark account as at_risk if it has a renewal coming up
-      // Only update if status is not already 'at_risk' or 'churned'
-      if (account.status !== 'at_risk' && account.status !== 'churned') {
+      // Mark account as at_risk if renewal is within 6 months (180 days) and in the future
+      // Remove at_risk status if renewal is more than 6 months away or has passed
+      if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
+        // Renewal is within 6 months - mark as at_risk
+        if (account.status !== 'at_risk' && account.status !== 'churned') {
+          try {
+            await base44.entities.Account.update(account.id, { status: 'at_risk' });
+            console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days)`);
+          } catch (error) {
+            console.error(`❌ Error updating account status for ${account.name}:`, error);
+          }
+        }
+      } else if (account.status === 'at_risk' && (daysUntilRenewal < 0 || daysUntilRenewal > 180)) {
+        // Renewal is past or more than 6 months away - remove at_risk status (set back to active)
+        // Only if it was at_risk (might have been set for renewal reasons)
         try {
-          await base44.entities.Account.update(account.id, { status: 'at_risk' });
-          console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days)`);
+          await base44.entities.Account.update(account.id, { status: 'active' });
+          console.log(`✅ Removed at_risk status from ${account.name} (renewal ${daysUntilRenewal < 0 ? 'passed' : 'more than 6 months away'})`);
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
       }
+      
+      // Only create notification if renewal is within 6 months (180 days) and in the future
+      if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
       
       // Check if this notification is snoozed (universal - any user can snooze for everyone)
       const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
