@@ -88,12 +88,13 @@ export default function ProfileDropdown() {
   const displayRole = profile?.role === 'system_admin' || profile?.role === 'admin' ? 'Admin' : 'User';
 
   // Show loading state if user data is still loading
-  if (isLoading || (!profile && !user)) {
+  if (isLoading) {
     return (
       <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
     );
   }
 
+  // Always render the dropdown, even if user/profile is not available yet
   return (
     <SimpleDropdown
       trigger={

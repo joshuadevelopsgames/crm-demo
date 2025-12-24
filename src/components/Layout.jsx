@@ -252,7 +252,19 @@ export default function Layout({ children, currentPageName }) {
                 <span className="hidden lg:inline">Tutorial</span>
               </Link>
               <NotificationBell />
-              <ProfileDropdown />
+              {typeof ProfileDropdown !== 'undefined' ? (
+                <ProfileDropdown />
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="ml-2 text-slate-600 hover:text-slate-900"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              )}
             </div>
 
             {/* Mobile menu button - Better touch targets for PWA/mobile */}
