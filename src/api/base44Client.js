@@ -70,7 +70,14 @@ export const base44 = {
         });
         const result = await response.json();
         if (result.success) return result.data;
-        throw new Error(result.error || 'Failed to update account');
+        
+        // Include more error details for debugging
+        const error = new Error(result.error || 'Failed to update account');
+        error.status = response.status;
+        error.response = result;
+        error.accountId = id;
+        error.updateData = data;
+        throw error;
       },
       // Upsert: Create if doesn't exist, update if it does
       upsert: async (data, lookupField = 'lmn_crm_id') => {

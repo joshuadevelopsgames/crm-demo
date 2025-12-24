@@ -269,13 +269,23 @@ export async function createRenewalNotifications() {
               console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days, was: ${account.status})`);
             } catch (error) {
               retries++;
+              const errorDetails = {
+                accountId: account.id,
+                accountName: account.name,
+                currentStatus: account.status,
+                errorMessage: error.message,
+                errorStack: error.stack,
+                errorResponse: error.response || error.body || null
+              };
+              
               if (retries >= maxRetries) {
                 errorCount++;
-                console.error(`❌ Error updating account status for ${account.name} after ${maxRetries} retries:`, error);
+                console.error(`❌ Error updating account status for ${account.name} after ${maxRetries} retries:`, errorDetails);
+                console.error(`   Full error object:`, error);
                 // Still create notification even if status update failed - the account should be at_risk
                 isAtRisk = true; // Treat as at_risk for notification purposes
               } else {
-                console.warn(`⚠️ Retry ${retries}/${maxRetries} for ${account.name} status update...`);
+                console.warn(`⚠️ Retry ${retries}/${maxRetries} for ${account.name} status update...`, errorDetails);
                 await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
               }
             }
