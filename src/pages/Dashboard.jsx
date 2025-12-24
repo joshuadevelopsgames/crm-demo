@@ -43,17 +43,23 @@ export default function Dashboard() {
   useEffect(() => {
     createRenewalNotifications().catch(error => {
       console.error('Error creating renewal notifications:', error);
+    }).then(() => {
+      // Invalidate notifications query to refresh the bell
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     });
     
     // Refresh renewal notifications every hour
     const interval = setInterval(() => {
       createRenewalNotifications().catch(error => {
         console.error('Error refreshing renewal notifications:', error);
+      }).then(() => {
+        // Invalidate notifications query to refresh the bell
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
       });
     }, 60 * 60 * 1000); // 1 hour
     
     return () => clearInterval(interval);
-  }, []);
+  }, [queryClient]);
   
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],

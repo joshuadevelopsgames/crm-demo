@@ -51,10 +51,19 @@ export default function NotificationBell() {
   const { data: allNotifications = [] } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
-      if (!currentUser?.id) return [];
-      return base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
+      if (!currentUser?.id) {
+        console.log('🔔 NotificationBell: No current user ID');
+        return [];
+      }
+      const notifications = await base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
+      console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
+        renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
+        unread: notifications.filter(n => !n.is_read).length
+      });
+      return notifications;
     },
-    enabled: !!currentUser?.id
+    enabled: !!currentUser?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
   });
 
   // Fetch universal snoozes (applies to all users)
@@ -85,6 +94,15 @@ export default function NotificationBell() {
     );
     return !isSnoozed;
   });
+
+  // Debug logging
+  useEffect(() => {
+    if (allNotifications.length > 0) {
+      const renewalCount = allNotifications.filter(n => n.type === 'renewal_reminder').length;
+      const activeRenewalCount = activeNotifications.filter(n => n.type === 'renewal_reminder').length;
+      console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`);
+    }
+  }, [allNotifications, activeNotifications]);
 
   // Filter to show unread first, then read (only active notifications)
   const notifications = [...activeNotifications].sort((a, b) => {
