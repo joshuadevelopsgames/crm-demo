@@ -187,13 +187,82 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     }
   });
 
-  // Create account name to account ID mapping (for fallback matching)
+  // Create account name to account ID mapping (for matching Lead Name to accounts)
   const accountNameToIdMap = new Map();
   accounts.forEach((account, crmId) => {
     if (account.name) {
-      accountNameToIdMap.set(account.name.toLowerCase().trim(), account.id);
+      const normalizedName = account.name.toLowerCase().trim();
+      accountNameToIdMap.set(normalizedName, account.id);
+      // Also store variations for fuzzy matching
+      const nameWithoutSuffix = normalizedName.replace(/\b(inc|llc|ltd|corp|corporation|company|co)\b/gi, '').trim();
+      if (nameWithoutSuffix && nameWithoutSuffix !== normalizedName) {
+        accountNameToIdMap.set(nameWithoutSuffix, account.id);
+      }
     }
   });
+
+  // Create new contacts from unmatched Leads records
+  // If a Lead doesn't match an existing contact, but Lead Name matches an account, create a new contact
+  const unmatchedLeads = supplementalData.filter(lead => {
+    // Check if this lead was matched to any existing contact
+    const wasMatched = mergedContacts.some(contact => {
+      if (!contact.matched) return false;
+      // Check if contact was matched using this lead's data
+      const leadKey = lead.match_key;
+      const contactKey = createMatchKey(contact.first_name, contact.last_name, contact.email_1, contact.email_2);
+      return leadKey === contactKey || 
+             (lead.email_1 && contact.email_1 && lead.email_1.toLowerCase() === contact.email_1.toLowerCase()) ||
+             (lead.phone_1 && contact.phone_1 && normalizePhone(lead.phone_1) === normalizePhone(contact.phone_1));
+    });
+    return !wasMatched && lead.lead_name; // Only process unmatched leads with a lead name
+  });
+
+  // Create new contacts from unmatched leads
+  const newContactsFromLeads = unmatchedLeads.map(lead => {
+    // Find account by Lead Name
+    let accountId = null;
+    const leadNameNormalized = normalizeName(lead.lead_name);
+    
+    // Try exact match first
+    accountId = accountNameToIdMap.get(leadNameNormalized);
+    
+    // Try fuzzy match if exact match fails
+    if (!accountId) {
+      for (const [accountName, accId] of accountNameToIdMap.entries()) {
+        if (fuzzyMatchNames(leadNameNormalized, accountName)) {
+          accountId = accId;
+          break;
+        }
+      }
+    }
+
+    // Only create contact if we found an account
+    if (accountId) {
+      return {
+        first_name: lead.first_name || '',
+        last_name: lead.last_name || '',
+        email_1: lead.email_1 || '',
+        email_2: lead.email_2 || '',
+        phone_1: lead.phone_1 || '',
+        phone_2: lead.phone_2 || '',
+        position: lead.position || '',
+        title: lead.position || '',
+        role: determineRoleFromPosition(lead.position),
+        do_not_email: lead.do_not_email !== null ? lead.do_not_email : false,
+        do_not_mail: lead.do_not_mail !== null ? lead.do_not_mail : false,
+        do_not_call: lead.do_not_call !== null ? lead.do_not_call : false,
+        referral_source: lead.referral_source || '',
+        notes: lead.notes_supplement || '',
+        account_id: accountId,
+        data_source: 'leads_list_new_contact',
+        matched: false // This is a new contact, not a matched one
+      };
+    }
+    return null; // No account found, skip this lead
+  }).filter(contact => contact !== null); // Remove null entries
+
+  // Add new contacts from leads to the merged contacts array
+  mergedContacts.push(...newContactsFromLeads);
 
   // Create account ID to account object mapping for easy updates
   const accountsArray = Array.from(accounts.values());
