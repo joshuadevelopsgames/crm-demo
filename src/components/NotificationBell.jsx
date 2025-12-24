@@ -42,6 +42,7 @@ export default function NotificationBell() {
   // Get current user from UserContext (more reliable than base44.auth.me)
   const { user: contextUser, profile } = useUser();
   const currentUser = contextUser || profile;
+  const currentUserId = currentUser?.id;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
   const { data: allNotifications = [] } = useQuery({
@@ -372,6 +373,8 @@ export default function NotificationBell() {
         return '📊';
       case 'renewal_reminder':
         return <RefreshCw className="w-6 h-6 text-amber-600" />;
+      case 'neglected_account':
+        return '⏰';
       default:
         return '📬';
     }
@@ -387,6 +390,8 @@ export default function NotificationBell() {
         return 'bg-emerald-50 border-emerald-200';
       case 'renewal_reminder':
         return 'bg-orange-50 border-orange-200';
+      case 'neglected_account':
+        return 'bg-amber-50 border-amber-200';
       default:
         return 'bg-blue-50 border-blue-200';
     }
@@ -462,6 +467,7 @@ export default function NotificationBell() {
                     const isExpanded = expandedGroups.has(group.type);
                     const hasMultiple = group.count > 1;
                     const groupName = group.type === 'renewal_reminder' ? 'Renewal Reminders' :
+                                     group.type === 'neglected_account' ? 'Neglected Accounts' :
                                      group.type === 'task_reminder' ? 'Task Reminders' :
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :
                                      group.type === 'task_due_today' ? 'Tasks Due Today' :
@@ -515,7 +521,7 @@ export default function NotificationBell() {
                                       className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                                     />
                                   )}
-                                  {!hasMultiple && group.notifications[0]?.type === 'renewal_reminder' && (
+                                  {!hasMultiple && (group.notifications[0]?.type === 'renewal_reminder' || group.notifications[0]?.type === 'neglected_account') && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -580,7 +586,7 @@ export default function NotificationBell() {
                                       {!notification.is_read && (
                                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
                                       )}
-                                      {notification.type === 'renewal_reminder' && (
+                                      {(notification.type === 'renewal_reminder' || notification.type === 'neglected_account') && (
                                         <Button
                                           variant="ghost"
                                           size="sm"

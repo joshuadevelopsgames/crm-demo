@@ -115,7 +115,13 @@ export default async function handler(req, res) {
         }
         
         if (existing) {
-          // Update existing
+          // Update existing - preserve existing segment if new data doesn't have one
+          if (!accountData.revenue_segment && existing.revenue_segment) {
+            accountData.revenue_segment = existing.revenue_segment;
+          } else if (!accountData.revenue_segment) {
+            accountData.revenue_segment = 'C'; // Default to 'C' if missing
+          }
+          
           const { data: updated, error: updateError } = await supabase
             .from('accounts')
             .update(accountData)
@@ -131,8 +137,10 @@ export default async function handler(req, res) {
             action: 'updated'
           });
         } else {
-          // Create new
+          // Create new - ensure revenue_segment is always set (default to 'C' if missing)
+          accountData.revenue_segment = account.revenue_segment || 'C';
           accountData.created_at = new Date().toISOString();
+          
           const { data: created, error: createError } = await supabase
             .from('accounts')
             .insert(accountData)
@@ -200,6 +208,8 @@ export default async function handler(req, res) {
             const { id: importedId, ...accountWithoutId } = account;
             const accountData = {
               ...accountWithoutId,
+              // Ensure revenue_segment is always set (default to 'C' if missing)
+              revenue_segment: account.revenue_segment || 'C',
               updated_at: new Date().toISOString()
             };
             

@@ -7,9 +7,35 @@
  * 
  * Usage:
  *   SUPABASE_URL=your_url SUPABASE_SERVICE_ROLE_KEY=your_key node clear_imported_data_script.js
+ *   OR: node clear_imported_data_script.js (will load from .env file)
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Load .env file if it exists
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+try {
+  const envFile = readFileSync(join(__dirname, '.env'), 'utf8');
+  envFile.split('\n').forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+} catch (err) {
+  // .env file doesn't exist or can't be read, that's okay
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,17 +61,16 @@ async function clearImportedData() {
     
     // 1. Delete estimates first
     console.log('Deleting estimates...');
-    const { data: estimatesData, error: estimatesError } = await supabase
+    const { count: estimatesCount, error: estimatesCountError } = await supabase
       .from('estimates')
-      .select('id')
-      .limit(10000); // Get all estimates
+      .select('*', { count: 'exact', head: true });
     
-    if (estimatesError) {
-      console.error('❌ Error fetching estimates:', estimatesError);
-      throw estimatesError;
+    if (estimatesCountError) {
+      console.error('❌ Error counting estimates:', estimatesCountError);
+      throw estimatesCountError;
     }
     
-    if (estimatesData && estimatesData.length > 0) {
+    if (estimatesCount && estimatesCount > 0) {
       const { error: deleteError } = await supabase
         .from('estimates')
         .delete()
@@ -55,30 +80,23 @@ async function clearImportedData() {
         console.error('❌ Error deleting estimates:', deleteError);
         throw deleteError;
       }
-      console.log(`✅ Deleted ${estimatesData.length} estimates\n`);
+      console.log(`✅ Deleted ${estimatesCount} estimates\n`);
     } else {
       console.log('✅ No estimates to delete\n');
     }
-    
-    if (estimatesError) {
-      console.error('❌ Error deleting estimates:', estimatesError);
-      throw estimatesError;
-    }
-    console.log(`✅ Deleted estimates (count: ${estimatesCount || 'unknown'})\n`);
 
     // 2. Delete jobsites
     console.log('Deleting jobsites...');
-    const { data: jobsitesData, error: jobsitesFetchError } = await supabase
+    const { count: jobsitesCount, error: jobsitesCountError } = await supabase
       .from('jobsites')
-      .select('id')
-      .limit(10000);
+      .select('*', { count: 'exact', head: true });
     
-    if (jobsitesFetchError) {
-      console.error('❌ Error fetching jobsites:', jobsitesFetchError);
-      throw jobsitesFetchError;
+    if (jobsitesCountError) {
+      console.error('❌ Error counting jobsites:', jobsitesCountError);
+      throw jobsitesCountError;
     }
     
-    if (jobsitesData && jobsitesData.length > 0) {
+    if (jobsitesCount && jobsitesCount > 0) {
       const { error: deleteError } = await supabase
         .from('jobsites')
         .delete()
@@ -88,24 +106,23 @@ async function clearImportedData() {
         console.error('❌ Error deleting jobsites:', deleteError);
         throw deleteError;
       }
-      console.log(`✅ Deleted ${jobsitesData.length} jobsites\n`);
+      console.log(`✅ Deleted ${jobsitesCount} jobsites\n`);
     } else {
       console.log('✅ No jobsites to delete\n');
     }
 
     // 3. Delete contacts
     console.log('Deleting contacts...');
-    const { data: contactsData, error: contactsFetchError } = await supabase
+    const { count: contactsCount, error: contactsCountError } = await supabase
       .from('contacts')
-      .select('id')
-      .limit(10000);
+      .select('*', { count: 'exact', head: true });
     
-    if (contactsFetchError) {
-      console.error('❌ Error fetching contacts:', contactsFetchError);
-      throw contactsFetchError;
+    if (contactsCountError) {
+      console.error('❌ Error counting contacts:', contactsCountError);
+      throw contactsCountError;
     }
     
-    if (contactsData && contactsData.length > 0) {
+    if (contactsCount && contactsCount > 0) {
       const { error: deleteError } = await supabase
         .from('contacts')
         .delete()
@@ -115,24 +132,23 @@ async function clearImportedData() {
         console.error('❌ Error deleting contacts:', deleteError);
         throw deleteError;
       }
-      console.log(`✅ Deleted ${contactsData.length} contacts\n`);
+      console.log(`✅ Deleted ${contactsCount} contacts\n`);
     } else {
       console.log('✅ No contacts to delete\n');
     }
 
     // 4. Delete accounts
     console.log('Deleting accounts...');
-    const { data: accountsData, error: accountsFetchError } = await supabase
+    const { count: accountsCount, error: accountsCountError } = await supabase
       .from('accounts')
-      .select('id')
-      .limit(10000);
+      .select('*', { count: 'exact', head: true });
     
-    if (accountsFetchError) {
-      console.error('❌ Error fetching accounts:', accountsFetchError);
-      throw accountsFetchError;
+    if (accountsCountError) {
+      console.error('❌ Error counting accounts:', accountsCountError);
+      throw accountsCountError;
     }
     
-    if (accountsData && accountsData.length > 0) {
+    if (accountsCount && accountsCount > 0) {
       const { error: deleteError } = await supabase
         .from('accounts')
         .delete()
@@ -142,7 +158,7 @@ async function clearImportedData() {
         console.error('❌ Error deleting accounts:', deleteError);
         throw deleteError;
       }
-      console.log(`✅ Deleted ${accountsData.length} accounts\n`);
+      console.log(`✅ Deleted ${accountsCount} accounts\n`);
     } else {
       console.log('✅ No accounts to delete\n');
     }

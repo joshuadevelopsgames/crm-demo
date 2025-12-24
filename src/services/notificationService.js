@@ -419,6 +419,205 @@ export async function createRenewalNotifications() {
 }
 
 /**
+ * Create notifications for neglected accounts (no interaction in 30+ days)
+ * This creates universal notifications that all users see, but can be snoozed individually
+ */
+export async function createNeglectedAccountNotifications() {
+  console.log('🔄 Starting neglected account notification creation...');
+  let createdCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+  
+  try {
+    // Get all accounts
+    const accounts = await base44.entities.Account.list();
+    console.log(`📊 Found ${accounts.length} accounts`);
+    
+    // Get all users - handle errors gracefully
+    let users = [];
+    let currentUser = null;
+    try {
+      users = await base44.entities.User.list();
+      console.log(`👥 Found ${users.length} users`);
+    } catch (error) {
+      console.warn('Error fetching users list:', error);
+    }
+    
+    try {
+      currentUser = await base44.auth.me();
+    } catch (error) {
+      console.warn('Error fetching current user:', error);
+    }
+    
+    const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
+    
+    if (usersToNotify.length === 0) {
+      console.warn('⚠️ No users found for neglected account notifications - skipping');
+      return;
+    }
+
+    const today = startOfDay(new Date());
+    
+    // Process each account
+    for (const account of accounts) {
+      // Skip archived accounts
+      if (account.archived) continue;
+      
+      // Skip accounts with ICP status = 'na' (permanently excluded)
+      if (account.icp_status === 'na') continue;
+      
+      // Skip if snoozed
+      if (account.snoozed_until) {
+        const snoozeDate = new Date(account.snoozed_until);
+        if (snoozeDate > new Date()) {
+          continue; // Still snoozed
+        }
+      }
+      
+      // Determine threshold based on revenue segment
+      // A and B segments: 30+ days, others: 90+ days
+      // Default to 'C' (90 days) if segment is missing
+      const segment = account.revenue_segment || 'C';
+      const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+      
+      // Check if no interaction beyond threshold
+      let daysSinceInteraction = null;
+      if (!account.last_interaction_date) {
+        // No interaction date means it's neglected
+        daysSinceInteraction = null; // Will be treated as "no interaction logged"
+      } else {
+        const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+        daysSinceInteraction = differenceInDays(today, lastInteractionDate);
+        if (daysSinceInteraction <= thresholdDays) {
+          continue; // Recent interaction, not neglected
+        }
+      }
+      
+      // Account is neglected - create notification
+      // Check if this notification is snoozed (universal - any user can snooze for everyone)
+      const isSnoozed = await checkNotificationSnoozed('neglected_account', account.id);
+      if (isSnoozed) {
+        skippedCount++;
+        continue; // Notification is snoozed for all users
+      }
+      
+      // Create notification for all users
+      for (const user of usersToNotify) {
+        if (!user?.id) continue;
+        
+        try {
+          // Check if notification already exists (unread or read - avoid duplicates)
+          const existingNotifications = await base44.entities.Notification.filter({
+            user_id: user.id,
+            type: 'neglected_account',
+            related_account_id: account.id
+          });
+          
+          // Check if there's an existing notification created today (to avoid duplicates)
+          const hasNotificationToday = existingNotifications.some(notif => {
+            const notifDate = startOfDay(new Date(notif.created_at));
+            return notifDate.getTime() === today.getTime();
+          });
+          
+          if (hasNotificationToday) {
+            skippedCount++;
+            continue; // Already created today
+          }
+          
+          // Create the notification
+          const message = daysSinceInteraction === null
+            ? `No interactions logged - account needs attention (${segment || 'C/D'} segment)`
+            : `No contact in ${daysSinceInteraction} day${daysSinceInteraction !== 1 ? 's' : ''} - account needs attention (${segment || 'C/D'} segment, ${thresholdDays}+ day threshold)`;
+          
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'neglected_account',
+            title: `Neglected Account: ${account.name}`,
+            message: message,
+            related_account_id: account.id,
+            related_task_id: null,
+            scheduled_for: today.toISOString()
+          });
+          
+          createdCount++;
+          console.log(`✅ Created neglected account notification for ${account.name} (${daysSinceInteraction === null ? 'no interaction date' : `${daysSinceInteraction} days`}) for user ${user.email || user.id}`);
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ Error creating neglected account notification for ${account.name} for user ${user.email || user.id}:`, error);
+        }
+      }
+    }
+    
+    // Clean up notifications for accounts that are no longer neglected
+    let cleanupCount = 0;
+    try {
+      // Get all accounts that are currently neglected (calculate once, use for all users)
+      const neglectedAccountIds = new Set(
+        accounts
+          .filter(acc => {
+            if (acc.archived) return false;
+            if (acc.icp_status === 'na') return false;
+            if (acc.snoozed_until) {
+              const snoozeDate = new Date(acc.snoozed_until);
+              if (snoozeDate > new Date()) return false;
+            }
+            if (!acc.last_interaction_date) return true; // No interaction date = neglected
+            const accSegment = acc.revenue_segment || 'C'; // Default to 'C' if missing
+            const accThresholdDays = (accSegment === 'A' || accSegment === 'B') ? 30 : 90;
+            const daysSince = differenceInDays(today, startOfDay(new Date(acc.last_interaction_date)));
+            return daysSince > accThresholdDays;
+          })
+          .map(acc => acc.id)
+      );
+      
+      // Get all users to clean up notifications per user
+      const users = await base44.entities.User.list();
+      
+      for (const user of users) {
+        if (!user?.id) continue;
+        
+        // Get neglected account notifications for this user
+        const userNeglectedNotifications = await base44.entities.Notification.filter({
+          user_id: user.id,
+          type: 'neglected_account'
+        });
+        
+        // Delete notifications for accounts that are no longer neglected
+        for (const notification of userNeglectedNotifications) {
+          if (notification.related_account_id && !neglectedAccountIds.has(notification.related_account_id)) {
+            try {
+              const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              const result = await response.json();
+              if (result.success) {
+                cleanupCount++;
+              } else {
+                console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
+              }
+            } catch (error) {
+              console.error(`❌ Error deleting notification ${notification.id}:`, error);
+            }
+          }
+        }
+      }
+      
+      if (cleanupCount > 0) {
+        console.log(`🧹 Cleaned up ${cleanupCount} neglected account notifications for accounts no longer neglected`);
+      }
+    } catch (cleanupError) {
+      console.error('❌ Error cleaning up neglected account notifications:', cleanupError);
+    }
+    
+    console.log(`✅ Neglected account notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
+    console.log(`🧹 Cleaned up ${cleanupCount} stale notifications`);
+  } catch (error) {
+    console.error('❌ Error creating neglected account notifications:', error);
+  }
+}
+
+/**
  * Check if a notification is snoozed (universal - applies to all users)
  * @param {string} notificationType - Type of notification
  * @param {string} accountId - Account ID (optional)

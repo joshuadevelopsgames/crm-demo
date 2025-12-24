@@ -43,7 +43,7 @@ export default function NeglectedAccounts() {
     return accountIds;
   }, [allScorecards]);
 
-  // Neglected accounts (no interaction in 30+ days, not snoozed, not N/A)
+  // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
   const neglectedAccounts = accounts.filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
@@ -59,10 +59,16 @@ export default function NeglectedAccounts() {
       }
     }
     
-    // Check if no interaction in 30+ days
+    // Determine threshold based on revenue segment
+    // A and B segments: 30+ days, others: 90+ days
+    // Default to 'C' (90 days) if segment is missing
+    const segment = account.revenue_segment || 'C';
+    const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+    
+    // Check if no interaction beyond threshold
     if (!account.last_interaction_date) return true;
     const daysSince = differenceInDays(new Date(), new Date(account.last_interaction_date));
-    return daysSince > 30;
+    return daysSince > thresholdDays;
   });
 
   const updateAccountMutation = useMutation({
@@ -114,7 +120,7 @@ export default function NeglectedAccounts() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Neglected Accounts</h1>
-            <p className="text-slate-600 mt-1">Accounts with no contact in 30+ days</p>
+            <p className="text-slate-600 mt-1">Accounts with no contact (A/B segments: 30+ days, C/D segments: 90+ days)</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

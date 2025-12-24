@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { createEndOfYearNotification, createRenewalNotifications } from '@/services/notificationService';
+import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications } from '@/services/notificationService';
 import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +44,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Check if renewal notifications already exist for today
     // This prevents duplicate runs across different browser sessions/devices
-    const checkAndRun = async () => {
+    const checkAndRunRenewals = async () => {
       try {
         // Get current user to filter notifications
         const currentUser = await base44.auth.me();
@@ -80,8 +80,46 @@ export default function Dashboard() {
       }
     };
     
+    // Create neglected account notifications on mount and daily
+    const checkAndRunNeglected = async () => {
+      try {
+        // Get current user to filter notifications
+        const currentUser = await base44.auth.me();
+        if (!currentUser?.id) {
+          console.warn('No current user, skipping neglected account notification check');
+          return;
+        }
+        
+        // Get today's neglected account notifications for current user to see if we've already run today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const notifications = await base44.entities.Notification.filter({
+          user_id: currentUser.id,
+          type: 'neglected_account'
+        });
+        
+        // Check if any neglected account notifications were created today
+        const hasNotificationsToday = notifications.some(notif => {
+          const notifDate = new Date(notif.created_at);
+          notifDate.setHours(0, 0, 0, 0);
+          return notifDate.getTime() === today.getTime();
+        });
+        
+        // Only run if we haven't created notifications today
+        if (!hasNotificationsToday) {
+          await createNeglectedAccountNotifications();
+          // Invalidate queries to refresh notifications
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        }
+      } catch (error) {
+        console.error('Error checking/creating neglected account notifications:', error);
+      }
+    };
+    
     // Run on mount
-    checkAndRun();
+    checkAndRunRenewals();
+    checkAndRunNeglected();
     
     // Schedule daily check at midnight
     const scheduleNextRun = () => {
@@ -92,7 +130,8 @@ export default function Dashboard() {
       const msUntilMidnight = tomorrow.getTime() - now.getTime();
       
       return setTimeout(async () => {
-        await checkAndRun();
+        await checkAndRunRenewals();
+        await checkAndRunNeglected();
         // Schedule next day
         scheduleNextRun();
       }, msUntilMidnight);
@@ -154,7 +193,7 @@ export default function Dashboard() {
     });
   }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts]);
   
-  // Neglected accounts (no interaction in 30+ days, not snoozed, not N/A)
+  // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
   const neglectedAccounts = accounts.filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
@@ -170,10 +209,16 @@ export default function Dashboard() {
       }
     }
     
-    // Check if no interaction in 30+ days
+    // Determine threshold based on revenue segment
+    // A and B segments: 30+ days, others: 90+ days
+    // Default to 'C' (90 days) if segment is missing
+    const segment = account.revenue_segment || 'C';
+    const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+    
+    // Check if no interaction beyond threshold
     if (!account.last_interaction_date) return true;
     const daysSince = differenceInDays(new Date(), new Date(account.last_interaction_date));
-    return daysSince > 30;
+    return daysSince > thresholdDays;
   });
   
   // Debug logging for neglected accounts calculation
@@ -188,14 +233,18 @@ export default function Dashboard() {
       }).length;
       const hasRecentInteraction = active.filter(a => {
         if (!a.last_interaction_date) return false;
+        const segment = a.revenue_segment || 'C'; // Default to 'C' if missing
+        const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
         const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
-        return daysSince <= 30;
+        return daysSince <= thresholdDays;
       }).length;
       const noInteractionDate = active.filter(a => !a.last_interaction_date).length;
       const oldInteraction = active.filter(a => {
         if (!a.last_interaction_date) return false;
+        const segment = a.revenue_segment || 'C'; // Default to 'C' if missing
+        const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
         const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
-        return daysSince > 30;
+        return daysSince > thresholdDays;
       }).length;
       
       console.log('📊 Neglected Accounts Analysis:', {
@@ -203,9 +252,9 @@ export default function Dashboard() {
         neglectedAccounts: neglectedAccounts.length,
         excludedByICP,
         snoozed,
-        hasRecentInteraction: `${hasRecentInteraction} (interaction within 30 days)`,
+        hasRecentInteraction: `${hasRecentInteraction} (interaction within threshold: A/B=30 days, C/D=90 days)`,
         noInteractionDate: `${noInteractionDate} (no last_interaction_date - should be neglected)`,
-        oldInteraction: `${oldInteraction} (interaction > 30 days ago - should be neglected)`,
+        oldInteraction: `${oldInteraction} (interaction beyond threshold: A/B=30 days, C/D=90 days - should be neglected)`,
         expectedNeglected: noInteractionDate + oldInteraction - excludedByICP - snoozed,
         difference: active.length - neglectedAccounts.length
       });
@@ -392,7 +441,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Neglected Accounts */}
         <TutorialTooltip
-          tip="Accounts here haven't been contacted in 30+ days. Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
+          tip="Accounts here haven't been contacted recently (A/B segments: 30+ days, C/D segments: 90+ days). Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
           step={1}
           position="bottom"
         >
@@ -424,8 +473,8 @@ export default function Dashboard() {
                 </div>
               </div>
             </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 mb-3">No contact in 30+ days</p>
+            <CardContent>
+            <p className="text-sm text-slate-600 mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {neglectedAccounts.slice(0, 5).map(account => (
                 <div

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select,
   SelectContent,
@@ -11,17 +12,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   FileText, 
-  Calendar,
   Download,
   TrendingUp,
   BarChart3,
-  PieChart
+  PieChart,
+  Building2
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { filterEstimatesByYear } from '@/utils/reportCalculations';
+import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
+import WinLossReport from '@/components/reports/WinLossReport';
+import DepartmentReport from '@/components/reports/DepartmentReport';
+import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 
 export default function Reports() {
   const [searchParams] = useSearchParams();
@@ -113,14 +117,34 @@ export default function Reports() {
     };
   }, [filteredEstimates]);
 
+  // Get estimates for selected year (for reports)
+  const yearEstimates = useMemo(() => {
+    return filterEstimatesByYear(estimates, selectedYear);
+  }, [estimates, selectedYear]);
+  
+  // Apply account and department filters to year estimates
+  const filteredYearEstimates = useMemo(() => {
+    return yearEstimates.filter(estimate => {
+      // Filter by account
+      if (selectedAccount !== 'all' && estimate.account_id !== selectedAccount) {
+        return false;
+      }
+
+      // Filter by department
+      if (selectedDepartment !== 'all' && estimate.division !== selectedDepartment) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [yearEstimates, selectedAccount, selectedDepartment]);
+
   const handleExportXLSX = () => {
-    // TODO: Implement XLSX export
-    alert('XLSX export coming soon');
+    exportToXLSX({ estimates: filteredYearEstimates, accounts }, selectedYear);
   };
 
   const handleExportPDF = () => {
-    // TODO: Implement PDF export
-    alert('PDF export coming soon');
+    exportToPDF({ estimates: filteredYearEstimates, accounts }, selectedYear);
   };
 
   return (
@@ -258,35 +282,45 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* Placeholder for Reports */}
-      <Card>
-        <CardHeader>
-          <CardTitle>End of Year Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Reports Coming Soon</h3>
-            <p className="text-slate-600 mb-4">
-              Comprehensive end of year reports with detailed analytics, graphs, and insights will be available here.
-            </p>
-            <div className="flex items-center justify-center gap-4 text-sm text-slate-500">
-              <div className="flex items-center gap-2">
-                <PieChart className="w-4 h-4" />
-                <span>Win/Loss Analysis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                <span>Department Breakdown</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>Revenue Trends</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Reports Tabs */}
+      <Tabs defaultValue="winloss" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="winloss" className="flex items-center gap-2">
+            <PieChart className="w-4 h-4" />
+            Win/Loss Report
+          </TabsTrigger>
+          <TabsTrigger value="department" className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Department Report
+          </TabsTrigger>
+          <TabsTrigger value="account" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Account Performance
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="winloss" className="space-y-4">
+          <WinLossReport 
+            estimates={filteredYearEstimates} 
+            accounts={accounts}
+            selectedYear={selectedYear}
+          />
+        </TabsContent>
+        
+        <TabsContent value="department" className="space-y-4">
+          <DepartmentReport 
+            estimates={filteredYearEstimates}
+          />
+        </TabsContent>
+        
+        <TabsContent value="account" className="space-y-4">
+          <AccountPerformanceReport 
+            estimates={filteredYearEstimates}
+            accounts={accounts}
+            selectedYear={selectedYear}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
