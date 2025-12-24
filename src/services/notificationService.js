@@ -181,6 +181,8 @@ export async function createRenewalNotifications() {
   let createdCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
+  let atRiskUpdatedCount = 0;
+  let atRiskAlreadyCount = 0;
   
   try {
     // Get all accounts
@@ -240,11 +242,19 @@ export async function createRenewalNotifications() {
       // Remove at_risk status if renewal is more than 6 months away or has passed
       if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
         // Renewal is within 6 months - mark as at_risk
-        if (account.status !== 'at_risk' && account.status !== 'churned') {
+        if (account.status === 'at_risk') {
+          atRiskAlreadyCount++;
+          // Already at_risk, no update needed
+        } else if (account.status === 'churned') {
+          // Don't update churned accounts
+        } else {
+          // Update to at_risk
           try {
             await base44.entities.Account.update(account.id, { status: 'at_risk' });
-            console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days)`);
+            atRiskUpdatedCount++;
+            console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days, was: ${account.status})`);
           } catch (error) {
+            errorCount++;
             console.error(`❌ Error updating account status for ${account.name}:`, error);
           }
         }
@@ -308,6 +318,8 @@ export async function createRenewalNotifications() {
     }
     
     console.log(`✅ Renewal notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
+    console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
+    console.log(`📊 Total accounts with renewals within 6 months: ${atRiskUpdatedCount + atRiskAlreadyCount}`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }

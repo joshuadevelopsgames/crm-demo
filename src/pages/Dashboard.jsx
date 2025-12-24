@@ -44,8 +44,9 @@ export default function Dashboard() {
     createRenewalNotifications().catch(error => {
       console.error('Error creating renewal notifications:', error);
     }).then(() => {
-      // Invalidate notifications query to refresh the bell
+      // Invalidate queries to refresh both notifications and accounts (for at_risk status)
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
     });
     
     // Refresh renewal notifications every hour
@@ -53,8 +54,9 @@ export default function Dashboard() {
       createRenewalNotifications().catch(error => {
         console.error('Error refreshing renewal notifications:', error);
       }).then(() => {
-        // Invalidate notifications query to refresh the bell
+        // Invalidate queries to refresh both notifications and accounts (for at_risk status)
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts'] });
       });
     }, 60 * 60 * 1000); // 1 hour
     
