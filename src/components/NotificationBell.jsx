@@ -198,6 +198,7 @@ export default function NotificationBell() {
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [snoozeDuration, setSnoozeDuration] = useState(1);
   const [snoozeUnit, setSnoozeUnit] = useState('weeks');
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   const handleSnoozeClick = (e, notification) => {
     e.stopPropagation();
