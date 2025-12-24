@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
@@ -25,6 +25,11 @@ export default function ProfileDropdown() {
   const { isTutorialMode, exitTutorial } = useTutorial();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('ProfileDropdown rendered', { hasProfile: !!profile, hasUser: !!user, isLoading });
+  }, [profile, user, isLoading]);
 
   const handleLogout = async (e) => {
     if (e) {
