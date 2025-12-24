@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -374,7 +374,7 @@ export default function NotificationBell() {
       case 'renewal_reminder':
         return <RefreshCw className="w-6 h-6 text-amber-600" />;
       case 'neglected_account':
-        return '⏰';
+        return <Clock className="w-6 h-6 text-amber-600" />;
       default:
         return '📬';
     }

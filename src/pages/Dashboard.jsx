@@ -439,91 +439,6 @@ export default function Dashboard() {
 
       {/* Alerts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Neglected Accounts */}
-        <TutorialTooltip
-          tip="Accounts here haven't been contacted recently (A/B segments: 30+ days, C/D segments: 90+ days). Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
-          step={1}
-          position="bottom"
-        >
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
-                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
-                >
-                  <Clock className="w-5 h-5 text-amber-600" />
-                  Neglected Accounts
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                    {neglectedAccounts.length}
-                  </Badge>
-                  {neglectedAccounts.length > 5 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
-                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View All
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-            <p className="text-sm text-slate-600 mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {neglectedAccounts.slice(0, 5).map(account => (
-                <div
-                  key={account.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
-                >
-                  <Link
-                    to={createPageUrl(`AccountDetail?id=${account.id}`)}
-                    className="flex-1"
-                  >
-                    <p className="font-medium text-slate-900">{account.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {account.last_interaction_date
-                        ? `Last contact: ${format(new Date(account.last_interaction_date), 'MMM d, yyyy')}`
-                        : 'No interactions logged'}
-                    </p>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setSnoozeAccount(account);
-                    }}
-                    className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
-                  >
-                    <BellOff className="w-4 h-4 mr-1" />
-                    Snooze
-                  </Button>
-                </div>
-              ))}
-              {neglectedAccounts.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
-              )}
-              {neglectedAccounts.length > 5 && (
-                <Button
-                  variant="outline"
-                  className="w-full mt-2 border-amber-200 text-amber-700 hover:bg-amber-50"
-                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
-                >
-                  View All {neglectedAccounts.length} Accounts
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        </TutorialTooltip>
-
         {/* At Risk Renewals */}
         <TutorialTooltip
           tip="Accounts with renewals coming up within 6 months. These are marked as at-risk and need attention. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Click the title to view all at-risk accounts."
@@ -608,6 +523,91 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+        </TutorialTooltip>
+
+        {/* Neglected Accounts */}
+        <TutorialTooltip
+          tip="Accounts here haven't been contacted recently (A/B segments: 30+ days, C/D segments: 90+ days). Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
+          step={1}
+          position="bottom"
+        >
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                >
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  Neglected Accounts
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                    {neglectedAccounts.length}
+                  </Badge>
+                  {neglectedAccounts.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {neglectedAccounts.slice(0, 5).map(account => (
+                <div
+                  key={account.id}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
+                >
+                  <Link
+                    to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                    className="flex-1"
+                  >
+                    <p className="font-medium text-slate-900">{account.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {account.last_interaction_date
+                        ? `Last contact: ${format(new Date(account.last_interaction_date), 'MMM d, yyyy')}`
+                        : 'No interactions logged'}
+                    </p>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSnoozeAccount(account);
+                    }}
+                    className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
+                  >
+                    <BellOff className="w-4 h-4 mr-1" />
+                    Snooze
+                  </Button>
+                </div>
+              ))}
+              {neglectedAccounts.length === 0 && (
+                <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
+              )}
+              {neglectedAccounts.length > 5 && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-amber-200 text-amber-700 hover:bg-amber-50"
+                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                >
+                  View All {neglectedAccounts.length} Accounts
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
         </TutorialTooltip>
 
         {/* Overdue Tasks */}
