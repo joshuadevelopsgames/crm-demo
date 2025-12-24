@@ -42,21 +42,38 @@ export default function Dashboard() {
 
   // Create renewal notifications on mount and daily
   useEffect(() => {
-    const lastRunKey = 'renewalNotificationsLastRun';
-    const lastRun = localStorage.getItem(lastRunKey);
-    const today = new Date().toDateString();
+    // Check if renewal notifications already exist for today
+    // This prevents duplicate runs across different browser sessions/devices
+    const checkAndRun = async () => {
+      try {
+        // Get today's renewal notifications to see if we've already run today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const notifications = await base44.entities.Notification.filter({
+          type: 'renewal_reminder'
+        });
+        
+        // Check if any renewal notifications were created today
+        const hasNotificationsToday = notifications.some(notif => {
+          const notifDate = new Date(notif.created_at);
+          notifDate.setHours(0, 0, 0, 0);
+          return notifDate.getTime() === today.getTime();
+        });
+        
+        // Only run if we haven't created notifications today
+        if (!hasNotificationsToday) {
+          await createRenewalNotifications();
+          // Invalidate queries to refresh both notifications and accounts (for at_risk status)
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        }
+      } catch (error) {
+        console.error('Error checking/creating renewal notifications:', error);
+      }
+    };
     
-    // Run immediately on mount if we haven't run today
-    if (!lastRun || lastRun !== today) {
-      createRenewalNotifications().catch(error => {
-        console.error('Error creating renewal notifications:', error);
-      }).then(() => {
-        localStorage.setItem(lastRunKey, today);
-        // Invalidate queries to refresh both notifications and accounts (for at_risk status)
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      });
-    }
+    // Run on mount
+    checkAndRun();
     
     // Schedule daily check at midnight
     const scheduleNextRun = () => {
@@ -66,15 +83,8 @@ export default function Dashboard() {
       tomorrow.setHours(0, 0, 0, 0); // Midnight
       const msUntilMidnight = tomorrow.getTime() - now.getTime();
       
-      return setTimeout(() => {
-        createRenewalNotifications().catch(error => {
-          console.error('Error refreshing renewal notifications:', error);
-        }).then(() => {
-          localStorage.setItem(lastRunKey, new Date().toDateString());
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          queryClient.invalidateQueries({ queryKey: ['accounts'] });
-        });
-        
+      return setTimeout(async () => {
+        await checkAndRun();
         // Schedule next day
         scheduleNextRun();
       }, msUntilMidnight);
