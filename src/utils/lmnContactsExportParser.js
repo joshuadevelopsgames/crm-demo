@@ -116,7 +116,10 @@ export function parseContactsExport(csvTextOrRows) {
       const lastName = row[colMap.lastName]?.trim();
       
       if (firstName || lastName) {
-        const contactId = row[colMap.contactId]?.trim();
+        // Preserve Contact ID with prefix (e.g., "P2357388" -> "p2357388")
+        // Normalize to lowercase for consistency
+        const contactIdRaw = row[colMap.contactId]?.trim();
+        const contactId = contactIdRaw ? contactIdRaw.toLowerCase() : null;
         const primaryContact = row[colMap.primaryContact]?.trim().toLowerCase() === 'true';
         const email1 = row[colMap.email1]?.trim() || '';
         const email2 = row[colMap.email2]?.trim() || '';
@@ -129,7 +132,7 @@ export function parseContactsExport(csvTextOrRows) {
         
         contactsList.push({
           id: stableContactId, // Stable ID for merging
-          lmn_contact_id: contactId, // Original LMN Contact ID for future lookups
+          lmn_contact_id: contactId, // Original LMN Contact ID for future lookups (normalized to lowercase)
           account_id: accountId, // Link to parent account (always present)
           account_name: crmName,
           first_name: firstName || '',

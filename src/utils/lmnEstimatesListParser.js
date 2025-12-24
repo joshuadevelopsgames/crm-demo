@@ -85,7 +85,10 @@ export function parseEstimatesList(csvTextOrRows) {
 
       try {
         const estimateId = row[colMap.estimateId]?.toString().trim();
-        const contactId = row[colMap.contactId]?.toString().trim();
+        // NOTE: "Contact ID" in Estimates List is actually the CRM ID (Account ID), not a contact ID
+        // But we normalize it to lowercase for consistency
+        const contactIdRaw = row[colMap.contactId]?.toString().trim();
+        const contactId = contactIdRaw ? contactIdRaw.toLowerCase() : null;
         
         if (!estimateId) {
           errors.push(`Row ${i + 1}: Missing Estimate ID, skipped`);

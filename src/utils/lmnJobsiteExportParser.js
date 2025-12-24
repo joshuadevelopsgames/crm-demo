@@ -57,11 +57,13 @@ export function parseJobsiteExport(csvTextOrRows) {
           continue;
         }
 
+        // NOTE: "Contact ID" in Jobsite Export is actually the CRM ID (Account ID), 
+        // not an individual contact ID. The merge logic will handle matching this to accounts.
         const jobsite = {
           id: `lmn-jobsite-${jobsiteId}`,
           lmn_jobsite_id: jobsiteId,
-          lmn_contact_id: contactId || null,
-          contact_id: contactId ? `lmn-contact-${contactId}` : null,
+          lmn_contact_id: contactId || null, // This is actually the CRM ID (Account ID)
+          contact_id: null, // Don't set contact_id here - let merge logic determine it
           contact_name: row[colMap.contactName]?.toString().trim() || '',
           name: jobsiteName || row[colMap.jobsiteName]?.toString().trim() || '',
           address_1: row[colMap.address1]?.toString().trim() || '',
