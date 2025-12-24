@@ -522,7 +522,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   });
 
   // STEP 3: Determine account_id for each jobsite using ID-based matching FIRST
-  // Priority: account_id (direct) > contact_id (maps to account_id) > name matching (fallback)
+  // Priority: account_id (direct) > lmn_contact_id as CRM ID (account_id) > contact_id (maps to account_id) > name matching (fallback)
+  // NOTE: In Jobsite Export, "Contact ID" may also be the CRM ID (Account ID) in some cases
   
   const jobsitesWithAccountId = jobsites.map(jobsite => {
     let linkedAccountId = null;
@@ -547,31 +548,40 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     }
 
-    // PRIORITY 2: Match by contact_id -> find account_id for that contact
+    // PRIORITY 2: lmn_contact_id - first try as CRM ID (Account ID), then as contact_id
     if (!linkedAccountId && jobsite.lmn_contact_id) {
       const jobsiteContactId = String(jobsite.lmn_contact_id).trim();
       if (jobsiteContactId) {
-        // Try exact match first
-        linkedAccountId = contactIdToAccountMap.get(jobsiteContactId);
-        // Try case-insensitive match
-        if (!linkedAccountId) {
-          linkedAccountId = contactIdToAccountMap.get(jobsiteContactId.toLowerCase());
-        }
-        // Fallback: search in merged contacts (in case of formatting differences)
-        if (!linkedAccountId) {
-          const contact = mergedContacts.find(c => {
-            if (!c.lmn_contact_id) return false;
-            const contactId = String(c.lmn_contact_id).trim();
-            return contactId === jobsiteContactId || 
-                   contactId.toLowerCase() === jobsiteContactId.toLowerCase();
-          });
-          if (contact && contact.account_id) {
-            linkedAccountId = contact.account_id;
+        // First, try treating it as a CRM ID (Account ID)
+        const mappedAccountId = accountIdMap.get(jobsiteContactId) || accountIdMap.get(jobsiteContactId.toLowerCase());
+        if (mappedAccountId) {
+          linkedAccountId = mappedAccountId;
+          linkMethod = 'crm_id_direct';
+          jobsiteLinkingStats.linkedByContactId++; // Count as ID-based link
+        } else {
+          // Fallback: if it doesn't match a CRM ID, try treating it as a contact_id
+          // Try exact match first
+          linkedAccountId = contactIdToAccountMap.get(jobsiteContactId);
+          // Try case-insensitive match
+          if (!linkedAccountId) {
+            linkedAccountId = contactIdToAccountMap.get(jobsiteContactId.toLowerCase());
           }
-        }
-        if (linkedAccountId) {
-          linkMethod = 'contact_id';
-          jobsiteLinkingStats.linkedByContactId++;
+          // Fallback: search in merged contacts (in case of formatting differences)
+          if (!linkedAccountId) {
+            const contact = mergedContacts.find(c => {
+              if (!c.lmn_contact_id) return false;
+              const contactId = String(c.lmn_contact_id).trim();
+              return contactId === jobsiteContactId || 
+                     contactId.toLowerCase() === jobsiteContactId.toLowerCase();
+            });
+            if (contact && contact.account_id) {
+              linkedAccountId = contact.account_id;
+            }
+          }
+          if (linkedAccountId) {
+            linkMethod = 'contact_id';
+            jobsiteLinkingStats.linkedByContactId++;
+          }
         }
       }
     }
