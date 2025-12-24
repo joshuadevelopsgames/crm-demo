@@ -250,11 +250,32 @@ export default function NotificationBell() {
     unreadCount: notifications.filter(n => !n.is_read).length
   }));
 
-  // Sort groups by unread count (groups with unread first)
+  // Define notification type priority (lower number = higher priority)
+  const getTypePriority = (type) => {
+    const priorities = {
+      'renewal_reminder': 1,
+      'neglected_account': 2,
+      'task_overdue': 3,
+      'task_due_today': 4,
+      'task_reminder': 5,
+      'end_of_year_analysis': 6
+    };
+    return priorities[type] || 99; // Unknown types go last
+  };
+
+  // Sort groups by priority, then unread count, then total count
   notificationGroups.sort((a, b) => {
+    // First, sort by type priority
+    const priorityA = getTypePriority(a.type);
+    const priorityB = getTypePriority(b.type);
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB; // Lower priority number = higher priority
+    }
+    // Then by unread count (groups with unread first)
     if (a.unreadCount !== b.unreadCount) {
       return b.unreadCount - a.unreadCount; // More unread first
     }
+    // Finally by total count
     return b.count - a.count; // More notifications first
   });
 
