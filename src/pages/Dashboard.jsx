@@ -214,6 +214,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
+          const isAtRisk = stat.title === 'At Risk Accounts';
           return (
             <TutorialTooltip
               key={stat.title}
@@ -221,7 +222,10 @@ export default function Dashboard() {
               step={1}
               position="bottom"
             >
-              <Card className="border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group">
+              <Card 
+                className={`border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group ${isAtRisk ? 'cursor-pointer hover:shadow-md' : ''}`}
+                onClick={isAtRisk ? () => navigate(`${createPageUrl('Accounts')}?status=at_risk`) : undefined}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">

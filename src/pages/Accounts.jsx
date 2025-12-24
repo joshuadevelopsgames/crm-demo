@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
@@ -47,6 +47,7 @@ import toast from 'react-hot-toast';
 
 export default function Accounts() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterSegment, setFilterSegment] = useState('all');
@@ -55,6 +56,7 @@ export default function Accounts() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
+  const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
   
   const queryClient = useQueryClient();
 
@@ -400,6 +402,36 @@ export default function Accounts() {
         </TabsList>
 
         <TabsContent value="active" className="mt-0 space-y-4">
+      {/* Status Filter Banner */}
+      {statusFilter && (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <span className="font-medium text-amber-900">
+                  Showing {statusFilter === 'at_risk' ? 'At Risk' : statusFilter} accounts
+                </span>
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  {accountsByStatus.length}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter(null);
+                  setSearchParams({});
+                }}
+                className="text-amber-700 hover:text-amber-900"
+              >
+                Clear Filter
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Filters & Search */}
       <TutorialTooltip
         tip="Use these filters to search accounts by name, filter by type or segment, sort by different criteria, and toggle between list and card views."
