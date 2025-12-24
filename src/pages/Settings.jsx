@@ -26,11 +26,17 @@ export default function Settings() {
   const navigate = useNavigate();
   const supabase = getSupabaseAuth();
 
-  const [fullName, setFullName] = useState(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
-  const [phoneNumber, setPhoneNumber] = useState(profile?.phone_number || '');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
   const [systemAnnouncements, setSystemAnnouncements] = useState(true);
+
+  // Update state when profile/user data loads
+  useEffect(() => {
+    setFullName(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
+    setPhoneNumber(profile?.phone_number || '');
+  }, [profile, user]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
