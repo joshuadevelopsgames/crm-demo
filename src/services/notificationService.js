@@ -305,22 +305,38 @@ export async function createRenewalNotifications() {
         continue; // Notification is snoozed for all users
       }
       
+      // Only create notifications if account is actually at_risk
+      // Double-check the account status after potential update
+      const accountAfterUpdate = accounts.find(a => a.id === account.id);
+      const accountIsAtRisk = accountAfterUpdate?.status === 'at_risk' || isAtRisk;
+      
+      if (!accountIsAtRisk) {
+        console.log(`⏭️ Skipping notification for ${account.name} - account is not at_risk (status: ${accountAfterUpdate?.status || account.status})`);
+        continue;
+      }
+      
       // Create notification for all users
       for (const user of usersToNotify) {
         if (!user?.id) continue;
         
         try {
-          // Check if notification already exists (unread)
+          // Check if notification already exists (unread or read - avoid duplicates)
           const existingNotifications = await base44.entities.Notification.filter({
             user_id: user.id,
             type: 'renewal_reminder',
-            related_account_id: account.id,
-            is_read: false
+            related_account_id: account.id
           });
           
-          if (existingNotifications.length > 0) {
+          // Check if there's an existing notification created today (to avoid duplicates)
+          const today = startOfDay(new Date());
+          const hasNotificationToday = existingNotifications.some(notif => {
+            const notifDate = startOfDay(new Date(notif.created_at));
+            return notifDate.getTime() === today.getTime();
+          });
+          
+          if (hasNotificationToday) {
             skippedCount++;
-            continue; // Already exists
+            continue; // Already created today
           }
           
           // Create the notification

@@ -77,8 +77,29 @@ export default function NotificationBell() {
     }
   });
 
-  // Filter out snoozed notifications (universal - if any user snoozed, hide for everyone)
+  // Fetch accounts to verify at_risk status for renewal notifications
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list(),
+    enabled: !!currentUser?.id
+  });
+  
+  // Create a set of account IDs that are actually at_risk
+  const atRiskAccountIds = new Set(
+    accounts
+      .filter(acc => acc.status === 'at_risk' && !acc.archived)
+      .map(acc => acc.id)
+  );
+
+  // Filter out snoozed notifications and notifications for accounts that aren't at_risk
   const activeNotifications = allNotifications.filter(notification => {
+    // For renewal reminders, only show if account is actually at_risk
+    if (notification.type === 'renewal_reminder' && notification.related_account_id) {
+      if (!atRiskAccountIds.has(notification.related_account_id)) {
+        return false; // Account is not at_risk, don't show notification
+      }
+    }
+    
     // Check if this notification is snoozed (universal)
     const now = new Date();
     const isSnoozed = snoozes.some(snooze => 
