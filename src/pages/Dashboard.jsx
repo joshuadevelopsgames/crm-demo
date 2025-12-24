@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createEndOfYearNotification, createRenewalNotifications } from '@/services/notificationService';
+import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,17 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Task.list()
   });
 
+  // Fetch estimates to calculate renewal dates
+  const { data: estimates = [] } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
+
   const { data: sequences = [] } = useQuery({
     queryKey: ['sequence-enrollments'],
     queryFn: () => base44.entities.SequenceEnrollment.list()
@@ -111,18 +123,38 @@ export default function Dashboard() {
   });
 
   // At-risk accounts (renewals within 6 months / 180 days)
-  const atRiskRenewals = accounts.filter(account => {
-    if (account.archived) return false;
-    if (account.status !== 'at_risk') return false;
-    if (!account.renewal_date) return false;
-    const daysUntil = differenceInDays(new Date(account.renewal_date), new Date());
-    return daysUntil > 0 && daysUntil <= 180;
-  }).sort((a, b) => {
-    // Sort by days until renewal (soonest first)
-    const daysA = differenceInDays(new Date(a.renewal_date), new Date());
-    const daysB = differenceInDays(new Date(b.renewal_date), new Date());
-    return daysA - daysB;
-  });
+  // Calculate renewal dates from estimates for each account
+  const atRiskRenewals = accounts
+    .map(account => {
+      if (account.archived) return null;
+      if (account.status !== 'at_risk') return null;
+      
+      // Get estimates for this account
+      const accountEstimates = estimates.filter(est => est.account_id === account.id);
+      
+      // Calculate renewal date from estimates
+      const renewalDate = calculateRenewalDate(accountEstimates);
+      
+      if (!renewalDate) return null;
+      
+      const daysUntil = differenceInDays(new Date(renewalDate), new Date());
+      
+      // Only include if renewal is within 6 months (180 days) and in the future
+      if (daysUntil <= 0 || daysUntil > 180) return null;
+      
+      return {
+        ...account,
+        renewal_date: renewalDate.toISOString(),
+        calculated_renewal_date: renewalDate
+      };
+    })
+    .filter(Boolean) // Remove null entries
+    .sort((a, b) => {
+      // Sort by days until renewal (soonest first)
+      const daysA = differenceInDays(new Date(a.calculated_renewal_date), new Date());
+      const daysB = differenceInDays(new Date(b.calculated_renewal_date), new Date());
+      return daysA - daysB;
+    });
 
   // Overdue tasks
   const overdueTasks = tasks.filter(task => {
@@ -375,7 +407,7 @@ export default function Dashboard() {
               <p className="text-sm text-slate-600 mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {atRiskRenewals.slice(0, 5).map(account => {
-                  const daysUntil = differenceInDays(new Date(account.renewal_date), new Date());
+                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
                   return (
                     <Link
                       key={account.id}
@@ -385,7 +417,7 @@ export default function Dashboard() {
                       <div className="flex-1">
                         <p className="font-medium text-slate-900">{account.name}</p>
                         <p className="text-xs text-slate-500">
-                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.renewal_date), 'MMM d, yyyy')}
+                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
                         </p>
                       </div>
                       <ArrowRight className="w-4 h-4 text-slate-400" />
