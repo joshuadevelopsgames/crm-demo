@@ -576,7 +576,9 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     }
 
-    // PRIORITY 3: Fallback matching (only if no IDs available) - match by name/address
+    // PRIORITY 3: Fallback matching (only if contact_id exists but doesn't map to any account)
+    // This should rarely happen - all jobsites have contact_id, and all contacts should have account_id
+    // But we keep this as a safety net for edge cases (orphaned contact_ids, data corruption, etc.)
     if (!linkedAccountId) {
 
     // Method 2: Match by contact name matching account name (fuzzy)
