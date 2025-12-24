@@ -21,10 +21,17 @@ import { disconnectGmail } from '@/services/gmailService';
 import { createPageUrl } from '@/utils';
 
 export default function ProfileDropdown() {
-  const { profile, user } = useUser();
+  const { profile, user, isLoading } = useUser();
   const { isTutorialMode, exitTutorial } = useTutorial();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Don't render if user data is still loading
+  if (isLoading) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+    );
+  }
 
   const handleLogout = async (e) => {
     if (e) {
