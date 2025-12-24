@@ -146,7 +146,15 @@ export default function NotificationBell() {
         return false;
       }
       // Once calculation is complete, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
-      if (!accountsThatShouldBeAtRisk.has(notification.related_account_id)) {
+      // Use string comparison to handle type mismatches (UUID vs text)
+      const accountIdStr = String(notification.related_account_id);
+      const isInAtRiskSet = Array.from(accountsThatShouldBeAtRisk).some(id => String(id) === accountIdStr);
+      
+      if (!isInAtRiskSet) {
+        // Debug: log why notification is being filtered out
+        if (accountsThatShouldBeAtRisk.size > 0) {
+          console.log(`🔍 Filtering out notification for account ${accountIdStr} - not in at-risk set (${accountsThatShouldBeAtRisk.size} accounts in set)`);
+        }
         return false; // Account should not be at_risk based on renewal date, don't show notification
       }
     }
