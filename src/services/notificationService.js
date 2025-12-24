@@ -177,18 +177,26 @@ export async function createEndOfYearNotification() {
  * This creates universal notifications that all users see, but can be snoozed individually
  */
 export async function createRenewalNotifications() {
+  console.log('🔄 Starting renewal notification creation...');
+  let createdCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+  
   try {
     // Get all accounts
     const accounts = await base44.entities.Account.list();
+    console.log(`📊 Found ${accounts.length} accounts`);
     
     // Get all estimates
     const estimates = await base44.entities.Estimate.list();
+    console.log(`📋 Found ${estimates.length} estimates`);
     
     // Get all users - handle errors gracefully
     let users = [];
     let currentUser = null;
     try {
       users = await base44.entities.User.list();
+      console.log(`👥 Found ${users.length} users`);
     } catch (error) {
       console.warn('Error fetching users list:', error);
     }
@@ -202,12 +210,11 @@ export async function createRenewalNotifications() {
     const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
     
     if (usersToNotify.length === 0) {
-      console.warn('No users found for renewal notifications - skipping');
+      console.warn('⚠️ No users found for renewal notifications - skipping');
       return;
     }
 
     const today = startOfDay(new Date());
-    const sixMonthsFromNow = subMonths(today, -6); // 6 months in the future
     
     // Process each account
     for (const account of accounts) {
@@ -227,42 +234,54 @@ export async function createRenewalNotifications() {
       // Only create notification if renewal is within 6 months (180 days) and in the future
       if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
       
-      // Check if notification should be shown (6 months before = 180 days)
-      // We want to show it when we're exactly 6 months away, or close to it
-      const daysUntilSixMonths = differenceInDays(renewalDateStart, sixMonthsFromNow);
+      // Check if this notification is snoozed (universal - any user can snooze for everyone)
+      const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
+      if (isSnoozed) {
+        skippedCount++;
+        continue; // Notification is snoozed for all users
+      }
       
       // Create notification for all users
       for (const user of usersToNotify) {
         if (!user?.id) continue;
         
-        // Check if this notification is snoozed (universal - any user can snooze for everyone)
-        const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
-        if (isSnoozed) continue; // Notification is snoozed for all users
-        
-        // Check if notification already exists
-        const existingNotifications = await base44.entities.Notification.filter({
-          user_id: user.id,
-          type: 'renewal_reminder',
-          related_account_id: account.id,
-          is_read: false
-        });
-        
-        if (existingNotifications.length > 0) continue; // Already exists
-        
-        // Create the notification
-        await base44.entities.Notification.create({
-          user_id: user.id,
-          type: 'renewal_reminder',
-          title: `Renewal Coming Up: ${account.name}`,
-          message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
-          related_account_id: account.id,
-          related_task_id: null,
-          scheduled_for: renewalDateStart.toISOString()
-        });
+        try {
+          // Check if notification already exists (unread)
+          const existingNotifications = await base44.entities.Notification.filter({
+            user_id: user.id,
+            type: 'renewal_reminder',
+            related_account_id: account.id,
+            is_read: false
+          });
+          
+          if (existingNotifications.length > 0) {
+            skippedCount++;
+            continue; // Already exists
+          }
+          
+          // Create the notification
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'renewal_reminder',
+            title: `Renewal Coming Up: ${account.name}`,
+            message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
+            related_account_id: account.id,
+            related_task_id: null,
+            scheduled_for: renewalDateStart.toISOString()
+          });
+          
+          createdCount++;
+          console.log(`✅ Created notification for ${account.name} (${daysUntilRenewal} days) for user ${user.email || user.id}`);
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ Error creating notification for ${account.name} for user ${user.email || user.id}:`, error);
+        }
       }
     }
+    
+    console.log(`✅ Renewal notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
   } catch (error) {
-    console.error('Error creating renewal notifications:', error);
+    console.error('❌ Error creating renewal notifications:', error);
   }
 }
 
