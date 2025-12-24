@@ -140,14 +140,22 @@ export default function NotificationBell() {
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
   const activeNotifications = allNotifications.filter(notification => {
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
-    if (notification.type === 'renewal_reminder' && notification.related_account_id) {
+    if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
       if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
         return false;
       }
+      
+      // Handle null, undefined, or 'null' string values
+      const accountId = notification.related_account_id;
+      if (!accountId || accountId === 'null' || accountId === null || accountId === undefined) {
+        console.log(`🔍 Filtering out notification with invalid related_account_id: "${accountId}"`);
+        return false; // No account ID means we can't verify if it should be at-risk
+      }
+      
       // Once calculation is complete, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
       // Use string comparison to handle type mismatches (UUID vs text)
-      const accountIdStr = String(notification.related_account_id).trim();
+      const accountIdStr = String(accountId).trim();
       const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
       const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
       
