@@ -101,11 +101,37 @@ export default function NotificationBell() {
   }, [allNotifications, activeNotifications]);
 
   // Filter to show unread first, then read (only active notifications)
-  const notifications = [...activeNotifications].sort((a, b) => {
+  const sortedNotifications = [...activeNotifications].sort((a, b) => {
     if (a.is_read !== b.is_read) {
       return a.is_read ? 1 : -1; // Unread first
     }
     return 0;
+  });
+
+  // Group notifications by type
+  const groupedNotifications = sortedNotifications.reduce((groups, notification) => {
+    const type = notification.type;
+    if (!groups[type]) {
+      groups[type] = [];
+    }
+    groups[type].push(notification);
+    return groups;
+  }, {});
+
+  // Convert grouped object to array of groups
+  const notificationGroups = Object.entries(groupedNotifications).map(([type, notifications]) => ({
+    type,
+    notifications,
+    count: notifications.length,
+    unreadCount: notifications.filter(n => !n.is_read).length
+  }));
+
+  // Sort groups by unread count (groups with unread first)
+  notificationGroups.sort((a, b) => {
+    if (a.unreadCount !== b.unreadCount) {
+      return b.unreadCount - a.unreadCount; // More unread first
+    }
+    return b.count - a.count; // More notifications first
   });
 
   const markAsReadMutation = useMutation({
@@ -123,6 +149,9 @@ export default function NotificationBell() {
   });
 
   const unreadCount = activeNotifications.filter(n => !n.is_read).length;
+  
+  // For badge count, show total unread (not grouped)
+  const displayUnreadCount = unreadCount;
 
   // Snooze notification mutation (universal - affects all users)
   const snoozeNotificationMutation = useMutation({
