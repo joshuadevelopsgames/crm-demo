@@ -451,14 +451,14 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-        <Card className="border-red-200 bg-red-50/50">
+        <Card className="border-orange-200 bg-orange-50/50">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <AlertTriangle className="w-5 h-5 text-orange-600" />
                 Overdue Tasks
               </CardTitle>
-              <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
                 {overdueTasks.length}
               </Badge>
             </div>
@@ -469,7 +469,7 @@ export default function Dashboard() {
               {overdueTasks.slice(0, 5).map(task => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-100"
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100"
                 >
                   <div className="flex-1">
                     <p className="font-medium text-slate-900">{task.title}</p>
@@ -477,7 +477,7 @@ export default function Dashboard() {
                       Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-red-600 border-red-300">
+                  <Badge variant="outline" className="text-orange-600 border-orange-300">
                     {task.priority}
                   </Badge>
                 </div>
