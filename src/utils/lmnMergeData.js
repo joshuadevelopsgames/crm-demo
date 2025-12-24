@@ -289,39 +289,121 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     }
   });
 
-  // First pass: Link estimates to accounts with improved matching
-  const estimatesWithAccountId = estimates.map(estimate => {
-    let linkedAccountId = null;
-    let linkMethod = null;
+  // Create account ID lookup map (for direct account_id matching)
+  // Map both lmn_crm_id and the full account id (lmn-account-XXXXX)
+  const accountIdMap = new Map(); // lmn_crm_id -> account.id
+  const accountIdDirectMap = new Map(); // account.id -> account
+  accountsArray.forEach(account => {
+    if (account.lmn_crm_id) {
+      const crmId = String(account.lmn_crm_id).trim();
+      accountIdMap.set(crmId, account.id);
+      accountIdMap.set(crmId.toLowerCase(), account.id);
+    }
+    accountIdDirectMap.set(account.id, account);
+    // Also check if estimate/jobsite has account_id that matches our account.id format
+    if (account.id.startsWith('lmn-account-')) {
+      const crmIdFromId = account.id.replace('lmn-account-', '');
+      accountIdMap.set(crmIdFromId, account.id);
+    }
+  });
 
-    // Method 1: Match by contact ID (most reliable - ID-based)
-    if (estimate.lmn_contact_id) {
-      const estimateContactId = String(estimate.lmn_contact_id).trim();
-      if (estimateContactId) {
-        // Try exact match first
-        linkedAccountId = contactIdToAccountMap.get(estimateContactId);
-        // Try case-insensitive match
-        if (!linkedAccountId) {
-          linkedAccountId = contactIdToAccountMap.get(estimateContactId.toLowerCase());
+  // STEP 1: Group all data by contact_id/account_id FIRST (ID-based grouping)
+  // This ensures we prioritize ID-based relationships before any other matching
+  
+  // Group estimates by contact_id first (all estimates with same contact_id should link to same account)
+  const estimatesByContactId = new Map(); // contact_id -> [estimates]
+  const estimatesByAccountId = new Map(); // account_id -> [estimates]
+  const ungroupedEstimates = [];
+  
+  estimates.forEach(estimate => {
+    // Check for direct account_id first
+    if (estimate.account_id) {
+      const estAccountId = String(estimate.account_id).trim();
+      if (!estimatesByAccountId.has(estAccountId)) {
+        estimatesByAccountId.set(estAccountId, []);
+      }
+      estimatesByAccountId.get(estAccountId).push(estimate);
+    } 
+    // Then check for contact_id
+    else if (estimate.lmn_contact_id) {
+      const contactId = String(estimate.lmn_contact_id).trim();
+      if (contactId) {
+        if (!estimatesByContactId.has(contactId)) {
+          estimatesByContactId.set(contactId, []);
         }
-        // Fallback: search in merged contacts (in case of formatting differences)
-        if (!linkedAccountId) {
-          const contact = mergedContacts.find(c => {
-            if (!c.lmn_contact_id) return false;
-            const contactId = String(c.lmn_contact_id).trim();
-            return contactId === estimateContactId || 
-                   contactId.toLowerCase() === estimateContactId.toLowerCase();
-          });
-          if (contact && contact.account_id) {
-            linkedAccountId = contact.account_id;
-          }
-        }
-        if (linkedAccountId) {
-          linkMethod = 'contact_id';
-          estimateLinkingStats.linkedByContactId++;
-        }
+        estimatesByContactId.get(contactId).push(estimate);
+      } else {
+        ungroupedEstimates.push(estimate);
+      }
+    } else {
+      ungroupedEstimates.push(estimate);
+    }
+  });
+
+  // Link grouped estimates to accounts
+  const estimatesWithAccountId = [];
+  
+  // First: Link estimates grouped by account_id
+  estimatesByAccountId.forEach((estimateGroup, accountId) => {
+    let linkedAccountId = null;
+    // Check if it's a direct account.id match
+    if (accountIdDirectMap.has(accountId)) {
+      linkedAccountId = accountId;
+    } else {
+      // Check if it's an lmn_crm_id that we can map
+      linkedAccountId = accountIdMap.get(accountId) || accountIdMap.get(accountId.toLowerCase());
+    }
+    
+    // Link all estimates in this group to the same account
+    estimateGroup.forEach(estimate => {
+      if (linkedAccountId) {
+        estimateLinkingStats.linkedByContactId++; // Count as ID-based link
+      }
+      estimatesWithAccountId.push({
+        ...estimate,
+        account_id: linkedAccountId,
+        _link_method: linkedAccountId ? 'direct_account_id' : null,
+        _is_orphaned: !linkedAccountId
+      });
+    });
+  });
+
+  // Second: Link estimates grouped by contact_id (all with same contact_id get same account)
+  estimatesByContactId.forEach((estimateGroup, contactId) => {
+    // Find account_id for this contact_id
+    let linkedAccountId = contactIdToAccountMap.get(contactId) || 
+                          contactIdToAccountMap.get(contactId.toLowerCase());
+    
+    // Fallback: search in merged contacts
+    if (!linkedAccountId) {
+      const contact = mergedContacts.find(c => {
+        if (!c.lmn_contact_id) return false;
+        const cId = String(c.lmn_contact_id).trim();
+        return cId === contactId || cId.toLowerCase() === contactId.toLowerCase();
+      });
+      if (contact && contact.account_id) {
+        linkedAccountId = contact.account_id;
       }
     }
+    
+    // Link all estimates in this group to the same account
+    estimateGroup.forEach(estimate => {
+      if (linkedAccountId) {
+        estimateLinkingStats.linkedByContactId++;
+      }
+      estimatesWithAccountId.push({
+        ...estimate,
+        account_id: linkedAccountId,
+        _link_method: linkedAccountId ? 'contact_id' : null,
+        _is_orphaned: !linkedAccountId
+      });
+    });
+  });
+
+  // Third: Process ungrouped estimates with fallback matching
+  ungroupedEstimates.forEach(estimate => {
+    let linkedAccountId = null;
+    let linkMethod = null;
 
     // Method 2: Match by email -> contact -> account
     if (!linkedAccountId && estimate.email) {
@@ -426,39 +508,101 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     };
   });
 
-  // Link jobsites to accounts with improved matching
-  const jobsitesWithAccountId = jobsites.map(jobsite => {
-    let linkedAccountId = null;
-    let linkMethod = null;
+  // STEP 2: Group jobsites by contact_id/account_id FIRST (ID-based grouping)
+  // Group jobsites by contact_id first (all jobsites with same contact_id should link to same account)
+  const jobsitesByContactId = new Map(); // contact_id -> [jobsites]
+  const jobsitesByAccountId = new Map(); // account_id -> [jobsites]
+  const ungroupedJobsites = [];
+  
+  jobsites.forEach(jobsite => {
+    // Check for direct account_id first
+    if (jobsite.account_id) {
+      const jobsiteAccountId = String(jobsite.account_id).trim();
+      if (!jobsitesByAccountId.has(jobsiteAccountId)) {
+        jobsitesByAccountId.set(jobsiteAccountId, []);
+      }
+      jobsitesByAccountId.get(jobsiteAccountId).push(jobsite);
+    } 
+    // Then check for contact_id
+    else if (jobsite.lmn_contact_id) {
+      const contactId = String(jobsite.lmn_contact_id).trim();
+      if (contactId) {
+        if (!jobsitesByContactId.has(contactId)) {
+          jobsitesByContactId.set(contactId, []);
+        }
+        jobsitesByContactId.get(contactId).push(jobsite);
+      } else {
+        ungroupedJobsites.push(jobsite);
+      }
+    } else {
+      ungroupedJobsites.push(jobsite);
+    }
+  });
 
-    // Method 1: Match by contact ID (most reliable - ID-based)
-    if (jobsite.lmn_contact_id) {
-      const jobsiteContactId = String(jobsite.lmn_contact_id).trim();
-      if (jobsiteContactId) {
-        // Try exact match first
-        linkedAccountId = contactIdToAccountMap.get(jobsiteContactId);
-        // Try case-insensitive match
-        if (!linkedAccountId) {
-          linkedAccountId = contactIdToAccountMap.get(jobsiteContactId.toLowerCase());
-        }
-        // Fallback: search in merged contacts (in case of formatting differences)
-        if (!linkedAccountId) {
-          const contact = mergedContacts.find(c => {
-            if (!c.lmn_contact_id) return false;
-            const contactId = String(c.lmn_contact_id).trim();
-            return contactId === jobsiteContactId || 
-                   contactId.toLowerCase() === jobsiteContactId.toLowerCase();
-          });
-          if (contact && contact.account_id) {
-            linkedAccountId = contact.account_id;
-          }
-        }
-        if (linkedAccountId) {
-          linkMethod = 'contact_id';
-          jobsiteLinkingStats.linkedByContactId++;
-        }
+  // Link grouped jobsites to accounts
+  const jobsitesWithAccountId = [];
+  
+  // First: Link jobsites grouped by account_id
+  jobsitesByAccountId.forEach((jobsiteGroup, accountId) => {
+    let linkedAccountId = null;
+    // Check if it's a direct account.id match
+    if (accountIdDirectMap.has(accountId)) {
+      linkedAccountId = accountId;
+    } else {
+      // Check if it's an lmn_crm_id that we can map
+      linkedAccountId = accountIdMap.get(accountId) || accountIdMap.get(accountId.toLowerCase());
+    }
+    
+    // Link all jobsites in this group to the same account
+    jobsiteGroup.forEach(jobsite => {
+      if (linkedAccountId) {
+        jobsiteLinkingStats.linkedByContactId++; // Count as ID-based link
+      }
+      jobsitesWithAccountId.push({
+        ...jobsite,
+        account_id: linkedAccountId,
+        _link_method: linkedAccountId ? 'direct_account_id' : null,
+        _is_orphaned: !linkedAccountId
+      });
+    });
+  });
+
+  // Second: Link jobsites grouped by contact_id (all with same contact_id get same account)
+  jobsitesByContactId.forEach((jobsiteGroup, contactId) => {
+    // Find account_id for this contact_id
+    let linkedAccountId = contactIdToAccountMap.get(contactId) || 
+                          contactIdToAccountMap.get(contactId.toLowerCase());
+    
+    // Fallback: search in merged contacts
+    if (!linkedAccountId) {
+      const contact = mergedContacts.find(c => {
+        if (!c.lmn_contact_id) return false;
+        const cId = String(c.lmn_contact_id).trim();
+        return cId === contactId || cId.toLowerCase() === contactId.toLowerCase();
+      });
+      if (contact && contact.account_id) {
+        linkedAccountId = contact.account_id;
       }
     }
+    
+    // Link all jobsites in this group to the same account
+    jobsiteGroup.forEach(jobsite => {
+      if (linkedAccountId) {
+        jobsiteLinkingStats.linkedByContactId++;
+      }
+      jobsitesWithAccountId.push({
+        ...jobsite,
+        account_id: linkedAccountId,
+        _link_method: linkedAccountId ? 'contact_id' : null,
+        _is_orphaned: !linkedAccountId
+      });
+    });
+  });
+
+  // Third: Process ungrouped jobsites with fallback matching
+  ungroupedJobsites.forEach(jobsite => {
+    let linkedAccountId = null;
+    let linkMethod = null;
 
     // Method 2: Match by contact name matching account name (fuzzy)
     if (!linkedAccountId && jobsite.contact_name) {
