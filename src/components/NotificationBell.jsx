@@ -45,7 +45,7 @@ export default function NotificationBell() {
   const currentUserId = currentUser?.id;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
-  const { data: allNotifications = [] } = useQuery({
+  const { data: allNotifications = [], refetch: refetchNotifications } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) {
@@ -61,7 +61,16 @@ export default function NotificationBell() {
     },
     enabled: !!currentUser?.id,
     refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
+    refetchOnMount: true, // Always refetch on mount (not cached)
   });
+
+  // Force fresh notification fetch on component mount
+  useEffect(() => {
+    if (currentUser?.id) {
+      console.log('🔔 NotificationBell: Forcing fresh notification fetch on mount');
+      refetchNotifications();
+    }
+  }, [currentUser?.id, refetchNotifications]);
 
   // Fetch universal snoozes (applies to all users)
   const { data: snoozes = [] } = useQuery({

@@ -427,6 +427,13 @@ export async function createNeglectedAccountNotifications() {
   let createdCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
+  let neglectedAccountCount = 0;
+  let skippedBySnooze = 0;
+  let skippedByExisting = 0;
+  let skippedByArchived = 0;
+  let skippedByICP = 0;
+  let skippedBySnoozedAccount = 0;
+  let skippedByRecentInteraction = 0;
   
   try {
     // Get all accounts
@@ -461,15 +468,22 @@ export async function createNeglectedAccountNotifications() {
     // Process each account
     for (const account of accounts) {
       // Skip archived accounts
-      if (account.archived) continue;
+      if (account.archived) {
+        skippedByArchived++;
+        continue;
+      }
       
       // Skip accounts with ICP status = 'na' (permanently excluded)
-      if (account.icp_status === 'na') continue;
+      if (account.icp_status === 'na') {
+        skippedByICP++;
+        continue;
+      }
       
       // Skip if snoozed
       if (account.snoozed_until) {
         const snoozeDate = new Date(account.snoozed_until);
         if (snoozeDate > new Date()) {
+          skippedBySnoozedAccount++;
           continue; // Still snoozed
         }
       }
@@ -489,19 +503,23 @@ export async function createNeglectedAccountNotifications() {
         const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
         daysSinceInteraction = differenceInDays(today, lastInteractionDate);
         if (daysSinceInteraction <= thresholdDays) {
+          skippedByRecentInteraction++;
           continue; // Recent interaction, not neglected
         }
       }
       
-      // Account is neglected - create notification
+      // Account is neglected
+      neglectedAccountCount++;
+      
       // Check if this notification is snoozed (universal - any user can snooze for everyone)
       const isSnoozed = await checkNotificationSnoozed('neglected_account', account.id);
       if (isSnoozed) {
-        skippedCount++;
+        skippedBySnooze++;
         continue; // Notification is snoozed for all users
       }
       
       // Create notification for all users
+      let accountNotificationCreated = false;
       for (const user of usersToNotify) {
         if (!user?.id) continue;
         
@@ -520,7 +538,8 @@ export async function createNeglectedAccountNotifications() {
           });
           
           if (hasNotificationToday) {
-            skippedCount++;
+            skippedByExisting++;
+            accountNotificationCreated = true; // At least one user has a notification for this account
             continue; // Already created today
           }
           
@@ -540,11 +559,17 @@ export async function createNeglectedAccountNotifications() {
           });
           
           createdCount++;
+          accountNotificationCreated = true;
           console.log(`✅ Created neglected account notification for ${account.name} (${daysSinceInteraction === null ? 'no interaction date' : `${daysSinceInteraction} days`}) for user ${user.email || user.id}`);
         } catch (error) {
           errorCount++;
           console.error(`❌ Error creating neglected account notification for ${account.name} for user ${user.email || user.id}:`, error);
         }
+      }
+      
+      // Track accounts that should have notifications but don't
+      if (!accountNotificationCreated && !isSnoozed) {
+        console.warn(`⚠️ Account ${account.name} (${account.id}) is neglected but no notification was created (may have errors for all users)`);
       }
     }
     
@@ -610,8 +635,20 @@ export async function createNeglectedAccountNotifications() {
       console.error('❌ Error cleaning up neglected account notifications:', cleanupError);
     }
     
-    console.log(`✅ Neglected account notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
-    console.log(`🧹 Cleaned up ${cleanupCount} stale notifications`);
+    console.log(`✅ Neglected account notification creation complete:`);
+    console.log(`   📊 Total neglected accounts identified: ${neglectedAccountCount}`);
+    console.log(`   ✅ Notifications created: ${createdCount}`);
+    console.log(`   ⏭️  Skipped breakdown:`);
+    console.log(`      - By notification snooze: ${skippedBySnooze}`);
+    console.log(`      - By existing notification today: ${skippedByExisting}`);
+    console.log(`      - By archived account: ${skippedByArchived}`);
+    console.log(`      - By ICP status 'na': ${skippedByICP}`);
+    console.log(`      - By snoozed account: ${skippedBySnoozedAccount}`);
+    console.log(`      - By recent interaction: ${skippedByRecentInteraction}`);
+    console.log(`   ❌ Errors: ${errorCount}`);
+    console.log(`   🧹 Cleaned up ${cleanupCount} stale notifications`);
+    console.log(`   📈 Expected notifications: ${neglectedAccountCount * usersToNotify.length} (${neglectedAccountCount} accounts × ${usersToNotify.length} users)`);
+    console.log(`   📉 Actual notifications created: ${createdCount}`);
   } catch (error) {
     console.error('❌ Error creating neglected account notifications:', error);
   }

@@ -40,6 +40,13 @@ export default function Dashboard() {
     });
   }, []);
 
+  // Force fresh notification fetch on page load (not cached)
+  useEffect(() => {
+    // Invalidate notifications query to force fresh fetch on page load
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    console.log('🔄 Dashboard: Invalidated notifications cache on page load');
+  }, [queryClient]);
+
   // Create renewal notifications on mount and daily
   useEffect(() => {
     // Check if renewal notifications already exist for today
