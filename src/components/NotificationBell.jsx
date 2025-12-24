@@ -208,10 +208,23 @@ export default function NotificationBell() {
       // Check for mismatches
       if (renewalCount > 0 && accountsThatShouldBeAtRisk.size > 0) {
         const atRiskIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
-        const missingFromAtRisk = uniqueRenewalAccountIds.filter(id => !atRiskIds.includes(id));
+        const missingFromAtRisk = uniqueRenewalAccountIds.filter(id => {
+          const trimmedId = String(id).trim();
+          return trimmedId && trimmedId !== 'null' && !atRiskIds.includes(trimmedId);
+        });
         if (missingFromAtRisk.length > 0) {
           console.warn(`⚠️ Found ${missingFromAtRisk.length} renewal notifications for accounts NOT in at-risk set:`, missingFromAtRisk.slice(0, 10));
         }
+        
+        // Count how many notifications should be filtered
+        const notificationsToFilter = renewalNotifications.filter(n => {
+          const accountId = n.related_account_id;
+          if (!accountId || accountId === 'null' || accountId === null) return true;
+          const accountIdStr = String(accountId).trim();
+          return !atRiskIds.includes(accountIdStr);
+        }).length;
+        
+        console.log(`📊 Filter analysis: ${renewalCount} total renewal notifications, ${notificationsToFilter} should be filtered out, ${renewalCount - notificationsToFilter} should remain`);
       }
     }
   }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete]);
