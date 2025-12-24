@@ -264,6 +264,18 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Add new contacts from leads to the merged contacts array
   mergedContacts.push(...newContactsFromLeads);
 
+  // Track new contacts created from Leads (without Contact ID) for user notification
+  const newContactsFromLeadsInfo = newContactsFromLeads.map(contact => {
+    // Find account name for display
+    const account = accountsArray.find(acc => acc.id === contact.account_id);
+    return {
+      contact_name: `${contact.first_name} ${contact.last_name}`.trim() || contact.email_1 || 'Unknown',
+      email: contact.email_1 || '',
+      account_name: account?.name || 'Unknown Account',
+      account_id: contact.account_id
+    };
+  });
+
   // Create account ID to account object mapping for easy updates
   const accountsArray = Array.from(accounts.values());
   const accountMap = new Map();

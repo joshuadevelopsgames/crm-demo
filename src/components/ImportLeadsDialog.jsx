@@ -557,7 +557,8 @@ export default function ImportLeadsDialog({ open, onClose }) {
         contactsFailed: 0,
         estimatesFailed: 0,
         jobsitesFailed: 0,
-        errors: []
+        errors: [],
+        newContactsFromLeads: mergedData.stats?.newContactsFromLeads || { count: 0, contacts: [] }
       };
 
       // Import/Update accounts using bulk upsert (much faster)
@@ -2113,6 +2114,38 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       importResults.jobsitesFailed > 0 && `${importResults.jobsitesFailed} jobsites failed`
                     ].filter(Boolean).join(', ')}
                   </p>
+                </Card>
+              )}
+
+              {/* Notification for new contacts created from Leads without Contact ID */}
+              {importResults.newContactsFromLeads && importResults.newContactsFromLeads.count > 0 && (
+                <Card className="p-4 bg-blue-50 border-blue-200 w-full max-w-2xl mt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-sm font-bold">ℹ️</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-900 mb-2">
+                        {importResults.newContactsFromLeads.count} New Contact{importResults.newContactsFromLeads.count !== 1 ? 's' : ''} Created (No Contact ID)
+                      </p>
+                      <p className="text-sm text-blue-800 mb-3">
+                        The following contact{importResults.newContactsFromLeads.count !== 1 ? 's were' : ' was'} created from the Leads sheet but {importResults.newContactsFromLeads.count !== 1 ? 'do not have' : 'does not have'} a Contact ID. {importResults.newContactsFromLeads.count !== 1 ? 'They have been' : 'It has been'} attributed to {importResults.newContactsFromLeads.count !== 1 ? 'their respective' : 'its'} account{importResults.newContactsFromLeads.count !== 1 ? 's' : ''}:
+                      </p>
+                      <div className="max-h-48 overflow-y-auto space-y-2">
+                        {importResults.newContactsFromLeads.contacts.map((contact, idx) => (
+                          <div key={idx} className="p-2 bg-white rounded border border-blue-200">
+                            <p className="text-sm font-medium text-blue-900">
+                              {contact.contact_name || 'Unknown Contact'}
+                              {contact.email && <span className="text-blue-700 font-normal"> ({contact.email})</span>}
+                            </p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              → Attributed to: <span className="font-semibold">{contact.account_name}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </Card>
               )}
 
