@@ -326,16 +326,40 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       // Update account by ID in Supabase
       const { id, ...updateData } = req.body;
-      updateData.updated_at = new Date().toISOString();
+      
+      // Validate that id is provided
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Account ID is required'
+        });
+      }
+      
+      // Remove any undefined or null values from updateData
+      const cleanUpdateData = {};
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] !== undefined && updateData[key] !== null) {
+          cleanUpdateData[key] = updateData[key];
+        }
+      });
+      
+      // Ensure updated_at is set
+      cleanUpdateData.updated_at = new Date().toISOString();
+      
+      // Don't allow updating the id field
+      delete cleanUpdateData.id;
       
       const { data: updated, error } = await supabase
         .from('accounts')
-        .update(updateData)
+        .update(cleanUpdateData)
         .eq('id', id)
         .select()
         .single();
       
       if (error) {
+        console.error('Error updating account:', error);
+        console.error('Account ID:', id);
+        console.error('Update data:', cleanUpdateData);
         if (error.code === 'PGRST116') {
           return res.status(404).json({
             success: false,

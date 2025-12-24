@@ -820,12 +820,20 @@ export default function ImportLeadsDialog({ open, onClose }) {
         const updatedAccounts = autoAssignRevenueSegments(allAccounts, estimatesByAccountId);
         
         // Update all accounts with their calculated segments
-        const segmentUpdates = updatedAccounts.map(account => 
-          base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
-        );
+        // Filter out accounts without valid IDs and handle errors gracefully
+        const segmentUpdates = updatedAccounts
+          .filter(account => account.id && account.revenue_segment) // Only update accounts with valid ID and segment
+          .map(account => 
+            base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
+              .catch(error => {
+                console.warn(`⚠️ Failed to update revenue segment for account ${account.id}:`, error.message);
+                return null; // Return null for failed updates
+              })
+          );
         
-        await Promise.all(segmentUpdates);
-        console.log(`✅ Assigned revenue segments to ${segmentUpdates.length} accounts based on 12-month rolling revenue`);
+        const results = await Promise.all(segmentUpdates);
+        const successCount = results.filter(r => r !== null).length;
+        console.log(`✅ Assigned revenue segments to ${successCount} of ${updatedAccounts.length} accounts based on 12-month rolling revenue`);
       } catch (segmentError) {
         console.error('⚠️ Error calculating revenue segments:', segmentError);
         // Don't fail the import if segment calculation fails
