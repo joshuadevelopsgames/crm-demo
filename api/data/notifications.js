@@ -49,8 +49,15 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // Try to fetch from notifications table
       // If table doesn't exist, return empty array
-      // Filter by user_id if provided in query params
+      // REQUIRED: Filter by user_id for security - users can only see their own notifications
       const { user_id } = req.query;
+      
+      if (!user_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'user_id query parameter is required for security'
+        });
+      }
       
       let allNotifications = [];
       let page = 0;
@@ -61,12 +68,8 @@ export default async function handler(req, res) {
         let query = supabase
           .from('notifications')
           .select('*')
+          .eq('user_id', user_id) // Always filter by user_id for security
           .order('created_at', { ascending: false });
-        
-        // Filter by user_id if provided (server-side filtering for security)
-        if (user_id) {
-          query = query.eq('user_id', user_id);
-        }
         
         const { data, error } = await query
           .range(page * pageSize, (page + 1) * pageSize - 1);
