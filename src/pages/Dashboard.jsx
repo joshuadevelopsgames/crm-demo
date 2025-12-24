@@ -440,6 +440,16 @@ export default function Dashboard() {
                 {atRiskRenewals.length === 0 && (
                   <p className="text-sm text-slate-500 text-center py-4">No at-risk renewals 🎉</p>
                 )}
+                {atRiskRenewals.length > 5 && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                  >
+                    View All {atRiskRenewals.length} Accounts
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
