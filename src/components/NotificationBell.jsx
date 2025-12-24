@@ -328,27 +328,55 @@ export default function NotificationBell() {
               </div>
               
               <div className="divide-y divide-slate-100">
-                {notifications.length === 0 ? (
+                {notificationGroups.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">
                     <Bell className="w-12 h-12 mx-auto mb-3 text-slate-300" />
                     <p>No notifications</p>
                   </div>
                 ) : (
-                  notifications.map((notification) => (
+                  notificationGroups.map((group) => (
+                    <div key={group.type} className="divide-y divide-slate-100">
+                      {/* Group Header (only show if multiple notifications of same type) */}
+                      {group.count > 1 && (
+                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{getNotificationIcon(group.type)}</span>
+                              <span className="text-xs font-semibold text-slate-700 uppercase">
+                                {group.type === 'renewal_reminder' ? 'Renewal Reminders' :
+                                 group.type === 'task_reminder' ? 'Task Reminders' :
+                                 group.type === 'task_overdue' ? 'Overdue Tasks' :
+                                 group.type === 'task_due_today' ? 'Tasks Due Today' :
+                                 group.type === 'end_of_year_analysis' ? 'Reports' :
+                                 'Notifications'}
+                              </span>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {group.count} {group.count === 1 ? 'notification' : 'notifications'}
+                              {group.unreadCount > 0 && ` (${group.unreadCount} unread)`}
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Grouped Notifications */}
+                      {group.notifications.map((notification) => (
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-slate-50 transition-colors ${
                         !notification.is_read ? getNotificationColor(notification.type) : ''
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div 
-                          className="text-2xl flex-shrink-0 cursor-pointer"
-                          onClick={() => handleNotificationClick(notification)}
-                        >
-                          {getNotificationIcon(notification.type)}
-                        </div>
-                        <div 
+                        <div className="flex items-start gap-3">
+                        {group.count === 1 && (
+                          <div 
+                            className="text-2xl flex-shrink-0 cursor-pointer"
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                        )}
+                        <div
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => handleNotificationClick(notification)}
                         >
@@ -384,6 +412,8 @@ export default function NotificationBell() {
                           </p>
                         </div>
                       </div>
+                    </div>
+                      ))}
                     </div>
                   ))
                 )}
