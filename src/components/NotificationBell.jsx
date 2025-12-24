@@ -178,19 +178,35 @@ export default function NotificationBell() {
 
   // Debug logging
   useEffect(() => {
-    if (allNotifications.length > 0) {
+    if (allNotifications.length > 0 && atRiskCalculationComplete) {
       const renewalCount = allNotifications.filter(n => n.type === 'renewal_reminder').length;
       const activeRenewalCount = activeNotifications.filter(n => n.type === 'renewal_reminder').length;
+      const renewalNotifications = allNotifications.filter(n => n.type === 'renewal_reminder');
+      const renewalAccountIds = renewalNotifications.map(n => String(n.related_account_id).trim()).filter(Boolean);
+      const uniqueRenewalAccountIds = [...new Set(renewalAccountIds)];
+      
       console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`, {
         accountsThatShouldBeAtRisk: accountsThatShouldBeAtRisk.size,
         atRiskCalculationComplete,
         accountsLoading,
         estimatesLoading,
         accountsCount: accounts.length,
-        estimatesCount: estimates.length
+        estimatesCount: estimates.length,
+        uniqueRenewalAccountIds: uniqueRenewalAccountIds.length,
+        atRiskAccountIds: Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim()).slice(0, 5),
+        renewalAccountIdsSample: uniqueRenewalAccountIds.slice(0, 5)
       });
+      
+      // Check for mismatches
+      if (renewalCount > 0 && accountsThatShouldBeAtRisk.size > 0) {
+        const atRiskIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
+        const missingFromAtRisk = uniqueRenewalAccountIds.filter(id => !atRiskIds.includes(id));
+        if (missingFromAtRisk.length > 0) {
+          console.warn(`⚠️ Found ${missingFromAtRisk.length} renewal notifications for accounts NOT in at-risk set:`, missingFromAtRisk.slice(0, 10));
+        }
+      }
     }
-  }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length]);
+  }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete]);
 
   // Filter to show unread first, then read (only active notifications)
   const sortedNotifications = [...activeNotifications].sort((a, b) => {
