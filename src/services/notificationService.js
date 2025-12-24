@@ -1,5 +1,5 @@
 import { base44 } from '@/api/base44Client';
-import { differenceInDays, isToday, isPast, startOfDay, addDays } from 'date-fns';
+import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate } from 'date-fns';
 
 /**
  * Create notifications for task reminders
@@ -107,6 +107,67 @@ export async function cleanupTaskNotifications(taskId) {
   
   for (const notification of notifications) {
     await base44.entities.Notification.update(notification.id, { is_read: true });
+  }
+}
+
+/**
+ * Create End of Year Data Analysis notification on December 15th every year
+ * This notification appears once per year and is dismissible
+ */
+export async function createEndOfYearNotification() {
+  const today = new Date();
+  const currentMonth = getMonth(today); // 0-11, December is 11
+  const currentDay = getDate(today); // 1-31
+  const currentYear = getYear(today);
+
+  // Only create notification on December 15th
+  if (currentMonth !== 11 || currentDay !== 15) {
+    return;
+  }
+
+  try {
+    // Get all users
+    const users = await base44.entities.User.list();
+    const currentUser = await base44.auth.me();
+    
+    // If we can't get users, try with current user
+    const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
+
+    for (const user of usersToNotify) {
+      if (!user?.id) continue;
+
+      // Check if notification already exists for this year
+      const existingNotifications = await base44.entities.Notification.filter({
+        user_id: user.id,
+        type: 'end_of_year_analysis',
+        is_read: false
+      });
+
+      // Check if any existing notification was created this year
+      const thisYearNotification = existingNotifications.find(notif => {
+        if (!notif.created_at) return false;
+        const notifYear = getYear(new Date(notif.created_at));
+        return notifYear === currentYear;
+      });
+
+      // If notification already exists for this year, skip
+      if (thisYearNotification) {
+        continue;
+      }
+
+      // Create the notification
+      await base44.entities.Notification.create({
+        user_id: user.id,
+        type: 'end_of_year_analysis',
+        title: 'End of Year Data Analysis',
+        message: `It's time to review your ${currentYear} performance! View comprehensive reports with win/loss analysis, department breakdowns, and revenue trends.`,
+        related_account_id: null,
+        related_task_id: null,
+        scheduled_for: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error creating end of year notification:', error);
   }
 }
 

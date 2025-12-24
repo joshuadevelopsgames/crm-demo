@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { useTutorial } from '../contexts/TutorialContext';
 import { useUser } from '../contexts/UserContext';
 import NotificationBell from './NotificationBell';
+import ProfileDropdown from './ProfileDropdown';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { clearGoogleAuthSession } from '@/services/googleAuthService';
@@ -251,15 +252,7 @@ export default function Layout({ children, currentPageName }) {
                 <span className="hidden lg:inline">Tutorial</span>
               </Link>
               <NotificationBell />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="ml-2 text-slate-600 hover:text-slate-900"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
+              <ProfileDropdown />
             </div>
 
             {/* Mobile menu button - Better touch targets for PWA/mobile */}
@@ -378,19 +371,9 @@ export default function Layout({ children, currentPageName }) {
                 <HelpCircle className="w-5 h-5" />
                 Tutorial
               </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 w-full"
-                style={(isPWA || isNativeApp) ? {
-                  minHeight: '48px',
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation',
-                  textAlign: 'left'
-                } : {}}
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
+              <div className="px-4 py-2">
+                <ProfileDropdown />
+              </div>
             </div>
           </div>
         )}

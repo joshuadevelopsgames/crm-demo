@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { createEndOfYearNotification } from '@/services/notificationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,13 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  
+  // Check for end of year notification on mount
+  useEffect(() => {
+    createEndOfYearNotification().catch(error => {
+      console.error('Error checking for end of year notification:', error);
+    });
+  }, []);
   
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],

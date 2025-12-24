@@ -70,7 +70,11 @@ export default function NotificationBell() {
     }
     
     // Navigate based on notification type
-    if (notification.related_task_id) {
+    if (notification.type === 'end_of_year_analysis') {
+      const currentYear = new Date().getFullYear();
+      navigate(`${createPageUrl('Reports')}?year=${currentYear}`);
+      setIsOpen(false);
+    } else if (notification.related_task_id) {
       navigate('/tasks');
       setIsOpen(false);
     } else if (notification.related_account_id) {
@@ -87,6 +91,8 @@ export default function NotificationBell() {
         return '⚠️';
       case 'task_due_today':
         return '🔔';
+      case 'end_of_year_analysis':
+        return '📊';
       default:
         return '📬';
     }
@@ -98,6 +104,8 @@ export default function NotificationBell() {
         return 'bg-red-50 border-red-200';
       case 'task_due_today':
         return 'bg-amber-50 border-amber-200';
+      case 'end_of_year_analysis':
+        return 'bg-emerald-50 border-emerald-200';
       default:
         return 'bg-blue-50 border-blue-200';
     }
