@@ -25,6 +25,7 @@ import WinLossTest from './pages/WinLossTest';
 import ListDivisions from './pages/ListDivisions';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
+import TestRenewalNotifications from './pages/TestRenewalNotifications';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import { createPageUrl } from './utils';
@@ -217,6 +218,11 @@ function AppContent() {
               } />
               <Route path={createPageUrl('Settings')} element={<Settings />} />
               <Route path={createPageUrl('Reports')} element={<Reports />} />
+              <Route path="/test-renewal-notifications" element={
+                <AdminRoute>
+                  <TestRenewalNotifications />
+                </AdminRoute>
+              } />
               <Route path="/list-divisions" element={<ListDivisions />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
