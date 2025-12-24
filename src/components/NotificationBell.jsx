@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -393,7 +393,7 @@ export default function NotificationBell() {
       case 'end_of_year_analysis':
         return '📊';
       case 'renewal_reminder':
-        return <RefreshCw className="w-6 h-6 text-amber-600" />;
+        return <AlertTriangle className="w-6 h-6 text-red-600" />;
       case 'neglected_account':
         return <Clock className="w-6 h-6 text-amber-600" />;
       default:
@@ -410,7 +410,7 @@ export default function NotificationBell() {
       case 'end_of_year_analysis':
         return 'bg-emerald-50 border-emerald-200';
       case 'renewal_reminder':
-        return 'bg-orange-50 border-orange-200';
+        return 'bg-red-50 border-red-200';
       case 'neglected_account':
         return 'bg-amber-50 border-amber-200';
       default:
@@ -487,7 +487,7 @@ export default function NotificationBell() {
                   notificationGroups.map((group) => {
                     const isExpanded = expandedGroups.has(group.type);
                     const hasMultiple = group.count > 1;
-                    const groupName = group.type === 'renewal_reminder' ? 'Renewal Reminders' :
+                    const groupName = group.type === 'renewal_reminder' ? 'At Risk Accounts' :
                                      group.type === 'neglected_account' ? 'Neglected Accounts' :
                                      group.type === 'task_reminder' ? 'Task Reminders' :
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :

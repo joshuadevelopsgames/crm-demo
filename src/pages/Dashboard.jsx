@@ -439,7 +439,7 @@ export default function Dashboard() {
 
       {/* Alerts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* At Risk Renewals */}
+        {/* At Risk Accounts */}
         <TutorialTooltip
           tip="Accounts with renewals coming up within 6 months. These are marked as at-risk and need attention. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Click the title to view all at-risk accounts."
           step={1}
@@ -453,7 +453,7 @@ export default function Dashboard() {
                   onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
                 >
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  At Risk Renewals
+                  At Risk Accounts
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
