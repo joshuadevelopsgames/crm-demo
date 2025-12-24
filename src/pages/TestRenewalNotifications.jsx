@@ -111,9 +111,9 @@ export default function TestRenewalNotifications() {
             <p className="text-sm text-amber-800">
               <strong>Browser Console Usage:</strong> You can also run this directly in the console:
             </p>
-            <code className="block mt-2 p-2 bg-white rounded text-xs overflow-x-auto">
-              window.testRenewalPreview = async () => {'{'} const {'{'} previewRenewalNotifications {'}'} = await import('/src/utils/testRenewalNotifications.js'); return await previewRenewalNotifications(); {'}'}
-            </code>
+              <code className="block mt-2 p-2 bg-white rounded text-xs overflow-x-auto">
+                {`window.testRenewalPreview = async () => { const { previewRenewalNotifications } = await import('/src/utils/testRenewalNotifications.js'); return await previewRenewalNotifications(); }`}
+              </code>
             <p className="text-xs text-amber-700 mt-2">
               Then run: <code className="bg-white px-1 rounded">testRenewalPreview()</code>
             </p>

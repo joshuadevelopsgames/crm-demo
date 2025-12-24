@@ -362,6 +362,13 @@ export async function createRenewalNotifications() {
     // We'll fetch all users and clean up notifications for each user separately
     let cleanupCount = 0;
     try {
+      // Get all accounts that are currently at_risk (calculate once, use for all users)
+      const atRiskAccountIds = new Set(
+        accounts
+          .filter(acc => acc.status === 'at_risk' && !acc.archived)
+          .map(acc => acc.id)
+      );
+      
       // Get all users to clean up notifications per user
       const users = await base44.entities.User.list();
       
@@ -373,30 +380,24 @@ export async function createRenewalNotifications() {
           user_id: user.id,
           type: 'renewal_reminder'
         });
-      
-      // Get all accounts that are currently at_risk
-      const atRiskAccountIds = new Set(
-        accounts
-          .filter(acc => acc.status === 'at_risk' && !acc.archived)
-          .map(acc => acc.id)
-      );
-      
+        
         // Delete notifications for accounts that are no longer at_risk
         for (const notification of userRenewalNotifications) {
-        if (notification.related_account_id && !atRiskAccountIds.has(notification.related_account_id)) {
-          try {
-            const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            const result = await response.json();
-            if (result.success) {
-              cleanupCount++;
-            } else {
-              console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
+          if (notification.related_account_id && !atRiskAccountIds.has(notification.related_account_id)) {
+            try {
+              const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              const result = await response.json();
+              if (result.success) {
+                cleanupCount++;
+              } else {
+                console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
+              }
+            } catch (error) {
+              console.error(`❌ Error deleting notification ${notification.id}:`, error);
             }
-          } catch (error) {
-            console.error(`❌ Error deleting notification ${notification.id}:`, error);
           }
         }
       }
