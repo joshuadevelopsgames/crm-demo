@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -334,88 +334,158 @@ export default function NotificationBell() {
                     <p>No notifications</p>
                   </div>
                 ) : (
-                  notificationGroups.map((group) => (
-                    <div key={group.type} className="divide-y divide-slate-100">
-                      {/* Group Header (only show if multiple notifications of same type) */}
-                      {group.count > 1 && (
-                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{getNotificationIcon(group.type)}</span>
-                              <span className="text-xs font-semibold text-slate-700 uppercase">
-                                {group.type === 'renewal_reminder' ? 'Renewal Reminders' :
-                                 group.type === 'task_reminder' ? 'Task Reminders' :
-                                 group.type === 'task_overdue' ? 'Overdue Tasks' :
-                                 group.type === 'task_due_today' ? 'Tasks Due Today' :
-                                 group.type === 'end_of_year_analysis' ? 'Reports' :
-                                 'Notifications'}
-                              </span>
+                  notificationGroups.map((group) => {
+                    const isExpanded = expandedGroups.has(group.type);
+                    const hasMultiple = group.count > 1;
+                    const groupName = group.type === 'renewal_reminder' ? 'Renewal Reminders' :
+                                     group.type === 'task_reminder' ? 'Task Reminders' :
+                                     group.type === 'task_overdue' ? 'Overdue Tasks' :
+                                     group.type === 'task_due_today' ? 'Tasks Due Today' :
+                                     group.type === 'end_of_year_analysis' ? 'Reports' :
+                                     'Notifications';
+
+                    return (
+                      <div key={group.type} className="divide-y divide-slate-100">
+                        {/* Group Header - Clickable to expand/collapse if multiple */}
+                        <div 
+                          className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
+                            hasMultiple && group.unreadCount > 0 ? getNotificationColor(group.type) : ''
+                          }`}
+                          onClick={() => {
+                            if (hasMultiple) {
+                              const newExpanded = new Set(expandedGroups);
+                              if (isExpanded) {
+                                newExpanded.delete(group.type);
+                              } else {
+                                newExpanded.add(group.type);
+                              }
+                              setExpandedGroups(newExpanded);
+                            } else if (group.notifications[0]) {
+                              // Single notification - click through to it
+                              handleNotificationClick(group.notifications[0]);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="text-2xl flex-shrink-0">
+                              {getNotificationIcon(group.type)}
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {group.count} {group.count === 1 ? 'notification' : 'notifications'}
-                              {group.unreadCount > 0 && ` (${group.unreadCount} unread)`}
-                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-1">
+                                  <h4 className={`text-sm font-medium ${group.unreadCount > 0 ? 'text-slate-900' : 'text-slate-600'}`}>
+                                    {hasMultiple ? groupName : group.notifications[0]?.title || groupName}
+                                  </h4>
+                                  {hasMultiple && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {group.count}
+                                    </Badge>
+                                  )}
+                                  {group.unreadCount > 0 && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {hasMultiple && (
+                                    <ChevronRight 
+                                      className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                    />
+                                  )}
+                                  {!hasMultiple && group.notifications[0]?.type === 'renewal_reminder' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (group.notifications[0]) {
+                                          handleSnoozeClick(e, group.notifications[0]);
+                                        }
+                                      }}
+                                      title="Snooze this notification"
+                                    >
+                                      <BellOff className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              {hasMultiple && (
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {group.unreadCount > 0 
+                                    ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
+                                    : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`
+                                  }
+                                </p>
+                              )}
+                              {!hasMultiple && group.notifications[0] && (
+                                <>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {group.notifications[0].message}
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-2">
+                                    {group.notifications[0].scheduled_for 
+                                      ? format(new Date(group.notifications[0].scheduled_for), 'MMM d, h:mm a')
+                                      : format(new Date(group.notifications[0].created_at), 'MMM d, h:mm a')
+                                    }
+                                  </p>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      )}
-                      
-                      {/* Grouped Notifications */}
-                      {group.notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 hover:bg-slate-50 transition-colors ${
-                        !notification.is_read ? getNotificationColor(notification.type) : ''
-                      }`}
-                    >
-                        <div className="flex items-start gap-3">
-                        {group.count === 1 && (
-                          <div 
-                            className="text-2xl flex-shrink-0 cursor-pointer"
-                            onClick={() => handleNotificationClick(notification)}
-                          >
-                            {getNotificationIcon(notification.type)}
+                        
+                        {/* Expanded Notifications List */}
+                        {hasMultiple && isExpanded && (
+                          <div className="bg-slate-50">
+                            {group.notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className={`p-4 pl-12 hover:bg-slate-100 transition-colors border-l-2 border-slate-200 ${
+                                  !notification.is_read ? getNotificationColor(notification.type) : ''
+                                }`}
+                              >
+                                <div 
+                                  className="flex-1 min-w-0 cursor-pointer"
+                                  onClick={() => handleNotificationClick(notification)}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900' : 'text-slate-600'}`}>
+                                      {notification.title}
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                      {!notification.is_read && (
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
+                                      )}
+                                      {notification.type === 'renewal_reminder' && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 px-2 text-xs"
+                                          onClick={(e) => handleSnoozeClick(e, notification)}
+                                          title="Snooze this notification"
+                                        >
+                                          <BellOff className="w-3 h-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-2">
+                                    {notification.scheduled_for 
+                                      ? format(new Date(notification.scheduled_for), 'MMM d, h:mm a')
+                                      : format(new Date(notification.created_at), 'MMM d, h:mm a')
+                                    }
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        <div
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => handleNotificationClick(notification)}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900' : 'text-slate-600'}`}>
-                              {notification.title}
-                            </h4>
-                            <div className="flex items-center gap-2">
-                              {!notification.is_read && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
-                              )}
-                              {notification.type === 'renewal_reminder' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={(e) => handleSnoozeClick(e, notification)}
-                                  title="Snooze this notification"
-                                >
-                                  <BellOff className="w-3 h-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-2">
-                            {notification.scheduled_for 
-                              ? format(new Date(notification.scheduled_for), 'MMM d, h:mm a')
-                              : format(new Date(notification.created_at), 'MMM d, h:mm a')
-                            }
-                          </p>
-                        </div>
                       </div>
-                    </div>
-                      ))}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </CardContent>
