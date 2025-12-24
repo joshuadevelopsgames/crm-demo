@@ -240,21 +240,27 @@ export async function createRenewalNotifications() {
       
       // Mark account as at_risk if renewal is within 6 months (180 days) and in the future
       // Remove at_risk status if renewal is more than 6 months away or has passed
+      let isAtRisk = account.status === 'at_risk';
+      
       if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
         // Renewal is within 6 months - mark as at_risk
         if (account.status === 'at_risk') {
           atRiskAlreadyCount++;
+          isAtRisk = true;
           // Already at_risk, no update needed
         } else if (account.status === 'churned') {
           // Don't update churned accounts
+          isAtRisk = false;
         } else {
           // Update to at_risk
           try {
             await base44.entities.Account.update(account.id, { status: 'at_risk' });
             atRiskUpdatedCount++;
+            isAtRisk = true;
             console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days, was: ${account.status})`);
           } catch (error) {
             errorCount++;
+            isAtRisk = false; // Status update failed, don't create notification
             console.error(`❌ Error updating account status for ${account.name}:`, error);
           }
         }
@@ -263,14 +269,17 @@ export async function createRenewalNotifications() {
         // Only if it was at_risk (might have been set for renewal reasons)
         try {
           await base44.entities.Account.update(account.id, { status: 'active' });
+          isAtRisk = false;
           console.log(`✅ Removed at_risk status from ${account.name} (renewal ${daysUntilRenewal < 0 ? 'passed' : 'more than 6 months away'})`);
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
       }
       
-      // Only create notification if renewal is within 6 months (180 days) and in the future
-      if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
+      // Only create notification if:
+      // 1. Renewal is within 6 months (180 days) and in the future
+      // 2. Account is actually marked as at_risk (status update succeeded or was already at_risk)
+      if (daysUntilRenewal < 0 || daysUntilRenewal > 180 || !isAtRisk) continue;
       
       // Check if this notification is snoozed (universal - any user can snooze for everyone)
       const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
@@ -317,9 +326,53 @@ export async function createRenewalNotifications() {
       }
     }
     
+    // Clean up notifications for accounts that are no longer at_risk
+    // This handles cases where accounts were previously at_risk but no longer meet criteria
+    let cleanupCount = 0;
+    try {
+      // Get all renewal reminder notifications
+      const allRenewalNotifications = await base44.entities.Notification.filter({
+        type: 'renewal_reminder'
+      });
+      
+      // Get all accounts that are currently at_risk
+      const atRiskAccountIds = new Set(
+        accounts
+          .filter(acc => acc.status === 'at_risk' && !acc.archived)
+          .map(acc => acc.id)
+      );
+      
+      // Delete notifications for accounts that are no longer at_risk
+      for (const notification of allRenewalNotifications) {
+        if (notification.related_account_id && !atRiskAccountIds.has(notification.related_account_id)) {
+          try {
+            const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await response.json();
+            if (result.success) {
+              cleanupCount++;
+            } else {
+              console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
+            }
+          } catch (error) {
+            console.error(`❌ Error deleting notification ${notification.id}:`, error);
+          }
+        }
+      }
+      
+      if (cleanupCount > 0) {
+        console.log(`🧹 Cleaned up ${cleanupCount} renewal notifications for accounts no longer at_risk`);
+      }
+    } catch (cleanupError) {
+      console.error('❌ Error cleaning up renewal notifications:', cleanupError);
+    }
+    
     console.log(`✅ Renewal notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
     console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
     console.log(`📊 Total accounts with renewals within 6 months: ${atRiskUpdatedCount + atRiskAlreadyCount}`);
+    console.log(`🧹 Cleaned up ${cleanupCount} stale notifications`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }
