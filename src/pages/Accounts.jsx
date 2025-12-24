@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +59,18 @@ export default function Accounts() {
   const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
   
   const queryClient = useQueryClient();
+
+  // Check URL parameters for status filter
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setStatusFilter(statusParam);
+      // If filtering by status, show active tab (not archived)
+      if (statusParam !== 'archived') {
+        setActiveTab('active');
+      }
+    }
+  }, [searchParams]);
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts'],
@@ -213,6 +225,18 @@ export default function Accounts() {
   // Filter by archived status first
   const accountsByStatus = accounts.filter(account => {
     const isArchived = account.status === 'archived' || account.archived === true;
+    
+    // If statusFilter is set (from URL), filter by that status
+    if (statusFilter) {
+      if (statusFilter === 'archived') {
+        return isArchived;
+      } else {
+        // Filter by specific status (e.g., 'at_risk')
+        return !isArchived && account.status === statusFilter;
+      }
+    }
+    
+    // Otherwise use activeTab logic
     return activeTab === 'archived' ? isArchived : !isArchived;
   });
 
