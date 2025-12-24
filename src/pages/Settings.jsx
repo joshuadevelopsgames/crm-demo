@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/contexts/UserContext';
 import { base44 } from '@/api/base44Client';
@@ -37,23 +37,38 @@ export default function Settings() {
       if (!supabase || !user?.id) {
         throw new Error('Not authenticated');
       }
+      
+      // Use upsert to create profile if it doesn't exist
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
-        .update(data)
-        .eq('id', user.id)
+        .upsert({
+          id: user.id,
+          email: user.email,
+          ...data
+        }, {
+          onConflict: 'id'
+        })
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Profile update error:', error);
+        throw error;
+      }
       return updatedProfile;
     },
     onSuccess: () => {
+      // Invalidate all user-related queries
       queryClient.invalidateQueries({ queryKey: ['auth-session'] });
-      toast.success('✓ Profile updated');
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      // Force UserContext to refetch
+      window.dispatchEvent(new Event('authStateChange'));
+      toast.success('✓ Profile updated successfully');
     },
     onError: (error) => {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error(error.message || 'Failed to update profile. Please try again.');
     }
   });
 
