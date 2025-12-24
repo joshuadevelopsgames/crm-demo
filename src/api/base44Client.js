@@ -617,12 +617,56 @@ export const base44 = {
         return Array.isArray(data) ? data : [];
       },
       filter: async (filters, sort) => {
+        // If filtering by user_id, fetch from API with user_id query param for server-side filtering
+        // This ensures users only see their own notifications
+        if (filters && filters.user_id) {
+          try {
+            const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(filters.user_id)}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+            }
+            const result = await response.json();
+            let results = result.success ? (result.data || []) : [];
+            
+            // Apply any additional filters (besides user_id) client-side
+            const otherFilters = { ...filters };
+            delete otherFilters.user_id;
+            if (Object.keys(otherFilters).length > 0) {
+              results = results.filter(notification => {
+                return Object.entries(otherFilters).every(([key, value]) => {
+                  return String(notification[key]) === String(value);
+                });
+              });
+            }
+            
+            // Apply sorting
+            if (sort) {
+              const desc = sort.startsWith('-');
+              const sortField = desc ? sort.substring(1) : sort;
+              results.sort((a, b) => {
+                const aVal = a[sortField];
+                const bVal = b[sortField];
+                if (aVal < bVal) return desc ? 1 : -1;
+                if (aVal > bVal) return desc ? -1 : 1;
+                return 0;
+              });
+            }
+            
+            return results;
+          } catch (error) {
+            console.warn('Error fetching filtered notifications from API, falling back to client-side filter:', error);
+            // Fall back to client-side filtering if API call fails
+          }
+        }
+        
+        // Fallback: client-side filtering (for non-user_id filters or if API call fails)
         const data = await getData('notifications');
         let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(notification => {
             return Object.entries(filters).every(([key, value]) => {
-              return notification[key] === value;
+              // Use loose equality to handle string vs UUID type mismatches
+              return String(notification[key]) === String(value);
             });
           });
         }
