@@ -97,8 +97,8 @@ export default function NotificationBell() {
     // For renewal reminders, only show if account is actually at_risk
     // But wait for accounts to load before filtering (to avoid showing all notifications initially)
     if (notification.type === 'renewal_reminder' && notification.related_account_id) {
-      // If accounts haven't loaded yet, don't show renewal notifications (they'll appear once accounts load)
-      if (accountsLoading) {
+      // If accounts haven't loaded yet or are empty, don't show renewal notifications
+      if (accountsLoading || accounts.length === 0) {
         return false;
       }
       // Once accounts are loaded, only show notifications for accounts that are at_risk
