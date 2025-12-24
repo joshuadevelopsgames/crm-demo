@@ -78,7 +78,7 @@ export default function NotificationBell() {
   });
 
   // Fetch accounts to verify at_risk status for renewal notifications
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
     enabled: !!currentUser?.id
@@ -90,11 +90,18 @@ export default function NotificationBell() {
       .filter(acc => acc.status === 'at_risk' && !acc.archived)
       .map(acc => acc.id)
   );
-
+  
   // Filter out snoozed notifications and notifications for accounts that aren't at_risk
+  // Only filter renewal reminders by at_risk status if accounts have loaded
   const activeNotifications = allNotifications.filter(notification => {
     // For renewal reminders, only show if account is actually at_risk
+    // But wait for accounts to load before filtering (to avoid showing all notifications initially)
     if (notification.type === 'renewal_reminder' && notification.related_account_id) {
+      // If accounts haven't loaded yet, don't show renewal notifications (they'll appear once accounts load)
+      if (accountsLoading) {
+        return false;
+      }
+      // Once accounts are loaded, only show notifications for accounts that are at_risk
       if (!atRiskAccountIds.has(notification.related_account_id)) {
         return false; // Account is not at_risk, don't show notification
       }

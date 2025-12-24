@@ -282,8 +282,9 @@ export async function createRenewalNotifications() {
                 errorCount++;
                 console.error(`❌ Error updating account status for ${account.name} after ${maxRetries} retries:`, errorDetails);
                 console.error(`   Full error object:`, error);
-                // Still create notification even if status update failed - the account should be at_risk
-                isAtRisk = true; // Treat as at_risk for notification purposes
+                // Don't set isAtRisk = true if update failed - account is not actually at_risk
+                // This prevents creating notifications for accounts that couldn't be updated
+                isAtRisk = false;
               } else {
                 console.warn(`⚠️ Retry ${retries}/${maxRetries} for ${account.name} status update...`, errorDetails);
                 await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
@@ -316,12 +317,13 @@ export async function createRenewalNotifications() {
       }
       
       // Only create notifications if account is actually at_risk
-      // Double-check the account status after potential update
-      const accountAfterUpdate = accounts.find(a => a.id === account.id);
-      const accountIsAtRisk = accountAfterUpdate?.status === 'at_risk' || isAtRisk;
+      // isAtRisk is set to true only if:
+      // 1. Account was already at_risk (line 252), OR
+      // 2. Status update succeeded (updateSuccess = true, line 268)
+      // If status update failed, isAtRisk remains false (we don't set it to true on failure anymore)
       
-      if (!accountIsAtRisk) {
-        console.log(`⏭️ Skipping notification for ${account.name} - account is not at_risk (status: ${accountAfterUpdate?.status || account.status})`);
+      if (!isAtRisk) {
+        console.log(`⏭️ Skipping notification for ${account.name} - account is not at_risk (status: ${account.status}, update may have failed)`);
         continue;
       }
       
