@@ -98,8 +98,22 @@ export default function Dashboard() {
   // Calculate metrics
   // Active accounts = all non-archived accounts (matches Accounts page logic)
   const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
+  const archivedAccounts = accounts.filter(a => a.status === 'archived' || a.archived === true).length;
+  const totalAccounts = accounts.length;
   const atRiskAccounts = accounts.filter(a => a.status === 'at_risk').length;
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
+  
+  // Debug logging to verify counts
+  useEffect(() => {
+    console.log('📊 Account Counts:', {
+      total: totalAccounts,
+      active: activeAccounts,
+      archived: archivedAccounts,
+      atRisk: atRiskAccounts,
+      sum: activeAccounts + archivedAccounts,
+      difference: totalAccounts - (activeAccounts + archivedAccounts)
+    });
+  }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts]);
   
   // Neglected accounts (no interaction in 30+ days, not snoozed, not N/A)
   const neglectedAccounts = accounts.filter(account => {
