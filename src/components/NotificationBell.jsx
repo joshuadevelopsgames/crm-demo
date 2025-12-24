@@ -1,14 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, X, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format, isToday, isPast, differenceInDays } from 'date-fns';
+import { format, isToday, isPast, differenceInDays, addDays, addWeeks, addMonths, addYears } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { Capacitor } from '@capacitor/core';
+import { snoozeNotification } from '@/services/notificationService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,8 +57,39 @@ export default function NotificationBell() {
     enabled: !!currentUser?.id
   });
 
-  // Filter to show unread first, then read
-  const notifications = [...allNotifications].sort((a, b) => {
+  // Fetch snoozes for current user
+  const { data: snoozes = [] } = useQuery({
+    queryKey: ['notificationSnoozes', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return [];
+      try {
+        const response = await fetch(`/api/data/notificationSnoozes?user_id=${currentUser.id}`);
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
+      } catch (error) {
+        console.error('Error fetching snoozes:', error);
+        return [];
+      }
+    },
+    enabled: !!currentUser?.id
+  });
+
+  // Filter out snoozed notifications
+  const activeNotifications = allNotifications.filter(notification => {
+    // Check if this notification is snoozed
+    const now = new Date();
+    const isSnoozed = snoozes.some(snooze => 
+      snooze.notification_type === notification.type &&
+      (notification.related_account_id 
+        ? snooze.related_account_id === notification.related_account_id
+        : snooze.related_account_id === null) &&
+      new Date(snooze.snoozed_until) > now
+    );
+    return !isSnoozed;
+  });
+
+  // Filter to show unread first, then read (only active notifications)
+  const notifications = [...activeNotifications].sort((a, b) => {
     if (a.is_read !== b.is_read) {
       return a.is_read ? 1 : -1; // Unread first
     }
@@ -62,7 +110,70 @@ export default function NotificationBell() {
     }
   });
 
-  const unreadCount = allNotifications.filter(n => !n.is_read).length;
+  const unreadCount = activeNotifications.filter(n => !n.is_read).length;
+
+  // Snooze notification mutation
+  const snoozeNotificationMutation = useMutation({
+    mutationFn: async ({ notification, duration, unit }) => {
+      if (!currentUser?.id) throw new Error('Not authenticated');
+      
+      const now = new Date();
+      let snoozedUntil;
+      switch (unit) {
+        case 'days':
+          snoozedUntil = addDays(now, duration);
+          break;
+        case 'weeks':
+          snoozedUntil = addWeeks(now, duration);
+          break;
+        case 'months':
+          snoozedUntil = addMonths(now, duration);
+          break;
+        case 'years':
+          snoozedUntil = addYears(now, duration);
+          break;
+        default:
+          snoozedUntil = addWeeks(now, duration);
+      }
+      
+      await snoozeNotification(
+        currentUser.id,
+        notification.type,
+        notification.related_account_id || null,
+        snoozedUntil
+      );
+      
+      // Mark notification as read when snoozed
+      await base44.entities.Notification.markAsRead(notification.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
+    }
+  });
+
+  const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [snoozeDuration, setSnoozeDuration] = useState(1);
+  const [snoozeUnit, setSnoozeUnit] = useState('weeks');
+
+  const handleSnoozeClick = (e, notification) => {
+    e.stopPropagation();
+    setSelectedNotification(notification);
+    setSnoozeDialogOpen(true);
+  };
+
+  const handleSnoozeConfirm = () => {
+    if (selectedNotification) {
+      snoozeNotificationMutation.mutate({
+        notification: selectedNotification,
+        duration: snoozeDuration,
+        unit: snoozeUnit
+      });
+      setSnoozeDialogOpen(false);
+      setSelectedNotification(null);
+    }
+  };
 
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) {
@@ -93,6 +204,8 @@ export default function NotificationBell() {
         return '🔔';
       case 'end_of_year_analysis':
         return '📊';
+      case 'renewal_reminder':
+        return '🔄';
       default:
         return '📬';
     }
@@ -106,6 +219,8 @@ export default function NotificationBell() {
         return 'bg-amber-50 border-amber-200';
       case 'end_of_year_analysis':
         return 'bg-emerald-50 border-emerald-200';
+      case 'renewal_reminder':
+        return 'bg-orange-50 border-orange-200';
       default:
         return 'bg-blue-50 border-blue-200';
     }
@@ -180,23 +295,41 @@ export default function NotificationBell() {
                   notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
+                      className={`p-4 hover:bg-slate-50 transition-colors ${
                         !notification.is_read ? getNotificationColor(notification.type) : ''
                       }`}
-                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="text-2xl flex-shrink-0">
+                        <div 
+                          className="text-2xl flex-shrink-0 cursor-pointer"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
                           {getNotificationIcon(notification.type)}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900' : 'text-slate-600'}`}>
                               {notification.title}
                             </h4>
-                            {!notification.is_read && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
-                            )}
+                            <div className="flex items-center gap-2">
+                              {!notification.is_read && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
+                              )}
+                              {notification.type === 'renewal_reminder' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={(e) => handleSnoozeClick(e, notification)}
+                                  title="Snooze this notification"
+                                >
+                                  <BellOff className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           <p className="text-sm text-slate-600 mt-1">
                             {notification.message}
@@ -218,6 +351,79 @@ export default function NotificationBell() {
           </div>
         </>
       )}
+
+      {/* Snooze Dialog */}
+      <Dialog open={snoozeDialogOpen} onOpenChange={setSnoozeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BellOff className="w-5 h-5 text-amber-600" />
+              Snooze Notification
+            </DialogTitle>
+            <DialogDescription>
+              Hide this notification for a period of time. It will reappear after the snooze period ends.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="1"
+                  value={snoozeDuration}
+                  onChange={(e) => setSnoozeDuration(parseInt(e.target.value) || 1)}
+                  className="w-24"
+                />
+                <Select value={snoozeUnit} onValueChange={setSnoozeUnit}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="days">Day(s)</SelectItem>
+                    <SelectItem value="weeks">Week(s)</SelectItem>
+                    <SelectItem value="months">Month(s)</SelectItem>
+                    <SelectItem value="years">Year(s)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-600">
+                Notification will reappear on{' '}
+                <span className="font-semibold text-slate-900">
+                  {format(
+                    (() => {
+                      const now = new Date();
+                      switch (snoozeUnit) {
+                        case 'days': return addDays(now, snoozeDuration);
+                        case 'weeks': return addWeeks(now, snoozeDuration);
+                        case 'months': return addMonths(now, snoozeDuration);
+                        case 'years': return addYears(now, snoozeDuration);
+                        default: return addWeeks(now, snoozeDuration);
+                      }
+                    })(),
+                    'MMM d, yyyy'
+                  )}
+                </span>
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setSnoozeDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSnoozeConfirm} 
+                className="bg-amber-600 hover:bg-amber-700"
+                disabled={snoozeNotificationMutation.isPending}
+              >
+                <BellOff className="w-4 h-4 mr-2" />
+                {snoozeNotificationMutation.isPending ? 'Snoozing...' : 'Snooze'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

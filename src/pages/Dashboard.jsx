@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { createEndOfYearNotification } from '@/services/notificationService';
+import { createEndOfYearNotification, createRenewalNotifications } from '@/services/notificationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,22 @@ export default function Dashboard() {
     createEndOfYearNotification().catch(error => {
       console.error('Error checking for end of year notification:', error);
     });
+  }, []);
+
+  // Create renewal notifications on mount and periodically
+  useEffect(() => {
+    createRenewalNotifications().catch(error => {
+      console.error('Error creating renewal notifications:', error);
+    });
+    
+    // Refresh renewal notifications every hour
+    const interval = setInterval(() => {
+      createRenewalNotifications().catch(error => {
+        console.error('Error refreshing renewal notifications:', error);
+      });
+    }, 60 * 60 * 1000); // 1 hour
+    
+    return () => clearInterval(interval);
   }, []);
   
   const { data: accounts = [] } = useQuery({

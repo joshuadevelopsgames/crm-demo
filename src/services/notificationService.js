@@ -1,5 +1,6 @@
 import { base44 } from '@/api/base44Client';
-import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate } from 'date-fns';
+import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format } from 'date-fns';
+import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 
 /**
  * Create notifications for task reminders
@@ -168,6 +169,161 @@ export async function createEndOfYearNotification() {
     }
   } catch (error) {
     console.error('Error creating end of year notification:', error);
+  }
+}
+
+/**
+ * Create renewal notifications for accounts with renewals coming up in 6 months
+ * This creates universal notifications that all users see, but can be snoozed individually
+ */
+export async function createRenewalNotifications() {
+  try {
+    // Get all accounts
+    const accounts = await base44.entities.Account.list();
+    
+    // Get all estimates
+    const estimates = await base44.entities.Estimate.list();
+    
+    // Get all users
+    const users = await base44.entities.User.list();
+    const currentUser = await base44.auth.me();
+    const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
+    
+    if (usersToNotify.length === 0) {
+      console.warn('No users found for renewal notifications');
+      return;
+    }
+
+    const today = startOfDay(new Date());
+    const sixMonthsFromNow = subMonths(today, -6); // 6 months in the future
+    
+    // Process each account
+    for (const account of accounts) {
+      if (account.archived) continue;
+      
+      // Get estimates for this account
+      const accountEstimates = estimates.filter(est => est.account_id === account.id);
+      
+      // Calculate renewal date from estimates
+      const renewalDate = calculateRenewalDate(accountEstimates);
+      
+      if (!renewalDate) continue; // No renewal date found
+      
+      const renewalDateStart = startOfDay(renewalDate);
+      const daysUntilRenewal = differenceInDays(renewalDateStart, today);
+      
+      // Only create notification if renewal is within 6 months (180 days) and in the future
+      if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
+      
+      // Check if notification should be shown (6 months before = 180 days)
+      // We want to show it when we're exactly 6 months away, or close to it
+      const daysUntilSixMonths = differenceInDays(renewalDateStart, sixMonthsFromNow);
+      
+      // Create notification for all users
+      for (const user of usersToNotify) {
+        if (!user?.id) continue;
+        
+        // Check if user has snoozed this notification
+        const isSnoozed = await checkNotificationSnoozed(user.id, 'renewal_reminder', account.id);
+        if (isSnoozed) continue; // User has snoozed this notification
+        
+        // Check if notification already exists
+        const existingNotifications = await base44.entities.Notification.filter({
+          user_id: user.id,
+          type: 'renewal_reminder',
+          related_account_id: account.id,
+          is_read: false
+        });
+        
+        if (existingNotifications.length > 0) continue; // Already exists
+        
+        // Create the notification
+        await base44.entities.Notification.create({
+          user_id: user.id,
+          type: 'renewal_reminder',
+          title: `Renewal Coming Up: ${account.name}`,
+          message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
+          related_account_id: account.id,
+          related_task_id: null,
+          scheduled_for: renewalDateStart.toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error creating renewal notifications:', error);
+  }
+}
+
+/**
+ * Check if a notification is snoozed for a user
+ * @param {string} userId - User ID
+ * @param {string} notificationType - Type of notification
+ * @param {string} accountId - Account ID (optional)
+ * @returns {Promise<boolean>} - True if snoozed
+ */
+export async function checkNotificationSnoozed(userId, notificationType, accountId = null) {
+  try {
+    const response = await fetch('/api/data/notificationSnoozes', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!response.ok) return false;
+    
+    const result = await response.json();
+    if (!result.success) return false;
+    
+    const snoozes = result.data || [];
+    const now = new Date();
+    
+    // Find active snooze for this user, type, and account
+    const activeSnooze = snoozes.find(snooze => 
+      snooze.user_id === userId &&
+      snooze.notification_type === notificationType &&
+      (accountId ? snooze.related_account_id === accountId : snooze.related_account_id === null) &&
+      new Date(snooze.snoozed_until) > now
+    );
+    
+    return !!activeSnooze;
+  } catch (error) {
+    console.error('Error checking notification snooze:', error);
+    return false;
+  }
+}
+
+/**
+ * Snooze a notification for a user
+ * @param {string} userId - User ID
+ * @param {string} notificationType - Type of notification
+ * @param {string} accountId - Account ID (optional)
+ * @param {Date} snoozedUntil - Date until which to snooze
+ * @returns {Promise<Object>} - The snooze record
+ */
+export async function snoozeNotification(userId, notificationType, accountId = null, snoozedUntil) {
+  try {
+    const response = await fetch('/api/data/notificationSnoozes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'snooze',
+        data: {
+          user_id: userId,
+          notification_type: notificationType,
+          related_account_id: accountId,
+          snoozed_until: snoozedUntil.toISOString()
+        }
+      })
+    });
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to snooze notification');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Error snoozing notification:', error);
+    throw error;
   }
 }
 
