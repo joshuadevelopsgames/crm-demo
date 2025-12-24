@@ -668,7 +668,20 @@ export const base44 = {
         }
         
         // Fallback: client-side filtering (for non-user_id filters or if API call fails)
-        const data = await getData('notifications');
+        // NOTE: This fallback should rarely be used. If filtering by user_id, the API call above should succeed.
+        // For non-user_id filters, we still need to get current user for security
+        const currentUser = await base44.auth.me();
+        if (!currentUser?.id) {
+          console.warn('No current user for notification filter, returning empty array');
+          return [];
+        }
+        const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(currentUser.id)}`);
+        if (!response.ok) {
+          console.warn('Failed to fetch notifications for fallback filter');
+          return [];
+        }
+        const result = await response.json();
+        const data = result.success ? (result.data || []) : [];
         let results = Array.isArray(data) ? [...data] : [];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(notification => {
