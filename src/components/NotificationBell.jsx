@@ -147,13 +147,18 @@ export default function NotificationBell() {
       }
       // Once calculation is complete, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
       // Use string comparison to handle type mismatches (UUID vs text)
-      const accountIdStr = String(notification.related_account_id);
-      const isInAtRiskSet = Array.from(accountsThatShouldBeAtRisk).some(id => String(id) === accountIdStr);
+      const accountIdStr = String(notification.related_account_id).trim();
+      const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
+      const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
       
       if (!isInAtRiskSet) {
-        // Debug: log why notification is being filtered out
+        // Debug: log why notification is being filtered out (only log first few to avoid spam)
         if (accountsThatShouldBeAtRisk.size > 0) {
-          console.log(`🔍 Filtering out notification for account ${accountIdStr} - not in at-risk set (${accountsThatShouldBeAtRisk.size} accounts in set)`);
+          console.log(`🔍 Filtering out notification for account "${accountIdStr}" - not in at-risk set`, {
+            notificationAccountId: accountIdStr,
+            atRiskAccountIds: atRiskAccountIds.slice(0, 5), // Show first 5 for comparison
+            totalAtRisk: atRiskAccountIds.length
+          });
         }
         return false; // Account should not be at_risk based on renewal date, don't show notification
       }
