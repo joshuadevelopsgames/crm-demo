@@ -143,6 +143,13 @@ export default function NotificationBell() {
     if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
       if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
+        console.log(`🔍 Filtering out renewal notification - data not ready`, {
+          accountsLoading,
+          estimatesLoading,
+          accountsCount: accounts.length,
+          estimatesCount: estimates.length,
+          atRiskCalculationComplete
+        });
         return false;
       }
       
@@ -161,15 +168,17 @@ export default function NotificationBell() {
       
       if (!isInAtRiskSet) {
         // Debug: log why notification is being filtered out (only log first few to avoid spam)
-        if (accountsThatShouldBeAtRisk.size > 0) {
-          console.log(`🔍 Filtering out notification for account "${accountIdStr}" - not in at-risk set`, {
-            notificationAccountId: accountIdStr,
-            atRiskAccountIds: atRiskAccountIds.slice(0, 5), // Show first 5 for comparison
-            totalAtRisk: atRiskAccountIds.length
-          });
-        }
+        console.log(`🔍 Filtering out notification for account "${accountIdStr}" - not in at-risk set`, {
+          notificationAccountId: accountIdStr,
+          atRiskAccountIds: atRiskAccountIds.slice(0, 5), // Show first 5 for comparison
+          totalAtRisk: atRiskAccountIds.length,
+          atRiskSetSize: accountsThatShouldBeAtRisk.size
+        });
         return false; // Account should not be at_risk based on renewal date, don't show notification
       }
+      
+      // If we get here, the notification should be shown (account is at-risk)
+      // But we still need to check if it's snoozed
     }
     
     // Check if this notification is snoozed (universal)
