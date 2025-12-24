@@ -375,18 +375,18 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-red-200 bg-red-50/50">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-red-700 transition-colors"
                   onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
                 >
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
                   At Risk Renewals
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                  <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
                     {atRiskRenewals.length}
                   </Badge>
                   {atRiskRenewals.length > 5 && (
@@ -394,7 +394,7 @@ export default function Dashboard() {
                       variant="ghost"
                       size="sm"
                       onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
-                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                      className="text-red-700 hover:text-red-900 hover:bg-red-100"
                     >
                       <ExternalLink className="w-4 h-4 mr-1" />
                       View All
@@ -411,7 +411,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
+                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-red-50 transition-colors border border-red-100"
                     >
                       <Link
                         to={createPageUrl(`AccountDetail?id=${account.id}`)}
@@ -429,7 +429,7 @@ export default function Dashboard() {
                           e.preventDefault();
                           setSnoozeAccount(account);
                         }}
-                        className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
+                        className="text-red-700 hover:text-red-900 hover:bg-red-100 ml-2"
                       >
                         <BellOff className="w-4 h-4 mr-1" />
                         Snooze
