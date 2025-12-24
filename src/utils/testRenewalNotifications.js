@@ -137,7 +137,11 @@ export async function previewRenewalNotifications() {
       // Only show if renewal is within 6 months (180 days) and in the future
       if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
         // Check if notification already exists
-        const allNotifications = await base44.entities.Notification.list();
+        // Get current user for filtering
+        const currentUser = await base44.auth.me();
+        const allNotifications = currentUser?.id 
+          ? await base44.entities.Notification.filter({ user_id: currentUser.id })
+          : [];
         const existingNotif = allNotifications.find(
           n => n.type === 'renewal_reminder' && 
                n.related_account_id === account.id && 
