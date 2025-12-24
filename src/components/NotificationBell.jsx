@@ -143,20 +143,12 @@ export default function NotificationBell() {
     if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
       if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
-        console.log(`🔍 Filtering out renewal notification - data not ready`, {
-          accountsLoading,
-          estimatesLoading,
-          accountsCount: accounts.length,
-          estimatesCount: estimates.length,
-          atRiskCalculationComplete
-        });
         return false;
       }
       
       // Handle null, undefined, or 'null' string values
       const accountId = notification.related_account_id;
       if (!accountId || accountId === 'null' || accountId === null || accountId === undefined) {
-        console.log(`🔍 Filtering out notification with invalid related_account_id: "${accountId}"`);
         return false; // No account ID means we can't verify if it should be at-risk
       }
       
@@ -167,13 +159,6 @@ export default function NotificationBell() {
       const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
       
       if (!isInAtRiskSet) {
-        // Debug: log why notification is being filtered out (only log first few to avoid spam)
-        console.log(`🔍 Filtering out notification for account "${accountIdStr}" - not in at-risk set`, {
-          notificationAccountId: accountIdStr,
-          atRiskAccountIds: atRiskAccountIds.slice(0, 5), // Show first 5 for comparison
-          totalAtRisk: atRiskAccountIds.length,
-          atRiskSetSize: accountsThatShouldBeAtRisk.size
-        });
         return false; // Account should not be at_risk based on renewal date, don't show notification
       }
       
