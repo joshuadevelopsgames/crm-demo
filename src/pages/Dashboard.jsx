@@ -110,11 +110,18 @@ export default function Dashboard() {
     return daysSince > 30;
   });
 
-  // Upcoming renewals (within 60 days)
-  const upcomingRenewals = accounts.filter(account => {
+  // At-risk accounts (renewals within 6 months / 180 days)
+  const atRiskRenewals = accounts.filter(account => {
+    if (account.archived) return false;
+    if (account.status !== 'at_risk') return false;
     if (!account.renewal_date) return false;
     const daysUntil = differenceInDays(new Date(account.renewal_date), new Date());
-    return daysUntil > 0 && daysUntil <= 60;
+    return daysUntil > 0 && daysUntil <= 180;
+  }).sort((a, b) => {
+    // Sort by days until renewal (soonest first)
+    const daysA = differenceInDays(new Date(a.renewal_date), new Date());
+    const daysB = differenceInDays(new Date(b.renewal_date), new Date());
+    return daysA - daysB;
   });
 
   // Overdue tasks
@@ -330,47 +337,63 @@ export default function Dashboard() {
         </Card>
         </TutorialTooltip>
 
-        {/* Upcoming Renewals */}
+        {/* At Risk Renewals */}
         <TutorialTooltip
-          tip="Accounts with renewals coming up in the next 60 days. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Planning ahead helps increase renewal rates."
+          tip="Accounts with renewals coming up within 6 months. These are marked as at-risk and need attention. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Click the title to view all at-risk accounts."
           step={1}
           position="bottom"
         >
-          <Card className="border-emerald-200 bg-emerald-50/50">
+          <Card className="border-amber-200 bg-amber-50/50">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
-                  <Calendar className="w-5 h-5 text-emerald-600" />
-                  Upcoming Renewals
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                >
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  At Risk Renewals
                 </CardTitle>
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                  {upcomingRenewals.length}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                    {atRiskRenewals.length}
+                  </Badge>
+                  {atRiskRenewals.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-600 mb-3">Renewing in next 60 days</p>
+              <p className="text-sm text-slate-600 mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {upcomingRenewals.slice(0, 5).map(account => {
+                {atRiskRenewals.slice(0, 5).map(account => {
                   const daysUntil = differenceInDays(new Date(account.renewal_date), new Date());
                   return (
                     <Link
                       key={account.id}
                       to={createPageUrl(`AccountDetail?id=${account.id}`)}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-emerald-50 transition-colors border border-emerald-100"
+                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
                     >
                       <div className="flex-1">
                         <p className="font-medium text-slate-900">{account.name}</p>
                         <p className="text-xs text-slate-500">
-                          Renews in {daysUntil} days • {format(new Date(account.renewal_date), 'MMM d, yyyy')}
+                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.renewal_date), 'MMM d, yyyy')}
                         </p>
                       </div>
                       <ArrowRight className="w-4 h-4 text-slate-400" />
                     </Link>
                   );
                 })}
-                {upcomingRenewals.length === 0 && (
-                  <p className="text-sm text-slate-500 text-center py-4">No upcoming renewals</p>
+                {atRiskRenewals.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">No at-risk renewals 🎉</p>
                 )}
               </div>
             </CardContent>
