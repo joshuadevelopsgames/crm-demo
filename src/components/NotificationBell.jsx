@@ -38,14 +38,9 @@ export default function NotificationBell() {
     setIsNativeApp(Capacitor.isNativePlatform());
   }, []);
 
-  // Get current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      return user;
-    }
-  });
+  // Get current user from UserContext (more reliable than base44.auth.me)
+  const { user: contextUser, profile } = useUser();
+  const currentUser = contextUser || profile;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
   const { data: allNotifications = [] } = useQuery({

@@ -797,7 +797,27 @@ export const base44 = {
     },
   },
   auth: {
-    me: async () => ({ email: 'user@example.com', id: '1' }),
+    me: async () => {
+      // Try to get real user from Supabase
+      try {
+        const { getSupabaseAuth } = await import('@/services/supabaseClient');
+        const supabase = getSupabaseAuth();
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            return {
+              id: session.user.id,
+              email: session.user.email,
+              ...session.user
+            };
+          }
+        }
+      } catch (error) {
+        console.warn('Error getting Supabase user, using fallback:', error);
+      }
+      // Fallback to mock user
+      return { email: 'user@example.com', id: '1' };
+    },
     logout: () => {},
   },
 };
