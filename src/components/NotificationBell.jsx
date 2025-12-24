@@ -84,7 +84,7 @@ export default function NotificationBell() {
     enabled: !!currentUser?.id
   });
   
-  const { data: estimates = [] } = useQuery({
+  const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
@@ -100,7 +100,7 @@ export default function NotificationBell() {
   const [accountsThatShouldBeAtRisk, setAccountsThatShouldBeAtRisk] = useState(new Set());
   
   useEffect(() => {
-    if (accountsLoading || accounts.length === 0 || estimates.length === 0) {
+    if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0) {
       setAccountsThatShouldBeAtRisk(new Set());
       return;
     }
@@ -127,16 +127,17 @@ export default function NotificationBell() {
         }
       });
       
+      console.log(`🔍 NotificationBell: Calculated ${atRiskSet.size} accounts that should be at_risk from renewal dates`);
       setAccountsThatShouldBeAtRisk(atRiskSet);
     });
-  }, [accounts, estimates, accountsLoading]);
+  }, [accounts, estimates, accountsLoading, estimatesLoading]);
   
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
   const activeNotifications = allNotifications.filter(notification => {
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder' && notification.related_account_id) {
       // If accounts/estimates haven't loaded yet, don't show renewal notifications
-      if (accountsLoading || accounts.length === 0) {
+      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0) {
         return false;
       }
       // Once data is loaded, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
@@ -162,9 +163,15 @@ export default function NotificationBell() {
     if (allNotifications.length > 0) {
       const renewalCount = allNotifications.filter(n => n.type === 'renewal_reminder').length;
       const activeRenewalCount = activeNotifications.filter(n => n.type === 'renewal_reminder').length;
-      console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`);
+      console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`, {
+        accountsThatShouldBeAtRisk: accountsThatShouldBeAtRisk.size,
+        accountsLoading,
+        estimatesLoading,
+        accountsCount: accounts.length,
+        estimatesCount: estimates.length
+      });
     }
-  }, [allNotifications, activeNotifications]);
+  }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length]);
 
   // Filter to show unread first, then read (only active notifications)
   const sortedNotifications = [...activeNotifications].sort((a, b) => {
