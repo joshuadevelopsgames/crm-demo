@@ -219,11 +219,7 @@ function AppContent() {
               } />
               <Route path={createPageUrl('Settings')} element={<Settings />} />
               <Route path={createPageUrl('Reports')} element={<Reports />} />
-              <Route path="/test-renewal-notifications" element={
-                <AdminRoute>
-                  <TestRenewalNotifications />
-                </AdminRoute>
-              } />
+              <Route path="/test-renewal-notifications" element={<TestRenewalNotifications />} />
               <Route path="/list-divisions" element={<ListDivisions />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
