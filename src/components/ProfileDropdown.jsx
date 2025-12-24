@@ -26,13 +26,6 @@ export default function ProfileDropdown() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Don't render if user data is still loading
-  if (isLoading) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
-    );
-  }
-
   const handleLogout = async (e) => {
     if (e) {
       e.preventDefault();
@@ -93,6 +86,13 @@ export default function ProfileDropdown() {
   const displayEmail = profile?.email || user?.email || '';
   const displayPhone = profile?.phone_number || '';
   const displayRole = profile?.role === 'system_admin' || profile?.role === 'admin' ? 'Admin' : 'User';
+
+  // Show loading state if user data is still loading
+  if (isLoading || (!profile && !user)) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+    );
+  }
 
   return (
     <SimpleDropdown
