@@ -1,32 +1,32 @@
 # Testing Renewal Notifications
 
-## Quick Test Methods
+## Quick Test Methods (All Read-Only - No Data Changes)
 
-### Method 1: Browser Console (Easiest)
+### Method 1: Browser Console - Preview Mode (Safest)
 
 1. **Open your app** in the browser (e.g., `lecrm-dev.vercel.app`)
 2. **Open browser console** (F12 or Cmd+Option+I)
 3. **Run this code:**
 
 ```javascript
-// Test what renewals would be found
+// Preview what notifications would be created (READ-ONLY, no changes)
+import { previewRenewalNotifications } from '@/utils/testRenewalNotifications';
+previewRenewalNotifications();
+
+// Or see what renewals exist
 import { testRenewalNotifications } from '@/utils/testRenewalNotifications';
 testRenewalNotifications();
-
-// Or manually trigger notifications
-import { manuallyTriggerRenewalNotifications } from '@/utils/testRenewalNotifications';
-manuallyTriggerRenewalNotifications();
 ```
 
-### Method 2: Create Test Data
+**This is completely safe** - it only reads data and shows you what would happen, without creating any notifications or changing any data.
 
-To test with real data, update an estimate to have a renewal soon:
+### Method 2: Check Existing Data (Read-Only)
 
-1. **Find an account** with won estimates
-2. **Update an estimate's `contract_end`** to be 30-180 days in the future
-3. **Make sure the estimate status is "won"**
-4. **Go to Dashboard** - notifications should be created automatically
-5. **Check the notification bell** - you should see a renewal reminder
+Check if you already have accounts with renewals coming up:
+
+1. **Use the preview function** in browser console (see Method 1)
+2. **Or check the SQL queries below** to see what renewals exist
+3. **No data changes needed** - just see what's already there
 
 ### Method 3: Use Test Script (Node.js)
 
@@ -112,18 +112,32 @@ This will show:
 
 3. **Check browser console** for errors in `NotificationBell` component
 
-## Quick Test Scenario
+## Safe Testing (No Data Changes)
 
-1. **Pick an account** (e.g., "Test Account")
-2. **Update an estimate:**
-   ```sql
-   UPDATE estimates
-   SET contract_end = (CURRENT_DATE + INTERVAL '90 days')::text,
-       status = 'won'
-   WHERE account_id = 'your-account-id'
-   LIMIT 1;
-   ```
-3. **Go to Dashboard** - should trigger notification creation
-4. **Check notification bell** - should see renewal reminder
-5. **Test snooze** - click snooze button, notification should disappear
+### Step 1: Preview What Would Happen
+
+Run in browser console:
+```javascript
+import { previewRenewalNotifications } from '@/utils/testRenewalNotifications';
+previewRenewalNotifications();
+```
+
+This shows you:
+- Which accounts have renewals coming up
+- What notifications would be created
+- If any are already created or snoozed
+- **No data is changed** - completely read-only
+
+### Step 2: Check Existing Notifications
+
+1. **Go to Dashboard** - notifications are created automatically
+2. **Check notification bell** - see if any renewal reminders appear
+3. **Test snooze** - click snooze button on a notification (this is safe, it only creates a snooze record)
+
+### Step 3: Verify System is Working
+
+If you see notifications in the preview but not in the app:
+- Check browser console for errors
+- Verify the SQL migration was run (`create_notification_snoozes_table.sql`)
+- Check that `createRenewalNotifications()` is being called (it runs automatically on Dashboard load)
 
