@@ -96,7 +96,8 @@ export default function Dashboard() {
   });
 
   // Calculate metrics
-  const activeAccounts = accounts.filter(a => a.status === 'active').length;
+  // Active accounts = all non-archived accounts (matches Accounts page logic)
+  const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
   const atRiskAccounts = accounts.filter(a => a.status === 'at_risk').length;
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
   
