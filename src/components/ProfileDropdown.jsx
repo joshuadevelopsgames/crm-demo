@@ -21,7 +21,6 @@ import { disconnectGmail } from '@/services/gmailService';
 import { createPageUrl } from '@/utils';
 
 export default function ProfileDropdown() {
-  const [isOpen, setIsOpen] = useState(false);
   const { profile, user } = useUser();
   const { isTutorialMode, exitTutorial } = useTutorial();
   const navigate = useNavigate();
@@ -136,7 +135,6 @@ export default function ProfileDropdown() {
           <SimpleDropdownItem
             onClick={() => {
               navigate(createPageUrl('Settings'));
-              setIsOpen(false);
             }}
             className="flex items-center gap-2 px-4 py-2"
           >
@@ -146,7 +144,6 @@ export default function ProfileDropdown() {
           <SimpleDropdownItem
             onClick={() => {
               navigate(createPageUrl('Reports'));
-              setIsOpen(false);
             }}
             className="flex items-center gap-2 px-4 py-2"
           >
