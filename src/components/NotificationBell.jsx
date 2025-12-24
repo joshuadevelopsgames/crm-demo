@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { Capacitor } from '@capacitor/core';
 import { snoozeNotification } from '@/services/notificationService';
+import { useUser } from '@/contexts/UserContext';
 import {
   Dialog,
   DialogContent,
@@ -115,7 +116,7 @@ export default function NotificationBell() {
   });
 
   const markAllAsReadMutation = useMutation({
-    mutationFn: () => base44.entities.Notification.markAllAsRead(currentUser?.id),
+    mutationFn: () => base44.entities.Notification.markAllAsRead(currentUserId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
@@ -126,7 +127,7 @@ export default function NotificationBell() {
   // Snooze notification mutation (universal - affects all users)
   const snoozeNotificationMutation = useMutation({
     mutationFn: async ({ notification, duration, unit }) => {
-      if (!currentUser?.id) throw new Error('Not authenticated');
+      if (!currentUserId) throw new Error('Not authenticated');
       
       const now = new Date();
       let snoozedUntil;
@@ -152,7 +153,7 @@ export default function NotificationBell() {
         notification.type,
         notification.related_account_id || null,
         snoozedUntil,
-        currentUser.id // Track who snoozed it (optional)
+        currentUserId // Track who snoozed it (optional)
       );
       
       // Mark notification as read for current user when snoozed
