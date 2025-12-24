@@ -1017,7 +1017,6 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   </p>
                 </div>
                 <p className="text-xs text-amber-600 mt-4 font-medium">
-                  ⏱️ This process typically takes approximately 10 minutes to complete
                 </p>
                 <p className="text-xs text-slate-500 mt-2">Please wait while we import your data</p>
               </div>
