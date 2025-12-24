@@ -14,3 +14,4 @@ CREATE INDEX IF NOT EXISTS idx_accounts_icp_status ON accounts(icp_status);
 COMMENT ON COLUMN accounts.icp_status IS 'ICP status: required, not_required, or na';
 COMMENT ON COLUMN accounts.icp_required IS 'Whether ICP scorecard is required for this account';
 
+
