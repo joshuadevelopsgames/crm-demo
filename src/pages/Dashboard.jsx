@@ -175,6 +175,42 @@ export default function Dashboard() {
     const daysSince = differenceInDays(new Date(), new Date(account.last_interaction_date));
     return daysSince > 30;
   });
+  
+  // Debug logging for neglected accounts calculation
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const active = accounts.filter(a => a.status !== 'archived' && a.archived !== true);
+      const excludedByICP = active.filter(a => a.icp_status === 'na').length;
+      const snoozed = active.filter(a => {
+        if (!a.snoozed_until) return false;
+        const snoozeDate = new Date(a.snoozed_until);
+        return snoozeDate > new Date();
+      }).length;
+      const hasRecentInteraction = active.filter(a => {
+        if (!a.last_interaction_date) return false;
+        const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
+        return daysSince <= 30;
+      }).length;
+      const noInteractionDate = active.filter(a => !a.last_interaction_date).length;
+      const oldInteraction = active.filter(a => {
+        if (!a.last_interaction_date) return false;
+        const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
+        return daysSince > 30;
+      }).length;
+      
+      console.log('📊 Neglected Accounts Analysis:', {
+        activeAccounts: active.length,
+        neglectedAccounts: neglectedAccounts.length,
+        excludedByICP,
+        snoozed,
+        hasRecentInteraction: `${hasRecentInteraction} (interaction within 30 days)`,
+        noInteractionDate: `${noInteractionDate} (no last_interaction_date - should be neglected)`,
+        oldInteraction: `${oldInteraction} (interaction > 30 days ago - should be neglected)`,
+        expectedNeglected: noInteractionDate + oldInteraction - excludedByICP - snoozed,
+        difference: active.length - neglectedAccounts.length
+      });
+    }
+  }, [accounts, neglectedAccounts]);
 
   // At-risk accounts (renewals within 6 months / 180 days)
   // Calculate renewal dates from estimates for each account
