@@ -409,19 +409,32 @@ export default function Dashboard() {
                 {atRiskRenewals.slice(0, 5).map(account => {
                   const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
                   return (
-                    <Link
+                    <div
                       key={account.id}
-                      to={createPageUrl(`AccountDetail?id=${account.id}`)}
                       className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
                     >
-                      <div className="flex-1">
+                      <Link
+                        to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                        className="flex-1"
+                      >
                         <p className="font-medium text-slate-900">{account.name}</p>
                         <p className="text-xs text-slate-500">
                           Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
                         </p>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400" />
-                    </Link>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSnoozeAccount(account);
+                        }}
+                        className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
+                      >
+                        <BellOff className="w-4 h-4 mr-1" />
+                        Snooze
+                      </Button>
+                    </div>
                   );
                 })}
                 {atRiskRenewals.length === 0 && (
