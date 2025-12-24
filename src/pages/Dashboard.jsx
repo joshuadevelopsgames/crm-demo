@@ -253,7 +253,23 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
-          const isAtRisk = stat.title === 'At Risk Accounts';
+          const isClickable = stat.title === 'Active Accounts' || 
+                             stat.title === 'Total Contacts' || 
+                             stat.title === 'Open Tasks' || 
+                             stat.title === 'At Risk Accounts';
+          
+          const handleClick = () => {
+            if (stat.title === 'Active Accounts') {
+              navigate(createPageUrl('Accounts'));
+            } else if (stat.title === 'Total Contacts') {
+              navigate(createPageUrl('Contacts'));
+            } else if (stat.title === 'Open Tasks') {
+              navigate(createPageUrl('Tasks'));
+            } else if (stat.title === 'At Risk Accounts') {
+              navigate(`${createPageUrl('Accounts')}?status=at_risk`);
+            }
+          };
+          
           return (
             <TutorialTooltip
               key={stat.title}
@@ -262,8 +278,8 @@ export default function Dashboard() {
               position="bottom"
             >
               <Card 
-                className={`border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group ${isAtRisk ? 'cursor-pointer hover:shadow-md' : ''}`}
-                onClick={isAtRisk ? () => navigate(`${createPageUrl('Accounts')}?status=at_risk`) : undefined}
+                className={`border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                onClick={isClickable ? handleClick : undefined}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
