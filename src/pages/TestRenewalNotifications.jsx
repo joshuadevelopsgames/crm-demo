@@ -9,6 +9,11 @@ export default function TestRenewalNotifications() {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
 
+  // Auto-run preview on mount
+  useEffect(() => {
+    runPreview();
+  }, []);
+
   const runPreview = async () => {
     setLoading(true);
     setError(null);
