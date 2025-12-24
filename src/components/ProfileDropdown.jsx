@@ -21,16 +21,15 @@ import { disconnectGmail } from '@/services/gmailService';
 import { createPageUrl } from '@/utils';
 
 export default function ProfileDropdown() {
-  try {
-    const { profile, user, isLoading } = useUser();
-    const { isTutorialMode, exitTutorial } = useTutorial();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
+  const { profile, user, isLoading } = useUser();
+  const { isTutorialMode, exitTutorial } = useTutorial();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-    // Debug logging
-    useEffect(() => {
-      console.log('✅ ProfileDropdown rendered', { hasProfile: !!profile, hasUser: !!user, isLoading, profileEmail: profile?.email, userEmail: user?.email });
-    }, [profile, user, isLoading]);
+  // Debug logging
+  useEffect(() => {
+    console.log('✅ ProfileDropdown rendered', { hasProfile: !!profile, hasUser: !!user, isLoading, profileEmail: profile?.email, userEmail: user?.email });
+  }, [profile, user, isLoading]);
 
   const handleLogout = async (e) => {
     if (e) {
@@ -169,30 +168,5 @@ export default function ProfileDropdown() {
       </div>
     </SimpleDropdown>
   );
-  } catch (error) {
-    console.error('❌ ProfileDropdown error:', error);
-    // Fallback: show a simple button that at least works
-    return (
-      <button
-        onClick={async () => {
-          try {
-            const supabase = getSupabaseAuth();
-            if (supabase) await supabase.auth.signOut();
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = '/login';
-          } catch (e) {
-            console.error('Logout error:', e);
-            window.location.href = '/login';
-          }
-        }}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      >
-        <User className="w-4 h-4" />
-        <span className="hidden lg:inline">User</span>
-        <ChevronDown className="w-3 h-3" />
-      </button>
-    );
-  }
 }
 
