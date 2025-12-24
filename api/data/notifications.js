@@ -49,16 +49,26 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // Try to fetch from notifications table
       // If table doesn't exist, return empty array
+      // Filter by user_id if provided in query params
+      const { user_id } = req.query;
+      
       let allNotifications = [];
       let page = 0;
       const pageSize = 1000;
       let hasMore = true;
 
       while (hasMore) {
-        const { data, error } = await supabase
+        let query = supabase
           .from('notifications')
           .select('*')
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        // Filter by user_id if provided (server-side filtering for security)
+        if (user_id) {
+          query = query.eq('user_id', user_id);
+        }
+        
+        const { data, error } = await query
           .range(page * pageSize, (page + 1) * pageSize - 1);
         
         if (error) {
