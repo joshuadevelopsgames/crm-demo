@@ -46,10 +46,18 @@ export default function Dashboard() {
     // This prevents duplicate runs across different browser sessions/devices
     const checkAndRun = async () => {
       try {
-        // Get today's renewal notifications to see if we've already run today
+        // Get current user to filter notifications
+        const currentUser = await base44.auth.me();
+        if (!currentUser?.id) {
+          console.warn('No current user, skipping renewal notification check');
+          return;
+        }
+        
+        // Get today's renewal notifications for current user to see if we've already run today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const notifications = await base44.entities.Notification.filter({
+          user_id: currentUser.id,
           type: 'renewal_reminder'
         });
         

@@ -358,12 +358,21 @@ export async function createRenewalNotifications() {
     
     // Clean up notifications for accounts that are no longer at_risk
     // This handles cases where accounts were previously at_risk but no longer meet criteria
+    // NOTE: This is a system-wide cleanup that needs to see all notifications
+    // We'll fetch all users and clean up notifications for each user separately
     let cleanupCount = 0;
     try {
-      // Get all renewal reminder notifications
-      const allRenewalNotifications = await base44.entities.Notification.filter({
-        type: 'renewal_reminder'
-      });
+      // Get all users to clean up notifications per user
+      const users = await base44.entities.User.list();
+      
+      for (const user of users) {
+        if (!user?.id) continue;
+        
+        // Get renewal reminder notifications for this user
+        const userRenewalNotifications = await base44.entities.Notification.filter({
+          user_id: user.id,
+          type: 'renewal_reminder'
+        });
       
       // Get all accounts that are currently at_risk
       const atRiskAccountIds = new Set(
@@ -372,8 +381,8 @@ export async function createRenewalNotifications() {
           .map(acc => acc.id)
       );
       
-      // Delete notifications for accounts that are no longer at_risk
-      for (const notification of allRenewalNotifications) {
+        // Delete notifications for accounts that are no longer at_risk
+        for (const notification of userRenewalNotifications) {
         if (notification.related_account_id && !atRiskAccountIds.has(notification.related_account_id)) {
           try {
             const response = await fetch(`/api/data/notifications?id=${notification.id}`, {

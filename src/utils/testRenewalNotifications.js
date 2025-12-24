@@ -78,7 +78,11 @@ export async function testRenewalNotifications() {
     console.log(`\n✅ Found ${accountsWithRenewals.length} account(s) that would trigger notifications\n`);
 
     // Check for existing notifications
-    const allNotifications = await base44.entities.Notification.list();
+    // NOTE: This is a test utility, so we'll get current user and filter by user_id
+    const currentUser = await base44.auth.me();
+    const allNotifications = currentUser?.id 
+      ? await base44.entities.Notification.filter({ user_id: currentUser.id })
+      : [];
     const renewalNotifications = allNotifications.filter(
       n => n.type === 'renewal_reminder' && !n.is_read
     );

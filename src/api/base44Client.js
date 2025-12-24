@@ -612,9 +612,17 @@ export const base44 = {
       },
     },
     Notification: {
-      list: async () => {
-        const data = await getData('notifications');
-        return Array.isArray(data) ? data : [];
+      list: async (userId) => {
+        // Require userId to ensure users only see their own notifications
+        if (!userId) {
+          throw new Error('Notification.list() requires userId parameter for security');
+        }
+        const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(userId)}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+        }
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
       },
       filter: async (filters, sort) => {
         // If filtering by user_id, fetch from API with user_id query param for server-side filtering
