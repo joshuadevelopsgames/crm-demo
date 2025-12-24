@@ -184,13 +184,25 @@ export async function createRenewalNotifications() {
     // Get all estimates
     const estimates = await base44.entities.Estimate.list();
     
-    // Get all users
-    const users = await base44.entities.User.list();
-    const currentUser = await base44.auth.me();
+    // Get all users - handle errors gracefully
+    let users = [];
+    let currentUser = null;
+    try {
+      users = await base44.entities.User.list();
+    } catch (error) {
+      console.warn('Error fetching users list:', error);
+    }
+    
+    try {
+      currentUser = await base44.auth.me();
+    } catch (error) {
+      console.warn('Error fetching current user:', error);
+    }
+    
     const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
     
     if (usersToNotify.length === 0) {
-      console.warn('No users found for renewal notifications');
+      console.warn('No users found for renewal notifications - skipping');
       return;
     }
 

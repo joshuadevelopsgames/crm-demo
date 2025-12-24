@@ -556,9 +556,32 @@ export const base44 = {
       },
     },
     User: {
-      list: async () => mockUsers,
+      list: async () => {
+        // Try to get users from profiles table via API
+        try {
+          const data = await getData('profiles');
+          // Transform profiles to user format
+          return data.map(profile => ({
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            role: profile.role,
+            ...profile
+          }));
+        } catch (error) {
+          console.warn('Error loading users from API:', error);
+          // Fallback: try to get current user
+          try {
+            const currentUser = await base44.auth.me();
+            return currentUser ? [currentUser] : [];
+          } catch (e) {
+            return [];
+          }
+        }
+      },
       filter: async (filters) => {
-        let results = [...mockUsers];
+        const users = await base44.entities.User.list();
+        let results = [...users];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(user => {
             return Object.entries(filters).every(([key, value]) => {
@@ -569,20 +592,16 @@ export const base44 = {
         return results;
       },
       get: async (id) => {
-        return mockUsers.find(u => u.id === id);
+        const users = await base44.entities.User.list();
+        return users.find(u => u.id === id);
       },
       create: async (data) => {
-        const newUser = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
-        mockUsers.push(newUser);
-        return newUser;
+        // Not implemented - users are created via auth
+        throw new Error('User creation not supported via this API');
       },
       update: async (id, data) => {
-        const index = mockUsers.findIndex(u => u.id === id);
-        if (index !== -1) {
-          mockUsers[index] = { ...mockUsers[index], ...data };
-          return mockUsers[index];
-        }
-        return data;
+        // Not implemented - use profile API instead
+        throw new Error('User update not supported via this API');
       },
     },
     Notification: {
