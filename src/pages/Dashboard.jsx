@@ -365,8 +365,8 @@ export default function Dashboard() {
       title: 'At Risk Accounts',
       value: atRiskAccounts,
       icon: AlertTriangle,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       tip: 'This shows your at risk accounts. These are accounts flagged as at-risk.'
     }
   ];
