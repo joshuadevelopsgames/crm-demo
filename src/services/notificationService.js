@@ -263,7 +263,14 @@ export async function createRenewalNotifications() {
  */
 export async function checkNotificationSnoozed(userId, notificationType, accountId = null) {
   try {
-    const response = await fetch('/api/data/notificationSnoozes', {
+    let url = `/api/data/notificationSnoozes?user_id=${encodeURIComponent(userId)}&notification_type=${encodeURIComponent(notificationType)}`;
+    if (accountId) {
+      url += `&related_account_id=${encodeURIComponent(accountId)}`;
+    } else {
+      url += `&related_account_id=null`;
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -277,12 +284,16 @@ export async function checkNotificationSnoozed(userId, notificationType, account
     const now = new Date();
     
     // Find active snooze for this user, type, and account
-    const activeSnooze = snoozes.find(snooze => 
-      snooze.user_id === userId &&
-      snooze.notification_type === notificationType &&
-      (accountId ? snooze.related_account_id === accountId : snooze.related_account_id === null) &&
-      new Date(snooze.snoozed_until) > now
-    );
+    const activeSnooze = snoozes.find(snooze => {
+      const matchesUser = snooze.user_id === userId;
+      const matchesType = snooze.notification_type === notificationType;
+      const matchesAccount = accountId 
+        ? snooze.related_account_id === accountId 
+        : (snooze.related_account_id === null || snooze.related_account_id === 'null' || !snooze.related_account_id);
+      const isActive = new Date(snooze.snoozed_until) > now;
+      
+      return matchesUser && matchesType && matchesAccount && isActive;
+    });
     
     return !!activeSnooze;
   } catch (error) {
