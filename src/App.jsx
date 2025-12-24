@@ -159,6 +159,7 @@ function AppContent() {
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
     if (path === '/google-auth-callback') return null; // Google auth callback doesn't use Layout
     if (path === '/list-divisions') return 'ListDivisions';
+    if (path === '/test-renewal-notifications') return 'TestRenewalNotifications';
     return 'Dashboard';
   };
 
