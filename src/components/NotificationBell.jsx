@@ -98,12 +98,16 @@ export default function NotificationBell() {
   // Calculate which accounts SHOULD be at_risk based on renewal dates (source of truth)
   // This is more accurate than relying on the status field, which might not update if API calls fail
   const [accountsThatShouldBeAtRisk, setAccountsThatShouldBeAtRisk] = useState(new Set());
+  const [atRiskCalculationComplete, setAtRiskCalculationComplete] = useState(false);
   
   useEffect(() => {
     if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0) {
       setAccountsThatShouldBeAtRisk(new Set());
+      setAtRiskCalculationComplete(false);
       return;
     }
+    
+    setAtRiskCalculationComplete(false);
     
     // Dynamically import utilities
     Promise.all([
@@ -129,6 +133,7 @@ export default function NotificationBell() {
       
       console.log(`🔍 NotificationBell: Calculated ${atRiskSet.size} accounts that should be at_risk from renewal dates`);
       setAccountsThatShouldBeAtRisk(atRiskSet);
+      setAtRiskCalculationComplete(true);
     });
   }, [accounts, estimates, accountsLoading, estimatesLoading]);
   
@@ -136,11 +141,11 @@ export default function NotificationBell() {
   const activeNotifications = allNotifications.filter(notification => {
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder' && notification.related_account_id) {
-      // If accounts/estimates haven't loaded yet, don't show renewal notifications
-      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0) {
+      // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
+      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
         return false;
       }
-      // Once data is loaded, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
+      // Once calculation is complete, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
       if (!accountsThatShouldBeAtRisk.has(notification.related_account_id)) {
         return false; // Account should not be at_risk based on renewal date, don't show notification
       }
@@ -165,6 +170,7 @@ export default function NotificationBell() {
       const activeRenewalCount = activeNotifications.filter(n => n.type === 'renewal_reminder').length;
       console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`, {
         accountsThatShouldBeAtRisk: accountsThatShouldBeAtRisk.size,
+        atRiskCalculationComplete,
         accountsLoading,
         estimatesLoading,
         accountsCount: accounts.length,
