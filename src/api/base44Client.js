@@ -735,8 +735,16 @@ export const base44 = {
         throw new Error(result.error || 'Failed to mark notification as read');
       },
       markAllAsRead: async (userId) => {
-        const data = await getData('notifications');
-        const userNotifications = Array.isArray(data) ? data.filter(n => n.user_id === userId) : [];
+        if (!userId) {
+          throw new Error('markAllAsRead requires userId parameter');
+        }
+        // Fetch notifications for this user only (server-side filtering)
+        const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(userId)}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+        }
+        const result = await response.json();
+        const userNotifications = result.success ? (result.data || []) : [];
         await Promise.all(
           userNotifications.map(n => 
             fetch('/api/data/notifications', {
