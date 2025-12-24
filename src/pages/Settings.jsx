@@ -44,24 +44,29 @@ export default function Settings() {
         throw new Error('Not authenticated');
       }
       
-      // Use upsert to create profile if it doesn't exist
-      const { data: updatedProfile, error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          ...data
-        }, {
-          onConflict: 'id'
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Profile update error:', error);
-        throw error;
+      // Get the session token for API authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No session token available');
       }
-      return updatedProfile;
+
+      // Use API endpoint to bypass RLS issues
+      const response = await fetch('/api/data/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+
+      return result.data;
     },
     onSuccess: () => {
       // Invalidate all user-related queries
