@@ -838,6 +838,16 @@ export default function ImportLeadsDialog({ open, onClose }) {
         console.error('⚠️ Error calculating revenue segments:', segmentError);
         // Don't fail the import if segment calculation fails
       }
+      
+      // Update renewal notifications after import (estimates may have changed)
+      try {
+        const { createRenewalNotifications } = await import('@/services/notificationService');
+        await createRenewalNotifications();
+        console.log('✅ Updated renewal notifications after import');
+      } catch (renewalError) {
+        console.error('⚠️ Error updating renewal notifications:', renewalError);
+        // Don't fail the import if renewal notification update fails
+      }
 
     } catch (err) {
       setError(`Import failed: ${err.message}`);

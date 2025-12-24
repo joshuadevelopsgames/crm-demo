@@ -40,28 +40,49 @@ export default function Dashboard() {
     });
   }, []);
 
-  // Create renewal notifications on mount and periodically
+  // Create renewal notifications on mount and daily
   useEffect(() => {
-    createRenewalNotifications().catch(error => {
-      console.error('Error creating renewal notifications:', error);
-    }).then(() => {
-      // Invalidate queries to refresh both notifications and accounts (for at_risk status)
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-    });
+    const lastRunKey = 'renewalNotificationsLastRun';
+    const lastRun = localStorage.getItem(lastRunKey);
+    const today = new Date().toDateString();
     
-    // Refresh renewal notifications every hour
-    const interval = setInterval(() => {
+    // Run immediately on mount if we haven't run today
+    if (!lastRun || lastRun !== today) {
       createRenewalNotifications().catch(error => {
-        console.error('Error refreshing renewal notifications:', error);
+        console.error('Error creating renewal notifications:', error);
       }).then(() => {
+        localStorage.setItem(lastRunKey, today);
         // Invalidate queries to refresh both notifications and accounts (for at_risk status)
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
       });
-    }, 60 * 60 * 1000); // 1 hour
+    }
     
-    return () => clearInterval(interval);
+    // Schedule daily check at midnight
+    const scheduleNextRun = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0); // Midnight
+      const msUntilMidnight = tomorrow.getTime() - now.getTime();
+      
+      return setTimeout(() => {
+        createRenewalNotifications().catch(error => {
+          console.error('Error refreshing renewal notifications:', error);
+        }).then(() => {
+          localStorage.setItem(lastRunKey, new Date().toDateString());
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        });
+        
+        // Schedule next day
+        scheduleNextRun();
+      }, msUntilMidnight);
+    };
+    
+    const timeoutId = scheduleNextRun();
+    
+    return () => clearTimeout(timeoutId);
   }, [queryClient]);
   
   const { data: accounts = [] } = useQuery({
