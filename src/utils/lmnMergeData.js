@@ -588,10 +588,9 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     }
 
-      // Track orphaned estimates (no account_id found via any method)
-      if (!linkedAccountId) {
-        estimateLinkingStats.orphaned++;
-      }
+    // Track orphaned estimates (no account_id found via any method)
+    if (!linkedAccountId) {
+      estimateLinkingStats.orphaned++;
     }
 
     return {
@@ -604,7 +603,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
 
   // STEP 2: Group all estimates by their determined account_id
   // This ensures all estimates for the same account are grouped together
-  const estimatesByAccountId = new Map(); // account_id -> [estimates]
+  // Reuse the existing map by clearing it first
+  estimatesByAccountId.clear();
   estimatesWithAccountId.forEach(estimate => {
     if (estimate.account_id) {
       if (!estimatesByAccountId.has(estimate.account_id)) {
@@ -683,8 +683,7 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     // This should rarely happen - all jobsites have contact_id, and all contacts should have account_id
     // But we keep this as a safety net for edge cases (orphaned contact_ids, data corruption, etc.)
     if (!linkedAccountId) {
-
-    // Method 2: Match by contact name matching account name (fuzzy)
+      // Method 2: Match by contact name matching account name (fuzzy)
     if (!linkedAccountId && jobsite.contact_name) {
       const jobsiteContactName = normalizeName(jobsite.contact_name);
       
@@ -706,10 +705,10 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
         linkMethod = 'name_match_fuzzy';
         jobsiteLinkingStats.linkedByNameMatch++;
       }
-    }
+      }
 
-    // Method 3: Match by address (jobsites have addresses)
-    if (!linkedAccountId && jobsite.address_1) {
+      // Method 3: Match by address (jobsites have addresses)
+      if (!linkedAccountId && jobsite.address_1) {
       const normalizedJobsiteAddress = normalizeAddress(jobsite.address_1);
       if (normalizedJobsiteAddress) {
         // Try exact match first
@@ -731,10 +730,10 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
           jobsiteLinkingStats.linkedByAddress++;
         }
       }
-    }
+      }
 
-    // Method 4: Match by jobsite name containing account name
-    if (!linkedAccountId && jobsite.name) {
+      // Method 4: Match by jobsite name containing account name
+      if (!linkedAccountId && jobsite.name) {
       const jobsiteName = normalizeName(jobsite.name);
       for (const [normalizedName, account] of accountNameMap.entries()) {
         if (jobsiteName.includes(normalizedName) || normalizedName.includes(jobsiteName)) {
@@ -743,6 +742,7 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
           jobsiteLinkingStats.linkedByJobsiteName++;
           break;
         }
+      }
       }
     }
 
