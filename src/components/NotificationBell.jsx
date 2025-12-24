@@ -77,33 +77,71 @@ export default function NotificationBell() {
     }
   });
 
-  // Fetch accounts to verify at_risk status for renewal notifications
+  // Fetch accounts and estimates to calculate renewal dates (source of truth)
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
     enabled: !!currentUser?.id
   });
   
-  // Create a set of account IDs that are actually at_risk
-  const atRiskAccountIds = new Set(
-    accounts
-      .filter(acc => acc.status === 'at_risk' && !acc.archived)
-      .map(acc => acc.id)
-  );
+  const { data: estimates = [] } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    enabled: !!currentUser?.id
+  });
   
-  // Filter out snoozed notifications and notifications for accounts that aren't at_risk
-  // Only filter renewal reminders by at_risk status if accounts have loaded
+  // Calculate which accounts SHOULD be at_risk based on renewal dates (source of truth)
+  // This is more accurate than relying on the status field, which might not update if API calls fail
+  const [accountsThatShouldBeAtRisk, setAccountsThatShouldBeAtRisk] = useState(new Set());
+  
+  useEffect(() => {
+    if (accountsLoading || accounts.length === 0 || estimates.length === 0) {
+      setAccountsThatShouldBeAtRisk(new Set());
+      return;
+    }
+    
+    // Dynamically import utilities
+    Promise.all([
+      import('@/utils/renewalDateCalculator'),
+      import('date-fns')
+    ]).then(([{ calculateRenewalDate }, { differenceInDays, startOfDay }]) => {
+      const today = startOfDay(new Date());
+      const atRiskSet = new Set();
+      
+      accounts.forEach(account => {
+        if (account.archived) return;
+        const accountEstimates = estimates.filter(est => est.account_id === account.id);
+        const renewalDate = calculateRenewalDate(accountEstimates);
+        if (renewalDate) {
+          const renewalDateStart = startOfDay(renewalDate);
+          const daysUntilRenewal = differenceInDays(renewalDateStart, today);
+          // Account should be at_risk if renewal is within 6 months (180 days) and in the future
+          if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
+            atRiskSet.add(account.id);
+          }
+        }
+      });
+      
+      setAccountsThatShouldBeAtRisk(atRiskSet);
+    });
+  }, [accounts, estimates, accountsLoading]);
+  
+  // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
   const activeNotifications = allNotifications.filter(notification => {
-    // For renewal reminders, only show if account is actually at_risk
-    // But wait for accounts to load before filtering (to avoid showing all notifications initially)
+    // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder' && notification.related_account_id) {
-      // If accounts haven't loaded yet or are empty, don't show renewal notifications
+      // If accounts/estimates haven't loaded yet, don't show renewal notifications
       if (accountsLoading || accounts.length === 0) {
         return false;
       }
-      // Once accounts are loaded, only show notifications for accounts that are at_risk
-      if (!atRiskAccountIds.has(notification.related_account_id)) {
-        return false; // Account is not at_risk, don't show notification
+      // Once data is loaded, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
+      if (!accountsThatShouldBeAtRisk.has(notification.related_account_id)) {
+        return false; // Account should not be at_risk based on renewal date, don't show notification
       }
     }
     

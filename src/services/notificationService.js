@@ -238,24 +238,21 @@ export async function createRenewalNotifications() {
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
       
-      // Mark account as at_risk if renewal is within 6 months (180 days) and in the future
-      // Remove at_risk status if renewal is more than 6 months away or has passed
-      let shouldBeAtRisk = false;
-      let isAtRisk = account.status === 'at_risk';
+      // Determine if account SHOULD be at_risk based on renewal date (source of truth)
+      // This is independent of the status field - renewal date is the authoritative source
+      const shouldBeAtRisk = daysUntilRenewal >= 0 && daysUntilRenewal <= 180;
+      const isCurrentlyAtRisk = account.status === 'at_risk';
       
-      if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
-        // Renewal is within 6 months - should be at_risk
-        shouldBeAtRisk = true;
-        
-        if (account.status === 'at_risk') {
+      // Update status field to match reality (renewal date is source of truth)
+      if (shouldBeAtRisk) {
+        // Account SHOULD be at_risk - update status if it's not already
+        if (isCurrentlyAtRisk) {
           atRiskAlreadyCount++;
-          isAtRisk = true;
           // Already at_risk, no update needed
         } else if (account.status === 'churned') {
-          // Don't update churned accounts, but they still get notifications
-          isAtRisk = false;
+          // Don't update churned accounts
         } else {
-          // Update to at_risk - retry on failure
+          // Update to at_risk - retry on failure, but don't fail if update doesn't work
           let updateSuccess = false;
           let retries = 0;
           const maxRetries = 3;
@@ -264,7 +261,6 @@ export async function createRenewalNotifications() {
             try {
               await base44.entities.Account.update(account.id, { status: 'at_risk' });
               atRiskUpdatedCount++;
-              isAtRisk = true;
               updateSuccess = true;
               console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days, was: ${account.status})`);
             } catch (error) {
@@ -282,9 +278,8 @@ export async function createRenewalNotifications() {
                 errorCount++;
                 console.error(`❌ Error updating account status for ${account.name} after ${maxRetries} retries:`, errorDetails);
                 console.error(`   Full error object:`, error);
-                // Don't set isAtRisk = true if update failed - account is not actually at_risk
-                // This prevents creating notifications for accounts that couldn't be updated
-                isAtRisk = false;
+                // Status update failed, but account SHOULD still be at_risk based on renewal date
+                // We'll continue to create notifications because renewal date is the source of truth
               } else {
                 console.warn(`⚠️ Retry ${retries}/${maxRetries} for ${account.name} status update...`, errorDetails);
                 await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
@@ -292,13 +287,11 @@ export async function createRenewalNotifications() {
             }
           }
         }
-      } else if (account.status === 'at_risk' && (daysUntilRenewal < 0 || daysUntilRenewal > 180)) {
+      } else if (isCurrentlyAtRisk && (daysUntilRenewal < 0 || daysUntilRenewal > 180)) {
         // Renewal is past or more than 6 months away - remove at_risk status (set back to active)
         // Only if it was at_risk (might have been set for renewal reasons)
-        shouldBeAtRisk = false;
         try {
           await base44.entities.Account.update(account.id, { status: 'active' });
-          isAtRisk = false;
           console.log(`✅ Removed at_risk status from ${account.name} (renewal ${daysUntilRenewal < 0 ? 'passed' : 'more than 6 months away'})`);
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
@@ -306,8 +299,8 @@ export async function createRenewalNotifications() {
       }
       
       // Create notification if renewal is within 6 months (180 days) and in the future
-      // The account should be at_risk (either already is, or we tried to update it)
-      if (daysUntilRenewal < 0 || daysUntilRenewal > 180) continue;
+      // Use renewal date as source of truth, not status field
+      if (!shouldBeAtRisk) continue;
       
       // Check if this notification is snoozed (universal - any user can snooze for everyone)
       const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
@@ -316,16 +309,8 @@ export async function createRenewalNotifications() {
         continue; // Notification is snoozed for all users
       }
       
-      // Only create notifications if account is actually at_risk
-      // isAtRisk is set to true only if:
-      // 1. Account was already at_risk (line 252), OR
-      // 2. Status update succeeded (updateSuccess = true, line 268)
-      // If status update failed, isAtRisk remains false (we don't set it to true on failure anymore)
-      
-      if (!isAtRisk) {
-        console.log(`⏭️ Skipping notification for ${account.name} - account is not at_risk (status: ${account.status}, update may have failed)`);
-        continue;
-      }
+      // Create notifications based on renewal date (source of truth), not status field
+      // If renewal is within 6 months, account should be at_risk regardless of status update success
       
       // Create notification for all users
       for (const user of usersToNotify) {
