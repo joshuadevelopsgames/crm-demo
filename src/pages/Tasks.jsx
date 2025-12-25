@@ -1518,14 +1518,13 @@ export default function Tasks() {
                             </div>
                           </div>
                           <div className="flex gap-1 ml-2">
-                            <a
-                              href={attachment.file_url}
-                              download={attachment.file_name}
+                            <button
+                              onClick={(e) => handleFileDownload(attachment, e)}
                               className="p-1.5 hover:bg-slate-200 rounded"
                               title="Download file"
                             >
                               <Download className="w-4 h-4 text-slate-600" />
-                            </a>
+                            </button>
                             {currentUser?.id === attachment.user_id && (
                               <Button
                                 size="sm"
