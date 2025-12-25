@@ -85,6 +85,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -1287,13 +1288,22 @@ export default function Tasks() {
             >
               <DialogHeader>
                 <div className="flex items-center justify-between pr-8">
-                  <DialogTitle>
-                    {isViewMode
-                      ? "Task Details"
-                      : editingTask
-                        ? "Edit Task"
-                        : "Create Task"}
-                  </DialogTitle>
+                  <div>
+                    <DialogTitle>
+                      {isViewMode
+                        ? "Task Details"
+                        : editingTask
+                          ? "Edit Task"
+                          : "Create Task"}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      {isViewMode
+                        ? "View task details"
+                        : editingTask
+                          ? "Edit task information"
+                          : "Create a new task"}
+                    </DialogDescription>
+                  </div>
                   {isViewMode && viewingTask && (
                     <Button
                       variant="outline"
