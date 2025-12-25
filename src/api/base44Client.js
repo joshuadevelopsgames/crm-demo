@@ -875,6 +875,85 @@ export const base44 = {
         return results;
       },
     },
+    TaskComment: {
+      list: async (taskId) => {
+        const response = await fetch(`/api/data/taskComments?task_id=${taskId}`);
+        const result = await response.json();
+        if (result.success) return result.data || [];
+        throw new Error(result.error || 'Failed to fetch task comments');
+      },
+      create: async (data) => {
+        const response = await fetch('/api/data/taskComments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create comment');
+      },
+      update: async (id, data) => {
+        const response = await fetch('/api/data/taskComments', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update comment');
+      },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/taskComments?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) return true;
+        throw new Error(result.error || 'Failed to delete comment');
+      },
+    },
+    TaskAttachment: {
+      list: async (taskId) => {
+        const response = await fetch(`/api/data/taskAttachments?task_id=${taskId}`);
+        const result = await response.json();
+        if (result.success) return result.data || [];
+        throw new Error(result.error || 'Failed to fetch task attachments');
+      },
+      upload: async (file, fileName, taskId, userId, userEmail, fileType) => {
+        // Convert file to base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const response = await fetch('/api/upload/taskAttachment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file: base64,
+            fileName,
+            taskId,
+            userId,
+            userEmail,
+            fileType: fileType || file.type
+          })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to upload attachment');
+      },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/taskAttachments?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) return true;
+        throw new Error(result.error || 'Failed to delete attachment');
+      },
+    },
   },
   auth: {
     me: async () => {

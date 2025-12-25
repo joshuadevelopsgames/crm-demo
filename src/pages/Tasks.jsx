@@ -40,7 +40,12 @@ import {
   Ban,
   AlertTriangle,
   Trash2,
-  Repeat
+  Repeat,
+  MessageSquare,
+  Paperclip,
+  Edit2,
+  Download,
+  Upload
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
 import {
@@ -128,6 +133,10 @@ export default function Tasks() {
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [lastCompletedTask, setLastCompletedTask] = useState(null);
+  const [taskDialogTab, setTaskDialogTab] = useState('details'); // 'details', 'comments', 'attachments'
+  const [newComment, setNewComment] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
   const queryClient = useQueryClient();
   const { isPWA, isMobile, isNativeApp, isDesktop } = useDeviceDetection();
   
@@ -170,6 +179,26 @@ export default function Tasks() {
       const user = await base44.auth.me();
       return user;
     }
+  });
+
+  // Fetch comments for editing task
+  const { data: taskComments = [] } = useQuery({
+    queryKey: ['taskComments', editingTask?.id],
+    queryFn: async () => {
+      if (!editingTask?.id) return [];
+      return await base44.entities.TaskComment.list(editingTask.id);
+    },
+    enabled: !!editingTask?.id
+  });
+
+  // Fetch attachments for editing task
+  const { data: taskAttachments = [] } = useQuery({
+    queryKey: ['taskAttachments', editingTask?.id],
+    queryFn: async () => {
+      if (!editingTask?.id) return [];
+      return await base44.entities.TaskAttachment.list(editingTask.id);
+    },
+    enabled: !!editingTask?.id
   });
 
   const [newTask, setNewTask] = useState({
@@ -319,6 +348,136 @@ export default function Tasks() {
 
   const confirmDelete = async () => {
     deleteTaskMutation.mutate(tasksToDelete);
+  };
+
+  // Comment mutations
+  const createCommentMutation = useMutation({
+    mutationFn: async (data) => {
+      return await base44.entities.TaskComment.create(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskComments', editingTask?.id] });
+      setNewComment('');
+      toast.success('Comment added');
+    },
+    onError: (error) => {
+      console.error('Error creating comment:', error);
+      toast.error(error.message || 'Failed to add comment');
+    }
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: async ({ id, content }) => {
+      return await base44.entities.TaskComment.update(id, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskComments', editingTask?.id] });
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      toast.success('Comment updated');
+    },
+    onError: (error) => {
+      console.error('Error updating comment:', error);
+      toast.error(error.message || 'Failed to update comment');
+    }
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (id) => {
+      return await base44.entities.TaskComment.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskComments', editingTask?.id] });
+      toast.success('Comment deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting comment:', error);
+      toast.error(error.message || 'Failed to delete comment');
+    }
+  });
+
+  // Attachment mutations
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: async ({ file, fileName, taskId, userId, userEmail }) => {
+      return await base44.entities.TaskAttachment.upload(file, fileName, taskId, userId, userEmail);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskAttachments', editingTask?.id] });
+      toast.success('File uploaded');
+    },
+    onError: (error) => {
+      console.error('Error uploading attachment:', error);
+      toast.error(error.message || 'Failed to upload file');
+    }
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: async (id) => {
+      return await base44.entities.TaskAttachment.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskAttachments', editingTask?.id] });
+      toast.success('File deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting attachment:', error);
+      toast.error(error.message || 'Failed to delete file');
+    }
+  });
+
+  // Comment handlers
+  const handleAddComment = () => {
+    if (!newComment.trim() || !editingTask?.id || !currentUser?.id) return;
+    
+    createCommentMutation.mutate({
+      task_id: editingTask.id,
+      user_id: currentUser.id,
+      user_email: currentUser.email,
+      content: newComment.trim()
+    });
+  };
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.content);
+  };
+
+  const handleSaveComment = () => {
+    if (!editingCommentText.trim() || !editingCommentId) return;
+    
+    updateCommentMutation.mutate({
+      id: editingCommentId,
+      content: editingCommentText.trim()
+    });
+  };
+
+  const handleDeleteComment = (id) => {
+    if (confirm('Are you sure you want to delete this comment?')) {
+      deleteCommentMutation.mutate(id);
+    }
+  };
+
+  // Attachment handlers
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !editingTask?.id || !currentUser?.id) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    uploadAttachmentMutation.mutate({
+      file,
+      fileName: file.name,
+      taskId: editingTask.id,
+      userId: currentUser.id,
+      userEmail: currentUser.email
+    });
+
+    // Reset file input
+    event.target.value = '';
   };
 
   // Keyboard shortcuts
@@ -583,6 +742,10 @@ export default function Tasks() {
     setIsDialogOpen(false);
     setEditingTask(null);
     resetTaskForm();
+    setTaskDialogTab('details');
+    setNewComment('');
+    setEditingCommentId(null);
+    setEditingCommentText('');
   };
 
   const addLabel = () => {
@@ -833,6 +996,24 @@ export default function Tasks() {
             <DialogHeader>
               <DialogTitle>{editingTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
             </DialogHeader>
+            
+            {/* Tabs for Details, Comments, Attachments */}
+            {editingTask && (
+              <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="comments" className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Comments ({taskComments.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="attachments" className="flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" />
+                    Files ({taskAttachments.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
@@ -1159,14 +1340,186 @@ export default function Tasks() {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={closeDialog}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateOrUpdate} disabled={!newTask.title}>
-                  {editingTask ? 'Update Task' : 'Create Task'}
-                </Button>
-              </div>
+              
+              {/* Comments Tab Content */}
+              {editingTask && taskDialogTab === 'comments' && (
+                <div className="space-y-4">
+                  {/* Add Comment */}
+                  <div className="space-y-2">
+                    <Label>Add Comment</Label>
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      rows={3}
+                    />
+                    <Button 
+                      onClick={handleAddComment} 
+                      disabled={!newComment.trim() || createCommentMutation.isPending}
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Comment
+                    </Button>
+                  </div>
+                  
+                  {/* Comments List */}
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {taskComments.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-4">No comments yet</p>
+                    ) : (
+                      taskComments.map((comment) => (
+                        <div key={comment.id} className="border rounded-lg p-3 bg-slate-50">
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentText}
+                                onChange={(e) => setEditingCommentText(e.target.value)}
+                                rows={2}
+                              />
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  onClick={handleSaveComment}
+                                  disabled={updateCommentMutation.isPending}
+                                >
+                                  Save
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingCommentId(null);
+                                    setEditingCommentText('');
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="text-sm text-slate-900 whitespace-pre-wrap">{comment.content}</p>
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    {comment.user_email || 'Unknown'} • {format(new Date(comment.created_at), 'MMM d, yyyy h:mm a')}
+                                  </p>
+                                </div>
+                                {currentUser?.id === comment.user_id && (
+                                  <div className="flex gap-1 ml-2">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleEditComment(comment)}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleDeleteComment(comment.id)}
+                                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Attachments Tab Content */}
+              {editingTask && taskDialogTab === 'attachments' && (
+                <div className="space-y-4">
+                  {/* Upload File */}
+                  <div className="space-y-2">
+                    <Label>Upload File</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        onChange={handleFileUpload}
+                        disabled={uploadAttachmentMutation.isPending}
+                        className="flex-1"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">Max file size: 10MB</p>
+                  </div>
+                  
+                  {/* Attachments List */}
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {taskAttachments.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-4">No attachments yet</p>
+                    ) : (
+                      taskAttachments.map((attachment) => (
+                        <div key={attachment.id} className="border rounded-lg p-3 bg-slate-50 flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <a
+                                href={attachment.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block"
+                              >
+                                {attachment.file_name}
+                              </a>
+                              <p className="text-xs text-slate-500">
+                                {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : ''} • 
+                                {attachment.user_email || 'Unknown'} • 
+                                {format(new Date(attachment.created_at), 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            <a
+                              href={attachment.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 hover:bg-slate-200 rounded"
+                            >
+                              <Download className="w-4 h-4 text-slate-600" />
+                            </a>
+                            {currentUser?.id === attachment.user_id && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this file?')) {
+                                    deleteAttachmentMutation.mutate(attachment.id);
+                                  }
+                                }}
+                                className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Footer buttons - only show on details tab or when creating */}
+              {(taskDialogTab === 'details' || !editingTask) && (
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={closeDialog}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateOrUpdate} disabled={!newTask.title}>
+                    {editingTask ? 'Update Task' : 'Create Task'}
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
