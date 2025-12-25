@@ -524,23 +524,21 @@ export async function createNeglectedAccountNotifications() {
         if (!user?.id) continue;
         
         try {
-          // Check if notification already exists (unread or read - avoid duplicates)
+          // Check if notification already exists for this account and user
+          // We want to ensure every neglected account has a notification, so we check if ANY notification exists
+          // (not just today's) to avoid duplicates, but we'll create one if none exists
           const existingNotifications = await base44.entities.Notification.filter({
             user_id: user.id,
             type: 'neglected_account',
             related_account_id: account.id
           });
           
-          // Check if there's an existing notification created today (to avoid duplicates)
-          const hasNotificationToday = existingNotifications.some(notif => {
-            const notifDate = startOfDay(new Date(notif.created_at));
-            return notifDate.getTime() === today.getTime();
-          });
-          
-          if (hasNotificationToday) {
+          // If a notification already exists (regardless of when it was created), skip creating a new one
+          // This prevents duplicates while ensuring all neglected accounts have notifications
+          if (existingNotifications.length > 0) {
             skippedByExisting++;
             accountNotificationCreated = true; // At least one user has a notification for this account
-            continue; // Already created today
+            continue; // Notification already exists
           }
           
           // Create the notification

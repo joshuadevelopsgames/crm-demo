@@ -88,6 +88,7 @@ export default function Dashboard() {
     };
     
     // Create neglected account notifications on mount and daily
+    // Always run to ensure all neglected accounts have notifications (function handles duplicates)
     const checkAndRunNeglected = async () => {
       try {
         // Get current user to filter notifications
@@ -97,28 +98,12 @@ export default function Dashboard() {
           return;
         }
         
-        // Get today's neglected account notifications for current user to see if we've already run today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const notifications = await base44.entities.Notification.filter({
-          user_id: currentUser.id,
-          type: 'neglected_account'
-        });
-        
-        // Check if any neglected account notifications were created today
-        const hasNotificationsToday = notifications.some(notif => {
-          const notifDate = new Date(notif.created_at);
-          notifDate.setHours(0, 0, 0, 0);
-          return notifDate.getTime() === today.getTime();
-        });
-        
-        // Only run if we haven't created notifications today
-        if (!hasNotificationsToday) {
-          await createNeglectedAccountNotifications();
-          // Invalidate queries to refresh notifications
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          queryClient.invalidateQueries({ queryKey: ['accounts'] });
-        }
+        // Always run notification creation - it will skip accounts that already have notifications
+        // This ensures newly neglected accounts get notifications even if the function ran earlier today
+        await createNeglectedAccountNotifications();
+        // Invalidate queries to refresh notifications
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts'] });
       } catch (error) {
         console.error('Error checking/creating neglected account notifications:', error);
       }
