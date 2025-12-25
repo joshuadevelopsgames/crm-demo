@@ -130,6 +130,9 @@ export default function Tasks() {
   const [filterLabel, setFilterLabel] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [viewingTask, setViewingTask] = useState(null); // For read-only task view
+  const [isViewMode, setIsViewMode] = useState(false); // true = viewing, false = editing/creating
+  const [pendingAttachments, setPendingAttachments] = useState([]); // Files to upload after task creation
   const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', or 'calendar'
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
@@ -182,24 +185,26 @@ export default function Tasks() {
     }
   });
 
-  // Fetch comments for editing task
+  // Fetch comments for viewing/editing task
+  const taskIdForComments = viewingTask?.id || editingTask?.id;
   const { data: taskComments = [] } = useQuery({
-    queryKey: ['taskComments', editingTask?.id],
+    queryKey: ['taskComments', taskIdForComments],
     queryFn: async () => {
-      if (!editingTask?.id) return [];
-      return await base44.entities.TaskComment.list(editingTask.id);
+      if (!taskIdForComments) return [];
+      return await base44.entities.TaskComment.list(taskIdForComments);
     },
-    enabled: !!editingTask?.id
+    enabled: !!taskIdForComments
   });
 
-  // Fetch attachments for editing task
+  // Fetch attachments for viewing/editing task
+  const taskIdForAttachments = viewingTask?.id || editingTask?.id;
   const { data: taskAttachments = [] } = useQuery({
-    queryKey: ['taskAttachments', editingTask?.id],
+    queryKey: ['taskAttachments', taskIdForAttachments],
     queryFn: async () => {
-      if (!editingTask?.id) return [];
-      return await base44.entities.TaskAttachment.list(editingTask.id);
+      if (!taskIdForAttachments) return [];
+      return await base44.entities.TaskAttachment.list(taskIdForAttachments);
     },
-    enabled: !!editingTask?.id
+    enabled: !!taskIdForAttachments
   });
 
   const [newTask, setNewTask] = useState({
@@ -388,7 +393,8 @@ export default function Tasks() {
       return await base44.entities.TaskComment.delete(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['taskComments', editingTask?.id] });
+      const taskId = viewingTask?.id || editingTask?.id;
+      queryClient.invalidateQueries({ queryKey: ['taskComments', taskId] });
       toast.success('Comment deleted');
     },
     onError: (error) => {
@@ -403,7 +409,8 @@ export default function Tasks() {
       return await base44.entities.TaskAttachment.upload(file, fileName, taskId, userId, userEmail);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['taskAttachments', editingTask?.id] });
+      const taskId = viewingTask?.id || editingTask?.id;
+      queryClient.invalidateQueries({ queryKey: ['taskAttachments', taskId] });
       toast.success('File uploaded');
     },
     onError: (error) => {
@@ -417,7 +424,8 @@ export default function Tasks() {
       return await base44.entities.TaskAttachment.delete(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['taskAttachments', editingTask?.id] });
+      const taskId = viewingTask?.id || editingTask?.id;
+      queryClient.invalidateQueries({ queryKey: ['taskAttachments', taskId] });
       toast.success('File deleted');
     },
     onError: (error) => {
@@ -461,7 +469,7 @@ export default function Tasks() {
   // Attachment handlers
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
-    if (!file || !editingTask?.id || !currentUser?.id) return;
+    if (!file || !currentUser?.id) return;
 
     // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
@@ -469,6 +477,15 @@ export default function Tasks() {
       return;
     }
 
+    // If task doesn't exist yet (creating new task), store file for later upload
+    if (!editingTask?.id) {
+      setPendingAttachments(prev => [...prev, file]);
+      toast.success('File will be uploaded when task is created');
+      event.target.value = '';
+      return;
+    }
+
+    // If task exists, upload immediately
     uploadAttachmentMutation.mutate({
       file,
       fileName: file.name,
@@ -781,6 +798,9 @@ export default function Tasks() {
   const closeDialog = () => {
     setIsDialogOpen(false);
     setEditingTask(null);
+    setViewingTask(null);
+    setIsViewMode(false);
+    setPendingAttachments([]);
     resetTaskForm();
     setTaskDialogTab('details');
     setNewComment('');
@@ -1032,13 +1052,29 @@ export default function Tasks() {
               New Task
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className={`${isViewMode ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto`}>
             <DialogHeader>
-              <DialogTitle>{editingTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle>
+                  {isViewMode ? 'Task Details' : editingTask ? 'Edit Task' : 'Create New Task'}
+                </DialogTitle>
+                {isViewMode && viewingTask && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      openEditDialog(viewingTask);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
             </DialogHeader>
             
             {/* Tabs for Details, Comments, Attachments */}
-            {editingTask && (
+            {(editingTask || viewingTask) && (
               <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="details">Details</TabsTrigger>
@@ -1055,6 +1091,90 @@ export default function Tasks() {
             )}
             
             <div className="space-y-4 py-4">
+              {/* View Mode - Read-only task details */}
+              {isViewMode && viewingTask ? (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">{viewingTask.title}</h2>
+                    {viewingTask.description && (
+                      <p className="text-slate-700 whitespace-pre-wrap">{viewingTask.description}</p>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Priority</Label>
+                      <div className="mt-1">
+                        <Badge className={getPriorityColor(viewingTask.priority)}>
+                          {viewingTask.priority}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Status</Label>
+                      <div className="mt-1">
+                        <Badge variant="outline">
+                          {viewingTask.status === 'todo' ? 'To Do' :
+                           viewingTask.status === 'in_progress' ? 'In Progress' :
+                           viewingTask.status === 'blocked' ? 'Blocked' :
+                           viewingTask.status === 'completed' ? 'Completed' : viewingTask.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Category</Label>
+                      <p className="mt-1 text-slate-900">{viewingTask.category || 'Other'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Due Date</Label>
+                      <p className="mt-1 text-slate-900">
+                        {viewingTask.due_date 
+                          ? format(new Date(viewingTask.due_date), 'MMM d, yyyy')
+                          : 'No due date'}
+                        {viewingTask.due_time && ` at ${viewingTask.due_time}`}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Assigned To</Label>
+                      <p className="mt-1 text-slate-900">{viewingTask.assigned_to || 'Unassigned'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs uppercase">Estimated Time</Label>
+                      <p className="mt-1 text-slate-900">{viewingTask.estimated_time || 30} minutes</p>
+                    </div>
+                    {viewingTask.related_account_id && (
+                      <div>
+                        <Label className="text-slate-500 text-xs uppercase">Related Account</Label>
+                        <p className="mt-1 text-slate-900">
+                          {accounts.find(a => a.id === viewingTask.related_account_id)?.name || 'Unknown'}
+                        </p>
+                      </div>
+                    )}
+                    {viewingTask.labels && viewingTask.labels.length > 0 && (
+                      <div className="col-span-2">
+                        <Label className="text-slate-500 text-xs uppercase">Labels</Label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {viewingTask.labels.map((label, idx) => (
+                            <Badge key={idx} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200">
+                              <Tag className="w-3 h-3 mr-1" />
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {viewingTask.is_recurring && (
+                      <div className="col-span-2">
+                        <Label className="text-slate-500 text-xs uppercase">Recurring</Label>
+                        <p className="mt-1 text-slate-900">
+                          {viewingTask.recurrence_pattern} (every {viewingTask.recurrence_interval})
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+              /* Edit/Create Mode - Editable form */
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label>Task Title *</Label>
@@ -1062,6 +1182,7 @@ export default function Tasks() {
                     value={newTask.title}
                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                     placeholder="Follow up with client..."
+                    disabled={isViewMode}
                   />
                 </div>
                 <div className="col-span-2">
@@ -1382,7 +1503,7 @@ export default function Tasks() {
               </div>
               
               {/* Comments Tab Content */}
-              {editingTask && taskDialogTab === 'comments' && (
+              {(editingTask || viewingTask) && taskDialogTab === 'comments' && (
                 <div className="space-y-4">
                   {/* Add Comment */}
                   <div className="space-y-2">
@@ -1477,27 +1598,58 @@ export default function Tasks() {
               )}
               
               {/* Attachments Tab Content */}
-              {editingTask && taskDialogTab === 'attachments' && (
+              {(editingTask || viewingTask || !editingTask) && taskDialogTab === 'attachments' && (
                 <div className="space-y-4">
-                  {/* Upload File */}
-                  <div className="space-y-2">
-                    <Label>Upload File</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="file"
-                        onChange={handleFileUpload}
-                        disabled={uploadAttachmentMutation.isPending}
-                        className="flex-1"
-                      />
+                  {/* Upload File - Show when editing or creating (not viewing) */}
+                  {!isViewMode && (
+                    <div className="space-y-2">
+                      <Label>Upload File</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          onChange={handleFileUpload}
+                          disabled={uploadAttachmentMutation.isPending}
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500">Max file size: 10MB</p>
+                      
+                      {/* Show pending attachments during creation */}
+                      {pendingAttachments.length > 0 && !editingTask && (
+                        <div className="mt-3 space-y-2">
+                          <Label className="text-xs text-slate-600 font-semibold">Pending uploads (will be attached after task creation):</Label>
+                          {pendingAttachments.map((file, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded">
+                              <div className="flex items-center gap-2">
+                                <Paperclip className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm text-slate-900">{file.name}</span>
+                                <span className="text-xs text-slate-500">
+                                  ({(file.size / 1024).toFixed(1)} KB)
+                                </span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setPendingAttachments(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-500">Max file size: 10MB</p>
-                  </div>
+                  )}
                   
                   {/* Attachments List */}
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {taskAttachments.length === 0 ? (
+                    {taskAttachments.length === 0 && pendingAttachments.length === 0 ? (
                       <p className="text-sm text-slate-500 text-center py-4">No attachments yet</p>
                     ) : (
+                      <>
                       taskAttachments.map((attachment) => (
                         <div key={attachment.id} className="border rounded-lg p-3 bg-slate-50 flex items-center justify-between">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1782,7 +1934,7 @@ export default function Tasks() {
                       className={`h-full min-h-[200px] hover:shadow-md transition-all cursor-pointer border ${
                         task.status === 'completed' ? 'opacity-60 border-slate-200' : 'border-slate-200 hover:border-slate-300'
                       } ${isOverdue && task.status !== 'completed' ? 'border-red-200 bg-red-50/30' : ''}`}
-                      onClick={() => !bulkActionMode && openEditDialog(task)}
+                      onClick={() => !bulkActionMode && openTaskView(task)}
                     >
                       <CardContent className="px-3 pt-2 pb-0 flex flex-col h-full">
                         {/* Header with priority and status */}
@@ -1941,7 +2093,7 @@ export default function Tasks() {
                       } ${
                         isMobileView ? 'shadow-sm hover:shadow-md' : 'hover:shadow-md'
                       }`}
-                      onClick={() => !bulkActionMode && openEditDialog(task)}
+                      onClick={() => !bulkActionMode && openTaskView(task)}
                       style={isMobileView ? {
                         borderLeftWidth: '4px',
                         borderLeftColor: priorityFlag.borderColorValue,
