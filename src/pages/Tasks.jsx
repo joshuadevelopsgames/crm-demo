@@ -1466,6 +1466,7 @@ export default function Tasks() {
                             <div className="flex-1 min-w-0">
                               <a
                                 href={attachment.file_url}
+                                download={attachment.file_name}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block"
@@ -1482,9 +1483,9 @@ export default function Tasks() {
                           <div className="flex gap-1 ml-2">
                             <a
                               href={attachment.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              download={attachment.file_name}
                               className="p-1.5 hover:bg-slate-200 rounded"
+                              title="Download file"
                             >
                               <Download className="w-4 h-4 text-slate-600" />
                             </a>
