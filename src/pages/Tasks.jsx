@@ -2229,7 +2229,6 @@ export default function Tasks() {
                           )}
                         </div>
                       </div>
-                    )}
                   </div>
                 </TabsContent>
               </Tabs>
