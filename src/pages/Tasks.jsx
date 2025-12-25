@@ -1092,7 +1092,7 @@ export default function Tasks() {
               New Task
             </Button>
           </DialogTrigger>
-          <DialogContent className={`${isViewMode ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto`}>
+          <DialogContent className={isViewMode ? 'max-w-4xl max-h-[90vh] overflow-y-auto' : 'max-w-2xl max-h-[90vh] overflow-y-auto'}>
             <DialogHeader>
               <div className="flex items-center justify-between pr-8">
                 <DialogTitle>
@@ -1140,10 +1140,10 @@ export default function Tasks() {
             
             <div className="space-y-4 py-4">
               {/* When creating new task, don't show details - only show attachments */}
-              {(!editingTask && !viewingTask) ? null : (
-              <div>
-              {/* View Mode - Read-only task details */}
-              {isViewMode && viewingTask ? (
+              {(editingTask || viewingTask) && (
+                <div>
+                  {/* View Mode - Read-only task details */}
+                  {isViewMode && viewingTask ? (
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">{viewingTask.title}</h2>
@@ -1551,7 +1551,8 @@ export default function Tasks() {
                     </div>
                   )}
                 </div>
-              </div>
+              )}
+                </div>
               )}
               
               {/* Comments Tab Content */}
