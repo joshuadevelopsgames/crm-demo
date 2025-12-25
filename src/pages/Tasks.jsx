@@ -481,6 +481,45 @@ export default function Tasks() {
     event.target.value = '';
   };
 
+  // Handle file download with forced download
+  const handleFileDownload = async (attachment, event) => {
+    event.preventDefault();
+    
+    try {
+      if (attachment.storage_path) {
+        // Use proxy endpoint for guaranteed download
+        const downloadUrl = `/api/storage/download?path=${encodeURIComponent(attachment.storage_path)}&filename=${encodeURIComponent(attachment.file_name)}`;
+        const response = await fetch(downloadUrl);
+        
+        if (!response.ok) {
+          throw new Error('Failed to download file');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = attachment.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Fallback to direct download
+        const a = document.createElement('a');
+        a.href = attachment.file_url;
+        a.download = attachment.file_name;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+    }
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1464,17 +1503,13 @@ export default function Tasks() {
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <a
-                                href={attachment.storage_path 
-                                  ? `/api/storage/download?path=${encodeURIComponent(attachment.storage_path)}&filename=${encodeURIComponent(attachment.file_name)}`
-                                  : attachment.file_url}
-                                download={attachment.file_name}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block"
+                              <button
+                                onClick={(e) => handleFileDownload(attachment, e)}
+                                className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block text-left w-full"
+                                title="Click to download"
                               >
                                 {attachment.file_name}
-                              </a>
+                              </button>
                               <p className="text-xs text-slate-500">
                                 {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : ''} • 
                                 {attachment.user_email || 'Unknown'} • 
