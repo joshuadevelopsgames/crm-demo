@@ -1351,8 +1351,8 @@ export default function Tasks() {
                 <TabsContent value="details" className="space-y-4 py-4">
                   {/* Show task details/form when on Details tab (for both creating and editing) */}
                   <div>
-                      {/* View Mode - Read-only task details */}
-                      {isViewMode && viewingTask && (
+                    {/* View Mode - Read-only task details */}
+                    {isViewMode && viewingTask && (
                       <div className="space-y-6">
                         <div>
                           <h2 className="text-2xl font-bold text-slate-900 mb-2">
