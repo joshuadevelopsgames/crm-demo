@@ -1089,21 +1089,28 @@ export default function Tasks() {
             </DialogHeader>
             
             {/* Tabs for Details, Comments, Attachments */}
-            {(editingTask || viewingTask) && (
-              <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="comments" className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Comments ({taskComments.length})
-                  </TabsTrigger>
+            <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
+              <TabsList className={editingTask || viewingTask ? "grid w-full grid-cols-3" : "grid w-full grid-cols-2"}>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                {editingTask || viewingTask ? (
+                  <>
+                    <TabsTrigger value="comments" className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Comments ({taskComments.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="attachments" className="flex items-center gap-2">
+                      <Paperclip className="w-4 h-4" />
+                      Files ({taskAttachments.length + pendingAttachments.length})
+                    </TabsTrigger>
+                  </>
+                ) : (
                   <TabsTrigger value="attachments" className="flex items-center gap-2">
                     <Paperclip className="w-4 h-4" />
-                    Files ({taskAttachments.length + pendingAttachments.length})
+                    Files ({pendingAttachments.length})
                   </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
+                )}
+              </TabsList>
+            </Tabs>
             
             <div className="space-y-4 py-4">
               {/* View Mode - Read-only task details */}
@@ -1614,7 +1621,7 @@ export default function Tasks() {
               )}
               
               {/* Attachments Tab Content */}
-              {(editingTask || viewingTask || !editingTask) && taskDialogTab === 'attachments' && (
+              {taskDialogTab === 'attachments' && (
                 <div className="space-y-4">
                   {/* Upload File - Show when editing or creating (not viewing) */}
                   {!isViewMode && (
