@@ -20,6 +20,7 @@ import {
   Plus,
   Search,
   Calendar,
+  Upload,
   User,
   Building2,
   CheckCircle2,
@@ -141,6 +142,7 @@ export default function Tasks() {
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const queryClient = useQueryClient();
   const { isPWA, isMobile, isNativeApp, isDesktop } = useDeviceDetection();
   
@@ -471,6 +473,11 @@ export default function Tasks() {
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !currentUser?.id) return;
+    addFileToPending(file);
+  };
+
+  const addFileToPending = (file) => {
+    if (!file || !currentUser?.id) return;
 
     // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
@@ -482,7 +489,6 @@ export default function Tasks() {
     if (!editingTask?.id) {
       setPendingAttachments(prev => [...prev, file]);
       toast.success('File will be uploaded when task is created');
-      event.target.value = '';
       return;
     }
 
@@ -494,9 +500,29 @@ export default function Tasks() {
       userId: currentUser.id,
       userEmail: currentUser.email
     });
+  };
 
-    // Reset file input
-    event.target.value = '';
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      addFileToPending(file);
+    }
   };
 
   // Handle file download with forced download
@@ -1090,28 +1116,28 @@ export default function Tasks() {
             </DialogHeader>
             
             {/* Tabs for Details, Comments, Attachments */}
-            <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
-              <TabsList className={editingTask || viewingTask ? "grid w-full grid-cols-3" : "grid w-full grid-cols-2"}>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                {editingTask || viewingTask ? (
-                  <>
-                    <TabsTrigger value="comments" className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4" />
-                      Comments ({taskComments.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="attachments" className="flex items-center gap-2">
-                      <Paperclip className="w-4 h-4" />
-                      Files ({taskAttachments.length + pendingAttachments.length})
-                    </TabsTrigger>
-                  </>
-                ) : (
+            {editingTask || viewingTask ? (
+              <Tabs value={taskDialogTab} onValueChange={setTaskDialogTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="comments" className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Comments ({taskComments.length})
+                  </TabsTrigger>
                   <TabsTrigger value="attachments" className="flex items-center gap-2">
                     <Paperclip className="w-4 h-4" />
-                    Files ({pendingAttachments.length})
+                    Files ({taskAttachments.length + pendingAttachments.length})
                   </TabsTrigger>
-                )}
-              </TabsList>
-            </Tabs>
+                </TabsList>
+              </Tabs>
+            ) : (
+              // When creating new task, start on attachments tab and don't show tabs
+              <div className="hidden">
+                <Tabs value="attachments" className="w-full">
+                  <TabsList />
+                </Tabs>
+              </div>
+            )}
             
             <div className="space-y-4 py-4">
               {/* View Mode - Read-only task details */}
