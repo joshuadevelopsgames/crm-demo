@@ -1507,6 +1507,7 @@ export default function Tasks() {
                   )}
                 </div>
               </div>
+              )}
               
               {/* Comments Tab Content */}
               {(editingTask || viewingTask) && taskDialogTab === 'comments' && (
