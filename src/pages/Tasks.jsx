@@ -2138,8 +2138,6 @@ export default function Tasks() {
                                 ))}
                               </div>
                             )}
-                          </div>
-                        )}
 
                         {/* Attachments List */}
                         <div className="space-y-2 max-h-[400px] overflow-y-auto">
