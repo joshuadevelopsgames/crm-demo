@@ -2060,6 +2060,7 @@ export default function Tasks() {
                           </div>
                         </div>
                       )}
+                </TabsContent>
 
                 {/* Attachments Tab Content */}
                 <TabsContent value="attachments" className="space-y-4 py-4">
