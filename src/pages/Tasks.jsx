@@ -1465,7 +1465,9 @@ export default function Tasks() {
                             <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <a
-                                href={attachment.file_url}
+                                href={attachment.storage_path 
+                                  ? `/api/storage/download?path=${encodeURIComponent(attachment.storage_path)}&filename=${encodeURIComponent(attachment.file_name)}`
+                                  : attachment.file_url}
                                 download={attachment.file_name}
                                 target="_blank"
                                 rel="noopener noreferrer"
