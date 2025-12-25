@@ -1700,7 +1700,8 @@ export default function Tasks() {
                             )}
                           </div>
                         </div>
-                      ))
+                      ))}
+                      </>
                     )}
                   </div>
                 </div>
