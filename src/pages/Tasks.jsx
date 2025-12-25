@@ -20,7 +20,6 @@ import {
   Plus,
   Search,
   Calendar,
-  Upload,
   User,
   Building2,
   CheckCircle2,
@@ -46,7 +45,7 @@ import {
   Paperclip,
   Edit2,
   Download,
-  Upload
+  Upload as UploadIcon
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
 import {
@@ -1553,6 +1552,7 @@ export default function Tasks() {
                   )}
                 </div>
               </div>
+              </>
               )}
               
               {/* Comments Tab Content */}
@@ -1667,7 +1667,7 @@ export default function Tasks() {
                           }`}
                         >
                           <div className="flex flex-col items-center text-center space-y-3">
-                            <Upload className="w-10 h-10 text-slate-400" />
+                            <UploadIcon className="w-10 h-10 text-slate-400" />
                             <div>
                               <p className="font-semibold text-slate-900">
                                 {isDragging ? 'Drop file here' : 'Drag and drop files here'}
