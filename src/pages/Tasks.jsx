@@ -1141,7 +1141,7 @@ export default function Tasks() {
             <div className="space-y-4 py-4">
               {/* When creating new task, don't show details - only show attachments */}
               {!editingTask && !viewingTask ? null : (
-              <>
+              <div>
               {/* View Mode - Read-only task details */}
               {isViewMode && viewingTask ? (
                 <div className="space-y-6">
@@ -1552,7 +1552,7 @@ export default function Tasks() {
                   )}
                 </div>
               </div>
-              </>
+              </div>
               )}
               
               {/* Comments Tab Content */}
