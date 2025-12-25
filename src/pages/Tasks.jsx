@@ -388,8 +388,9 @@ export default function Tasks() {
       return await base44.entities.TaskComment.create(data);
     },
     onSuccess: () => {
+      const taskId = viewingTask?.id || editingTask?.id;
       queryClient.invalidateQueries({
-        queryKey: ["taskComments", editingTask?.id],
+        queryKey: ["taskComments", taskId],
       });
       setNewComment("");
       toast.success("Comment added");
@@ -405,8 +406,9 @@ export default function Tasks() {
       return await base44.entities.TaskComment.update(id, { content });
     },
     onSuccess: () => {
+      const taskId = viewingTask?.id || editingTask?.id;
       queryClient.invalidateQueries({
-        queryKey: ["taskComments", editingTask?.id],
+        queryKey: ["taskComments", taskId],
       });
       setEditingCommentId(null);
       setEditingCommentText("");
