@@ -1552,7 +1552,6 @@ export default function Tasks() {
                   )}
                 </div>
               </div>
-              </div>
               )}
               
               {/* Comments Tab Content */}
