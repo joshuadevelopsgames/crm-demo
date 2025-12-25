@@ -17,7 +17,7 @@ import {
   Building2,
   Users,
   CheckSquare,
-  AlertTriangle,
+  AlertCircle,
   TrendingUp,
   Calendar,
   ArrowRight,
@@ -614,7 +614,7 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
-                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                <AlertCircle className="w-5 h-5 text-orange-600" />
                 Overdue Tasks
               </CardTitle>
               <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
@@ -642,7 +642,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {overdueTasks.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No overdue tasks 🎉</p>
+                <p className="text-sm text-slate-500 text-center py-4">No overdue tasks</p>
               )}
             </div>
           </CardContent>
