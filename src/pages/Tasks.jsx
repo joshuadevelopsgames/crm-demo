@@ -1485,7 +1485,7 @@ export default function Tasks() {
                       </div>
                     )}
                     {/* Edit/Create Mode - Editable form */}
-                    {!isViewMode && (
+                    {!isViewMode ? (
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                           <Label>Task Title *</Label>
@@ -1939,6 +1939,7 @@ export default function Tasks() {
                           )}
                         </div>
                       </div>
+                    )}
                   </div>
                 </TabsContent>
 
