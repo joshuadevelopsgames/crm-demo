@@ -436,10 +436,11 @@ export default function Tasks() {
 
   // Comment handlers
   const handleAddComment = () => {
-    if (!newComment.trim() || !editingTask?.id || !currentUser?.id) return;
+    const taskId = viewingTask?.id || editingTask?.id;
+    if (!newComment.trim() || !taskId || !currentUser?.id) return;
     
     createCommentMutation.mutate({
-      task_id: editingTask.id,
+      task_id: taskId,
       user_id: currentUser.id,
       user_email: currentUser.email,
       content: newComment.trim()
@@ -1047,7 +1048,12 @@ export default function Tasks() {
         >
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-slate-800" onClick={() => setEditingTask(null)}>
+            <Button className="bg-slate-900 hover:bg-slate-800" onClick={() => {
+              setEditingTask(null);
+              setViewingTask(null);
+              setIsViewMode(false);
+              setPendingAttachments([]);
+            }}>
               <Plus className="w-4 h-4 mr-2" />
               New Task
             </Button>
