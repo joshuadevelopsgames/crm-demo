@@ -2036,7 +2036,7 @@ export default function Tasks() {
 
                     {/* Attachments Tab Content */}
                     {taskDialogTab === "attachments" && (
-                      <div className="space-y-4">
+                      <div className="space-y-4 min-h-[200px]">
                         {/* Upload File - Show when editing or creating (not viewing) */}
                         {!isViewMode && (
                           <div className="space-y-4">
@@ -2068,7 +2068,7 @@ export default function Tasks() {
                               </div>
                             )}
 
-                            {/* File input button */}
+                            {/* File input button - show for both creating and editing */}
                             <div className="space-y-2">
                               <Label>Attach File</Label>
                               <div className="flex items-center gap-2">
