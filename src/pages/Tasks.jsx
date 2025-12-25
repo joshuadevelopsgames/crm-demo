@@ -1788,6 +1788,8 @@ export default function Tasks() {
                   <Button onClick={handleCreateOrUpdate} disabled={!newTask.title}>
                     {editingTask ? 'Update Task' : 'Create Task'}
                   </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
