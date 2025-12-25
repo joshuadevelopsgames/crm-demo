@@ -1329,10 +1329,12 @@ export default function Tasks() {
 
               <div className="space-y-4 py-4">
                 {/* When creating new task, don't show details - only show attachments */}
-                {(editingTask || viewingTask) && (
-                  <div>
-                    {/* View Mode - Read-only task details */}
-                    {isViewMode && viewingTask && (
+                {/* Only show task details/form when NOT on attachments tab */}
+                {(editingTask || viewingTask) &&
+                  taskDialogTab !== "attachments" && (
+                    <div>
+                      {/* View Mode - Read-only task details */}
+                      {isViewMode && viewingTask && (
                       <div className="space-y-6">
                         <div>
                           <h2 className="text-2xl font-bold text-slate-900 mb-2">
