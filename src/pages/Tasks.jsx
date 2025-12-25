@@ -1143,16 +1143,16 @@ export default function Tasks() {
               {(editingTask || viewingTask) && (
                 <div>
                   {/* View Mode - Read-only task details */}
-                  {isViewMode && viewingTask ? (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">{viewingTask.title}</h2>
-                    {viewingTask.description && (
-                      <p className="text-slate-700 whitespace-pre-wrap">{viewingTask.description}</p>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
+                  {isViewMode && viewingTask && (
+                    <div className="space-y-6">
+                      <div>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-2">{viewingTask.title}</h2>
+                        {viewingTask.description && (
+                          <p className="text-slate-700 whitespace-pre-wrap">{viewingTask.description}</p>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-slate-500 text-xs uppercase">Priority</Label>
                       <div className="mt-1">
@@ -1222,11 +1222,12 @@ export default function Tasks() {
                         </p>
                       </div>
                     )}
+                    </div>
                   </div>
-                </div>
-              ) : (
-              /* Edit/Create Mode - Editable form */
-              <div className="grid grid-cols-2 gap-4">
+                  )}
+                  {/* Edit/Create Mode - Editable form */}
+                  {!isViewMode && (
+                    <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label>Task Title *</Label>
                   <Input
@@ -1550,8 +1551,6 @@ export default function Tasks() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
                 </div>
               )}
               
