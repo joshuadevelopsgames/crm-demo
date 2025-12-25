@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1346,12 +1346,11 @@ export default function Tasks() {
                     {taskAttachments.length + pendingAttachments.length})
                   </TabsTrigger>
                 </TabsList>
-              </Tabs>
 
-              <div className="space-y-4 py-4">
-                {/* Show task details/form when on Details tab (for both creating and editing) */}
-                {taskDialogTab === "details" && (
-                    <div>
+                {/* Details Tab Content */}
+                <TabsContent value="details" className="space-y-4 py-4">
+                  {/* Show task details/form when on Details tab (for both creating and editing) */}
+                  <div>
                       {/* View Mode - Read-only task details */}
                       {isViewMode && viewingTask && (
                       <div className="space-y-6">
@@ -1940,11 +1939,12 @@ export default function Tasks() {
                           )}
                         </div>
                       </div>
-                    )}
+                  </div>
+                </TabsContent>
 
-                    {/* Comments Tab Content */}
-                    {(editingTask || viewingTask) &&
-                      taskDialogTab === "comments" && (
+                {/* Comments Tab Content */}
+                <TabsContent value="comments" className="space-y-4 py-4">
+                  {(editingTask || viewingTask) && (
                         <div className="space-y-4">
                           {/* Add Comment */}
                           <div className="space-y-2">
@@ -2061,14 +2061,14 @@ export default function Tasks() {
                         </div>
                       )}
 
-                    {/* Attachments Tab Content */}
-                    {taskDialogTab === "attachments" && (
-                      <div className="space-y-4 min-h-[200px] p-4">
-                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Files Tab - Test Content</h3>
-                        <p className="text-slate-600 mb-4">If you can see this, the Files tab is rendering!</p>
-                        
-                        {/* Drag and drop area - only show when creating new task */}
-                        {(!editingTask && !viewingTask) && (
+                {/* Attachments Tab Content */}
+                <TabsContent value="attachments" className="space-y-4 py-4">
+                  <div className="space-y-4 min-h-[200px] p-4">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Files Tab - Test Content</h3>
+                    <p className="text-slate-600 mb-4">If you can see this, the Files tab is rendering!</p>
+                    
+                    {/* Drag and drop area - only show when creating new task */}
+                    {(!editingTask && !viewingTask) && (
                           <div
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -2228,9 +2228,12 @@ export default function Tasks() {
                         </div>
                       </div>
                     )}
+                  </div>
+                </TabsContent>
+              </Tabs>
 
-                    {/* Footer buttons - only show on details tab or when creating */}
-                    {(taskDialogTab === "details" || !editingTask) && (
+              {/* Footer buttons - only show on details tab or when creating */}
+              {(taskDialogTab === "details" || !editingTask) && (
                       <div className="flex justify-end gap-3">
                         <Button variant="outline" onClick={closeDialog}>
                           Cancel
