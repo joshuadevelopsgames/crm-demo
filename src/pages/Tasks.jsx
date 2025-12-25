@@ -39,7 +39,8 @@ import {
   Minus,
   Ban,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Repeat
 } from 'lucide-react';
 import { format, differenceInDays, isToday, isPast, startOfDay } from 'date-fns';
 import {
@@ -184,7 +185,14 @@ export default function Tasks() {
     related_contact_id: '',
     estimated_time: 30,
     labels: [],
-    subtasks: []
+    subtasks: [],
+    is_recurring: false,
+    recurrence_pattern: 'weekly',
+    recurrence_interval: 1,
+    recurrence_days_of_week: [],
+    recurrence_day_of_month: null,
+    recurrence_end_date: '',
+    recurrence_count: null
   });
   const [newLabelInput, setNewLabelInput] = useState('');
 
@@ -202,7 +210,14 @@ export default function Tasks() {
       related_contact_id: '',
       estimated_time: 30,
       labels: [],
-      subtasks: []
+      subtasks: [],
+      is_recurring: false,
+      recurrence_pattern: 'weekly',
+      recurrence_interval: 1,
+      recurrence_days_of_week: [],
+      recurrence_day_of_month: null,
+      recurrence_end_date: '',
+      recurrence_count: null
     });
     setNewLabelInput('');
   };
@@ -397,7 +412,15 @@ export default function Tasks() {
   const handleCreateOrUpdate = async () => {
     const taskData = {
       ...newTask,
-      assigned_to: newTask.assigned_to || null
+      assigned_to: newTask.assigned_to || null,
+      // Clean up recurring fields if not recurring
+      is_recurring: newTask.is_recurring || false,
+      recurrence_pattern: newTask.is_recurring ? newTask.recurrence_pattern : null,
+      recurrence_interval: newTask.is_recurring ? newTask.recurrence_interval : null,
+      recurrence_days_of_week: newTask.is_recurring && newTask.recurrence_pattern === 'weekly' ? newTask.recurrence_days_of_week : null,
+      recurrence_day_of_month: newTask.is_recurring && newTask.recurrence_pattern === 'monthly' ? newTask.recurrence_day_of_month : null,
+      recurrence_end_date: newTask.is_recurring && newTask.recurrence_end_date ? newTask.recurrence_end_date : null,
+      recurrence_count: newTask.is_recurring && newTask.recurrence_count ? newTask.recurrence_count : null
     };
     
     // If creating a new task and due_date is blank, default to today
@@ -409,11 +432,86 @@ export default function Tasks() {
       taskData.due_date = `${year}-${month}-${day}`;
     }
     
+    // Calculate next_recurrence_date for recurring tasks
+    if (taskData.is_recurring && taskData.due_date) {
+      const nextDate = calculateNextRecurrenceDate(taskData);
+      taskData.next_recurrence_date = nextDate;
+    } else {
+      taskData.next_recurrence_date = null;
+    }
+    
     if (editingTask) {
       updateTaskMutation.mutate({ id: editingTask.id, data: taskData });
     } else {
       createTaskMutation.mutate(taskData);
     }
+  };
+
+  // Calculate next recurrence date based on pattern
+  const calculateNextRecurrenceDate = (task) => {
+    if (!task.due_date) return null;
+    
+    const dueDate = new Date(task.due_date);
+    const today = startOfDay(new Date());
+    let nextDate = new Date(dueDate);
+    
+    // If due date is in the past, start from today
+    if (dueDate < today) {
+      nextDate = new Date(today);
+    }
+    
+    switch (task.recurrence_pattern) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + task.recurrence_interval);
+        break;
+      case 'weekly':
+        // Find next occurrence based on days of week
+        if (task.recurrence_days_of_week && task.recurrence_days_of_week.length > 0) {
+          const days = task.recurrence_days_of_week.sort();
+          let found = false;
+          for (let i = 0; i < 14; i++) { // Check next 2 weeks
+            const checkDate = new Date(nextDate);
+            checkDate.setDate(checkDate.getDate() + i);
+            const dayOfWeek = checkDate.getDay();
+            if (days.includes(dayOfWeek)) {
+              nextDate = checkDate;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            // If no match in 2 weeks, use first day of next interval
+            nextDate.setDate(nextDate.getDate() + (task.recurrence_interval * 7));
+            nextDate.setDate(nextDate.getDate() + (days[0] - nextDate.getDay()));
+          }
+        } else {
+          nextDate.setDate(nextDate.getDate() + (task.recurrence_interval * 7));
+        }
+        break;
+      case 'monthly':
+        if (task.recurrence_day_of_month) {
+          nextDate.setMonth(nextDate.getMonth() + task.recurrence_interval);
+          nextDate.setDate(task.recurrence_day_of_month);
+        } else {
+          nextDate.setMonth(nextDate.getMonth() + task.recurrence_interval);
+        }
+        break;
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + task.recurrence_interval);
+        break;
+      default:
+        return null;
+    }
+    
+    // Check if end date is set and next date exceeds it
+    if (task.recurrence_end_date) {
+      const endDate = new Date(task.recurrence_end_date);
+      if (nextDate > endDate) {
+        return null; // Recurrence has ended
+      }
+    }
+    
+    return nextDate.toISOString().split('T')[0]; // Return as YYYY-MM-DD
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
@@ -468,7 +566,14 @@ export default function Tasks() {
       related_contact_id: task.related_contact_id || '',
       estimated_time: task.estimated_time || 30,
       labels: task.labels || [],
-      subtasks: task.subtasks || []
+      subtasks: task.subtasks || [],
+      is_recurring: task.is_recurring || false,
+      recurrence_pattern: task.recurrence_pattern || 'weekly',
+      recurrence_interval: task.recurrence_interval || 1,
+      recurrence_days_of_week: task.recurrence_days_of_week || [],
+      recurrence_day_of_month: task.recurrence_day_of_month || null,
+      recurrence_end_date: task.recurrence_end_date || '',
+      recurrence_count: task.recurrence_count || null
     });
     setNewLabelInput('');
     setIsDialogOpen(true);
@@ -926,6 +1031,133 @@ export default function Tasks() {
                     )}
                   </div>
                 </div>
+                
+                {/* Recurring Task Options */}
+                <div className="col-span-2 border-t pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="checkbox"
+                      id="is_recurring"
+                      checked={newTask.is_recurring}
+                      onChange={(e) => setNewTask({ ...newTask, is_recurring: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                    />
+                    <Label htmlFor="is_recurring" className="font-semibold cursor-pointer">
+                      Make this task recurring
+                    </Label>
+                  </div>
+                  
+                  {newTask.is_recurring && (
+                    <div className="space-y-4 pl-6 border-l-2 border-slate-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Repeat Pattern</Label>
+                          <Select
+                            value={newTask.recurrence_pattern}
+                            onValueChange={(value) => {
+                              setNewTask({ 
+                                ...newTask, 
+                                recurrence_pattern: value,
+                                recurrence_days_of_week: value === 'weekly' ? [] : newTask.recurrence_days_of_week,
+                                recurrence_day_of_month: value === 'monthly' ? null : newTask.recurrence_day_of_month
+                              });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Repeat Every</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={newTask.recurrence_interval}
+                            onChange={(e) => setNewTask({ ...newTask, recurrence_interval: parseInt(e.target.value) || 1 })}
+                            placeholder="1"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">
+                            {newTask.recurrence_pattern === 'daily' && 'day(s)'}
+                            {newTask.recurrence_pattern === 'weekly' && 'week(s)'}
+                            {newTask.recurrence_pattern === 'monthly' && 'month(s)'}
+                            {newTask.recurrence_pattern === 'yearly' && 'year(s)'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {newTask.recurrence_pattern === 'weekly' && (
+                        <div>
+                          <Label>Days of Week</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                  const days = newTask.recurrence_days_of_week || [];
+                                  const newDays = days.includes(index)
+                                    ? days.filter(d => d !== index)
+                                    : [...days, index].sort();
+                                  setNewTask({ ...newTask, recurrence_days_of_week: newDays });
+                                }}
+                                className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                                  (newTask.recurrence_days_of_week || []).includes(index)
+                                    ? 'bg-slate-900 text-white border-slate-900'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                {day.slice(0, 3)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {newTask.recurrence_pattern === 'monthly' && (
+                        <div>
+                          <Label>Day of Month</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={newTask.recurrence_day_of_month || ''}
+                            onChange={(e) => setNewTask({ ...newTask, recurrence_day_of_month: parseInt(e.target.value) || null })}
+                            placeholder="e.g., 15 (for 15th of each month)"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>End Date (optional)</Label>
+                          <Input
+                            type="date"
+                            value={newTask.recurrence_end_date}
+                            onChange={(e) => setNewTask({ ...newTask, recurrence_end_date: e.target.value })}
+                            placeholder="Never"
+                          />
+                        </div>
+                        <div>
+                          <Label>Number of Occurrences (optional)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={newTask.recurrence_count || ''}
+                            onChange={(e) => setNewTask({ ...newTask, recurrence_count: parseInt(e.target.value) || null })}
+                            placeholder="Unlimited"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={closeDialog}>
@@ -1186,11 +1418,19 @@ export default function Tasks() {
                         {/* Centered content area */}
                         <div className="flex-1 flex flex-col justify-center pt-2">
                           {/* Task Title */}
-                          <h3 className={`font-semibold text-slate-900 text-sm mb-1.5 line-clamp-2 leading-snug ${
-                            task.status === 'completed' ? 'line-through text-slate-500' : ''
-                            }`}>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <h3 className={`font-semibold text-slate-900 text-sm line-clamp-2 leading-snug flex-1 ${
+                              task.status === 'completed' ? 'line-through text-slate-500' : ''
+                              }`}>
                               {task.title}
                             </h3>
+                            {(task.is_recurring || task.parent_task_id) && (
+                              <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-0.5 flex-shrink-0">
+                                <Repeat className="w-3 h-3" />
+                                {task.parent_task_id ? 'Recurring' : 'Repeats'}
+                              </Badge>
+                            )}
+                          </div>
                           
                           {/* Description - always reserve space */}
                           <div className="min-h-[40px]">
