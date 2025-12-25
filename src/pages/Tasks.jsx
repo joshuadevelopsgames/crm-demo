@@ -2063,9 +2063,12 @@ export default function Tasks() {
 
                     {/* Attachments Tab Content */}
                     {taskDialogTab === "attachments" && (
-                      <div className="space-y-4 min-h-[200px]">
+                      <div className="space-y-4 min-h-[200px] p-4">
+                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Files Tab - Test Content</h3>
+                        <p className="text-slate-600 mb-4">If you can see this, the Files tab is rendering!</p>
+                        
                         {/* Drag and drop area - only show when creating new task */}
-                        {(!editingTask && !viewingTask) ? (
+                        {(!editingTask && !viewingTask) && (
                           <div
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -2090,10 +2093,10 @@ export default function Tasks() {
                               </div>
                             </div>
                           </div>
-                        ) : null}
+                        )}
 
                         {/* File input button - always show when not viewing */}
-                        {!isViewMode ? (
+                        {!isViewMode && (
                           <div className="space-y-2">
                             <Label>Attach File</Label>
                             <div className="flex items-center gap-2">
@@ -2109,7 +2112,7 @@ export default function Tasks() {
                               Max file size: 10MB
                             </p>
                           </div>
-                        ) : null}
+                        )}
 
                         {/* Show pending attachments during creation */}
                         {pendingAttachments.length > 0 && !editingTask && (
