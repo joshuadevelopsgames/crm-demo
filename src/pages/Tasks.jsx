@@ -84,6 +84,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import TaskCalendarView from '@/components/TaskCalendarView';
 
 // Sortable Task Item Wrapper
 const SortableTaskItem = ({ task, isSelected, onToggleSelect, bulkMode, ...props }) => {
@@ -129,7 +130,7 @@ export default function Tasks() {
   const [filterLabel, setFilterLabel] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'grid', or 'calendar'
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [lastCompletedTask, setLastCompletedTask] = useState(null);
@@ -1634,6 +1635,14 @@ export default function Tasks() {
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('calendar')}
+                    className={`h-8 px-3 ${viewMode === 'calendar' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                  >
+                    <CalendarIcon className="w-4 h-4" />
+                  </Button>
                 </div>
                 <Button
                   variant="outline"
@@ -1696,6 +1705,15 @@ export default function Tasks() {
         step={6}
         position="bottom"
       >
+      {viewMode === 'calendar' ? (
+        <div className="h-[calc(100vh-300px)]">
+          <TaskCalendarView
+            tasks={filteredTasks}
+            onTaskClick={(task) => openEditDialog(task)}
+            currentUser={currentUser}
+          />
+        </div>
+      ) : (
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -2127,6 +2145,7 @@ export default function Tasks() {
           )}
         </SortableContext>
       </DndContext>
+      )}
 
       {filteredTasks.length === 0 && (
         <Card className="p-12 text-center">
