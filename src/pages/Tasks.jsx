@@ -1090,7 +1090,7 @@ export default function Tasks() {
                   </TabsTrigger>
                   <TabsTrigger value="attachments" className="flex items-center gap-2">
                     <Paperclip className="w-4 h-4" />
-                    Files ({taskAttachments.length})
+                    Files ({taskAttachments.length + pendingAttachments.length})
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
