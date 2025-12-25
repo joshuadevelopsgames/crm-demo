@@ -768,8 +768,17 @@ export default function Tasks() {
     }
   };
 
+  const openTaskView = (task) => {
+    setViewingTask(task);
+    setEditingTask(null);
+    setIsViewMode(true);
+    setIsDialogOpen(true);
+  };
+
   const openEditDialog = (task) => {
     setEditingTask(task);
+    setViewingTask(null);
+    setIsViewMode(false);
     setNewTask({
       title: task.title || '',
       description: task.description || '',
