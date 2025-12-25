@@ -2246,9 +2246,6 @@ export default function Tasks() {
                         </Button>
                       </div>
                     )}
-                  </div>
-                )}
-              </div>
             </DialogContent>
           </Dialog>
         </TutorialTooltip>
