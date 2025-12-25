@@ -1922,7 +1922,7 @@ export default function Tasks() {
         <div className="h-[calc(100vh-300px)]">
           <TaskCalendarView
             tasks={filteredTasks}
-            onTaskClick={(task) => openEditDialog(task)}
+            onTaskClick={(task) => openTaskView(task)}
             currentUser={currentUser}
           />
         </div>
