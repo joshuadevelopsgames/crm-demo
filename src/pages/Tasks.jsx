@@ -1097,7 +1097,7 @@ export default function Tasks() {
             <DialogHeader>
               <div className="flex items-center justify-between pr-8">
                 <DialogTitle>
-                  {isViewMode ? 'Task Details' : editingTask ? 'Edit Task' : 'Create New Task'}
+                  {isViewMode ? 'Task Details' : editingTask ? 'Edit Task' : 'Attach Files'}
                 </DialogTitle>
                 {isViewMode && viewingTask && (
                   <Button
@@ -1648,21 +1648,47 @@ export default function Tasks() {
               )}
               
               {/* Attachments Tab Content */}
-              {taskDialogTab === 'attachments' && (
+              {(taskDialogTab === 'attachments' || (!editingTask && !viewingTask)) && (
                 <div className="space-y-4">
                   {/* Upload File - Show when editing or creating (not viewing) */}
                   {!isViewMode && (
-                    <div className="space-y-2">
-                      <Label>Upload File</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="file"
-                          onChange={handleFileUpload}
-                          disabled={uploadAttachmentMutation.isPending}
-                          className="flex-1"
-                        />
+                    <div className="space-y-4">
+                      {/* Drag and drop area - only show when creating new task */}
+                      {!editingTask && !viewingTask && (
+                        <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`border-2 border-dashed rounded-lg p-8 transition-all ${
+                            isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center text-center space-y-3">
+                            <Upload className="w-10 h-10 text-slate-400" />
+                            <div>
+                              <p className="font-semibold text-slate-900">
+                                {isDragging ? 'Drop file here' : 'Drag and drop files here'}
+                              </p>
+                              <p className="text-sm text-slate-500 mt-1">or</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* File input button */}
+                      <div className="space-y-2">
+                        <Label>Attach File</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            onChange={handleFileUpload}
+                            disabled={uploadAttachmentMutation.isPending}
+                            className="flex-1"
+                            id="file-upload-input"
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500">Max file size: 10MB</p>
                       </div>
-                      <p className="text-xs text-slate-500">Max file size: 10MB</p>
                       
                       {/* Show pending attachments during creation */}
                       {pendingAttachments.length > 0 && !editingTask && (
