@@ -1275,7 +1275,7 @@ export default function Tasks() {
                       ? "Task Details"
                       : editingTask
                         ? "Edit Task"
-                        : "Attach Files"}
+                        : "Create Task"}
                   </DialogTitle>
                   {isViewMode && viewingTask && (
                     <Button
@@ -2035,8 +2035,7 @@ export default function Tasks() {
                       )}
 
                     {/* Attachments Tab Content */}
-                    {(taskDialogTab === "attachments" ||
-                      (!editingTask && !viewingTask)) && (
+                    {taskDialogTab === "attachments" && (
                       <div className="space-y-4">
                         {/* Upload File - Show when editing or creating (not viewing) */}
                         {!isViewMode && (
