@@ -1069,7 +1069,7 @@ export default function Tasks() {
           </DialogTrigger>
           <DialogContent className={`${isViewMode ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto`}>
             <DialogHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pr-8">
                 <DialogTitle>
                   {isViewMode ? 'Task Details' : editingTask ? 'Edit Task' : 'Create New Task'}
                 </DialogTitle>
@@ -1080,6 +1080,7 @@ export default function Tasks() {
                     onClick={() => {
                       openEditDialog(viewingTask);
                     }}
+                    className="mr-2"
                   >
                     <Edit2 className="w-4 h-4 mr-2" />
                     Edit
