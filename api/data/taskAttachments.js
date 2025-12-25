@@ -70,6 +70,39 @@ export default async function handler(req, res) {
         });
       }
 
+      // For private buckets, we need to generate fresh signed URLs
+      // Check if bucket is public or private
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucket = buckets?.find(b => b.id === 'task-attachments');
+      const isPublic = bucket?.public || false;
+
+      // If bucket is private, generate signed URLs for each attachment
+      if (!isPublic && data && data.length > 0) {
+        const attachmentsWithUrls = await Promise.all(
+          data.map(async (attachment) => {
+            if (attachment.storage_path) {
+              const { data: signedUrlData } = await supabase.storage
+                .from('task-attachments')
+                .createSignedUrl(attachment.storage_path, 3600); // 1 hour expiration
+              
+              if (signedUrlData) {
+                return {
+                  ...attachment,
+                  file_url: signedUrlData.signedUrl
+                };
+              }
+            }
+            return attachment;
+          })
+        );
+        
+        return res.status(200).json({
+          success: true,
+          data: attachmentsWithUrls || [],
+          count: attachmentsWithUrls?.length || 0
+        });
+      }
+
       return res.status(200).json({
         success: true,
         data: data || [],

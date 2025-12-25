@@ -91,6 +91,24 @@ export default async function handler(req, res) {
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = `${taskId}/${timestamp}-${sanitizedFileName}`;
 
+    // Check if bucket exists first
+    const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+    if (bucketError) {
+      console.error('Error listing buckets:', bucketError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to access storage. Please ensure the storage bucket exists.'
+      });
+    }
+    
+    const bucketExists = buckets?.some(b => b.id === 'task-attachments');
+    if (!bucketExists) {
+      return res.status(400).json({
+        success: false,
+        error: 'Storage bucket "task-attachments" does not exist. Please create it in Supabase Dashboard → Storage.'
+      });
+    }
+
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('task-attachments')
@@ -107,12 +125,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    // For private buckets, we need to use signed URLs
+    // For public buckets, we can use public URLs
+    // Since the bucket is private, we'll store the storage_path and generate signed URLs on-demand
+    // For now, we'll create a signed URL that expires in 1 year (max)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('task-attachments')
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 31536000); // 1 year expiration
 
-    const fileUrl = urlData.publicUrl;
+    let fileUrl;
+    if (signedUrlError) {
+      // Fallback to public URL if signed URL fails (bucket might be public)
+      const { data: urlData } = supabase.storage
+        .from('task-attachments')
+        .getPublicUrl(filePath);
+      fileUrl = urlData.publicUrl;
+    } else {
+      fileUrl = signedUrlData.signedUrl;
+    }
 
     // Save attachment record to database
     const { data: attachmentData, error: dbError } = await supabase
