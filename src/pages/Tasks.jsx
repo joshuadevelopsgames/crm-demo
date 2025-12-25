@@ -1657,7 +1657,7 @@ export default function Tasks() {
                       <p className="text-sm text-slate-500 text-center py-4">No attachments yet</p>
                     ) : (
                       <>
-                      taskAttachments.map((attachment) => (
+                      {taskAttachments.map((attachment) => (
                         <div key={attachment.id} className="border rounded-lg p-3 bg-slate-50 flex items-center justify-between">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
