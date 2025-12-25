@@ -413,7 +413,7 @@ export default function NotificationBell() {
   const getNotificationColor = (type) => {
     switch (type) {
       case 'task_overdue':
-        return 'bg-red-50 border-red-200';
+        return 'bg-orange-50 border-orange-200';
       case 'task_due_today':
         return 'bg-amber-50 border-amber-200';
       case 'end_of_year_analysis':
