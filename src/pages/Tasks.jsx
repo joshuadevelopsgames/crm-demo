@@ -1153,406 +1153,407 @@ export default function Tasks() {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Priority</Label>
-                      <div className="mt-1">
-                        <Badge className={getPriorityColor(viewingTask.priority)}>
-                          {viewingTask.priority}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Status</Label>
-                      <div className="mt-1">
-                        <Badge variant="outline">
-                          {viewingTask.status === 'todo' ? 'To Do' :
-                           viewingTask.status === 'in_progress' ? 'In Progress' :
-                           viewingTask.status === 'blocked' ? 'Blocked' :
-                           viewingTask.status === 'completed' ? 'Completed' : viewingTask.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Category</Label>
-                      <p className="mt-1 text-slate-900">{viewingTask.category || 'Other'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Due Date</Label>
-                      <p className="mt-1 text-slate-900">
-                        {viewingTask.due_date 
-                          ? format(new Date(viewingTask.due_date), 'MMM d, yyyy')
-                          : 'No due date'}
-                        {viewingTask.due_time && ` at ${viewingTask.due_time}`}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Assigned To</Label>
-                      <p className="mt-1 text-slate-900">{viewingTask.assigned_to || 'Unassigned'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-500 text-xs uppercase">Estimated Time</Label>
-                      <p className="mt-1 text-slate-900">{viewingTask.estimated_time || 30} minutes</p>
-                    </div>
-                    {viewingTask.related_account_id && (
-                      <div>
-                        <Label className="text-slate-500 text-xs uppercase">Related Account</Label>
-                        <p className="mt-1 text-slate-900">
-                          {accounts.find(a => a.id === viewingTask.related_account_id)?.name || 'Unknown'}
-                        </p>
-                      </div>
-                    )}
-                    {viewingTask.labels && viewingTask.labels.length > 0 && (
-                      <div className="col-span-2">
-                        <Label className="text-slate-500 text-xs uppercase">Labels</Label>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {viewingTask.labels.map((label, idx) => (
-                            <Badge key={idx} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200">
-                              <Tag className="w-3 h-3 mr-1" />
-                              {label}
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Priority</Label>
+                          <div className="mt-1">
+                            <Badge className={getPriorityColor(viewingTask.priority)}>
+                              {viewingTask.priority}
                             </Badge>
-                          ))}
+                          </div>
                         </div>
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Status</Label>
+                          <div className="mt-1">
+                            <Badge variant="outline">
+                              {viewingTask.status === 'todo' ? 'To Do' :
+                               viewingTask.status === 'in_progress' ? 'In Progress' :
+                               viewingTask.status === 'blocked' ? 'Blocked' :
+                               viewingTask.status === 'completed' ? 'Completed' : viewingTask.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Category</Label>
+                          <p className="mt-1 text-slate-900">{viewingTask.category || 'Other'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Due Date</Label>
+                          <p className="mt-1 text-slate-900">
+                            {viewingTask.due_date 
+                              ? format(new Date(viewingTask.due_date), 'MMM d, yyyy')
+                              : 'No due date'}
+                            {viewingTask.due_time && ` at ${viewingTask.due_time}`}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Assigned To</Label>
+                          <p className="mt-1 text-slate-900">{viewingTask.assigned_to || 'Unassigned'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-slate-500 text-xs uppercase">Estimated Time</Label>
+                          <p className="mt-1 text-slate-900">{viewingTask.estimated_time || 30} minutes</p>
+                        </div>
+                        {viewingTask.related_account_id && (
+                          <div>
+                            <Label className="text-slate-500 text-xs uppercase">Related Account</Label>
+                            <p className="mt-1 text-slate-900">
+                              {accounts.find(a => a.id === viewingTask.related_account_id)?.name || 'Unknown'}
+                            </p>
+                          </div>
+                        )}
+                        {viewingTask.labels && viewingTask.labels.length > 0 && (
+                          <div className="col-span-2">
+                            <Label className="text-slate-500 text-xs uppercase">Labels</Label>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {viewingTask.labels.map((label, idx) => (
+                                <Badge key={idx} variant="outline" className="text-purple-700 bg-purple-50 border-purple-200">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {label}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {viewingTask.is_recurring && (
+                          <div className="col-span-2">
+                            <Label className="text-slate-500 text-xs uppercase">Recurring</Label>
+                            <p className="mt-1 text-slate-900">
+                              {viewingTask.recurrence_pattern} (every {viewingTask.recurrence_interval})
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {viewingTask.is_recurring && (
-                      <div className="col-span-2">
-                        <Label className="text-slate-500 text-xs uppercase">Recurring</Label>
-                        <p className="mt-1 text-slate-900">
-                          {viewingTask.recurrence_pattern} (every {viewingTask.recurrence_interval})
-                        </p>
-                      </div>
-                    )}
                     </div>
-                  </div>
                   )}
                   {/* Edit/Create Mode - Editable form */}
                   {!isViewMode && (
                     <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label>Task Title *</Label>
-                  <Input
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    placeholder="Follow up with client..."
-                    disabled={isViewMode}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={newTask.description}
-                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                    placeholder="Task details..."
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label>Priority</Label>
-                  <Select
-                    value={newTask.priority}
-                    onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="item-aligned">
-                      <SelectItem value="critical">Critical</SelectItem>
-                      <SelectItem value="blocker">Blocker</SelectItem>
-                      <SelectItem value="major">Major</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="minor">Minor</SelectItem>
-                      <SelectItem value="trivial">Trivial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <Select
-                    value={newTask.status}
-                    onValueChange={(value) => setNewTask({ ...newTask, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="blocked">Blocked</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Category</Label>
-                  <Select
-                    value={newTask.category}
-                    onValueChange={(value) => setNewTask({ ...newTask, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="follow_up">Follow Up</SelectItem>
-                      <SelectItem value="demo">Demo</SelectItem>
-                      <SelectItem value="proposal">Proposal</SelectItem>
-                      <SelectItem value="onboarding">Onboarding</SelectItem>
-                      <SelectItem value="support">Support</SelectItem>
-                      <SelectItem value="internal">Internal</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Due Date</Label>
-                  <Input
-                    type="date"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Due Time (optional)</Label>
-                  <Input
-                    type="time"
-                    value={newTask.due_time}
-                    onChange={(e) => setNewTask({ ...newTask, due_time: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Estimated Time (minutes)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={newTask.estimated_time}
-                    onChange={(e) => setNewTask({ ...newTask, estimated_time: parseInt(e.target.value) || 30 })}
-                    placeholder="30"
-                  />
-                </div>
-                <div>
-                  <Label>Assigned To (email)</Label>
-                  <Input
-                    value={newTask.assigned_to}
-                    onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                    placeholder="team@company.com"
-                  />
-                </div>
-                <div>
-                  <Label>Related Account</Label>
-                  <Select
-                    value={newTask.related_account_id}
-                    onValueChange={(value) => setNewTask({ ...newTask, related_account_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map(account => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label>Labels</Label>
-                  <div className="space-y-2">
-                    {/* Existing labels */}
-                    {newTask.labels.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {newTask.labels.map((label, idx) => (
-                          <Badge 
-                            key={idx} 
-                            variant="outline" 
-                            className="text-purple-700 bg-purple-50 border-purple-200 flex items-center gap-1 pr-1"
-                          >
-                            <Tag className="w-3 h-3" />
-                            {label}
-                            <button
-                              type="button"
-                              onClick={() => removeLabel(label)}
-                              className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </Badge>
-                        ))}
+                      <div className="col-span-2">
+                        <Label>Task Title *</Label>
+                        <Input
+                          value={newTask.title}
+                          onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                          placeholder="Follow up with client..."
+                          disabled={isViewMode}
+                        />
                       </div>
-                    )}
-                    {/* Add new label */}
-                    <div className="flex gap-2">
-                      <Input
-                        value={newLabelInput}
-                        onChange={(e) => setNewLabelInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addLabel();
-                          }
-                        }}
-                        placeholder="Add a label (press Enter)"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addLabel}
-                        disabled={!newLabelInput.trim() || newTask.labels.includes(newLabelInput.trim())}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    {/* Suggested labels */}
-                    {getAllLabels().length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="text-xs text-slate-500 mr-2">Suggestions:</span>
-                        {getAllLabels()
-                          .filter(label => !newTask.labels.includes(label))
-                          .slice(0, 5)
-                          .map((label, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => {
-                                setNewTask({ ...newTask, labels: [...newTask.labels, label] });
-                              }}
-                              className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
-                            >
-                              {label}
-                            </button>
-                          ))}
+                      <div className="col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={newTask.description}
+                          onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                          placeholder="Task details..."
+                          rows={3}
+                        />
                       </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Recurring Task Options */}
-                <div className="col-span-2 border-t pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <input
-                      type="checkbox"
-                      id="is_recurring"
-                      checked={newTask.is_recurring}
-                      onChange={(e) => setNewTask({ ...newTask, is_recurring: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
-                    />
-                    <Label htmlFor="is_recurring" className="font-semibold cursor-pointer">
-                      Make this task recurring
-                    </Label>
-                  </div>
-                  
-                  {newTask.is_recurring && (
-                    <div className="space-y-4 pl-6 border-l-2 border-slate-200">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Repeat Pattern</Label>
-                          <Select
-                            value={newTask.recurrence_pattern}
-                            onValueChange={(value) => {
-                              setNewTask({ 
-                                ...newTask, 
-                                recurrence_pattern: value,
-                                recurrence_days_of_week: value === 'weekly' ? [] : newTask.recurrence_days_of_week,
-                                recurrence_day_of_month: value === 'monthly' ? null : newTask.recurrence_day_of_month
-                              });
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Repeat Every</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={newTask.recurrence_interval}
-                            onChange={(e) => setNewTask({ ...newTask, recurrence_interval: parseInt(e.target.value) || 1 })}
-                            placeholder="1"
-                          />
-                          <p className="text-xs text-slate-500 mt-1">
-                            {newTask.recurrence_pattern === 'daily' && 'day(s)'}
-                            {newTask.recurrence_pattern === 'weekly' && 'week(s)'}
-                            {newTask.recurrence_pattern === 'monthly' && 'month(s)'}
-                            {newTask.recurrence_pattern === 'yearly' && 'year(s)'}
-                          </p>
-                        </div>
+                      <div>
+                        <Label>Priority</Label>
+                        <Select
+                          value={newTask.priority}
+                          onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent position="item-aligned">
+                            <SelectItem value="critical">Critical</SelectItem>
+                            <SelectItem value="blocker">Blocker</SelectItem>
+                            <SelectItem value="major">Major</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="minor">Minor</SelectItem>
+                            <SelectItem value="trivial">Trivial</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      
-                      {newTask.recurrence_pattern === 'weekly' && (
-                        <div>
-                          <Label>Days of Week</Label>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
-                              <button
-                                key={index}
-                                type="button"
-                                onClick={() => {
-                                  const days = newTask.recurrence_days_of_week || [];
-                                  const newDays = days.includes(index)
-                                    ? days.filter(d => d !== index)
-                                    : [...days, index].sort();
-                                  setNewTask({ ...newTask, recurrence_days_of_week: newDays });
-                                }}
-                                className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                                  (newTask.recurrence_days_of_week || []).includes(index)
-                                    ? 'bg-slate-900 text-white border-slate-900'
-                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                {day.slice(0, 3)}
-                              </button>
+                      <div>
+                        <Label>Status</Label>
+                        <Select
+                          value={newTask.status}
+                          onValueChange={(value) => setNewTask({ ...newTask, status: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todo">To Do</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Category</Label>
+                        <Select
+                          value={newTask.category}
+                          onValueChange={(value) => setNewTask({ ...newTask, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="follow_up">Follow Up</SelectItem>
+                            <SelectItem value="demo">Demo</SelectItem>
+                            <SelectItem value="proposal">Proposal</SelectItem>
+                            <SelectItem value="onboarding">Onboarding</SelectItem>
+                            <SelectItem value="support">Support</SelectItem>
+                            <SelectItem value="internal">Internal</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Due Date</Label>
+                        <Input
+                          type="date"
+                          value={newTask.due_date}
+                          onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Due Time (optional)</Label>
+                        <Input
+                          type="time"
+                          value={newTask.due_time}
+                          onChange={(e) => setNewTask({ ...newTask, due_time: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Estimated Time (minutes)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={newTask.estimated_time}
+                          onChange={(e) => setNewTask({ ...newTask, estimated_time: parseInt(e.target.value) || 30 })}
+                          placeholder="30"
+                        />
+                      </div>
+                      <div>
+                        <Label>Assigned To (email)</Label>
+                        <Input
+                          value={newTask.assigned_to}
+                          onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                          placeholder="team@company.com"
+                        />
+                      </div>
+                      <div>
+                        <Label>Related Account</Label>
+                        <Select
+                          value={newTask.related_account_id}
+                          onValueChange={(value) => setNewTask({ ...newTask, related_account_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts.map(account => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label>Labels</Label>
+                        <div className="space-y-2">
+                          {/* Existing labels */}
+                          {newTask.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {newTask.labels.map((label, idx) => (
+                                <Badge 
+                                  key={idx} 
+                                  variant="outline" 
+                                  className="text-purple-700 bg-purple-50 border-purple-200 flex items-center gap-1 pr-1"
+                                >
+                                  <Tag className="w-3 h-3" />
+                                  {label}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeLabel(label)}
+                                    className="ml-1 hover:bg-purple-200 rounded-full p-0.5"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {/* Add new label */}
+                          <div className="flex gap-2">
+                            <Input
+                              value={newLabelInput}
+                              onChange={(e) => setNewLabelInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addLabel();
+                                }
+                              }}
+                              placeholder="Add a label (press Enter)"
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={addLabel}
+                              disabled={!newLabelInput.trim() || newTask.labels.includes(newLabelInput.trim())}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
                           </div>
+                          {/* Suggested labels */}
+                          {getAllLabels().length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              <span className="text-xs text-slate-500 mr-2">Suggestions:</span>
+                              {getAllLabels()
+                                .filter(label => !newTask.labels.includes(label))
+                                .slice(0, 5)
+                                .map((label, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewTask({ ...newTask, labels: [...newTask.labels, label] });
+                                    }}
+                                    className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                       
-                      {newTask.recurrence_pattern === 'monthly' && (
-                        <div>
-                          <Label>Day of Month</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="31"
-                            value={newTask.recurrence_day_of_month || ''}
-                            onChange={(e) => setNewTask({ ...newTask, recurrence_day_of_month: parseInt(e.target.value) || null })}
-                            placeholder="e.g., 15 (for 15th of each month)"
+                      {/* Recurring Task Options */}
+                      <div className="col-span-2 border-t pt-4 mt-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <input
+                            type="checkbox"
+                            id="is_recurring"
+                            checked={newTask.is_recurring}
+                            onChange={(e) => setNewTask({ ...newTask, is_recurring: e.target.checked })}
+                            className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
                           />
+                          <Label htmlFor="is_recurring" className="font-semibold cursor-pointer">
+                            Make this task recurring
+                          </Label>
                         </div>
-                      )}
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>End Date (optional)</Label>
-                          <Input
-                            type="date"
-                            value={newTask.recurrence_end_date}
-                            onChange={(e) => setNewTask({ ...newTask, recurrence_end_date: e.target.value })}
-                            placeholder="Never"
-                          />
-                        </div>
-                        <div>
-                          <Label>Number of Occurrences (optional)</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={newTask.recurrence_count || ''}
-                            onChange={(e) => setNewTask({ ...newTask, recurrence_count: parseInt(e.target.value) || null })}
-                            placeholder="Unlimited"
-                          />
-                        </div>
+                        
+                        {newTask.is_recurring && (
+                          <div className="space-y-4 pl-6 border-l-2 border-slate-200">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label>Repeat Pattern</Label>
+                                <Select
+                                  value={newTask.recurrence_pattern}
+                                  onValueChange={(value) => {
+                                    setNewTask({ 
+                                      ...newTask, 
+                                      recurrence_pattern: value,
+                                      recurrence_days_of_week: value === 'weekly' ? [] : newTask.recurrence_days_of_week,
+                                      recurrence_day_of_month: value === 'monthly' ? null : newTask.recurrence_day_of_month
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Daily</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Repeat Every</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={newTask.recurrence_interval}
+                                  onChange={(e) => setNewTask({ ...newTask, recurrence_interval: parseInt(e.target.value) || 1 })}
+                                  placeholder="1"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">
+                                  {newTask.recurrence_pattern === 'daily' && 'day(s)'}
+                                  {newTask.recurrence_pattern === 'weekly' && 'week(s)'}
+                                  {newTask.recurrence_pattern === 'monthly' && 'month(s)'}
+                                  {newTask.recurrence_pattern === 'yearly' && 'year(s)'}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {newTask.recurrence_pattern === 'weekly' && (
+                              <div>
+                                <Label>Days of Week</Label>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
+                                    <button
+                                      key={index}
+                                      type="button"
+                                      onClick={() => {
+                                        const days = newTask.recurrence_days_of_week || [];
+                                        const newDays = days.includes(index)
+                                          ? days.filter(d => d !== index)
+                                          : [...days, index].sort();
+                                        setNewTask({ ...newTask, recurrence_days_of_week: newDays });
+                                      }}
+                                      className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                                        (newTask.recurrence_days_of_week || []).includes(index)
+                                          ? 'bg-slate-900 text-white border-slate-900'
+                                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      {day.slice(0, 3)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {newTask.recurrence_pattern === 'monthly' && (
+                              <div>
+                                <Label>Day of Month</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="31"
+                                  value={newTask.recurrence_day_of_month || ''}
+                                  onChange={(e) => setNewTask({ ...newTask, recurrence_day_of_month: parseInt(e.target.value) || null })}
+                                  placeholder="e.g., 15 (for 15th of each month)"
+                                />
+                              </div>
+                            )}
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label>End Date (optional)</Label>
+                                <Input
+                                  type="date"
+                                  value={newTask.recurrence_end_date}
+                                  onChange={(e) => setNewTask({ ...newTask, recurrence_end_date: e.target.value })}
+                                  placeholder="Never"
+                                />
+                              </div>
+                              <div>
+                                <Label>Number of Occurrences (optional)</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={newTask.recurrence_count || ''}
+                                  onChange={(e) => setNewTask({ ...newTask, recurrence_count: parseInt(e.target.value) || null })}
+                                  placeholder="Unlimited"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
-                </div>
-              )}
               
               {/* Comments Tab Content */}
               {(editingTask || viewingTask) && taskDialogTab === 'comments' && (
