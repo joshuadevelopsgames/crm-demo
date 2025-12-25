@@ -18,6 +18,7 @@ import {
   Users,
   CheckSquare,
   AlertCircle,
+  AlertTriangle,
   TrendingUp,
   Calendar,
   ArrowRight,
@@ -628,7 +629,8 @@ export default function Dashboard() {
               {overdueTasks.slice(0, 5).map(task => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100"
+                  onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 cursor-pointer hover:bg-orange-50 transition-colors"
                 >
                   <div className="flex-1">
                     <p className="font-medium text-slate-900">{task.title}</p>

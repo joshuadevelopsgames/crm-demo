@@ -860,6 +860,23 @@ export default function Tasks() {
     setIsDialogOpen(true);
   };
 
+  // Check for taskId in URL params and open the task
+  useEffect(() => {
+    if (tasks.length > 0 && !isLoading && !viewingTask && !editingTask) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const taskId = urlParams.get('taskId');
+      if (taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          openTaskView(task);
+          // Clean up URL param
+          const newUrl = window.location.pathname + window.location.search.replace(/[?&]taskId=[^&]*/, '').replace(/^\?/, '');
+          window.history.replaceState({}, '', newUrl || window.location.pathname);
+        }
+      }
+    }
+  }, [tasks, isLoading, viewingTask, editingTask]);
+
   const openEditDialog = (task) => {
     setEditingTask(task);
     setViewingTask(null);
