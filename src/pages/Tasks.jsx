@@ -1140,7 +1140,7 @@ export default function Tasks() {
             
             <div className="space-y-4 py-4">
               {/* When creating new task, don't show details - only show attachments */}
-              {!editingTask && !viewingTask ? null : (
+              {(!editingTask && !viewingTask) ? null : (
               <div>
               {/* View Mode - Read-only task details */}
               {isViewMode && viewingTask ? (
