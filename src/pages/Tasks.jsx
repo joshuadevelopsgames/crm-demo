@@ -2038,37 +2038,37 @@ export default function Tasks() {
                     {taskDialogTab === "attachments" && (
                       <div className="space-y-4 min-h-[200px]">
                         {/* Upload File - Show when editing or creating (not viewing) */}
-                        {!isViewMode && (
-                          <div className="space-y-4">
-                            {/* Drag and drop area - only show when creating new task */}
-                            {!editingTask && !viewingTask && (
-                              <div
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                                className={`border-2 border-dashed rounded-lg p-8 transition-all ${
-                                  isDragging
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-slate-300 bg-slate-50"
-                                }`}
-                              >
-                                <div className="flex flex-col items-center text-center space-y-3">
-                                  <UploadIcon className="w-10 h-10 text-slate-400" />
-                                  <div>
-                                    <p className="font-semibold text-slate-900">
-                                      {isDragging
-                                        ? "Drop file here"
-                                        : "Drag and drop files here"}
-                                    </p>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                      or
-                                    </p>
-                                  </div>
+                        <div className="space-y-4">
+                          {/* Drag and drop area - only show when creating new task */}
+                          {!editingTask && !viewingTask && !isViewMode && (
+                            <div
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
+                              className={`border-2 border-dashed rounded-lg p-8 transition-all ${
+                                isDragging
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-slate-300 bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex flex-col items-center text-center space-y-3">
+                                <UploadIcon className="w-10 h-10 text-slate-400" />
+                                <div>
+                                  <p className="font-semibold text-slate-900">
+                                    {isDragging
+                                      ? "Drop file here"
+                                      : "Drag and drop files here"}
+                                  </p>
+                                  <p className="text-sm text-slate-500 mt-1">
+                                    or
+                                  </p>
                                 </div>
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                            {/* File input button - show for both creating and editing */}
+                          {/* File input button - show for both creating and editing (not viewing) */}
+                          {!isViewMode && (
                             <div className="space-y-2">
                               <Label>Attach File</Label>
                               <div className="flex items-center gap-2">
@@ -2084,6 +2084,7 @@ export default function Tasks() {
                                 Max file size: 10MB
                               </p>
                             </div>
+                          )}
 
                             {/* Show pending attachments during creation */}
                             {pendingAttachments.length > 0 && !editingTask && (
