@@ -1254,6 +1254,7 @@ export default function Tasks() {
                   setViewingTask(null);
                   setIsViewMode(false);
                   setPendingAttachments([]);
+                  setTaskDialogTab("details");
                 }}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -1293,14 +1294,14 @@ export default function Tasks() {
               </DialogHeader>
 
               {/* Tabs for Details, Comments, Attachments */}
-              {editingTask || viewingTask ? (
-                <Tabs
-                  value={taskDialogTab}
-                  onValueChange={setTaskDialogTab}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="details">Details</TabsTrigger>
+              <Tabs
+                value={taskDialogTab}
+                onValueChange={setTaskDialogTab}
+                className="w-full"
+              >
+                <TabsList className={editingTask || viewingTask ? "grid w-full grid-cols-3" : "grid w-full grid-cols-2"}>
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  {(editingTask || viewingTask) && (
                     <TabsTrigger
                       value="comments"
                       className="flex items-center gap-2"
@@ -1308,30 +1309,21 @@ export default function Tasks() {
                       <MessageSquare className="w-4 h-4" />
                       Comments ({taskComments.length})
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="attachments"
-                      className="flex items-center gap-2"
-                    >
-                      <Paperclip className="w-4 h-4" />
-                      Files (
-                      {taskAttachments.length + pendingAttachments.length})
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              ) : (
-                // When creating new task, start on attachments tab and don't show tabs
-                <div className="hidden">
-                  <Tabs value="attachments" className="w-full">
-                    <TabsList />
-                  </Tabs>
-                </div>
-              )}
+                  )}
+                  <TabsTrigger
+                    value="attachments"
+                    className="flex items-center gap-2"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Files (
+                    {taskAttachments.length + pendingAttachments.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
               <div className="space-y-4 py-4">
-                {/* When creating new task, don't show details - only show attachments */}
-                {/* Only show task details/form when NOT on attachments tab */}
-                {(editingTask || viewingTask) &&
-                  taskDialogTab !== "attachments" && (
+                {/* Show task details/form when on Details tab (for both creating and editing) */}
+                {taskDialogTab === "details" && (
                     <div>
                       {/* View Mode - Read-only task details */}
                       {isViewMode && viewingTask && (
