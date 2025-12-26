@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail } from 'lucide-react';
@@ -45,7 +45,7 @@ export default function NotificationBell() {
   const currentUserId = currentUser?.id;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
-  const { data: allNotifications = [], refetch: refetchNotifications } = useQuery({
+  const { data: allNotificationsRaw = [], refetch: refetchNotifications } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) {
@@ -63,6 +63,17 @@ export default function NotificationBell() {
     refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
     refetchOnMount: true, // Always refetch on mount (not cached)
   });
+
+  // Safety check: Filter out any notifications that don't match current user (defensive programming)
+  // This ensures we never show notifications from other users, even if the API returns them
+  const allNotifications = useMemo(() => {
+    if (!currentUserId) return [];
+    const currentUserIdStr = String(currentUserId).trim();
+    return allNotificationsRaw.filter(notification => {
+      const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+      return notificationUserId === currentUserIdStr;
+    });
+  }, [allNotificationsRaw, currentUserId]);
 
   // Force fresh notification fetch on component mount
   useEffect(() => {
