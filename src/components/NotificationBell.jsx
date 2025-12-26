@@ -276,6 +276,11 @@ export default function NotificationBell() {
         return notificationUserId === currentUserIdStr;
       });
       
+      // Debug: log if we're filtering out notifications
+      if (type === 'renewal_reminder' && notifications.length !== userNotifications.length) {
+        console.log(`🔔 User filter: ${notifications.length} notifications before filter, ${userNotifications.length} after filter (removed ${notifications.length - userNotifications.length} from other users)`);
+      }
+      
       // For renewal_reminder, count unique accounts instead of total notifications
       // This prevents showing duplicate counts if there are multiple notifications per account
       let count = userNotifications.length;
@@ -302,15 +307,28 @@ export default function NotificationBell() {
         // Debug logging for renewal reminders
         if (userNotifications.length > 0) {
           console.log(`🔔 Renewal reminder group: ${userNotifications.length} notifications (${notifications.length} total before user filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
+          console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
         }
       }
       
-      return {
+      const group = {
         type,
         notifications: userNotifications, // Use filtered notifications
         count,
         unreadCount
       };
+      
+      // Additional debug for renewal reminders
+      if (type === 'renewal_reminder' && userNotifications.length > 0) {
+        console.log(`🔔 Final group object for ${type}:`, {
+          notificationsCount: group.notifications.length,
+          count: group.count,
+          unreadCount: group.unreadCount,
+          unreadNotificationsCount: group.notifications.filter(n => !n.is_read).length
+        });
+      }
+      
+      return group;
     });
   }, [groupedNotifications, currentUserId]);
 
