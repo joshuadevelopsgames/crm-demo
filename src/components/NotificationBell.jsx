@@ -328,6 +328,20 @@ export default function NotificationBell() {
           console.log(`🔔 Renewal reminder group: ${notifications.length} notifications (already filtered by user), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
           console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
           console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
+          console.log(`🔔 CRITICAL: The badge should show ${count} and text should show "${unreadCount} unread notifications"`);
+          
+          // Log the actual account IDs to verify uniqueness
+          if (unreadNotifications.length > unreadCount) {
+            console.warn(`⚠️ WARNING: ${unreadNotifications.length} unread notifications but only ${unreadCount} unique accounts - this suggests duplicates`);
+            const accountIdCounts = {};
+            accountIds.forEach(id => {
+              accountIdCounts[id] = (accountIdCounts[id] || 0) + 1;
+            });
+            const duplicates = Object.entries(accountIdCounts).filter(([id, count]) => count > 1);
+            if (duplicates.length > 0) {
+              console.warn(`⚠️ Found ${duplicates.length} accounts with multiple notifications:`, duplicates.slice(0, 5));
+            }
+          }
         }
       }
       
@@ -664,10 +678,15 @@ export default function NotificationBell() {
                               </div>
                               {hasMultiple && (
                                 <p className="text-sm text-slate-600 mt-1">
-                                  {group.unreadCount > 0 
-                                    ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
-                                    : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`
-                                  }
+                                  {(() => {
+                                    // Debug: log what value is being used for display
+                                    if (group.type === 'renewal_reminder') {
+                                      console.log(`🔔 RENDERING TEXT: group.unreadCount=${group.unreadCount}, group.count=${group.count}, showing: ${group.unreadCount > 0 ? group.unreadCount : group.count}`);
+                                    }
+                                    return group.unreadCount > 0 
+                                      ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
+                                      : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`;
+                                  })()}
                                 </p>
                               )}
                               {!hasMultiple && group.notifications[0] && (
