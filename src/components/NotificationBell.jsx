@@ -263,37 +263,46 @@ export default function NotificationBell() {
   }, {});
 
   // Convert grouped object to array of groups
-  const notificationGroups = Object.entries(groupedNotifications).map(([type, notifications]) => {
-    // For renewal_reminder, count unique accounts instead of total notifications
-    // This prevents showing duplicate counts if there are multiple notifications per account
-    let count = notifications.length;
-    let unreadCount = notifications.filter(n => !n.is_read).length;
-    
-    if (type === 'renewal_reminder') {
-      const uniqueAccountIds = new Set(
-        notifications
-          .map(n => n.related_account_id)
-          .filter(id => id && id !== 'null' && id !== null)
-      );
-      count = uniqueAccountIds.size;
+  // Use useMemo to ensure recalculation when snoozes change
+  const notificationGroups = useMemo(() => {
+    return Object.entries(groupedNotifications).map(([type, notifications]) => {
+      // For renewal_reminder, count unique accounts instead of total notifications
+      // This prevents showing duplicate counts if there are multiple notifications per account
+      let count = notifications.length;
+      let unreadCount = notifications.filter(n => !n.is_read).length;
       
-      // For unread count, also count unique accounts (only unread ones)
-      const unreadNotifications = notifications.filter(n => !n.is_read);
-      const uniqueUnreadAccountIds = new Set(
-        unreadNotifications
-          .map(n => n.related_account_id)
-          .filter(id => id && id !== 'null' && id !== null)
-      );
-      unreadCount = uniqueUnreadAccountIds.size;
-    }
-    
-    return {
-      type,
-      notifications,
-      count,
-      unreadCount
-    };
-  });
+      if (type === 'renewal_reminder') {
+        const uniqueAccountIds = new Set(
+          notifications
+            .map(n => n.related_account_id)
+            .filter(id => id && id !== 'null' && id !== null)
+        );
+        count = uniqueAccountIds.size;
+        
+        // For unread count, also count unique accounts (only unread ones)
+        // This ensures we show unique account count, not total notification count
+        const unreadNotifications = notifications.filter(n => !n.is_read);
+        const uniqueUnreadAccountIds = new Set(
+          unreadNotifications
+            .map(n => n.related_account_id)
+            .filter(id => id && id !== 'null' && id !== null)
+        );
+        unreadCount = uniqueUnreadAccountIds.size;
+        
+        // Debug logging for renewal reminders
+        if (notifications.length > 0) {
+          console.log(`🔔 Renewal reminder group: ${notifications.length} notifications, ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
+        }
+      }
+      
+      return {
+        type,
+        notifications,
+        count,
+        unreadCount
+      };
+    });
+  }, [groupedNotifications]);
 
   // Define notification type priority (lower number = higher priority)
   const getTypePriority = (type) => {
