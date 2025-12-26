@@ -253,14 +253,25 @@ export default function NotificationBell() {
   });
 
   // Group notifications by type
-  const groupedNotifications = sortedNotifications.reduce((groups, notification) => {
-    const type = notification.type;
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(notification);
-    return groups;
-  }, {});
+  // Additional safety: filter by current user before grouping
+  const groupedNotifications = useMemo(() => {
+    const currentUserIdStr = currentUserId ? String(currentUserId).trim() : null;
+    const userFilteredNotifications = currentUserIdStr 
+      ? sortedNotifications.filter(n => {
+          const notificationUserId = n.user_id ? String(n.user_id).trim() : null;
+          return notificationUserId === currentUserIdStr;
+        })
+      : sortedNotifications;
+    
+    return userFilteredNotifications.reduce((groups, notification) => {
+      const type = notification.type;
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(notification);
+      return groups;
+    }, {});
+  }, [sortedNotifications, currentUserId]);
 
   // Convert grouped object to array of groups
   // Use useMemo to ensure recalculation when snoozes change
@@ -287,11 +298,12 @@ export default function NotificationBell() {
       let unreadCount = userNotifications.filter(n => !n.is_read).length;
       
       if (type === 'renewal_reminder') {
-        const uniqueAccountIds = new Set(
-          userNotifications
-            .map(n => n.related_account_id)
-            .filter(id => id && id !== 'null' && id !== null)
-        );
+        // Normalize account IDs to strings for proper Set deduplication
+        const allAccountIds = userNotifications
+          .map(n => n.related_account_id)
+          .filter(id => id && id !== 'null' && id !== null)
+          .map(id => String(id).trim());
+        const uniqueAccountIds = new Set(allAccountIds);
         count = uniqueAccountIds.size;
         
         // For unread count, also count unique accounts (only unread ones)
@@ -315,6 +327,7 @@ export default function NotificationBell() {
         if (userNotifications.length > 0) {
           console.log(`🔔 Renewal reminder group: ${userNotifications.length} notifications (${notifications.length} total before user filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
           console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
+          console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
         }
       }
       
