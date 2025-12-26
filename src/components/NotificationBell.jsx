@@ -252,12 +252,26 @@ export default function NotificationBell() {
   }, {});
 
   // Convert grouped object to array of groups
-  const notificationGroups = Object.entries(groupedNotifications).map(([type, notifications]) => ({
-    type,
-    notifications,
-    count: notifications.length,
-    unreadCount: notifications.filter(n => !n.is_read).length
-  }));
+  const notificationGroups = Object.entries(groupedNotifications).map(([type, notifications]) => {
+    // For renewal_reminder, count unique accounts instead of total notifications
+    // This prevents showing duplicate counts if there are multiple notifications per account
+    let count = notifications.length;
+    if (type === 'renewal_reminder') {
+      const uniqueAccountIds = new Set(
+        notifications
+          .map(n => n.related_account_id)
+          .filter(id => id && id !== 'null' && id !== null)
+      );
+      count = uniqueAccountIds.size;
+    }
+    
+    return {
+      type,
+      notifications,
+      count,
+      unreadCount: notifications.filter(n => !n.is_read).length
+    };
+  });
 
   // Define notification type priority (lower number = higher priority)
   const getTypePriority = (type) => {

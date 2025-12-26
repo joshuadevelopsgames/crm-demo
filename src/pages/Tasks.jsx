@@ -2231,8 +2231,8 @@ export default function Tasks() {
                 </TabsContent>
               </Tabs>
 
-              {/* Footer buttons - only show on details tab or when creating */}
-              {(taskDialogTab === "details" || !editingTask) && (
+              {/* Footer buttons - only show when creating a new task or editing (not viewing) */}
+              {!isViewMode && (taskDialogTab === "details" || !editingTask) && (
                       <div className="flex justify-end gap-3">
                         <Button variant="outline" onClick={closeDialog}>
                           Cancel
