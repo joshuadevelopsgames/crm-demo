@@ -159,7 +159,17 @@ export default function NotificationBell() {
   }, [accounts, estimates, accountsLoading, estimatesLoading]);
   
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
-  const activeNotifications = allNotifications.filter(notification => {
+  // Also ensure we only show notifications for the current user
+  const activeNotifications = useMemo(() => {
+    if (!currentUserId) return [];
+    const currentUserIdStr = String(currentUserId).trim();
+    
+    return allNotifications.filter(notification => {
+      // First, ensure this notification belongs to the current user
+      const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+      if (notificationUserId !== currentUserIdStr) {
+        return false; // Not for current user
+      }
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
@@ -197,7 +207,8 @@ export default function NotificationBell() {
       new Date(snooze.snoozed_until) > now
     );
     return !isSnoozed;
-  });
+    });
+  }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes]);
 
   // Debug logging
   useEffect(() => {
@@ -275,31 +286,20 @@ export default function NotificationBell() {
 
   // Convert grouped object to array of groups
   // Use useMemo to ensure recalculation when snoozes change
+  // Note: groupedNotifications already filters by current user, so notifications here are already filtered
   const notificationGroups = useMemo(() => {
     if (!currentUserId) return [];
     
-    const currentUserIdStr = String(currentUserId).trim();
-    
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
-      // Additional safety filter: ensure we only count notifications for current user
-      const userNotifications = notifications.filter(n => {
-        const notificationUserId = n.user_id ? String(n.user_id).trim() : null;
-        return notificationUserId === currentUserIdStr;
-      });
-      
-      // Debug: log if we're filtering out notifications
-      if (type === 'renewal_reminder' && notifications.length !== userNotifications.length) {
-        console.log(`🔔 User filter: ${notifications.length} notifications before filter, ${userNotifications.length} after filter (removed ${notifications.length - userNotifications.length} from other users)`);
-      }
-      
+      // Notifications are already filtered by user in groupedNotifications
       // For renewal_reminder, count unique accounts instead of total notifications
       // This prevents showing duplicate counts if there are multiple notifications per account
-      let count = userNotifications.length;
-      let unreadCount = userNotifications.filter(n => !n.is_read).length;
+      let count = notifications.length;
+      let unreadCount = notifications.filter(n => !n.is_read).length;
       
       if (type === 'renewal_reminder') {
         // Normalize account IDs to strings for proper Set deduplication
-        const allAccountIds = userNotifications
+        const allAccountIds = notifications
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim());
@@ -308,7 +308,7 @@ export default function NotificationBell() {
         
         // For unread count, also count unique accounts (only unread ones)
         // This ensures we show unique account count, not total notification count
-        const unreadNotifications = userNotifications.filter(n => !n.is_read);
+        const unreadNotifications = notifications.filter(n => !n.is_read);
         const accountIds = unreadNotifications
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
@@ -324,8 +324,8 @@ export default function NotificationBell() {
         }
         
         // Debug logging for renewal reminders
-        if (userNotifications.length > 0) {
-          console.log(`🔔 Renewal reminder group: ${userNotifications.length} notifications (${notifications.length} total before user filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
+        if (notifications.length > 0) {
+          console.log(`🔔 Renewal reminder group: ${notifications.length} notifications (already filtered by user), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
           console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
           console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
         }
@@ -333,7 +333,7 @@ export default function NotificationBell() {
       
       const group = {
         type,
-        notifications: userNotifications, // Use filtered notifications
+        notifications, // Already filtered by user in groupedNotifications
         count,
         unreadCount
       };
