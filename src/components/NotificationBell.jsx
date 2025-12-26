@@ -297,12 +297,19 @@ export default function NotificationBell() {
         // For unread count, also count unique accounts (only unread ones)
         // This ensures we show unique account count, not total notification count
         const unreadNotifications = userNotifications.filter(n => !n.is_read);
-        const uniqueUnreadAccountIds = new Set(
-          unreadNotifications
-            .map(n => n.related_account_id)
-            .filter(id => id && id !== 'null' && id !== null)
-        );
+        const accountIds = unreadNotifications
+          .map(n => n.related_account_id)
+          .filter(id => id && id !== 'null' && id !== null)
+          .map(id => String(id).trim()); // Normalize to strings for Set comparison
+        const uniqueUnreadAccountIds = new Set(accountIds);
         unreadCount = uniqueUnreadAccountIds.size;
+        
+        // Debug: log account IDs if count doesn't match
+        if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
+          console.log(`🔔 Unread count mismatch: ${unreadNotifications.length} unread notifications, ${unreadCount} unique accounts`);
+          console.log(`🔔 Account IDs:`, Array.from(uniqueUnreadAccountIds).slice(0, 10));
+          console.log(`🔔 All account IDs (with duplicates):`, accountIds.slice(0, 20));
+        }
         
         // Debug logging for renewal reminders
         if (userNotifications.length > 0) {
