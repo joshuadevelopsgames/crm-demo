@@ -14,11 +14,13 @@ export function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
-    // Apply dark mode class to root element
+    // Apply dark mode via data-theme attribute (preferred) and class (legacy support)
     const root = document.documentElement;
     if (isDarkMode) {
+      root.setAttribute('data-theme', 'dark');
       root.classList.add('dark');
     } else {
+      root.setAttribute('data-theme', 'light');
       root.classList.remove('dark');
     }
     

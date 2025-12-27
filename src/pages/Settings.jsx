@@ -15,14 +15,17 @@ import {
   Monitor, 
   FileText,
   Save,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
+import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
 
 export default function Settings() {
-  const { profile, user } = useUser();
+  const { profile, user, isAdmin } = useUser();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -33,6 +36,8 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
   const [systemAnnouncements, setSystemAnnouncements] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(null);
 
   // Update state when profile/user data loads
   useEffect(() => {
@@ -90,6 +95,42 @@ export default function Settings() {
       full_name: fullName,
       phone_number: phoneNumber
     });
+  };
+
+  const handleExportAllData = async () => {
+    setIsExporting(true);
+    setExportProgress({ message: 'Preparing export...', accounts: 0, contacts: 0 });
+    
+    try {
+      toast.loading('Exporting data to Google Sheets...', { id: 'export-toast' });
+      
+      const result = await exportAllDataToGoogleSheet();
+      
+      if (result.success) {
+        const { accountsExported, contactsExported, totalRecords } = result.summary;
+        toast.success(
+          `✓ Export complete! ${accountsExported} accounts and ${contactsExported} contacts exported.`,
+          { id: 'export-toast', duration: 5000 }
+        );
+        setExportProgress({
+          message: 'Export complete!',
+          accounts: accountsExported,
+          contacts: contactsExported,
+          total: totalRecords
+        });
+      } else {
+        throw new Error(result.error || 'Export failed');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(
+        `Export failed: ${error.message || 'Unknown error'}`,
+        { id: 'export-toast', duration: 5000 }
+      );
+      setExportProgress(null);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -210,6 +251,65 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Data Export - Admin Only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Data Export
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Export all accounts and contacts data to Google Sheets. The data will be organized into separate tabs:
+              </p>
+              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1 ml-2">
+                <li><strong>Imported Accounts</strong> - All account information</li>
+                <li><strong>Imported Contacts</strong> - All contact information</li>
+                <li><strong>All Data</strong> - Combined view with account and contact data together</li>
+              </ul>
+            </div>
+            
+            {exportProgress && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">{exportProgress.message}</p>
+                {exportProgress.total > 0 && (
+                  <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                    <p>✓ Accounts exported: {exportProgress.accounts}</p>
+                    <p>✓ Contacts exported: {exportProgress.contacts}</p>
+                    <p className="font-medium mt-2">Total records: {exportProgress.total}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <Button
+              onClick={handleExportAllData}
+              disabled={isExporting}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export All Data to Google Sheets
+                </>
+              )}
+            </Button>
+            
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Note: This may take a few minutes for large datasets. The export will update existing data in your Google Sheet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* End of Year Reports */}
       <Card>

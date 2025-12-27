@@ -112,6 +112,22 @@ body {
   background: hsl(var(--muted-foreground) / 0.5);
 }
 
+/* Dark mode scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-track,
+.dark ::-webkit-scrollbar-track {
+  background: hsl(222 22% 11%); /* surface-1 */
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(215 15% 70% / 0.3); /* text-muted with opacity */
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 15% 70% / 0.5); /* text-muted with more opacity */
+}
+
 /* PWA/Standalone specific styles */
 @media (display-mode: standalone) {
   /* Use dynamic viewport height for PWA - accounts for browser UI */
@@ -149,10 +165,26 @@ html, body, #root {
   background-image: none !important;
 }
 
+/* Dark mode background fix - use theme tokens */
+[data-theme="dark"] html, 
+[data-theme="dark"] body, 
+[data-theme="dark"] #root,
+.dark html, 
+.dark body, 
+.dark #root {
+  background-color: hsl(222 22% 8%) !important; /* bg token */
+  background-image: none !important;
+}
+
 /* Ensure the main container extends to bottom */
 #root > div {
   background-color: #ffffff;
   min-height: 100vh;
+}
+
+[data-theme="dark"] #root > div,
+.dark #root > div {
+  background-color: hsl(222 22% 8%); /* bg token */
 }
 
 /* PWA: Prevent black sections when scrolling - cover entire viewport */
@@ -226,31 +258,74 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
   }
+  [data-theme="dark"] {
+    /* Dark Mode Style Guide - Strict token implementation */
+    --background: 222 22% 8%; /* bg */
+    --foreground: 210 30% 96%; /* text */
+    --card: 222 22% 11%; /* surface-1 */
+    --card-foreground: 210 30% 96%; /* text */
+    --popover: 222 22% 11%; /* surface-1 */
+    --popover-foreground: 210 30% 96%; /* text */
+    --primary: 172 70% 45%; /* primary */
+    --primary-foreground: 222 22% 10%; /* primary-contrast */
+    --secondary: 222 20% 14%; /* surface-2 */
+    --secondary-foreground: 210 30% 96%; /* text */
+    --muted: 222 20% 14%; /* surface-2 */
+    --muted-foreground: 215 15% 70%; /* text-muted */
+    --accent: 222 18% 18%; /* surface-3 */
+    --accent-foreground: 210 30% 96%; /* text */
+    --destructive: 0 75% 55%; /* danger */
+    --destructive-foreground: 210 30% 96%; /* text */
+    --border: 222 14% 24%; /* border */
+    --input: 222 20% 14%; /* surface-2 */
+    --ring: 210 100% 65%; /* focus */
+    --chart-1: 172 70% 45%; /* primary */
+    --chart-2: 145 65% 45%; /* success */
+    --chart-3: 40 90% 55%; /* warning */
+    --chart-4: 0 75% 55%; /* danger */
+    --chart-5: 210 100% 65%; /* focus/blue */
+    
+    /* Additional semantic tokens */
+    --surface-1: 222 22% 11%;
+    --surface-2: 222 20% 14%;
+    --surface-3: 222 18% 18%;
+    --text: 210 30% 96%;
+    --text-muted: 215 15% 70%;
+    --text-subtle: 215 10% 55%;
+    --primary-hover: 172 70% 50%;
+    --primary-active: 172 70% 40%;
+    --success: 145 65% 45%;
+    --warning: 40 90% 55%;
+    --danger: 0 75% 55%;
+    --focus: 210 100% 65%;
+  }
+  
+  /* Legacy .dark class support - map to data-theme */
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 222 22% 8%;
+    --foreground: 210 30% 96%;
+    --card: 222 22% 11%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 22% 11%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 172 70% 45%;
+    --primary-foreground: 222 22% 10%;
+    --secondary: 222 20% 14%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 20% 14%;
+    --muted-foreground: 215 15% 70%;
+    --accent: 222 18% 18%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 210 30% 96%;
+    --border: 222 14% 24%;
+    --input: 222 20% 14%;
+    --ring: 210 100% 65%;
+    --chart-1: 172 70% 45%;
+    --chart-2: 145 65% 45%;
+    --chart-3: 40 90% 55%;
+    --chart-4: 0 75% 55%;
+    --chart-5: 210 100% 65%;
   }
 }
 
@@ -262,6 +337,18 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Respect prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
