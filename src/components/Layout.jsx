@@ -175,11 +175,9 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-white" style={{ 
+    <div className="min-h-screen bg-white dark:bg-slate-950" style={{ 
       overscrollBehavior: 'none', 
       WebkitOverflowScrolling: 'touch',
-      backgroundColor: '#ffffff',
-      background: '#ffffff'
     }}>
       <style>{`
         :root {
@@ -193,14 +191,13 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Top Navigation - Apply mobile/PWA styles without affecting desktop */}
       <nav 
-        className="bg-white border-b border-slate-200/50 fixed left-0 right-0 z-50 shadow-sm" 
+        className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 z-50 shadow-sm" 
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
           top: isTutorialMode ? '3rem' : `max(0px, env(safe-area-inset-top, 0px))`,
           left: '0',
           right: '0',
           paddingTop: '0',
-          backgroundColor: '#ffffff',
           position: 'fixed',
           willChange: 'transform',
           transform: 'translate3d(0, 0, 0)',
@@ -213,7 +210,6 @@ export default function Layout({ children, currentPageName }) {
         } : {
           // Desktop web browser styles (unchanged)
           top: isTutorialMode ? '3rem' : '0',
-          backgroundColor: '#ffffff'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

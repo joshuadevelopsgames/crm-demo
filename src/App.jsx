@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import TutorialBar from './components/TutorialBar';
 import Dashboard from './pages/Dashboard';
@@ -234,15 +235,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <UserProvider>
-          <TutorialProvider>
-            <div style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
-              <TutorialBar />
-              <AppContent />
-              <InstallPrompt />
-            </div>
-          </TutorialProvider>
-        </UserProvider>
+        <ThemeProvider>
+          <UserProvider>
+            <TutorialProvider>
+              <div style={{ backgroundColor: '#ffffff', minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
+                <TutorialBar />
+                <AppContent />
+                <InstallPrompt />
+              </div>
+            </TutorialProvider>
+          </UserProvider>
+        </ThemeProvider>
       </Router>
     </QueryClientProvider>
   );
