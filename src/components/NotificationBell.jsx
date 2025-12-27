@@ -304,6 +304,9 @@ export default function NotificationBell() {
         const now = new Date();
         const activeNotificationsOnly = notifications.filter(n => {
           // Check if this notification is snoozed
+          if (!snoozes || !Array.isArray(snoozes)) {
+            return true; // If snoozes not loaded, include all
+          }
           const isSnoozed = snoozes.some(snooze => 
             snooze.notification_type === n.type &&
             (n.related_account_id 
@@ -313,6 +316,11 @@ export default function NotificationBell() {
           );
           return !isSnoozed;
         });
+        
+        // Debug: log if we filtered out any notifications
+        if (type === 'neglected_account' && notifications.length !== activeNotificationsOnly.length) {
+          console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
+        }
         
         // Normalize account IDs to strings for proper Set deduplication
         const allAccountIds = activeNotificationsOnly
@@ -354,6 +362,17 @@ export default function NotificationBell() {
           console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
           console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
           console.log(`🔔 CRITICAL: The badge should show ${count} and text should show "${unreadCount} unread notifications"`);
+          
+          // For neglected accounts, show detailed breakdown
+          if (type === 'neglected_account') {
+            console.log(`🔔 Neglected account breakdown: ${notifications.length} total, ${activeNotificationsOnly.length} after snooze, ${count} unique accounts (badge), ${unreadCount} unique unread accounts (text)`);
+            if (notifications.length !== activeNotificationsOnly.length) {
+              console.warn(`⚠️ WARNING: ${notifications.length - activeNotificationsOnly.length} notifications were filtered as snoozed`);
+            }
+            if (count !== unreadCount && unreadNotifications.length === activeNotificationsOnly.length) {
+              console.warn(`⚠️ WARNING: All ${activeNotificationsOnly.length} notifications are unread, but count (${count}) != unreadCount (${unreadCount})`);
+            }
+          }
           
           // Log the actual account IDs to verify uniqueness
           if (unreadNotifications.length > unreadCount) {
