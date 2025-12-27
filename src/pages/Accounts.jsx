@@ -370,7 +370,7 @@ export default function Accounts() {
           position="bottom"
         >
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Accounts</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
             <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
           </div>
         </TutorialTooltip>
@@ -546,25 +546,25 @@ export default function Accounts() {
               <table className="w-full min-w-[800px]">
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Account
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Segment
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Score
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Last Contact
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Revenue
                     </th>
                   </tr>
@@ -584,7 +584,7 @@ export default function Accounts() {
                               <Building2 className="w-5 h-5 text-slate-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-slate-900">{account.name}</div>
+                              <div className="font-medium text-slate-900 dark:text-foreground">{account.name}</div>
                               <div className="text-sm text-slate-500">{account.industry || 'No industry'}</div>
                             </div>
                           </div>
@@ -660,7 +660,7 @@ export default function Accounts() {
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</h3>
+                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</h3>
                               {isArchived && (
                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                   <Archive className="w-3 h-3 mr-1" />
@@ -827,25 +827,25 @@ export default function Accounts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Type
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Segment
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Score
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Last Contact
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Revenue
                       </th>
                     </tr>
@@ -867,7 +867,7 @@ export default function Accounts() {
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</span>
+                                  <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</span>
                                   {isArchived && (
                                     <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                       <Archive className="w-3 h-3 mr-1" />
@@ -944,7 +944,7 @@ export default function Accounts() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</h3>
+                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</h3>
                               {isArchived && (
                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                   <Archive className="w-3 h-3 mr-1" />

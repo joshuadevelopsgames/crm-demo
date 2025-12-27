@@ -140,7 +140,7 @@ export default function Contacts() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Contacts</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Contacts</h1>
             <p className="text-slate-600 mt-1">{filteredContacts.length} total contacts</p>
           </div>
           <Button 
@@ -238,19 +238,19 @@ export default function Contacts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
@@ -271,7 +271,7 @@ export default function Contacts() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                                <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                   {contact.first_name} {contact.last_name}
                                 </span>
                                 {isArchived && (
@@ -356,7 +356,7 @@ export default function Contacts() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </h3>
                               {contact.title && (
@@ -524,19 +524,19 @@ export default function Contacts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
@@ -557,7 +557,7 @@ export default function Contacts() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                                <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                   {contact.first_name} {contact.last_name}
                                 </span>
                                 {isArchived && (
@@ -642,7 +642,7 @@ export default function Contacts() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </h3>
                               {contact.title && (

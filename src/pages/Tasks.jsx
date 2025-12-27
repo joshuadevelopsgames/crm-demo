@@ -1236,7 +1236,7 @@ export default function Tasks() {
           position="bottom"
         >
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Tasks</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Tasks</h1>
             <p className="text-slate-600 mt-1">
               {filteredTasks.length}{" "}
               {activeFilter === "today"
@@ -2174,7 +2174,7 @@ export default function Tasks() {
                                         onClick={(e) =>
                                           handleFileDownload(attachment, e)
                                         }
-                                        className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block text-left w-full"
+                                        className="text-sm font-medium text-slate-900 dark:text-foreground hover:text-slate-700 dark:hover:text-text-muted truncate block text-left w-full"
                                         title="Click to download"
                                       >
                                         {attachment.file_name}
@@ -2563,9 +2563,9 @@ export default function Tasks() {
                               {/* Task Title */}
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <h3
-                                  className={`font-semibold text-slate-900 text-sm line-clamp-2 leading-snug flex-1 ${
+                                  className={`font-semibold text-slate-900 dark:text-foreground text-sm line-clamp-2 leading-snug flex-1 ${
                                     task.status === "completed"
-                                      ? "line-through text-slate-500"
+                                      ? "line-through text-slate-500 dark:text-text-muted"
                                       : ""
                                   }`}
                                 >
@@ -2756,9 +2756,9 @@ export default function Tasks() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <h3
-                                        className={`font-semibold ${isMobileView ? "text-base" : "text-base"} text-slate-900 leading-tight ${
+                                        className={`font-semibold ${isMobileView ? "text-base" : "text-base"} text-slate-900 dark:text-foreground leading-tight ${
                                           task.status === "completed"
-                                            ? "line-through text-slate-500"
+                                            ? "line-through text-slate-500 dark:text-text-muted"
                                             : ""
                                         }`}
                                       >
@@ -2944,7 +2944,7 @@ export default function Tasks() {
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
                                         <h3
-                                          className={`font-semibold text-slate-900 ${
+                                          className={`font-semibold text-slate-900 dark:text-foreground ${
                                             task.status === "completed"
                                               ? "line-through"
                                               : ""
@@ -3083,7 +3083,7 @@ export default function Tasks() {
         {filteredTasks.length === 0 && (
           <Card className="p-12 text-center">
             <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">
+            <h3 className="text-lg font-medium text-slate-900 dark:text-foreground mb-1">
               No tasks found
             </h3>
             <p className="text-slate-600">
