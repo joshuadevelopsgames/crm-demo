@@ -40,14 +40,14 @@ export default function KeyDates({ account }) {
 
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">Date Created</p>
-            <p className="font-medium text-slate-900 dark:text-foreground mt-1">
+            <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">
               {createdDate ? format(new Date(createdDate), 'MMM dd yyyy') : '—'}
             </p>
           </div>
 
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">Created By</p>
-            <p className="font-medium text-slate-900 dark:text-foreground mt-1">{createdBy}</p>
+            <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{createdBy}</p>
           </div>
         </div>
       </CardContent>

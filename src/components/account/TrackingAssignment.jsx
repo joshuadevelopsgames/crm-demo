@@ -132,7 +132,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-foreground mt-1 capitalize">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 capitalize">
                 {formData.account_type || '—'}
               </p>
             )}
@@ -163,7 +163,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-foreground mt-1 capitalize">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 capitalize">
                 {formData.classification?.replace('_', ' ') || '—'}
               </p>
             )}
@@ -179,7 +179,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 placeholder="Sales rep email or name"
               />
             ) : (
-              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.assigned_to || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.assigned_to || '—'}</p>
             )}
           </div>
 
@@ -193,7 +193,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 placeholder="Referral source"
               />
             ) : (
-              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.referral || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.referral || '—'}</p>
             )}
           </div>
 
@@ -208,7 +208,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 rows={3}
               />
             ) : (
-              <p className="font-medium text-slate-900 dark:text-foreground mt-1 whitespace-pre-wrap">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 whitespace-pre-wrap">
                 {formData.referral_note || '—'}
               </p>
             )}
