@@ -266,7 +266,50 @@ export default function Tasks() {
     recurrence_end_date: "",
     recurrence_count: null,
   });
+  const [assignedUsersOpen, setAssignedUsersOpen] = useState(false);
   const [newLabelInput, setNewLabelInput] = useState("");
+
+  // Helper functions for multi-user assignment
+  const parseAssignedUsers = (assignedTo) => {
+    if (!assignedTo || assignedTo.trim() === "") return [];
+    return assignedTo.split(",").map((email) => email.trim()).filter(Boolean);
+  };
+
+  const formatAssignedUsers = (emails) => {
+    return emails.filter(Boolean).join(",");
+  };
+
+  const toggleUserAssignment = (userEmail) => {
+    const currentAssignments = parseAssignedUsers(newTask.assigned_to);
+    const isAssigned = currentAssignments.includes(userEmail);
+    
+    if (isAssigned) {
+      const updated = currentAssignments.filter((email) => email !== userEmail);
+      setNewTask({
+        ...newTask,
+        assigned_to: formatAssignedUsers(updated),
+      });
+    } else {
+      const updated = [...currentAssignments, userEmail];
+      setNewTask({
+        ...newTask,
+        assigned_to: formatAssignedUsers(updated),
+      });
+    }
+  };
+
+  const getAssignedUserDisplay = (assignedTo, currentUserEmail) => {
+    const assignedEmails = parseAssignedUsers(assignedTo);
+    if (assignedEmails.length === 0) return "Unassigned";
+    
+    return assignedEmails
+      .map((email) => {
+        if (email === currentUserEmail) return "You";
+        const user = users.find((u) => u.email === email);
+        return user ? (user.full_name || user.name || email) : email;
+      })
+      .join(", ");
+  };
 
   const resetTaskForm = () => {
     setNewTask({
@@ -1023,7 +1066,7 @@ export default function Tasks() {
           task.status !== "completed" &&
           task.status !== "blocked" &&
           !task.due_date &&
-          task.assigned_to === currentUser?.email
+          parseAssignedUsers(task.assigned_to).includes(currentUser?.email)
         );
       case "today":
         return (
@@ -1234,7 +1277,7 @@ export default function Tasks() {
       (task) =>
         task.status !== "completed" &&
         !task.due_date &&
-        task.assigned_to === currentUser?.email,
+        parseAssignedUsers(task.assigned_to).includes(currentUser?.email),
     ).length;
     const today = tasks.filter(
       (task) =>
@@ -1457,16 +1500,7 @@ export default function Tasks() {
                               Assigned To
                             </Label>
                             <p className="mt-1 text-slate-900 dark:text-white">
-                              {viewingTask.assigned_to
-                                ? (() => {
-                                    const assignedUser = users.find(
-                                      (u) => u.email === viewingTask.assigned_to
-                                    );
-                                    return assignedUser
-                                      ? assignedUser.full_name || assignedUser.name || assignedUser.email
-                                      : viewingTask.assigned_to;
-                                  })()
-                                : "Unassigned"}
+                              {getAssignedUserDisplay(viewingTask.assigned_to, currentUser?.email)}
                             </p>
                           </div>
                           <div>
@@ -1666,31 +1700,63 @@ export default function Tasks() {
                         <div>
                           <Label>Assigned To</Label>
                           <Select
-                            value={newTask.assigned_to || "unassigned"}
-                            onValueChange={(value) =>
-                              setNewTask({
-                                ...newTask,
-                                assigned_to: value === "unassigned" ? "" : value,
-                              })
-                            }
+                            open={assignedUsersOpen}
+                            onOpenChange={setAssignedUsersOpen}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select user" />
+                              <SelectValue placeholder="Select users">
+                                {getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)}
+                              </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {users.map((user) => (
-                                <SelectItem key={user.id || user.email} value={user.email}>
-                                  <div className="flex flex-col">
-                                    <span>{user.full_name || user.name || user.email}</span>
-                                    {user.email && (user.full_name || user.name) && (
-                                      <span className="text-xs text-slate-500">
-                                        {user.email}
-                                      </span>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))}
+                            <SelectContent className="max-h-[300px]">
+                              <div className="p-2 space-y-2">
+                                <div
+                                  className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                                  onClick={() => {
+                                    setNewTask({
+                                      ...newTask,
+                                      assigned_to: "",
+                                    });
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={parseAssignedUsers(newTask.assigned_to).length === 0}
+                                    onChange={() => {}}
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <Label className="cursor-pointer font-normal">Unassigned</Label>
+                                </div>
+                                {users.map((user) => {
+                                  const isAssigned = parseAssignedUsers(newTask.assigned_to).includes(user.email);
+                                  return (
+                                    <div
+                                      key={user.id || user.email}
+                                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                                      onClick={() => toggleUserAssignment(user.email)}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isAssigned}
+                                        onChange={() => {}}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <div className="flex flex-col flex-1">
+                                        <Label className="cursor-pointer font-normal">
+                                          {user.email === currentUser?.email
+                                            ? "You"
+                                            : user.full_name || user.name || user.email}
+                                        </Label>
+                                        {user.email && (user.full_name || user.name) && user.email !== currentUser?.email && (
+                                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                                            {user.email}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </SelectContent>
                           </Select>
                         </div>
@@ -3088,19 +3154,26 @@ export default function Tasks() {
                                               )}
                                       </Badge>
                                     )}
-                                    {task.assigned_to && (
+                                    {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (
                                       <Badge
                                         variant="outline"
                                         className="text-slate-600 dark:text-slate-300 flex items-center gap-1"
                                       >
                                         <User className="w-3 h-3" />
                                         {(() => {
-                                          const assignedUser = users.find(
-                                            (u) => u.email === task.assigned_to
-                                          );
-                                          return assignedUser
-                                            ? assignedUser.full_name || assignedUser.name || task.assigned_to.split("@")[0]
-                                            : task.assigned_to.split("@")[0];
+                                          const assignedEmails = parseAssignedUsers(task.assigned_to);
+                                          if (assignedEmails.length === 1) {
+                                            const email = assignedEmails[0];
+                                            if (email === currentUser?.email) return "You";
+                                            const user = users.find((u) => u.email === email);
+                                            return user
+                                              ? user.full_name || user.name || email.split("@")[0]
+                                              : email.split("@")[0];
+                                          }
+                                          const includesYou = assignedEmails.includes(currentUser?.email);
+                                          return includesYou
+                                            ? `You + ${assignedEmails.length - 1}`
+                                            : `${assignedEmails.length} people`;
                                         })()}
                                       </Badge>
                                     )}
