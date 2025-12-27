@@ -306,28 +306,29 @@ export default function NotificationBell() {
         const uniqueAccountIds = new Set(allAccountIds);
         count = uniqueAccountIds.size;
         
-        // For unread count, also count unique accounts (only unread ones)
-        // This ensures we show unique account count, not total notification count
+        // For unread count, use the EXACT SAME logic as count, but only for unread notifications
+        // This ensures consistency - if count works, unreadCount will work the same way
         const unreadNotifications = notifications.filter(n => !n.is_read);
-        const accountIds = unreadNotifications
+        
+        // Use EXACT same pattern as count calculation above
+        const unreadAccountIds = unreadNotifications
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
-          .map(id => String(id).trim()); // Normalize to strings for Set comparison
-        const uniqueUnreadAccountIds = new Set(accountIds);
+          .map(id => String(id).trim()); // Same normalization as count
+        const uniqueUnreadAccountIds = new Set(unreadAccountIds); // Same Set logic as count
+        unreadCount = uniqueUnreadAccountIds.size; // Same size calculation as count
         
-        // CRITICAL: Always use unique account count, never total notification count
-        unreadCount = uniqueUnreadAccountIds.size;
-        
-        // Safety check: if unreadCount doesn't match expected, log warning
-        if (unreadNotifications.length !== unreadCount) {
-          console.warn(`⚠️ FIXING unreadCount: was ${unreadNotifications.length} (total notifications), setting to ${unreadCount} (unique accounts)`);
+        // Safety: if calculation somehow fails, fall back to count (all accounts have unread)
+        if (unreadCount > count) {
+          console.warn(`⚠️ unreadCount (${unreadCount}) > count (${count}), using count instead`);
+          unreadCount = count;
         }
         
         // Debug: log account IDs if count doesn't match
         if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
           console.log(`🔔 Unread count mismatch: ${unreadNotifications.length} unread notifications, ${unreadCount} unique accounts`);
           console.log(`🔔 Account IDs:`, Array.from(uniqueUnreadAccountIds).slice(0, 10));
-          console.log(`🔔 All account IDs (with duplicates):`, accountIds.slice(0, 20));
+          console.log(`🔔 All account IDs (with duplicates):`, unreadAccountIds.slice(0, 20));
         }
         
         // Debug logging for renewal reminders
