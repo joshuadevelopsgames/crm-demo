@@ -636,6 +636,8 @@ export default function NotificationBell() {
 
   const getNotificationIcon = (type) => {
     switch (type) {
+      case 'task_assigned':
+        return <User className="w-6 h-6 text-blue-600" />;
       case 'task_reminder':
         return <Clipboard className="w-6 h-6 text-slate-600" />;
       case 'task_overdue':
@@ -743,6 +745,7 @@ export default function NotificationBell() {
                     const hasMultiple = group.count > 1;
                     const groupName = group.type === 'renewal_reminder' ? 'At Risk Accounts' :
                                      group.type === 'neglected_account' ? 'Neglected Accounts' :
+                                     group.type === 'task_assigned' ? 'Task Assignments' :
                                      group.type === 'task_reminder' ? 'Task Reminders' :
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :
                                      group.type === 'task_due_today' ? 'Tasks Due Today' :
