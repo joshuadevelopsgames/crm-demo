@@ -362,7 +362,7 @@ export default function Dashboard() {
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      tip: 'This shows your at risk accounts. These are accounts flagged as at-risk.'
+      tip: 'Accounts with contract renewals coming up within the next 6 months. These need attention to ensure they renew successfully.'
     }
   ];
 
