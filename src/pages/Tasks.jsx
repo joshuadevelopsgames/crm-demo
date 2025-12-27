@@ -1268,7 +1268,8 @@ export default function Tasks() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
-                className="bg-slate-900 hover:bg-slate-800"
+                variant="outline"
+                className="border-slate-300"
                 onClick={() => {
                   setEditingTask(null);
                   setViewingTask(null);
