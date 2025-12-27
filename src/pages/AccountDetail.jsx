@@ -166,7 +166,7 @@ export default function AccountDetail() {
             <Building2 className="w-8 h-8 text-slate-600 dark:text-slate-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{account.name}</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-[#ffffff]">{account.name}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Badge className={getStatusColor(account.status)}>
                 {account.status}
@@ -346,7 +346,7 @@ export default function AccountDetail() {
         {/* To-Dos Tab (formerly Tasks) */}
         <TabsContent value="todos" className="space-y-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">To-Dos ({tasks.length})</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">To-Dos ({tasks.length})</h3>
             <Button variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               New To-Do
@@ -359,7 +359,7 @@ export default function AccountDetail() {
                 <Card key={task.id} className="p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-medium text-slate-900 dark:text-white">{task.title}</h4>
+                      <h4 className="font-medium text-slate-900 dark:text-[#ffffff]">{task.title}</h4>
                       {task.description && (
                         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{task.description}</p>
                       )}
@@ -393,7 +393,7 @@ export default function AccountDetail() {
         <TabsContent value="files">
           <Card className="p-12 text-center">
             <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No files yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No files yet</h3>
             <p className="text-slate-600 dark:text-slate-400 mb-4">
               Upload documents, images, or other files related to this account
             </p>

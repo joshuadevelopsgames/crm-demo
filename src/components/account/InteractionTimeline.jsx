@@ -114,7 +114,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
       <Card>
         <CardContent className="p-12 text-center">
           <MessageSquare className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No interactions yet</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No interactions yet</h3>
           <p className="text-slate-600 dark:text-slate-400">Log your first interaction to start tracking engagement</p>
         </CardContent>
       </Card>
@@ -164,7 +164,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         )}
                       </div>
                       {interaction.subject && (
-                        <h3 className="font-semibold text-slate-900 dark:text-white">{interaction.subject}</h3>
+                        <h3 className="font-semibold text-slate-900 dark:text-[#ffffff]">{interaction.subject}</h3>
                       )}
                       <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mt-1">
                         <span>{format(new Date(interaction.interaction_date), 'MMM d, yyyy • h:mm a')}</span>
@@ -256,7 +256,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
               Are you sure you want to delete this interaction? This action cannot be undone.
               {interactionToDelete?.subject && (
                 <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
-                  <strong className="text-slate-900 dark:text-white">Subject:</strong> <span className="text-slate-900 dark:text-white">{interactionToDelete.subject}</span>
+                  <strong className="text-slate-900 dark:text-[#ffffff]">Subject:</strong> <span className="text-slate-900 dark:text-[#ffffff]">{interactionToDelete.subject}</span>
                 </div>
               )}
             </AlertDialogDescription>

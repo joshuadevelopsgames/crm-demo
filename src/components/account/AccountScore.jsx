@@ -119,7 +119,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {!isICPNA && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">ICP Scorecard</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">ICP Scorecard</h3>
             {canManageICP && (
               <Link to={createPageUrl('Scoring')}>
                 <Button variant="outline" size="sm">
@@ -139,7 +139,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
           <Card>
             <CardContent className="p-8 text-center">
               <Award className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No ICP Template</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No ICP Template</h3>
               <p className="text-slate-600 dark:text-slate-400 mb-4">
                 {canManageICP 
                   ? 'Create an ICP template on the Scoring page to start scoring accounts'
@@ -160,7 +160,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                 <CardContent className="p-5">
               <div className="flex items-center justify-between">
                     <div>
-                  <h4 className="font-semibold text-slate-900 dark:text-white">{icpTemplate.name}</h4>
+                  <h4 className="font-semibold text-slate-900 dark:text-[#ffffff]">{icpTemplate.name}</h4>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{icpTemplate.description || 'Ideal Customer Profile scoring'}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Version {icpTemplate.version_number || 1} • {icpTemplate.questions?.length || 0} questions
@@ -198,7 +198,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {/* Scorecard History */}
       {scorecards.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Scorecard History</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff] mb-4">Scorecard History</h3>
           <div className="space-y-3">
             {scorecards.sort((a, b) => {
               const dateA = new Date(a.completed_date || a.scorecard_date || 0);
@@ -239,7 +239,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{scorecard.template_name || 'Custom Scorecard'}</h4>
+                          <h4 className="font-medium text-slate-900 dark:text-[#ffffff]">{scorecard.template_name || 'Custom Scorecard'}</h4>
                           <Badge 
                             className={isPass 
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
@@ -330,7 +330,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                           {/* Section Header */}
                                           <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                                             <div className="flex items-center justify-between">
-                                              <span className="text-sm font-semibold text-slate-900 dark:text-white">{section}</span>
+                                              <span className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">{section}</span>
                                               {scorecard.section_scores && scorecard.section_scores[section] !== undefined && (
                                                 <Badge variant="outline" className="text-xs">
                                                   Section Score: {scorecard.section_scores[section]}
@@ -374,7 +374,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                                 <div key={idx} className="px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800">
                                                   <div className="flex items-start justify-between gap-4">
                                                     <div className="flex-1 min-w-0">
-                                                      <p className="text-sm text-slate-900 dark:text-white font-medium mb-1">
+                                                      <p className="text-sm text-slate-900 dark:text-[#ffffff] font-medium mb-1">
                                                         {response.question_text}
                                                       </p>
                                                       <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -394,7 +394,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                                       </div>
                                                     </div>
                                                     <div className="text-right flex-shrink-0">
-                                                      <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                      <div className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
                                                         {response.weighted_score || 0}
                                                       </div>
                                                       <div className="text-xs text-slate-500 dark:text-slate-400">points</div>

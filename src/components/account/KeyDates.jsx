@@ -25,7 +25,7 @@ export default function KeyDates({ account }) {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">Last Contact</p>
-            <p className="font-semibold text-slate-900 dark:text-white mt-1">
+            <p className="font-semibold text-slate-900 dark:text-[#ffffff] mt-1">
               {lastContactDays !== null ? (
                 <>
                   {lastContactDays === 0 ? 'Today' : 
