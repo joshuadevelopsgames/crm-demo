@@ -785,7 +785,7 @@ export default function Tutorial() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Interactive Tutorial</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Interactive Tutorial</h1>
             <p className="text-slate-600 mt-1">Learn how to use your CRM system</p>
           </div>
           <Button variant="ghost" onClick={handleSkip}>

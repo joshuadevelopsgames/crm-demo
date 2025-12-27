@@ -6,6 +6,7 @@ import { createPageUrl } from '../utils';
 import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Login() {
   console.log('✅ Login component is rendering!');
@@ -15,6 +16,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
   
   useEffect(() => {
     console.log('✅ Login component mounted');
@@ -166,7 +168,7 @@ export default function Login() {
                 }}
               />
             </div>
-            <h1 style={{ fontSize: (isPWA || isMobile) ? '26px' : isDesktop ? '34px' : '30px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px', cursor: 'pointer' }}>LECRM</h1>
+            <h1 style={{ fontSize: (isPWA || isMobile) ? '26px' : isDesktop ? '34px' : '30px', fontWeight: 'bold', color: isDarkMode ? 'white' : '#0f172a', marginBottom: '8px', cursor: 'pointer' }}>LECRM</h1>
           </Link>
           <p style={{ color: '#475569', fontSize: (isPWA || isMobile) ? '14px' : '16px' }}>Sign in to your account</p>
         </div>
@@ -182,7 +184,7 @@ export default function Login() {
           <div style={{ padding: '0 24px 24px 24px' }}>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="email" style={{ fontSize: '14px', fontWeight: '500', color: '#0f172a' }}>Email</label>
+                <label htmlFor="email" style={{ fontSize: '14px', fontWeight: '500', color: isDarkMode ? 'white' : '#0f172a' }}>Email</label>
                 <input
                   id="email"
                   type="email"
@@ -207,7 +209,7 @@ export default function Login() {
               </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="password" style={{ fontSize: '14px', fontWeight: '500', color: '#0f172a' }}>Password</label>
+                <label htmlFor="password" style={{ fontSize: '14px', fontWeight: '500', color: isDarkMode ? 'white' : '#0f172a' }}>Password</label>
                 <input
                   id="password"
                   type="password"
@@ -268,7 +270,7 @@ export default function Login() {
                 width: '100%',
                 padding: (isPWA || isMobile) ? '14px 16px' : '10px 16px',
                 backgroundColor: isLoading || isGoogleLoading ? '#f1f5f9' : 'white',
-                color: isLoading || isGoogleLoading ? '#94a3b8' : '#0f172a',
+                color: isLoading || isGoogleLoading ? '#94a3b8' : (isDarkMode ? 'white' : '#0f172a'),
                 border: '1px solid #cbd5e1',
                 borderRadius: '6px',
                 fontSize: (isPWA || isMobile) ? '16px' : '14px',

@@ -100,12 +100,12 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                   <th className="text-left p-3 font-semibold text-slate-900 dark:text-white">Account</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Lost</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Win Rate</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Total Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Won Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Est. vs Won</th>
-                  <th className="text-center p-3 font-semibold text-slate-900">Actions</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Lost</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Win Rate</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Est. vs Won</th>
+                  <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,7 +120,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                           {accountEstimates.length > 0 && (
                             <button
                               onClick={() => toggleAccount(account.accountId)}
-                              className="text-slate-400 hover:text-slate-900"
+                              className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             >
                               {isExpanded ? (
                                 <ChevronDown className="w-4 h-4" />

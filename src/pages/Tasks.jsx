@@ -2145,7 +2145,7 @@ export default function Tasks() {
                                   >
                                     <div className="flex items-center gap-2">
                                       <Paperclip className="w-4 h-4 text-blue-600" />
-                                      <span className="text-sm text-slate-900">
+                                      <span className="text-sm text-slate-900 dark:text-white">
                                         {file.name}
                                       </span>
                                       <span className="text-xs text-slate-500">
