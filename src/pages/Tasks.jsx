@@ -1714,7 +1714,9 @@ export default function Tasks() {
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select users">
-                                {getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)}
+                                {parseAssignedUsers(newTask.assigned_to).length > 0
+                                  ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
+                                  : "Select users"}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
