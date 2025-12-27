@@ -179,7 +179,7 @@ export default function Layout({ children, currentPageName }) {
                     }}
                   />
                 </div>
-                <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">LECRM</span>
+                <span className="text-xl md:text-2xl font-bold text-foreground">LECRM</span>
               </Link>
             </div>
 
@@ -194,8 +194,8 @@ export default function Layout({ children, currentPageName }) {
                     to={createPageUrl(item.path)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                       isActive
-                        ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
@@ -211,8 +211,8 @@ export default function Layout({ children, currentPageName }) {
                     <button
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                         adminNavigation.some(item => currentPageName === item.path)
-                          ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                       }`}
                     >
                       <Settings className="w-4 h-4" />
@@ -304,7 +304,7 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="md:hidden border-t border-slate-200 dark:border-border bg-white dark:bg-surface-1">
             <div className="px-4 py-3 space-y-1">
               {regularNavigation.map((item) => {
                 const Icon = item.icon;
@@ -316,8 +316,8 @@ export default function Layout({ children, currentPageName }) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-slate-900 dark:bg-slate-800 text-white'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground/70 hover:bg-surface-2'
                     }`}
                     style={(isPWA || isNativeApp) ? {
                       minHeight: '48px',
@@ -347,8 +347,8 @@ export default function Layout({ children, currentPageName }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                           isActive
-                            ? 'bg-slate-900 text-white'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-foreground/70 hover:bg-surface-2'
                         }`}
                         style={(isPWA || isNativeApp) ? {
                           minHeight: '48px',
@@ -422,7 +422,7 @@ export default function Layout({ children, currentPageName }) {
             // #endregion
           }
         }}
-        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-slate-950`} style={(isPWA || isNativeApp) ? {
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} style={(isPWA || isNativeApp) ? {
         // PWA and native app specific padding (with safe areas)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,

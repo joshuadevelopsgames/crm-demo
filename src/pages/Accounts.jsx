@@ -382,7 +382,7 @@ export default function Accounts() {
           >
             <Button 
               onClick={() => setIsImportDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-primary-hover active:bg-primary-active text-primary-foreground"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import from LMN
@@ -409,16 +409,16 @@ export default function Accounts() {
 
       {/* Tabs: Active / Archived */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full justify-start bg-white dark:bg-slate-900 border-b dark:border-slate-800 rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="active" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3 text-foreground/70 data-[state=active]:text-foreground"
           >
             Active ({accounts.filter(a => a.status !== 'archived' && a.archived !== true).length})
           </TabsTrigger>
           <TabsTrigger 
             value="archived"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3 text-foreground/70 data-[state=active]:text-foreground"
           >
             <Archive className="w-4 h-4 mr-2" />
             Archived ({accounts.filter(a => a.status === 'archived' || a.archived === true).length})
@@ -516,7 +516,7 @@ export default function Accounts() {
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                className={`h-8 px-3 ${viewMode === 'list' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
               >
                 <List className="w-4 h-4" />
               </Button>
@@ -524,7 +524,7 @@ export default function Accounts() {
                 variant={viewMode === 'card' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('card')}
-                className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                className={`h-8 px-3 ${viewMode === 'card' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
               >
                 <LayoutGrid className="w-4 h-4" />
               </Button>
@@ -569,7 +569,7 @@ export default function Accounts() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                   {filteredAccounts.map((account) => {
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
                     return (
@@ -803,7 +803,7 @@ export default function Accounts() {
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('list')}
-                    className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                    className={`h-8 px-3 ${viewMode === 'list' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -811,7 +811,7 @@ export default function Accounts() {
                     variant={viewMode === 'card' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('card')}
-                    className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                    className={`h-8 px-3 ${viewMode === 'card' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
@@ -850,7 +850,7 @@ export default function Accounts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredAccounts.map((account) => {
                       const neglectStatus = getNeglectStatus(account.last_interaction_date);
                       const isArchived = account.status === 'archived' || account.archived === true;
