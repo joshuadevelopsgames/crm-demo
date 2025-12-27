@@ -1361,7 +1361,7 @@ export default function Tasks() {
                             {viewingTask.title}
                           </h2>
                           {viewingTask.description && (
-                            <p className="text-slate-700 whitespace-pre-wrap">
+                            <p className="text-slate-700 dark:text-white whitespace-pre-wrap">
                               {viewingTask.description}
                             </p>
                           )}

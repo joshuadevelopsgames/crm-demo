@@ -308,7 +308,7 @@ export default function ContactDetail() {
                   <CardTitle>Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-700 whitespace-pre-wrap">{contact.notes}</p>
+                  <p className="text-slate-700 dark:text-white whitespace-pre-wrap">{contact.notes}</p>
                 </CardContent>
               </Card>
             )}
