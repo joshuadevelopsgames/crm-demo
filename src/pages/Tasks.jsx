@@ -443,9 +443,20 @@ export default function Tasks() {
       setDeleteDialogOpen(false);
       const count = Array.isArray(taskIds) ? taskIds.length : 1;
       if (count === 1) {
-        toast.success("✓ Task deleted");
+        const task = tasks.find((t) => t.id === taskIds[0]);
+        const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+        const currentUserEmail = currentUser?.email;
+        const remainingAssignments = assignedEmails.filter(
+          (email) => email !== currentUserEmail
+        );
+
+        if (remainingAssignments.length === 0) {
+          toast.success("✓ Task deleted");
+        } else {
+          toast.success("✓ Removed from task assignment");
+        }
       } else {
-        toast.success(`✓ Deleted ${count} tasks`);
+        toast.success(`✓ Removed from ${count} task assignments`);
       }
       setTasksToDelete([]);
     },
@@ -3356,7 +3367,23 @@ export default function Tasks() {
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteTaskMutation.isPending}
             >
-              {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteTaskMutation.isPending ? "Removing..." : 
+                (() => {
+                  if (tasksToDelete.length === 1) {
+                    const task = tasks.find((t) => t.id === tasksToDelete[0]);
+                    const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                    const currentUserEmail = currentUser?.email;
+                    const isAssigned = assignedEmails.includes(currentUserEmail);
+                    const remainingAssignments = assignedEmails.filter(
+                      (email) => email !== currentUserEmail
+                    );
+                    
+                    if (!isAssigned) return "Cannot Remove";
+                    if (remainingAssignments.length === 0) return "Delete";
+                    return "Remove Me";
+                  }
+                  return "Remove Me";
+                })()}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
