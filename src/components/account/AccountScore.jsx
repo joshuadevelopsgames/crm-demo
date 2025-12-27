@@ -86,7 +86,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {/* Current Score (from most recent scorecard) */}
       <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-black">
             <TrendingUp className="w-5 h-5 text-emerald-600" />
             Current Organization Score
           </CardTitle>
