@@ -162,8 +162,8 @@ export default function AccountDetail() {
       >
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-start gap-4">
-          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-slate-600" />
+          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center">
+            <Building2 className="w-8 h-8 text-slate-600 dark:text-slate-400" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{account.name}</h1>
@@ -171,15 +171,15 @@ export default function AccountDetail() {
               <Badge className={getStatusColor(account.status)}>
                 {account.status}
               </Badge>
-              <Badge variant="outline" className="text-slate-700">
+              <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
                 {account.account_type}
               </Badge>
               {account.revenue_segment && (
-                <Badge variant="outline" className="text-slate-700">
+                <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
                   {account.revenue_segment}
                 </Badge>
               )}
-              <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 font-mono text-xs">
+              <Badge variant="outline" className="text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs">
                 ID: {account.id}
               </Badge>
             </div>
@@ -361,10 +361,10 @@ export default function AccountDetail() {
                     <div>
                       <h4 className="font-medium text-slate-900 dark:text-white">{task.title}</h4>
                       {task.description && (
-                        <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{task.description}</p>
                       )}
                       {task.due_date && (
-                        <p className="text-sm text-slate-500 mt-2">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                           <Calendar className="w-3 h-3 inline mr-1" />
                           Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
                         </p>
@@ -383,8 +383,8 @@ export default function AccountDetail() {
             </div>
           ) : (
             <Card className="p-12 text-center">
-              <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600">No to-dos for this account</p>
+              <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+              <p className="text-slate-600 dark:text-slate-400">No to-dos for this account</p>
             </Card>
           )}
         </TabsContent>
@@ -392,9 +392,9 @@ export default function AccountDetail() {
         {/* Files Tab */}
         <TabsContent value="files">
           <Card className="p-12 text-center">
-            <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No files yet</h3>
-            <p className="text-slate-600 mb-4">
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
               Upload documents, images, or other files related to this account
             </p>
             <Button variant="outline" className="border-slate-300">

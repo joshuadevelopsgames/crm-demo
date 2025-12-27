@@ -72,7 +72,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Tracking + Assignment
         </CardTitle>
         {!isEditing ? (
@@ -108,7 +108,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
       <CardContent>
         <div className="space-y-4">
           <div>
-            <Label className="text-slate-600">Type</Label>
+            <Label className="text-slate-600 dark:text-slate-400">Type</Label>
             {isEditing ? (
               <>
                 <Select
@@ -128,7 +128,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   </SelectContent>
                 </Select>
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
@@ -159,7 +159,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   </SelectContent>
                 </Select>
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
@@ -240,7 +240,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                       handleICPStatusChange(newStatus);
                     }}
                   />
-                  <Label htmlFor="icp-required" className="text-xs text-slate-600">
+                  <Label htmlFor="icp-required" className="text-xs text-slate-600 dark:text-slate-400">
                     ICP Required
                   </Label>
                 </div>

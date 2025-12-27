@@ -87,9 +87,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
       <>
         <Card>
           <CardContent className="p-12 text-center">
-            <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts yet</h3>
-            <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Contact
@@ -204,7 +204,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <label htmlFor="show-archived" className="text-sm text-slate-600 cursor-pointer">
+              <label htmlFor="show-archived" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                 Show Archived
               </label>
             </div>
@@ -217,9 +217,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
 
         <Card>
           <CardContent className="p-12 text-center">
-            <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts yet</h3>
-            <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Contact
@@ -388,13 +388,13 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           {fullName || 'Unnamed Contact'}
                     </h4>
                         {contact.title && (
-                          <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                             {contact.title}
                           </p>
                         )}
                       </div>
                     {isArchived && (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300 flex-shrink-0">
+                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 flex-shrink-0">
                         <Archive className="w-3 h-3 mr-1" />
                         Archived
                       </Badge>
@@ -410,7 +410,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
 
                 {/* Contact Info */}
                 <div className={`space-y-2 pt-2 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
-                  <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                     <Mail className="w-4 h-4 flex-shrink-0" />
                     <a 
                       href={`mailto:${contact.email}`} 
@@ -421,7 +421,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                     </a>
                   </div>
                   {contact.phone && (
-                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                       <Phone className="w-4 h-4 flex-shrink-0" />
                       <a 
                         href={`tel:${contact.phone}`} 
@@ -433,7 +433,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                     </div>
                   )}
                   {contact.linkedin_url && (
-                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                       <Linkedin className="w-4 h-4 flex-shrink-0" />
                       <a 
                         href={contact.linkedin_url} 
@@ -451,8 +451,8 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 {/* Preferences/Notes */}
                 {contact.preferences && (
                   <div className={`pt-3 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
-                    <p className={`text-xs mb-1 font-medium ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>Notes:</p>
-                    <p className={`text-sm line-clamp-2 ${isArchived ? 'text-slate-500' : 'text-slate-700'}`}>
+                    <p className={`text-xs mb-1 font-medium ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>Notes:</p>
+                    <p className={`text-sm line-clamp-2 ${isArchived ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       {contact.preferences}
                     </p>
                   </div>
@@ -469,19 +469,19 @@ export default function ContactsList({ contacts, accountId, accountName }) {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Phone
                   </th>
                 </tr>
@@ -515,7 +515,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                                 {fullName || 'Unnamed Contact'}
                               </span>
                               {isArchived && (
-                                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
+                                <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700">
                                   <Archive className="w-3 h-3 mr-1" />
                                   Archived
                                 </Badge>
@@ -524,7 +524,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           </div>
                         </div>
                       </td>
-                      <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                         {contact.title || '-'}
                       </td>
                       <td className="px-4 py-4">
@@ -535,7 +535,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                       <td className="px-4 py-4">
                         <a 
                           href={`mailto:${contact.email}`}
-                          className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                          className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
                         >
                           {contact.email}
                         </a>
@@ -544,12 +544,12 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                         {contact.phone ? (
                           <a 
                             href={`tel:${contact.phone}`}
-                            className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                            className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
                           >
                             {contact.phone}
                           </a>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
                     </tr>

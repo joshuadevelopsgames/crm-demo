@@ -54,7 +54,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                     </div>
                     <div>
                       <h4 className="font-semibold text-slate-900 dark:text-white">{jobsite.name || 'Unnamed Jobsite'}</h4>
-                      <p className="text-sm text-slate-600 mt-1">
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                         {[
                           jobsite.address_1,
                           jobsite.address_2,
@@ -66,14 +66,14 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                     </div>
                   </div>
                   {jobsite.status && (
-                    <Badge variant="outline" className="text-slate-600">
+                    <Badge variant="outline" className="text-slate-600 dark:text-slate-400">
                       {jobsite.status}
                     </Badge>
                   )}
                 </div>
 
                 {jobsite.contact_name && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                     <Phone className="w-4 h-4" />
                     <span>{jobsite.contact_name}</span>
                     {jobsite.contact_phone && (
@@ -93,30 +93,30 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Jobsite
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Address
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Notes
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-700">
                   {jobsites.map((jobsite) => (
                     <tr 
                       key={jobsite.id}
-                      className="hover:bg-slate-50 transition-colors cursor-pointer"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
+                      <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
                         {[
                           jobsite.address_1,
                           jobsite.address_2,
@@ -141,7 +141,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                       </td>
                       <td className="px-4 py-4">
                         {jobsite.contact_name ? (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                             <Phone className="w-4 h-4" />
                             <span>{jobsite.contact_name}</span>
                             {jobsite.contact_phone && (
@@ -149,7 +149,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
                       <td className="px-4 py-4">
@@ -158,14 +158,14 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                             {jobsite.status}
                           </Badge>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
                       <td className="px-4 py-4">
                         {jobsite.notes ? (
-                          <p className="text-sm text-slate-600 italic line-clamp-2">{jobsite.notes}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 italic line-clamp-2">{jobsite.notes}</p>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
                     </tr>
@@ -177,9 +177,9 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
         )
       ) : (
         <Card className="p-12 text-center">
-          <MapPin className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <MapPin className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No jobsites found</h3>
-          <p className="text-slate-600 mb-4">
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
             Add jobsite locations for this account to track work sites
           </p>
           <Button className="bg-emerald-600 hover:bg-emerald-700">

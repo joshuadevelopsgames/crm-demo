@@ -153,9 +153,9 @@ export default function SalesInsights({ accountId, interactions = [] }) {
       {insights.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Lightbulb className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <Lightbulb className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No sales insights yet</h3>
-            <p className="text-slate-600 mb-4">Capture key insights from your interactions</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Capture key insights from your interactions</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Insight
@@ -172,13 +172,13 @@ export default function SalesInsights({ accountId, interactions = [] }) {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Icon className="w-5 h-5 text-slate-600" />
+                        <Icon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                         <h4 className="font-semibold text-slate-900 dark:text-white">{insight.title}</h4>
                         <Badge variant="outline" className={getInsightTypeColor(insight.insight_type)}>
                           {insight.insight_type.replace('_', ' ')}
                         </Badge>
                       </div>
-                      <p className="text-slate-700 mb-3 whitespace-pre-wrap">{insight.content}</p>
+                      <p className="text-slate-700 dark:text-slate-300 mb-3 whitespace-pre-wrap">{insight.content}</p>
                       {insight.tags && insight.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
                           {insight.tags.map((tag, i) => (
@@ -188,7 +188,7 @@ export default function SalesInsights({ accountId, interactions = [] }) {
                           ))}
                         </div>
                       )}
-                      <div className="flex items-center gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                         <span>Recorded by {insight.recorded_by}</span>
                         <span>•</span>
                         <span>{format(new Date(insight.recorded_date), 'MMM d, yyyy')}</span>

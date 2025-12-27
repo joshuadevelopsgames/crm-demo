@@ -15,16 +15,16 @@ export default function KeyDates({ account }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
             Key Dates
           </CardTitle>
-          <Lock className="w-4 h-4 text-slate-400" />
+          <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-slate-600">Last Contact</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Last Contact</p>
             <p className="font-semibold text-slate-900 dark:text-white mt-1">
               {lastContactDays !== null ? (
                 <>
@@ -33,20 +33,20 @@ export default function KeyDates({ account }) {
                    `${lastContactDays} days ago`}
                 </>
               ) : (
-                <span className="text-slate-400">No contact records</span>
+                <span className="text-slate-400 dark:text-slate-500">No contact records</span>
               )}
             </p>
           </div>
 
           <div>
-            <p className="text-sm text-slate-600">Date Created</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Date Created</p>
             <p className="font-medium text-slate-900 dark:text-white mt-1">
               {createdDate ? format(new Date(createdDate), 'MMM dd yyyy') : '—'}
             </p>
           </div>
 
           <div>
-            <p className="text-sm text-slate-600">Created By</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Created By</p>
             <p className="font-medium text-slate-900 dark:text-white mt-1">{createdBy}</p>
           </div>
         </div>

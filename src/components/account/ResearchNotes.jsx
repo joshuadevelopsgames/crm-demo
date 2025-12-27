@@ -144,9 +144,9 @@ export default function ResearchNotes({ accountId }) {
       {notes.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+            <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No research notes yet</h3>
-            <p className="text-slate-600 mb-4">Document your research findings and key information</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Document your research findings and key information</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Note
@@ -163,13 +163,13 @@ export default function ResearchNotes({ accountId }) {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Icon className="w-5 h-5 text-slate-600" />
+                        <Icon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                         <h4 className="font-semibold text-slate-900 dark:text-white">{note.title}</h4>
                         <Badge variant="outline" className={getNoteTypeColor(note.note_type)}>
                           {note.note_type.replace('_', ' ')}
                         </Badge>
                       </div>
-                      <p className="text-slate-700 mb-3 whitespace-pre-wrap">{note.content}</p>
+                      <p className="text-slate-700 dark:text-slate-300 mb-3 whitespace-pre-wrap">{note.content}</p>
                       {note.source_url && (
                         <div className="mb-3">
                           <a 
@@ -184,7 +184,7 @@ export default function ResearchNotes({ accountId }) {
                           </a>
                         </div>
                       )}
-                      <div className="flex items-center gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                         <span>Recorded by {note.recorded_by}</span>
                         <span>•</span>
                         <span>{format(new Date(note.recorded_date), 'MMM d, yyyy')}</span>

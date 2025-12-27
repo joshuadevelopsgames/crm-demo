@@ -279,7 +279,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                   className={`border-b px-4 py-3 cursor-pointer transition-colors ${
                     department === 'Uncategorized'
                       ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' 
-                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                   onClick={() => toggleDepartment(department)}
                 >
@@ -289,13 +289,13 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                         <ChevronDown className={`w-4 h-4 ${
                           department === 'Uncategorized'
                             ? 'text-amber-600' 
-                            : 'text-slate-600'
+                            : 'text-slate-600 dark:text-slate-400'
                         }`} />
                       ) : (
                         <ChevronRight className={`w-4 h-4 ${
                           department === 'Uncategorized'
                             ? 'text-amber-600' 
-                            : 'text-slate-600'
+                            : 'text-slate-600 dark:text-slate-400'
                         }`} />
                       )}
                       <h4 className={`font-semibold ${
@@ -325,7 +325,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <Target className="w-4 h-4 text-slate-500" />
+                        <Target className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span className={`text-sm font-semibold ${
                           calculateDepartmentWinPercentage(departmentEstimates) >= 50
                             ? 'text-emerald-700'
@@ -337,7 +337,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-slate-500" />
+                        <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span className="font-semibold text-slate-900 dark:text-white">
                           {departmentTotal.toLocaleString('en-US', { 
                             minimumFractionDigits: 2, 
@@ -353,35 +353,35 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                 {isExpanded && (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-slate-50 border-b">
+                      <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Estimate #
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Date
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Description
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase">
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Amount
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase">
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Status
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200">
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                         {departmentEstimates.map((estimate) => (
-                          <tr key={estimate.id} className="hover:bg-slate-50 cursor-pointer">
+                          <tr key={estimate.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
                             <td className="px-4 py-4">
                               <span className="font-mono text-sm font-medium text-slate-900 dark:text-white">
                                 {estimate.estimate_number || estimate.id}
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                 <Calendar className="w-4 h-4" />
                                 {estimate.estimate_date ? format(new Date(estimate.estimate_date), 'MMM d, yyyy') : '—'}
                               </div>
@@ -389,12 +389,12 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                             <td className="px-4 py-4">
                               <p className="text-sm text-slate-900 dark:text-white">{estimate.project_name || estimate.description || '—'}</p>
                               {estimate.notes && (
-                                <p className="text-xs text-slate-500 mt-1">{estimate.notes}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{estimate.notes}</p>
                               )}
                             </td>
                             <td className="px-4 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <DollarSign className="w-4 h-4 text-slate-500" />
+                                <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                 <span className="font-semibold text-slate-900 dark:text-white">
                                   {estimate.total_price_with_tax || estimate.total_price 
                                     ? (estimate.total_price_with_tax || estimate.total_price).toLocaleString('en-US', { 
@@ -422,9 +422,9 @@ export default function EstimatesTab({ estimates = [], accountId }) {
         </div>
       ) : (
         <Card className="p-12 text-center">
-          <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No estimates found</h3>
-          <p className="text-slate-600 mb-4">
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
             {filterStatus !== 'all' || filterDepartment !== 'all' || filterYear !== 'all'
               ? 'No estimates match the selected filters'
               : 'No estimates found for this account'}
