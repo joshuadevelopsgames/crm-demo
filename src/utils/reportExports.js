@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { calculateOverallStats, calculateAccountStats, calculateDepartmentStats } from './reportCalculations';
+import { calculateOverallStats, calculateAccountStats, calculateDepartmentStats, formatCurrency } from './reportCalculations';
 
 /**
  * Export all report data to XLSX
@@ -142,9 +142,9 @@ export function exportToPDF(reportData, selectedYear) {
     ['Lost', overallStats.lost.toString()],
     ['Pending', overallStats.pending.toString()],
     ['Win Rate (%)', `${overallStats.winRate}%`],
-    ['Total Value', `$${(overallStats.totalValue / 1000).toFixed(1)}K`],
-    ['Won Value', `$${(overallStats.wonValue / 1000).toFixed(1)}K`],
-    ['Lost Value', `$${(overallStats.lostValue / 1000).toFixed(1)}K`],
+    ['Total Value', formatCurrency(overallStats.totalValue)],
+    ['Won Value', formatCurrency(overallStats.wonValue)],
+    ['Lost Value', formatCurrency(overallStats.lostValue)],
     ['Estimates vs Won (%)', `${overallStats.estimatesVsWonRatio}%`],
     ['Revenue vs Won (%)', `${overallStats.revenueVsWonRatio}%`]
   ];
@@ -177,8 +177,8 @@ export function exportToPDF(reportData, selectedYear) {
     acc.won.toString(),
     acc.lost.toString(),
     `${acc.winRate}%`,
-    `$${(acc.totalValue / 1000).toFixed(1)}K`,
-    `$${(acc.wonValue / 1000).toFixed(1)}K`
+    formatCurrency(acc.totalValue),
+    formatCurrency(acc.wonValue)
   ]);
   
   doc.autoTable({
@@ -218,9 +218,9 @@ export function exportToPDF(reportData, selectedYear) {
     dept.won.toString(),
     dept.lost.toString(),
     `${dept.winRate}%`,
-    `$${(dept.totalValue / 1000).toFixed(1)}K`,
-    `$${(dept.wonValue / 1000).toFixed(1)}K`,
-    `$${(dept.lostValue / 1000).toFixed(1)}K`
+    formatCurrency(dept.totalValue),
+    formatCurrency(dept.wonValue),
+    formatCurrency(dept.lostValue)
   ]);
   
   doc.autoTable({
