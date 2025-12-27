@@ -366,8 +366,29 @@ export default function Dashboard() {
     }
   ];
 
+  // #region agent log
+  useEffect(() => {
+    const logData5 = {location:'Dashboard.jsx:render',message:'Dashboard component rendering',data:{activeAccounts,contactsCount:contacts.length,myTasks,atRiskAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('🔍 DEBUG:', logData5);
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(err=>console.error('Log fetch error:',err));
+  }, [activeAccounts, contacts.length, myTasks, atRiskAccounts]);
+  // #endregion
+
   return (
-    <div className="space-y-8">
+    <div 
+      ref={(el) => {
+        if (el) {
+          // #region agent log
+          const dashBg = window.getComputedStyle(el).backgroundColor;
+          const dashDisplay = window.getComputedStyle(el).display;
+          const dashRect = el.getBoundingClientRect();
+          const logData6 = {location:'Dashboard.jsx:dash-ref',message:'Dashboard root div styles and position',data:{dashBg,dashDisplay,dashRect:{top:dashRect.top,left:dashRect.left,width:dashRect.width,height:dashRect.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          console.log('🔍 DEBUG:', logData6);
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(err=>console.error('Log fetch error:',err));
+          // #endregion
+        }
+      }}
+      className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>

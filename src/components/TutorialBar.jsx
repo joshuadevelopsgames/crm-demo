@@ -38,7 +38,42 @@ export default function TutorialBar() {
   if (!isTutorialMode) return null;
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg z-[60] sticky top-0">
+    <div 
+      ref={(el) => {
+        if (el) {
+          // #region agent log
+          const barBg = window.getComputedStyle(el).backgroundColor;
+          const barPosition = window.getComputedStyle(el).position;
+          const barZIndex = window.getComputedStyle(el).zIndex;
+          const barRect = el.getBoundingClientRect();
+          // Check if Tutorial page fixed div still exists
+          const allFixed = document.querySelectorAll('[style*="position: fixed"]');
+          const tutorialFixedDivs = Array.from(allFixed).filter(el => {
+            const style = el.getAttribute('style') || '';
+            const rect = el.getBoundingClientRect();
+            return style.includes('position: fixed') && 
+                   style.includes('top: 0') && 
+                   style.includes('left: 0') &&
+                   rect.width >= window.innerWidth * 0.9 &&
+                   rect.height >= window.innerHeight * 0.9;
+          });
+          const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+          const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+          const rootBg = document.getElementById('root') ? window.getComputedStyle(document.getElementById('root')).backgroundColor : 'no root';
+          const rootChildren = Array.from(document.getElementById('root')?.children || []).map(c => ({
+            tag: c.tagName,
+            className: c.className,
+            hasFixed: window.getComputedStyle(c).position === 'fixed',
+            zIndex: window.getComputedStyle(c).zIndex
+          }));
+          const logData4 = {location:'TutorialBar.jsx:bar-ref',message:'TutorialBar element styles and dimensions',data:{barBg,barPosition,barZIndex,barRect:{top:barRect.top,left:barRect.left,width:barRect.width,height:barRect.height,bottom:barRect.bottom},tutorialFixedDivsCount:tutorialFixedDivs.length,allFixedCount:allFixed.length,bodyBg,htmlBg,rootBg,rootChildren},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['A','B','E']};
+          console.log('🔍 DEBUG TutorialBar:', logData4);
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(err=>console.error('Log fetch error:',err));
+          // #endregion
+        }
+      }}
+      className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg z-[60] sticky top-0"
+      style={{ position: 'sticky', top: 0, width: '100%' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-4">
