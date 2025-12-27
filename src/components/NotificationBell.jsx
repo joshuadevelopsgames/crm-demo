@@ -307,19 +307,45 @@ export default function NotificationBell() {
           if (!snoozes || !Array.isArray(snoozes)) {
             return true; // If snoozes not loaded, include all
           }
-          const isSnoozed = snoozes.some(snooze => 
-            snooze.notification_type === n.type &&
-            (n.related_account_id 
-              ? snooze.related_account_id === n.related_account_id
-              : (snooze.related_account_id === null || snooze.related_account_id === 'null')) &&
-            new Date(snooze.snoozed_until) > now
-          );
+          
+          // Check for snooze match - need to handle string/number/object comparisons
+          const isSnoozed = snoozes.some(snooze => {
+            // Type must match
+            if (snooze.notification_type !== n.type) return false;
+            
+            // Check if snooze is still active
+            const snoozedUntil = new Date(snooze.snoozed_until);
+            if (snoozedUntil <= now) return false; // Snooze expired
+            
+            // Check account ID match - handle null, undefined, and string comparisons
+            const snoozeAccountId = snooze.related_account_id ? String(snooze.related_account_id).trim() : null;
+            const notifAccountId = n.related_account_id ? String(n.related_account_id).trim() : null;
+            
+            // Both null/empty means match (general snooze for this type)
+            if (!snoozeAccountId && !notifAccountId) return true;
+            
+            // One is null, one isn't - no match
+            if (!snoozeAccountId || !notifAccountId) return false;
+            
+            // Both have values - compare as strings
+            return snoozeAccountId === notifAccountId;
+          });
+          
           return !isSnoozed;
         });
         
         // Debug: log if we filtered out any notifications
-        if (type === 'neglected_account' && notifications.length !== activeNotificationsOnly.length) {
-          console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
+        if (type === 'neglected_account') {
+          if (notifications.length !== activeNotificationsOnly.length) {
+            console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
+          } else {
+            console.log(`🔔 Neglected account: No snoozed notifications found (checked ${snoozes?.length || 0} snoozes)`);
+            // Debug: show what snoozes exist
+            if (snoozes && snoozes.length > 0) {
+              const neglectedSnoozes = snoozes.filter(s => s.notification_type === 'neglected_account');
+              console.log(`🔔 Found ${neglectedSnoozes.length} neglected_account snoozes:`, neglectedSnoozes.slice(0, 3));
+            }
+          }
         }
         
         // Normalize account IDs to strings for proper Set deduplication
