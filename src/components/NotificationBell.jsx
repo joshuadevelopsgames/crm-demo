@@ -314,7 +314,14 @@ export default function NotificationBell() {
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim()); // Normalize to strings for Set comparison
         const uniqueUnreadAccountIds = new Set(accountIds);
+        
+        // CRITICAL: Always use unique account count, never total notification count
         unreadCount = uniqueUnreadAccountIds.size;
+        
+        // Safety check: if unreadCount doesn't match expected, log warning
+        if (unreadNotifications.length !== unreadCount) {
+          console.warn(`⚠️ FIXING unreadCount: was ${unreadNotifications.length} (total notifications), setting to ${unreadCount} (unique accounts)`);
+        }
         
         // Debug: log account IDs if count doesn't match
         if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
@@ -353,13 +360,22 @@ export default function NotificationBell() {
       };
       
       // Additional debug for renewal reminders
-      if (type === 'renewal_reminder' && userNotifications.length > 0) {
+      if (type === 'renewal_reminder' && notifications.length > 0) {
         console.log(`🔔 Final group object for ${type}:`, {
           notificationsCount: group.notifications.length,
           count: group.count,
           unreadCount: group.unreadCount,
-          unreadNotificationsCount: group.notifications.filter(n => !n.is_read).length
+          unreadNotificationsCount: group.notifications.filter(n => !n.is_read).length,
+          expectedUnreadCount: unreadCount // Should match group.unreadCount
         });
+        
+        // CRITICAL CHECK: Verify unreadCount is correct
+        if (group.unreadCount !== unreadCount) {
+          console.error(`❌ ERROR: group.unreadCount (${group.unreadCount}) doesn't match calculated unreadCount (${unreadCount})`);
+        }
+        if (group.unreadCount === group.notifications.filter(n => !n.is_read).length && group.unreadCount > group.count) {
+          console.error(`❌ ERROR: unreadCount (${group.unreadCount}) equals total unread notifications but should equal unique accounts (${group.count})`);
+        }
       }
       
       return group;
