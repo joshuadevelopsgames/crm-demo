@@ -236,9 +236,11 @@ function App() {
       <Router>
         <UserProvider>
           <TutorialProvider>
-            <TutorialBar />
-            <AppContent />
-            <InstallPrompt />
+            <div style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+              <TutorialBar />
+              <AppContent />
+              <InstallPrompt />
+            </div>
           </TutorialProvider>
         </UserProvider>
       </Router>
