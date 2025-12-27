@@ -371,7 +371,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-foreground">Dashboard</h1>
           <p className="text-slate-600 dark:text-text-muted mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
         </div>
         <Button 

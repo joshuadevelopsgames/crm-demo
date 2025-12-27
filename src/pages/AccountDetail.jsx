@@ -212,7 +212,7 @@ export default function AccountDetail() {
 
       {/* Tabs - LMN Style */}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className="w-full justify-start bg-white dark:bg-slate-900 border-b dark:border-slate-800 rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="info" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"

@@ -426,12 +426,12 @@ export default function Layout({ children, currentPageName }) {
         // PWA and native app specific padding (with safe areas)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
-        backgroundColor: '#ffffff',
+        backgroundColor: 'hsl(var(--background))',
         minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
       } : {
         // Desktop web browser styles - standard padding
         paddingTop: isTutorialMode ? '7rem' : isDesktop ? '6rem' : '5rem',
-        backgroundColor: '#ffffff'
+        backgroundColor: 'hsl(var(--background))'
       }}>
         <div className="animate-in fade-in duration-300">
           {children}
