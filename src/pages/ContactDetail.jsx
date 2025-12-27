@@ -112,7 +112,7 @@ export default function ContactDetail() {
         <Users className="w-12 h-12 text-slate-400" />
         <h2 className="text-xl font-semibold text-slate-900">Contact not found</h2>
         <p className="text-slate-600">The contact you're looking for doesn't exist.</p>
-        <Button onClick={() => navigate(createPageUrl('Contacts'))} variant="outline">
+        <Button onClick={() => navigate(createPageUrl('Contacts'))} variant="outline" className="border-slate-300">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Contacts
         </Button>
@@ -162,7 +162,7 @@ export default function ContactDetail() {
             </div>
           </div>
         </div>
-        <Button onClick={() => setShowEditContact(true)} variant="outline">
+        <Button onClick={() => setShowEditContact(true)} variant="outline" className="border-slate-300">
           <Edit className="w-4 h-4 mr-2" />
           Edit Contact
         </Button>
@@ -318,7 +318,7 @@ export default function ContactDetail() {
         <TabsContent value="interactions" className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900">Interaction History</h3>
-            <Button onClick={() => setShowAddInteraction(true)} className="bg-slate-900 hover:bg-slate-800">
+            <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               Log Interaction
             </Button>

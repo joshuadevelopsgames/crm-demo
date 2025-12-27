@@ -289,7 +289,8 @@ export default function Settings() {
             <Button
               onClick={handleExportAllData}
               disabled={isExporting}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              variant="outline"
+              className="border-slate-300 disabled:opacity-50"
             >
               {isExporting ? (
                 <>
@@ -325,7 +326,8 @@ export default function Settings() {
           </p>
           <Button
             onClick={() => navigate(createPageUrl('Reports'))}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            variant="outline"
+            className="border-slate-300"
           >
             <LinkIcon className="w-4 h-4 mr-2" />
             Go to Reports

@@ -286,7 +286,7 @@ export default function Sequences() {
 
           <Dialog open={isSequenceDialogOpen} onOpenChange={setIsSequenceDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-slate-800" onClick={resetSequenceForm}>
+              <Button variant="outline" className="border-slate-300" onClick={resetSequenceForm}>
                 <Plus className="w-4 h-4 mr-2" />
                 New Sequence
               </Button>

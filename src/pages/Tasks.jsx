@@ -2234,7 +2234,7 @@ export default function Tasks() {
               {/* Footer buttons - only show when creating a new task or editing (not viewing) */}
               {!isViewMode && (taskDialogTab === "details" || !editingTask) && (
                       <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={closeDialog}>
+                        <Button variant="outline" onClick={closeDialog} className="border-slate-300">
                           Cancel
                         </Button>
                         <Button

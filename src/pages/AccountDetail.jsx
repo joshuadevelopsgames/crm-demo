@@ -199,11 +199,11 @@ export default function AccountDetail() {
             <BellOff className="w-4 h-4 mr-2" />
             Snooze
           </Button>
-          <Button variant="outline" onClick={() => setShowEditAccount(true)}>
+          <Button variant="outline" onClick={() => setShowEditAccount(true)} className="border-slate-300">
             <Edit className="w-4 h-4 mr-2" />
             Edit
           </Button>
-          <Button onClick={() => setShowAddInteraction(true)} className="bg-slate-900 hover:bg-slate-800">
+          <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
             <Plus className="w-4 h-4 mr-2" />
             Log Interaction
           </Button>
@@ -347,7 +347,7 @@ export default function AccountDetail() {
         <TabsContent value="todos" className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900">To-Dos ({tasks.length})</h3>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               New To-Do
             </Button>
@@ -397,7 +397,7 @@ export default function AccountDetail() {
             <p className="text-slate-600 mb-4">
               Upload documents, images, or other files related to this account
             </p>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               Upload File
             </Button>
