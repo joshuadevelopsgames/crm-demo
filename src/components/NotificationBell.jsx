@@ -655,17 +655,17 @@ export default function NotificationBell() {
   const getNotificationColor = (type) => {
     switch (type) {
       case 'task_overdue':
-        return 'bg-orange-50 border-orange-200';
+        return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800';
       case 'task_due_today':
-        return 'bg-amber-50 border-amber-200';
+        return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
       case 'end_of_year_analysis':
-        return 'bg-emerald-50 border-emerald-200';
+        return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
       case 'renewal_reminder':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       case 'neglected_account':
-        return 'bg-amber-50 border-amber-200';
+        return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
       default:
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }
   };
 
@@ -706,8 +706,8 @@ export default function NotificationBell() {
           }}>
             <Card className="max-h-[600px] overflow-y-auto shadow-xl w-full max-w-sm">
             <CardContent className="p-0">
-              <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900">Notifications</h3>
+              <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900 dark:text-[#ffffff]">Notifications</h3>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
@@ -728,10 +728,10 @@ export default function NotificationBell() {
                 </div>
               </div>
               
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {notificationGroups.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500">
-                    <Bell className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <Bell className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                     <p>No notifications</p>
                   </div>
                 ) : (
@@ -747,10 +747,10 @@ export default function NotificationBell() {
                                      'Notifications';
 
                     return (
-                      <div key={group.type} className="divide-y divide-slate-100">
+                      <div key={group.type} className="divide-y divide-slate-100 dark:divide-slate-700">
                         {/* Group Header - Clickable to expand/collapse if multiple */}
                         <div 
-                          className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
+                          className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${
                             hasMultiple && group.unreadCount > 0 ? getNotificationColor(group.type) : ''
                           }`}
                           onClick={() => {
@@ -794,7 +794,7 @@ export default function NotificationBell() {
                                 <div className="flex items-center gap-2">
                                   {hasMultiple && (
                                     <ChevronRight 
-                                      className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                      className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                                     />
                                   )}
                                   {!hasMultiple && (group.notifications[0]?.type === 'renewal_reminder' || group.notifications[0]?.type === 'neglected_account') && (
@@ -816,7 +816,7 @@ export default function NotificationBell() {
                                 </div>
                               </div>
                               {hasMultiple && (
-                                <p className="text-sm text-slate-600 mt-1">
+                                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                                   {(() => {
                                     // Debug: log what value is being used for display
                                     if (group.type === 'renewal_reminder') {
@@ -830,10 +830,10 @@ export default function NotificationBell() {
                               )}
                               {!hasMultiple && group.notifications[0] && (
                                 <>
-                                  <p className="text-sm text-slate-600 mt-1">
+                                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                                     {group.notifications[0].message}
                                   </p>
-                                  <p className="text-xs text-slate-400 mt-2">
+                                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                                     {group.notifications[0].scheduled_for 
                                       ? format(new Date(group.notifications[0].scheduled_for), 'MMM d, h:mm a')
                                       : format(new Date(group.notifications[0].created_at), 'MMM d, h:mm a')
@@ -847,11 +847,11 @@ export default function NotificationBell() {
                         
                         {/* Expanded Notifications List */}
                         {hasMultiple && isExpanded && (
-                          <div className="bg-slate-50">
+                          <div className="bg-slate-50 dark:bg-slate-800/50">
                             {group.notifications.map((notification) => (
                               <div
                                 key={notification.id}
-                                className={`p-4 pl-12 hover:bg-slate-100 transition-colors border-l-2 border-slate-200 ${
+                                className={`p-4 pl-12 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors border-l-2 border-slate-200 dark:border-slate-700 ${
                                   !notification.is_read ? getNotificationColor(notification.type) : ''
                                 }`}
                               >
@@ -870,7 +870,7 @@ export default function NotificationBell() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        className="h-6 px-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (confirm('Are you sure you want to delete this notification?')) {
@@ -895,10 +895,10 @@ export default function NotificationBell() {
                                       )}
                                     </div>
                                   </div>
-                                  <p className="text-sm text-slate-600 mt-1">
+                                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                                     {notification.message}
                                   </p>
-                                  <p className="text-xs text-slate-400 mt-2">
+                                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                                     {notification.scheduled_for 
                                       ? format(new Date(notification.scheduled_for), 'MMM d, h:mm a')
                                       : format(new Date(notification.created_at), 'MMM d, h:mm a')
