@@ -150,7 +150,7 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="fullName" className="dark:text-[#ffffff]">Full Name</Label>
             <Input
               id="fullName"
               value={fullName}
@@ -159,7 +159,7 @@ export default function Settings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Label htmlFor="phoneNumber" className="dark:text-[#ffffff]">Phone Number</Label>
             <Input
               id="phoneNumber"
               value={phoneNumber}
@@ -169,18 +169,18 @@ export default function Settings() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label className="dark:text-[#ffffff]">Email</Label>
             <Input
               value={profile?.email || user?.email || ''}
               disabled
-              className="bg-slate-50"
+              className="bg-slate-50 dark:bg-slate-800 dark:text-[#ffffff]"
             />
-            <p className="text-xs text-slate-500">Email cannot be changed</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Email cannot be changed</p>
           </div>
           <Button 
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="bg-slate-900 hover:bg-slate-800"
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
           >
             <Save className="w-4 h-4 mr-2" />
             {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
