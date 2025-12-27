@@ -340,10 +340,32 @@ export default function NotificationBell() {
             console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
           } else {
             console.log(`🔔 Neglected account: No snoozed notifications found (checked ${snoozes?.length || 0} snoozes)`);
-            // Debug: show what snoozes exist
+            // Debug: show what snoozes exist and why they're not matching
             if (snoozes && snoozes.length > 0) {
+              console.log(`🔔 All snoozes (${snoozes.length}):`, snoozes.map(s => ({
+                id: s.id,
+                notification_type: s.notification_type,
+                related_account_id: s.related_account_id,
+                snoozed_until: s.snoozed_until,
+                isExpired: new Date(s.snoozed_until) <= now
+              })));
               const neglectedSnoozes = snoozes.filter(s => s.notification_type === 'neglected_account');
               console.log(`🔔 Found ${neglectedSnoozes.length} neglected_account snoozes:`, neglectedSnoozes.slice(0, 3));
+              
+              // Check why notifications aren't matching
+              if (neglectedSnoozes.length > 0 && notifications.length > 0) {
+                const sampleSnooze = neglectedSnoozes[0];
+                const sampleNotif = notifications[0];
+                console.log(`🔔 Matching check:`, {
+                  snoozeType: sampleSnooze.notification_type,
+                  notifType: sampleNotif.type,
+                  typeMatch: sampleSnooze.notification_type === sampleNotif.type,
+                  snoozeAccountId: sampleSnooze.related_account_id,
+                  notifAccountId: sampleNotif.related_account_id,
+                  accountIdMatch: String(sampleSnooze.related_account_id || '').trim() === String(sampleNotif.related_account_id || '').trim(),
+                  snoozeExpired: new Date(sampleSnooze.snoozed_until) <= now
+                });
+              }
             }
           }
         }
