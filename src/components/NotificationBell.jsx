@@ -342,28 +342,49 @@ export default function NotificationBell() {
             console.log(`🔔 Neglected account: No snoozed notifications found (checked ${snoozes?.length || 0} snoozes)`);
             // Debug: show what snoozes exist and why they're not matching
             if (snoozes && snoozes.length > 0) {
-              console.log(`🔔 All snoozes (${snoozes.length}):`, snoozes.map(s => ({
+              const snoozeDetails = snoozes.map(s => ({
                 id: s.id,
                 notification_type: s.notification_type,
                 related_account_id: s.related_account_id,
+                related_account_id_type: typeof s.related_account_id,
                 snoozed_until: s.snoozed_until,
                 isExpired: new Date(s.snoozed_until) <= now
-              })));
+              }));
+              console.log(`🔔 All snoozes (${snoozes.length}):`, JSON.stringify(snoozeDetails, null, 2));
               const neglectedSnoozes = snoozes.filter(s => s.notification_type === 'neglected_account');
-              console.log(`🔔 Found ${neglectedSnoozes.length} neglected_account snoozes:`, neglectedSnoozes.slice(0, 3));
+              console.log(`🔔 Found ${neglectedSnoozes.length} neglected_account snoozes`);
               
-              // Check why notifications aren't matching
-              if (neglectedSnoozes.length > 0 && notifications.length > 0) {
-                const sampleSnooze = neglectedSnoozes[0];
-                const sampleNotif = notifications[0];
-                console.log(`🔔 Matching check:`, {
-                  snoozeType: sampleSnooze.notification_type,
-                  notifType: sampleNotif.type,
-                  typeMatch: sampleSnooze.notification_type === sampleNotif.type,
-                  snoozeAccountId: sampleSnooze.related_account_id,
-                  notifAccountId: sampleNotif.related_account_id,
-                  accountIdMatch: String(sampleSnooze.related_account_id || '').trim() === String(sampleNotif.related_account_id || '').trim(),
-                  snoozeExpired: new Date(sampleSnooze.snoozed_until) <= now
+              // Check why notifications aren't matching - test against ALL notifications
+              if (snoozes.length > 0 && notifications.length > 0) {
+                const sampleSnooze = snoozes[0];
+                console.log(`🔔 Sample snooze:`, JSON.stringify({
+                  id: sampleSnooze.id,
+                  notification_type: sampleSnooze.notification_type,
+                  related_account_id: sampleSnooze.related_account_id,
+                  related_account_id_type: typeof sampleSnooze.related_account_id,
+                  snoozed_until: sampleSnooze.snoozed_until,
+                  isExpired: new Date(sampleSnooze.snoozed_until) <= now
+                }, null, 2));
+                
+                // Test first few notifications
+                notifications.slice(0, 3).forEach((notif, idx) => {
+                  const snoozeAccountId = sampleSnooze.related_account_id ? String(sampleSnooze.related_account_id).trim() : null;
+                  const notifAccountId = notif.related_account_id ? String(notif.related_account_id).trim() : null;
+                  const typeMatch = sampleSnooze.notification_type === notif.type;
+                  const accountMatch = (snoozeAccountId === notifAccountId) || (!snoozeAccountId && !notifAccountId);
+                  const notExpired = new Date(sampleSnooze.snoozed_until) > now;
+                  const shouldMatch = typeMatch && accountMatch && notExpired;
+                  
+                  console.log(`🔔 Notification ${idx} match test:`, {
+                    notifType: notif.type,
+                    notifAccountId,
+                    snoozeType: sampleSnooze.notification_type,
+                    snoozeAccountId,
+                    typeMatch,
+                    accountMatch,
+                    notExpired,
+                    shouldMatch
+                  });
                 });
               }
             }

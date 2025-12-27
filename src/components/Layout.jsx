@@ -43,9 +43,33 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     // #region agent log
     const logData = {location:'Layout.jsx:useEffect',message:'Layout useEffect - isTutorialMode state',data:{isTutorialMode,currentPageName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-    console.log('🔍 DEBUG:', logData);
+    console.log('🔍 DEBUG Layout useEffect:', logData);
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(err=>console.error('Log fetch error:',err));
     // #endregion
+    
+    // Check for Tutorial page fixed div that might still be in DOM
+    const tutorialFixedDivs = Array.from(document.querySelectorAll('div')).filter(div => {
+      const style = div.getAttribute('style') || '';
+      const computedStyle = window.getComputedStyle(div);
+      return (style.includes('position: fixed') || computedStyle.position === 'fixed') &&
+             (style.includes('top: 0') || computedStyle.top === '0px') &&
+             (style.includes('left: 0') || computedStyle.left === '0px') &&
+             computedStyle.zIndex !== 'auto' && parseInt(computedStyle.zIndex) <= 10;
+    });
+    
+    if (tutorialFixedDivs.length > 0) {
+      console.warn('⚠️ Found Tutorial page fixed divs still in DOM:', tutorialFixedDivs.map(d => ({
+        className: d.className,
+        style: d.getAttribute('style'),
+        zIndex: window.getComputedStyle(d).zIndex,
+        bg: window.getComputedStyle(d).backgroundColor
+      })));
+      // Remove them
+      tutorialFixedDivs.forEach(div => {
+        console.log('🗑️ Removing Tutorial fixed div');
+        div.remove();
+      });
+    }
     
     // Force white background on body and html
     document.body.style.backgroundColor = '#ffffff';
@@ -59,8 +83,8 @@ export default function Layout({ children, currentPageName }) {
     const bodyBg = window.getComputedStyle(document.body).backgroundColor;
     const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
     const rootBg = root ? window.getComputedStyle(root).backgroundColor : 'no root';
-    const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-    console.log('🔍 DEBUG:', logData2);
+    const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg,tutorialFixedDivsRemoved:tutorialFixedDivs.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['B','E']};
+    console.log('🔍 DEBUG Layout backgrounds:', JSON.stringify(logData2, null, 2));
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(err=>console.error('Log fetch error:',err));
     // #endregion
   }, [isTutorialMode]);
@@ -430,8 +454,25 @@ export default function Layout({ children, currentPageName }) {
               return (bg.includes('rgb(37, 99, 235)') || bg.includes('rgb(79, 70, 229)')) && 
                      (pos === 'fixed' || pos === 'absolute') && zIdx > 50;
             });
-            const logData3 = {location:'Layout.jsx:main-ref',message:'Main content element styles and position',data:{mainBg,mainDisplay,mainVisibility,mainZIndex,mainRect:{top:mainRect.top,left:mainRect.left,width:mainRect.width,height:mainRect.height},backdropCount:backdropElements.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['D','E']};
-            console.log('🔍 DEBUG:', logData3);
+            // Check body/html/root backgrounds
+            const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+            const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+            const rootBg = document.getElementById('root') ? window.getComputedStyle(document.getElementById('root')).backgroundColor : 'no root';
+            // Check for any fixed/absolute elements covering the page
+            const allFixed = Array.from(document.querySelectorAll('*')).filter(el => {
+              const style = window.getComputedStyle(el);
+              return (style.position === 'fixed' || style.position === 'absolute') && 
+                     parseInt(style.zIndex) > 50;
+            }).map(el => ({
+              tag: el.tagName,
+              className: el.className,
+              position: window.getComputedStyle(el).position,
+              zIndex: window.getComputedStyle(el).zIndex,
+              bg: window.getComputedStyle(el).backgroundColor,
+              rect: el.getBoundingClientRect()
+            }));
+            const logData3 = {location:'Layout.jsx:main-ref',message:'Main content element styles and position',data:{mainBg,mainDisplay,mainVisibility,mainZIndex,mainRect:{top:mainRect.top,left:mainRect.left,width:mainRect.width,height:mainRect.height},backdropCount:backdropElements.length,bodyBg,htmlBg,rootBg,allFixedCount:allFixed.length,allFixed:allFixed.slice(0, 5)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['D','E','B']};
+            console.log('🔍 DEBUG Layout main:', JSON.stringify(logData3, null, 2));
             fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(err=>console.error('Log fetch error:',err));
             // #endregion
           }
