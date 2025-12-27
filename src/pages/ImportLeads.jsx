@@ -185,7 +185,7 @@ export default function ImportLeads() {
             />
             
             <label htmlFor="csv-file-input">
-              <Button asChild className="bg-primary hover:bg-primary-hover active:bg-primary-active text-primary-foreground cursor-pointer">
+              <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground cursor-pointer">
                 <span>
                   <FileText className="w-4 h-4 mr-2" />
                   Choose CSV File
@@ -357,7 +357,7 @@ export default function ImportLeads() {
             <Button
               onClick={handleImport}
               disabled={!validation?.isValid || importStatus === 'importing'}
-              className="bg-primary hover:bg-primary-hover active:bg-primary-active text-primary-foreground"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
             >
               {importStatus === 'importing' ? (
                 <>

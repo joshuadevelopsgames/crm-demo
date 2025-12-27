@@ -382,7 +382,7 @@ export default function Accounts() {
           >
             <Button 
               onClick={() => setIsImportDialogOpen(true)}
-              className="bg-primary hover:bg-primary-hover active:bg-primary-active text-primary-foreground"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import from LMN
