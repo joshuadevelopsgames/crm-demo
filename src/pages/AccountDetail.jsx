@@ -166,7 +166,7 @@ export default function AccountDetail() {
             <Building2 className="w-8 h-8 text-slate-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">{account.name}</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{account.name}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Badge className={getStatusColor(account.status)}>
                 {account.status}
@@ -393,7 +393,7 @@ export default function AccountDetail() {
         <TabsContent value="files">
           <Card className="p-12 text-center">
             <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No files yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No files yet</h3>
             <p className="text-slate-600 mb-4">
               Upload documents, images, or other files related to this account
             </p>

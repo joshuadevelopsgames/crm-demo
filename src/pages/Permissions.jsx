@@ -459,7 +459,7 @@ export default function Permissions() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Shield className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Access Denied</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Access Denied</h3>
               <p className="text-slate-600">You must be a System Admin to access this page.</p>
             </div>
           </CardContent>
@@ -531,7 +531,7 @@ export default function Permissions() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">
+                        <p className="font-medium text-slate-900 dark:text-white truncate">
                           {user.full_name || user.email}
                         </p>
                         {user.full_name && (

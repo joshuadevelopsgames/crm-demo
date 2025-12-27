@@ -560,7 +560,7 @@ export default function NotificationBell() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2 flex-1">
-                                  <h4 className={`text-sm font-medium ${group.unreadCount > 0 ? 'text-slate-900' : 'text-slate-600'}`}>
+                                  <h4 className={`text-sm font-medium ${group.unreadCount > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-text-muted'}`}>
                                     {hasMultiple ? groupName : group.notifications[0]?.title || groupName}
                                   </h4>
                                   {hasMultiple && (
@@ -636,7 +636,7 @@ export default function NotificationBell() {
                                   onClick={() => handleNotificationClick(notification)}
                                 >
                                   <div className="flex items-start justify-between gap-2">
-                                    <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900' : 'text-slate-600'}`}>
+                                    <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-text-muted'}`}>
                                       {notification.title}
                                     </h4>
                                     <div className="flex items-center gap-2">

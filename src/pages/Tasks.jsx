@@ -1357,7 +1357,7 @@ export default function Tasks() {
                     {isViewMode && viewingTask && (
                       <div className="space-y-6">
                         <div>
-                          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                             {viewingTask.title}
                           </h2>
                           {viewingTask.description && (
@@ -1404,7 +1404,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Category
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.category || "Other"}
                             </p>
                           </div>
@@ -1412,7 +1412,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Due Date
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.due_date
                                 ? format(
                                     new Date(viewingTask.due_date),
@@ -1427,7 +1427,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Assigned To
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.assigned_to || "Unassigned"}
                             </p>
                           </div>
@@ -1435,7 +1435,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Estimated Time
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.estimated_time || 30} minutes
                             </p>
                           </div>
@@ -1444,7 +1444,7 @@ export default function Tasks() {
                               <Label className="text-slate-500 text-xs uppercase">
                                 Related Account
                               </Label>
-                              <p className="mt-1 text-slate-900">
+                              <p className="mt-1 text-slate-900 dark:text-white">
                                 {accounts.find(
                                   (a) =>
                                     a.id === viewingTask.related_account_id,
@@ -1477,7 +1477,7 @@ export default function Tasks() {
                               <Label className="text-slate-500 text-xs uppercase">
                                 Recurring
                               </Label>
-                              <p className="mt-1 text-slate-900">
+                              <p className="mt-1 text-slate-900 dark:text-white">
                                 {viewingTask.recurrence_pattern} (every{" "}
                                 {viewingTask.recurrence_interval})
                               </p>
@@ -1758,7 +1758,7 @@ export default function Tasks() {
                                   is_recurring: e.target.checked,
                                 })
                               }
-                              className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                              className="w-4 h-4 rounded border-slate-300 text-slate-900 dark:text-white focus:ring-slate-500"
                             />
                             <Label
                               htmlFor="is_recurring"
@@ -2018,7 +2018,7 @@ export default function Tasks() {
                                     <>
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                          <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                                          <p className="text-sm text-slate-900 dark:text-white whitespace-pre-wrap">
                                             {comment.content}
                                           </p>
                                           <p className="text-xs text-slate-500 mt-1">
@@ -3005,7 +3005,7 @@ export default function Tasks() {
                                     {task.category && (
                                       <Badge
                                         variant="outline"
-                                        className="text-slate-700"
+                                        className="text-slate-700 dark:text-white"
                                       >
                                         {task.category.replace("_", " ")}
                                       </Badge>

@@ -468,7 +468,7 @@ export default function Scoring() {
         <Card>
           <CardContent className="p-12 text-center">
             <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No ICP Template</h3>
             <p className="text-slate-600 mb-4">Import or create an ICP template to start scoring accounts</p>
             <Button 
               variant="outline" 

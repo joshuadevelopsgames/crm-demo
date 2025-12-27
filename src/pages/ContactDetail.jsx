@@ -143,7 +143,7 @@ export default function ContactDetail() {
               {initials || <Users className="w-8 h-8" />}
             </div>
             <div>
-              <h1 className={`text-3xl font-bold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+              <h1 className={`text-3xl font-bold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                 {fullName}
               </h1>
               {contact.title && (
@@ -192,7 +192,7 @@ export default function ContactDetail() {
                       <p className="text-sm text-slate-500">Email</p>
                       <a 
                         href={`mailto:${contact.email || contact.email_1}`}
-                        className="text-slate-900 hover:text-blue-600"
+                        className="text-slate-900 dark:text-white hover:text-blue-600"
                       >
                         {contact.email || contact.email_1}
                       </a>
@@ -215,7 +215,7 @@ export default function ContactDetail() {
                       <p className="text-sm text-slate-500">Phone</p>
                       <a 
                         href={`tel:${contact.phone || contact.phone_1}`}
-                        className="text-slate-900 hover:text-blue-600"
+                        className="text-slate-900 dark:text-white hover:text-blue-600"
                       >
                         {contact.phone || contact.phone_1}
                       </a>

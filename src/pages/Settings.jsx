@@ -136,7 +136,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
         <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your account settings and preferences</p>
       </div>
 
@@ -275,7 +275,7 @@ export default function Settings() {
             
             {exportProgress && (
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">{exportProgress.message}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">{exportProgress.message}</p>
                 {exportProgress.total > 0 && (
                   <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
                     <p>✓ Accounts exported: {exportProgress.accounts}</p>

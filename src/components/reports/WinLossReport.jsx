@@ -35,7 +35,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Win Rate</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{overallStats.winRate}%</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{overallStats.winRate}%</p>
                 <p className="text-xs text-slate-500 mt-1">
                   {overallStats.won} won / {overallStats.decidedCount} decided
                 </p>
@@ -50,7 +50,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Estimates</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{overallStats.total}</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{overallStats.total}</p>
                 <p className="text-xs text-slate-500 mt-1">
                   {overallStats.won} won, {overallStats.lost} lost, {overallStats.pending} pending
                 </p>
@@ -65,7 +65,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Value</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                   ${(overallStats.totalValue / 1000).toFixed(1)}K
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
@@ -82,7 +82,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Est. vs Won</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                   {overallStats.estimatesVsWonRatio}%
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
@@ -180,7 +180,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
               <tbody>
                 {accountStats.map((account, index) => (
                   <tr key={account.accountId} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-3 text-slate-900 font-medium">{account.accountName}</td>
+                    <td className="p-3 text-slate-900 dark:text-white font-medium">{account.accountName}</td>
                     <td className="p-3 text-right text-slate-600">{account.total}</td>
                     <td className="p-3 text-right text-emerald-600 font-medium">{account.won}</td>
                     <td className="p-3 text-right text-red-600 font-medium">{account.lost}</td>

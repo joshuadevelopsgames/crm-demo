@@ -89,7 +89,7 @@ export default function TestRenewalNotifications() {
 
           {results && (
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <h3 className="font-semibold text-slate-900 mb-2">Results:</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Results:</h3>
               <pre className="text-sm text-slate-700 whitespace-pre-wrap overflow-auto max-h-96">
                 {JSON.stringify(results, null, 2)}
               </pre>

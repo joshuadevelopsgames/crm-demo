@@ -223,7 +223,7 @@ export default function NeglectedAccounts() {
                             </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-sm text-slate-900 font-medium">
+                        <td className="px-4 py-4 text-sm text-slate-900 dark:text-white font-medium">
                           {account.annual_revenue ? `$${account.annual_revenue.toLocaleString()}` : '-'}
                         </td>
                         <td className="px-4 py-4">
@@ -325,7 +325,7 @@ export default function NeglectedAccounts() {
       ) : (
         <Card className="p-12 text-center">
           <Clock className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No neglected accounts</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No neglected accounts</h3>
           <p className="text-slate-600">All accounts have been contacted recently or are snoozed 🎉</p>
         </Card>
       )}

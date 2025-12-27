@@ -39,7 +39,7 @@ export default function DepartmentReport({ estimates }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600 font-medium">{dept.division}</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{dept.winRate}%</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{dept.winRate}%</p>
                   <p className="text-xs text-slate-500 mt-1">
                     {dept.won} won / {dept.decidedCount} decided
                   </p>
@@ -163,7 +163,7 @@ export default function DepartmentReport({ estimates }) {
               <tbody>
                 {deptStats.map((dept) => (
                   <tr key={dept.division} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-3 text-slate-900 font-medium">{dept.division}</td>
+                    <td className="p-3 text-slate-900 dark:text-white font-medium">{dept.division}</td>
                     <td className="p-3 text-right text-slate-600">{dept.total}</td>
                     <td className="p-3 text-right text-emerald-600 font-medium">{dept.won}</td>
                     <td className="p-3 text-right text-red-600 font-medium">{dept.lost}</td>

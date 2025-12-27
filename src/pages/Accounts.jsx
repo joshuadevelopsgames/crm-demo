@@ -623,7 +623,7 @@ export default function Accounts() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-slate-900 font-medium">
+                        <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
                           {(() => {
                             const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
                             return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
@@ -711,7 +711,7 @@ export default function Accounts() {
                         return revenue > 0 ? (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                               ${revenue.toLocaleString()}
                             </span>
                           </div>
@@ -738,7 +738,7 @@ export default function Accounts() {
       {filteredAccounts.length === 0 && (
         <Card className="p-12 text-center">
           <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No accounts found</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No accounts found</h3>
           <p className="text-slate-600 mb-4">
             {searchTerm || filterType !== 'all' || filterSegment !== 'all'
               ? 'Try adjusting your filters'
@@ -913,7 +913,7 @@ export default function Accounts() {
                               </span>
                             </div>
                           </td>
-                          <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                          <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                             {(() => {
                               const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
                               return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
@@ -993,7 +993,7 @@ export default function Accounts() {
                         {account.annual_revenue && (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                               ${account.annual_revenue.toLocaleString()}
                             </span>
                           </div>
@@ -1018,7 +1018,7 @@ export default function Accounts() {
           {filteredAccounts.length === 0 && (
             <Card className="p-12 text-center">
               <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No archived accounts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No archived accounts found</h3>
               <p className="text-slate-600 mb-4">
                 {searchTerm || filterType !== 'all' || filterSegment !== 'all'
                   ? 'Try adjusting your filters'

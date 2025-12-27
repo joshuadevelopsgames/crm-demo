@@ -447,7 +447,7 @@ export default function Contacts() {
           {filteredContacts.length === 0 && (
             <Card className="p-12 text-center">
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts found</h3>
               <p className="text-slate-600 mb-4">
                 {(filterName || filterAccount !== 'all')
                   ? 'Try adjusting your filters'
@@ -733,7 +733,7 @@ export default function Contacts() {
           {filteredContacts.length === 0 && (
             <Card className="p-12 text-center">
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No archived contacts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No archived contacts found</h3>
               <p className="text-slate-600 mb-4">
                 {(filterName || filterAccount !== 'all')
                   ? 'Try adjusting your filters'

@@ -88,7 +88,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         <Card>
           <CardContent className="p-12 text-center">
             <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts yet</h3>
             <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -218,7 +218,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         <Card>
           <CardContent className="p-12 text-center">
             <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts yet</h3>
             <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -384,7 +384,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                        <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                           {fullName || 'Unnamed Contact'}
                     </h4>
                         {contact.title && (
@@ -511,7 +511,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </span>
                               {isArchived && (

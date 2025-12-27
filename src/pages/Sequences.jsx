@@ -217,7 +217,7 @@ export default function Sequences() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Sequences</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Sequences</h1>
             <p className="text-slate-600 mt-1">Automate your outreach cadences</p>
           </div>
         <div className="flex gap-3">
@@ -337,7 +337,7 @@ export default function Sequences() {
                 {/* Steps */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-slate-900">Sequence Steps</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">Sequence Steps</h3>
                     <Button variant="outline" size="sm" onClick={addStep}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Step
@@ -491,7 +491,7 @@ export default function Sequences() {
           {sequences.length === 0 && (
             <Card className="p-12 text-center">
               <GitBranch className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No sequences yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No sequences yet</h3>
               <p className="text-slate-600">Create your first sequence to automate outreach</p>
             </Card>
           )}
@@ -512,7 +512,7 @@ export default function Sequences() {
                           <Building2 className="w-6 h-6 text-slate-600" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900">{accountName}</h4>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">{accountName}</h4>
                           <p className="text-sm text-slate-600">{sequenceName}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <Badge variant="outline" className="text-xs">
@@ -563,7 +563,7 @@ export default function Sequences() {
           {enrollments.length === 0 && (
             <Card className="p-12 text-center">
               <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No enrollments yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No enrollments yet</h3>
               <p className="text-slate-600">Enroll accounts in sequences to start automated outreach</p>
             </Card>
           )}

@@ -45,7 +45,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-sm text-slate-600 font-medium">Total Accounts</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">{accountStats.length}</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{accountStats.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -54,7 +54,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-sm text-slate-600 font-medium">Avg Win Rate</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {accountStats.length > 0 
                   ? (accountStats.reduce((sum, acc) => sum + acc.winRate, 0) / accountStats.length).toFixed(1)
                   : 0}%
@@ -67,7 +67,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold text-slate-900 mt-2">
+              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 ${(accountStats.reduce((sum, acc) => sum + acc.totalValue, 0) / 1000).toFixed(1)}K
               </p>
             </div>
@@ -96,7 +96,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left p-3 font-semibold text-slate-900 w-8"></th>
+                  <th className="text-left p-3 font-semibold text-slate-900 dark:text-white w-8"></th>
                   <th className="text-left p-3 font-semibold text-slate-900">Account</th>
                   <th className="text-right p-3 font-semibold text-slate-900">Total</th>
                   <th className="text-right p-3 font-semibold text-slate-900">Won</th>
@@ -130,7 +130,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                             </button>
                           )}
                         </td>
-                        <td className="p-3 text-slate-900 font-medium">{account.accountName}</td>
+                        <td className="p-3 text-slate-900 dark:text-white font-medium">{account.accountName}</td>
                         <td className="p-3 text-right text-slate-600">{account.total}</td>
                         <td className="p-3 text-right text-emerald-600 font-medium">{account.won}</td>
                         <td className="p-3 text-right text-red-600 font-medium">{account.lost}</td>
@@ -166,7 +166,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                         <tr>
                           <td colSpan="10" className="p-0 bg-slate-50">
                             <div className="p-4">
-                              <h4 className="text-sm font-semibold text-slate-900 mb-3">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                                 Estimates for {account.accountName}
                               </h4>
                               <div className="overflow-x-auto">
