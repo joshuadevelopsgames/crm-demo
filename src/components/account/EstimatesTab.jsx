@@ -219,7 +219,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
 
       {/* Filter Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           Estimates ({totalEstimates})
         </h3>
         <div className="flex gap-3">
@@ -301,7 +301,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                       <h4 className={`font-semibold ${
                         department === 'Uncategorized'
                           ? 'text-amber-900' 
-                          : 'text-slate-900'
+                          : 'text-slate-900 dark:text-white'
                       }`}>
                         {department}
                       </h4>
@@ -338,7 +338,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-slate-500" />
-                        <span className="font-semibold text-slate-900">
+                        <span className="font-semibold text-slate-900 dark:text-white">
                           {departmentTotal.toLocaleString('en-US', { 
                             minimumFractionDigits: 2, 
                             maximumFractionDigits: 2 
@@ -376,7 +376,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                         {departmentEstimates.map((estimate) => (
                           <tr key={estimate.id} className="hover:bg-slate-50 cursor-pointer">
                             <td className="px-4 py-4">
-                              <span className="font-mono text-sm font-medium text-slate-900">
+                              <span className="font-mono text-sm font-medium text-slate-900 dark:text-white">
                                 {estimate.estimate_number || estimate.id}
                               </span>
                             </td>
@@ -387,7 +387,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                               </div>
                             </td>
                             <td className="px-4 py-4">
-                              <p className="text-sm text-slate-900">{estimate.project_name || estimate.description || '—'}</p>
+                              <p className="text-sm text-slate-900 dark:text-white">{estimate.project_name || estimate.description || '—'}</p>
                               {estimate.notes && (
                                 <p className="text-xs text-slate-500 mt-1">{estimate.notes}</p>
                               )}
@@ -395,7 +395,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                             <td className="px-4 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <DollarSign className="w-4 h-4 text-slate-500" />
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-semibold text-slate-900 dark:text-white">
                                   {estimate.total_price_with_tax || estimate.total_price 
                                     ? (estimate.total_price_with_tax || estimate.total_price).toLocaleString('en-US', { 
                                         minimumFractionDigits: 2, 
@@ -423,7 +423,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       ) : (
         <Card className="p-12 text-center">
           <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No estimates found</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No estimates found</h3>
           <p className="text-slate-600 mb-4">
             {filterStatus !== 'all' || filterDepartment !== 'all' || filterYear !== 'all'
               ? 'No estimates match the selected filters'

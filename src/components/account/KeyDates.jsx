@@ -25,7 +25,7 @@ export default function KeyDates({ account }) {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-slate-600">Last Contact</p>
-            <p className="font-semibold text-slate-900 mt-1">
+            <p className="font-semibold text-slate-900 dark:text-white mt-1">
               {lastContactDays !== null ? (
                 <>
                   {lastContactDays === 0 ? 'Today' : 
@@ -40,14 +40,14 @@ export default function KeyDates({ account }) {
 
           <div>
             <p className="text-sm text-slate-600">Date Created</p>
-            <p className="font-medium text-slate-900 mt-1">
+            <p className="font-medium text-slate-900 dark:text-white mt-1">
               {createdDate ? format(new Date(createdDate), 'MMM dd yyyy') : '—'}
             </p>
           </div>
 
           <div>
             <p className="text-sm text-slate-600">Created By</p>
-            <p className="font-medium text-slate-900 mt-1">{createdBy}</p>
+            <p className="font-medium text-slate-900 dark:text-white mt-1">{createdBy}</p>
           </div>
         </div>
       </CardContent>

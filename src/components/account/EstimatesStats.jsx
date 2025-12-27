@@ -31,7 +31,7 @@ export default function EstimatesStats({ estimates = [] }) {
         <div className="space-y-3">
           <div>
             <p className="text-sm text-slate-600">THIS YEAR</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
               {thisYearEstimates.length}
             </p>
           </div>

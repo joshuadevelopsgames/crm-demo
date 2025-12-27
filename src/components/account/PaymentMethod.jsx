@@ -18,7 +18,7 @@ export default function PaymentMethod({ account, onAddPayment }) {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-slate-400" />
-              <span className="font-medium text-slate-900">
+              <span className="font-medium text-slate-900 dark:text-white">
                 {account.payment_method_type || 'Card on file'}
               </span>
             </div>

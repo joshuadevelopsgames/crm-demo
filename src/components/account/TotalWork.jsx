@@ -278,7 +278,7 @@ export default function TotalWork({ estimates = [] }) {
         <div className="space-y-3">
           <div>
             <p className="text-sm text-slate-600">ESTIMATED</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
               ${totalEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-slate-500 mt-1">
@@ -304,7 +304,7 @@ export default function TotalWork({ estimates = [] }) {
               variant="ghost" 
               size="sm" 
               onClick={() => setShowBreakdown(!showBreakdown)}
-              className="w-full justify-between text-xs text-slate-600 hover:text-slate-900"
+              className="w-full justify-between text-xs text-slate-600 hover:text-slate-900 dark:hover:text-white"
             >
               <span className="flex items-center gap-1">
                 <Info className="w-3 h-3" />
@@ -404,7 +404,7 @@ export default function TotalWork({ estimates = [] }) {
               
               {/* ESTIMATED Breakdown */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 mb-2">ESTIMATED Breakdown</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">ESTIMATED Breakdown</h4>
                 <div className="space-y-2">
                   {estimatedBreakdown.included.length > 0 ? (
                     <div>
@@ -414,7 +414,7 @@ export default function TotalWork({ estimates = [] }) {
                           <div key={idx} className="text-xs bg-slate-50 p-2 rounded border border-slate-200">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-white">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
@@ -442,7 +442,7 @@ export default function TotalWork({ estimates = [] }) {
                           <div key={idx} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-white">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (
@@ -466,7 +466,7 @@ export default function TotalWork({ estimates = [] }) {
               
               {/* SOLD Breakdown */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 mb-2">SOLD Breakdown (Won Estimates Only)</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">SOLD Breakdown (Won Estimates Only)</h4>
                 <div className="space-y-2">
                   {soldBreakdown.included.length > 0 ? (
                     <div>
@@ -476,7 +476,7 @@ export default function TotalWork({ estimates = [] }) {
                           <div key={idx} className="text-xs bg-emerald-50 p-2 rounded border border-emerald-200">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-white">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
@@ -504,7 +504,7 @@ export default function TotalWork({ estimates = [] }) {
                           <div key={idx} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-white">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (

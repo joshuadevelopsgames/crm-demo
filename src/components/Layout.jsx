@@ -210,7 +210,7 @@ export default function Layout({ children, currentPageName }) {
                   trigger={
                     <button
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                        adminNavigation.some(item => currentPageName === item.path)
+                        adminNavigation.some(item => currentPageName === item.path) || currentPageName === 'Tutorial'
                           ? 'bg-primary text-primary-foreground shadow-md'
                           : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                       }`}
@@ -240,42 +240,57 @@ export default function Layout({ children, currentPageName }) {
                         </SimpleDropdownItem>
                       );
                     })}
+                    <SimpleDropdownItem
+                      onClick={() => {
+                        navigate('/tutorial');
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 ${
+                        currentPageName === 'Tutorial' ? 'bg-slate-100 font-medium' : ''
+                      }`}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Tutorial
+                    </SimpleDropdownItem>
                   </div>
                 </SimpleDropdown>
               )}
-              <Link
-                to="/tutorial"
-                className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                title="Interactive Tutorial"
-              >
-                <HelpCircle className="w-4 h-4" />
-                <span className="hidden lg:inline">Tutorial</span>
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  title="Interactive Tutorial"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  <span className="hidden lg:inline">Tutorial</span>
+                </Link>
+              )}
               <NotificationBell />
               <ProfileDropdown />
             </div>
 
             {/* Mobile menu button - Better touch targets for PWA/mobile */}
             <div className="md:hidden flex items-center gap-1" style={(isPWA || isNativeApp) ? { gap: '4px' } : {}}>
-              <Link
-                to="/tutorial"
-                className="text-slate-600 hover:text-slate-900"
-                title="Tutorial"
-                style={(isPWA || isNativeApp) ? {
-                  padding: '10px',
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation'
-                } : {
-                  padding: '8px'
-                }}
-              >
-                <HelpCircle className="w-6 h-6" />
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  className="text-slate-600 hover:text-slate-900"
+                  title="Tutorial"
+                  style={(isPWA || isNativeApp) ? {
+                    padding: '10px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation'
+                  } : {
+                    padding: '8px'
+                  }}
+                >
+                  <HelpCircle className="w-6 h-6" />
+                </Link>
+              )}
               <NotificationBell />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -361,16 +376,35 @@ export default function Layout({ children, currentPageName }) {
                       </Link>
                     );
                   })}
+                  <Link
+                    to="/tutorial"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                      currentPageName === 'Tutorial'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground/70 hover:bg-surface-2'
+                    }`}
+                    style={(isPWA || isNativeApp) ? {
+                      minHeight: '48px',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'manipulation'
+                    } : {}}
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                    Tutorial
+                  </Link>
                 </>
               )}
-              <Link
-                to="/tutorial"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
-              >
-                <HelpCircle className="w-5 h-5" />
-                Tutorial
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                  Tutorial
+                </Link>
+              )}
               <div className="px-4 py-2">
                 <ProfileDropdown />
               </div>

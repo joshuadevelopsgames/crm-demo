@@ -196,7 +196,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
     return (
       <>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">{contacts.length} Contacts</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{contacts.length} Contacts</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch
@@ -324,7 +324,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           {filteredContacts.length} {showArchived ? 'Archived' : 'Active'} Contact{filteredContacts.length !== 1 ? 's' : ''}
         </h3>
         <div className="flex items-center gap-4">

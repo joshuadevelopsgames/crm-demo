@@ -11,7 +11,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           Jobsites ({jobsites.length})
         </h3>
         <div className="flex items-center gap-4">
@@ -53,7 +53,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                       <MapPin className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900">{jobsite.name || 'Unnamed Jobsite'}</h4>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">{jobsite.name || 'Unnamed Jobsite'}</h4>
                       <p className="text-sm text-slate-600 mt-1">
                         {[
                           jobsite.address_1,
@@ -124,7 +124,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                             <MapPin className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
-                            <span className="font-medium text-slate-900">
+                            <span className="font-medium text-slate-900 dark:text-white">
                               {jobsite.name || 'Unnamed Jobsite'}
                             </span>
                           </div>
@@ -178,7 +178,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
       ) : (
         <Card className="p-12 text-center">
           <MapPin className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No jobsites found</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No jobsites found</h3>
           <p className="text-slate-600 mb-4">
             Add jobsite locations for this account to track work sites
           </p>

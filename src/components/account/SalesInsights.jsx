@@ -143,7 +143,7 @@ export default function SalesInsights({ accountId, interactions = [] }) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Sales Insights ({insights.length})</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Sales Insights ({insights.length})</h3>
         <Button onClick={() => { resetForm(); setShowDialog(true); }} size="sm">
           <Plus className="w-4 h-4 mr-2" />
           Add Insight
@@ -154,7 +154,7 @@ export default function SalesInsights({ accountId, interactions = [] }) {
         <Card>
           <CardContent className="p-12 text-center">
             <Lightbulb className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No sales insights yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No sales insights yet</h3>
             <p className="text-slate-600 mb-4">Capture key insights from your interactions</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -173,7 +173,7 @@ export default function SalesInsights({ accountId, interactions = [] }) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Icon className="w-5 h-5 text-slate-600" />
-                        <h4 className="font-semibold text-slate-900">{insight.title}</h4>
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{insight.title}</h4>
                         <Badge variant="outline" className={getInsightTypeColor(insight.insight_type)}>
                           {insight.insight_type.replace('_', ' ')}
                         </Badge>

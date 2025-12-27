@@ -114,7 +114,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
       <Card>
         <CardContent className="p-12 text-center">
           <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No interactions yet</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No interactions yet</h3>
           <p className="text-slate-600">Log your first interaction to start tracking engagement</p>
         </CardContent>
       </Card>
@@ -164,7 +164,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         )}
                       </div>
                       {interaction.subject && (
-                        <h3 className="font-semibold text-slate-900">{interaction.subject}</h3>
+                        <h3 className="font-semibold text-slate-900 dark:text-white">{interaction.subject}</h3>
                       )}
                       <div className="flex items-center gap-3 text-sm text-slate-600 mt-1">
                         <span>{format(new Date(interaction.interaction_date), 'MMM d, yyyy • h:mm a')}</span>
@@ -187,7 +187,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditClick(interaction)}
-                        className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        className="text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100"
                         title="Edit interaction"
                       >
                         <Edit className="w-4 h-4" />

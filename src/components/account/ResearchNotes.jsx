@@ -134,7 +134,7 @@ export default function ResearchNotes({ accountId }) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Research Notes ({notes.length})</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Research Notes ({notes.length})</h3>
         <Button onClick={() => { resetForm(); setShowDialog(true); }} size="sm">
           <Plus className="w-4 h-4 mr-2" />
           Add Note
@@ -145,7 +145,7 @@ export default function ResearchNotes({ accountId }) {
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No research notes yet</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No research notes yet</h3>
             <p className="text-slate-600 mb-4">Document your research findings and key information</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -164,7 +164,7 @@ export default function ResearchNotes({ accountId }) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Icon className="w-5 h-5 text-slate-600" />
-                        <h4 className="font-semibold text-slate-900">{note.title}</h4>
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{note.title}</h4>
                         <Badge variant="outline" className={getNoteTypeColor(note.note_type)}>
                           {note.note_type.replace('_', ' ')}
                         </Badge>

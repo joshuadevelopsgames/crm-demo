@@ -136,7 +136,7 @@ export default function AccountDetail() {
   if (isLoading || !account) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 dark:border-white"></div>
       </div>
     );
   }
@@ -215,43 +215,43 @@ export default function AccountDetail() {
         <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="info" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Info
           </TabsTrigger>
           <TabsTrigger 
             value="contacts"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Contacts
           </TabsTrigger>
           <TabsTrigger 
             value="jobsites"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Jobsites
           </TabsTrigger>
           <TabsTrigger 
             value="estimates"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Estimates
           </TabsTrigger>
           <TabsTrigger 
             value="communications"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Communication History
           </TabsTrigger>
           <TabsTrigger 
             value="todos"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             To-Dos
           </TabsTrigger>
           <TabsTrigger 
             value="files"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 dark:data-[state=active]:border-white data-[state=active]:bg-transparent px-6 py-3"
           >
             Files
           </TabsTrigger>
@@ -346,7 +346,7 @@ export default function AccountDetail() {
         {/* To-Dos Tab (formerly Tasks) */}
         <TabsContent value="todos" className="space-y-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">To-Dos ({tasks.length})</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">To-Dos ({tasks.length})</h3>
             <Button variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               New To-Do
@@ -359,7 +359,7 @@ export default function AccountDetail() {
                 <Card key={task.id} className="p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-medium text-slate-900">{task.title}</h4>
+                      <h4 className="font-medium text-slate-900 dark:text-white">{task.title}</h4>
                       {task.description && (
                         <p className="text-sm text-slate-600 mt-1">{task.description}</p>
                       )}
