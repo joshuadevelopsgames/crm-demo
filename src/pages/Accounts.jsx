@@ -365,7 +365,7 @@ export default function Accounts() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <TutorialTooltip
-          tip="This is your Accounts page. Here you can view all companies, search and filter them by type or segment, and click on any account to see detailed information."
+          tip="Your central hub for managing all companies. Search by name, filter by type (prospect, customer, partner) or revenue segment (A, B, C, D), and sort by score, name, or last interaction. Click any account to view full details including interactions, contacts, scorecards, and sales insights. Use this to track your sales pipeline and customer relationships."
           step={2}
           position="bottom"
         >
@@ -376,7 +376,7 @@ export default function Accounts() {
         </TutorialTooltip>
         <div className="flex items-center gap-3">
           <TutorialTooltip
-            tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload both files to create accounts and contacts with complete data."
+            tip="Import accounts and contacts from LMN (golmn.com) by uploading CSV files. This creates new accounts and contacts with all their data (names, emails, phone numbers, etc.). Use this when you have new leads or want to bulk import data from your LMN system. The import will match existing accounts or create new ones."
             step={2}
             position="bottom"
           >
@@ -458,7 +458,7 @@ export default function Accounts() {
       
       {/* Filters & Search */}
       <TutorialTooltip
-        tip="Use these filters to search accounts by name, filter by type or segment, sort by different criteria, and toggle between list and card views."
+        tip="Powerful filtering and search tools to find exactly what you need. Search by account name to quickly locate specific companies. Filter by account type (prospect, customer, etc.) or revenue segment to focus on specific account groups. Sort by organization score, name, or last interaction date to prioritize your work. Switch between list and card views to see more or less detail per account."
         step={2}
         position="bottom"
       >
@@ -537,7 +537,7 @@ export default function Accounts() {
       {/* Accounts List View */}
       {viewMode === 'list' ? (
         <TutorialTooltip
-          tip="This is the list view of all accounts. Click on any row to view the account details. You can see the account name, type, status, segment, organization score, last contact date, and revenue at a glance."
+          tip="List view shows all accounts in a table format for quick scanning. Each row displays key information: account name, type, status, revenue segment, organization score, last contact date, and revenue. Click any row to open the full account detail page where you can view interactions, contacts, scorecards, and more. Use this view to quickly identify accounts that need attention based on score or last contact date."
           step={2}
           position="bottom"
         >

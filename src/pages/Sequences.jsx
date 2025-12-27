@@ -227,7 +227,7 @@ export default function Sequences() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Sequences page. Create multi-step automated outreach sequences to stay in touch with prospects and customers. Define different cadences for different account types."
+        tip="Create template sequences that automatically generate ordered, blocked tasks for your outreach. Click 'Create Template Sequence' to build a reusable sequence with multiple steps (emails, calls, meetings). Then use 'Enroll Account' to assign a sequence to an account - tasks will automatically appear on your Tasks page in the correct order, with each task blocked until the previous one completes. This automates your follow-up process and ensures nothing falls through the cracks."
         step={7}
         position="bottom"
       >

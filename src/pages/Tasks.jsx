@@ -1246,7 +1246,7 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <TutorialTooltip
-          tip="This is your Tasks page. Manage all your follow-ups and action items here. Create tasks, set priorities and due dates, and track their status. Press ⌘K to quickly add a task."
+          tip="Your central task management hub. Create tasks for follow-ups, meetings, and action items. Use tabs to filter by status (Today, Upcoming, Completed). Click any task to view details, add comments or attachments, update status, or mark as complete. Tasks from sequences are automatically created and blocked until previous tasks complete. Press ⌘K (or Ctrl+K) to quickly create a new task."
           step={6}
           position="bottom"
         >
@@ -1276,7 +1276,7 @@ export default function Tasks() {
           </div>
         </TutorialTooltip>
         <TutorialTooltip
-          tip="Click this button to create a new task. Tasks help you track follow-ups, meetings, and other action items related to your accounts and contacts."
+          tip="Create a new task to track any action item. Set a title, description, due date, priority, and link it to an account or contact for context. You can also make tasks recurring (daily, weekly, monthly), add attachments, and create subtasks. Tasks help you never miss a follow-up or deadline."
           step={6}
           position="bottom"
         >
@@ -2267,7 +2267,7 @@ export default function Tasks() {
 
       {/* Tabs and Filters */}
       <TutorialTooltip
-        tip="Use tabs to filter tasks: Inbox (no due date), Today (due today or overdue), Upcoming (future dates), and Completed. Use the search and priority filter to narrow down further."
+        tip="Organize your tasks with smart filtering. Use tabs: Inbox (tasks without due dates), Today (due today or overdue - prioritize these), Upcoming (future tasks), and Completed (your finished work). Use the search bar to find specific tasks by title or description. Filter by priority to focus on urgent items first. Switch between list, grid, and calendar views to see your tasks in different formats."
         step={6}
         position="bottom"
       >
@@ -2467,7 +2467,7 @@ export default function Tasks() {
 
       {/* Tasks List */}
       <TutorialTooltip
-        tip="This is your task list. Click on any task to edit it, update its status, or change its priority. Drag tasks to reorder them. Tasks can be linked to accounts for better organization."
+        tip="Your complete task list. Click any task to view or edit it - you can update status, change priority, add comments or attachments, set due dates, and link to accounts. Drag and drop tasks to reorder them manually. Tasks from sequences are automatically ordered and blocked until previous tasks complete. Use bulk selection mode to complete or delete multiple tasks at once."
         step={6}
         position="bottom"
       >
