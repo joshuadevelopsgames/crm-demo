@@ -107,12 +107,12 @@ export default function GmailConnection({ onSyncComplete }) {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <Mail className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+              <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-slate-900 mb-1">Connect Gmail</h3>
-              <p className="text-sm text-slate-600 mb-4">
+              <h3 className="font-semibold text-slate-900 dark:text-[#ffffff] mb-1">Connect Gmail</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                 Automatically sync emails with your CRM contacts and track client relationships
               </p>
               <Button 
@@ -133,16 +133,16 @@ export default function GmailConnection({ onSyncComplete }) {
     <Card>
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-slate-900">Gmail Connected</h3>
-              <Badge className="bg-emerald-100 text-emerald-800">Active</Badge>
+              <h3 className="font-semibold text-slate-900 dark:text-[#ffffff]">Gmail Connected</h3>
+              <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">Active</Badge>
             </div>
             {lastSync && (
-              <p className="text-sm text-slate-600 mb-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                 Last synced: {new Date(lastSync).toLocaleString()}
               </p>
             )}
@@ -159,7 +159,7 @@ export default function GmailConnection({ onSyncComplete }) {
               <Button 
                 onClick={handleDisconnect}
                 variant="outline"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
                 Disconnect
               </Button>
