@@ -402,8 +402,38 @@ export default function Tasks() {
       const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
       await Promise.all(
         taskIdsArray.map(async (taskId) => {
-          await base44.entities.Task.delete(taskId);
-          await cleanupTaskNotifications(taskId);
+          const task = tasks.find((t) => t.id === taskId);
+          if (!task) {
+            throw new Error("Task not found");
+          }
+
+          const assignedEmails = parseAssignedUsers(task.assigned_to || "");
+          const currentUserEmail = currentUser?.email;
+
+          // If user is assigned to the task, remove them from assignment instead of deleting
+          if (assignedEmails.includes(currentUserEmail)) {
+            const updatedAssignments = assignedEmails.filter(
+              (email) => email !== currentUserEmail
+            );
+
+            // If removing this user leaves no assigned users, fully delete the task
+            if (updatedAssignments.length === 0) {
+              await base44.entities.Task.delete(taskId);
+              await cleanupTaskNotifications(taskId);
+            } else {
+              // Remove user from assignment
+              await base44.entities.Task.update(taskId, {
+                assigned_to: formatAssignedUsers(updatedAssignments),
+              });
+              // Clean up notifications for this user only
+              // (other users' notifications remain)
+            }
+          } else {
+            // User is not assigned - prevent deletion
+            throw new Error(
+              "You can only remove tasks you are assigned to. This will remove you from the assignment."
+            );
+          }
         }),
       );
     },
@@ -3250,27 +3280,64 @@ export default function Tasks() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {tasksToDelete.length > 1
-                ? "Delete Multiple Tasks"
-                : "Delete Task"}
+                ? "Remove from Tasks"
+                : "Remove from Task"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {tasksToDelete.length > 1 ? (
-                `Are you sure you want to delete ${tasksToDelete.length} tasks? This action cannot be undone.`
+                <>
+                  Are you sure you want to remove yourself from {tasksToDelete.length} tasks?
+                  {tasksToDelete.some((id) => {
+                    const task = tasks.find((t) => t.id === id);
+                    const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                    const currentUserEmail = currentUser?.email;
+                    return assignedEmails.includes(currentUserEmail);
+                  }) && (
+                    <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
+                      This will remove you from the assignment. Other assigned users will still see these tasks.
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
-                  Are you sure you want to delete this task? This action cannot
-                  be undone.
-                  {tasksToDelete.length === 1 &&
-                    tasks.find((t) => t.id === tasksToDelete[0])
-                      ?.assigned_to && (
-                      <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
-                        <strong>Task assigned to:</strong>{" "}
-                        {
-                          tasks.find((t) => t.id === tasksToDelete[0])
-                            ?.assigned_to
-                        }
-                      </div>
-                    )}
+                  {(() => {
+                    const task = tasks.find((t) => t.id === tasksToDelete[0]);
+                    const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                    const currentUserEmail = currentUser?.email;
+                    const isAssigned = assignedEmails.includes(currentUserEmail);
+                    const remainingAssignments = assignedEmails.filter(
+                      (email) => email !== currentUserEmail
+                    );
+
+                    if (!isAssigned) {
+                      return (
+                        <div className="text-red-600 dark:text-red-400">
+                          You are not assigned to this task. You can only remove tasks you are assigned to.
+                        </div>
+                      );
+                    }
+
+                    if (remainingAssignments.length === 0) {
+                      return (
+                        <>
+                          Are you sure you want to delete this task? You are the only assigned user, so this will permanently delete the task.
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        This will remove you from this task assignment. The task will remain for other assigned users.
+                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
+                          <strong>Task will remain assigned to:</strong>{" "}
+                          {getAssignedUserDisplay(
+                            formatAssignedUsers(remainingAssignments),
+                            currentUserEmail
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </AlertDialogDescription>
