@@ -617,7 +617,7 @@ export default function Permissions() {
                 <div className="space-y-6">
                   {Object.entries(PERMISSIONS_BY_CATEGORY).map(([category, perms]) => (
                     <div key={category}>
-                      <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">
+                      <h3 className="text-sm font-semibold text-slate-700 dark:text-white mb-3 uppercase tracking-wide">
                         {category}
                       </h3>
                       <div className="space-y-3">
