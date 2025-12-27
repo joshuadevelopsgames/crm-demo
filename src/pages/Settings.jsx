@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { base44 } from '@/api/base44Client';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import toast from 'react-hot-toast';
 
 export default function Settings() {
   const { profile, user } = useUser();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const supabase = getSupabaseAuth();
@@ -93,8 +95,8 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-600 mt-1">Manage your account settings and preferences</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your account settings and preferences</p>
       </div>
 
       {/* Profile Settings */}
@@ -195,8 +197,17 @@ export default function Settings() {
             Display Preferences
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-500">Display preferences coming soon</p>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Dark Mode</Label>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Switch to dark theme for better viewing in low light</p>
+            </div>
+            <Switch
+              checked={isDarkMode}
+              onCheckedChange={toggleDarkMode}
+            />
+          </div>
         </CardContent>
       </Card>
 
