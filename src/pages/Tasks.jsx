@@ -1074,7 +1074,6 @@ export default function Tasks() {
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
-          !task.due_date &&
           parseAssignedUsers(task.assigned_to).includes(currentUser?.email)
         );
       case "today":
@@ -1285,7 +1284,7 @@ export default function Tasks() {
     const inbox = tasks.filter(
       (task) =>
         task.status !== "completed" &&
-        !task.due_date &&
+        task.status !== "blocked" &&
         parseAssignedUsers(task.assigned_to).includes(currentUser?.email),
     ).length;
     const today = tasks.filter(

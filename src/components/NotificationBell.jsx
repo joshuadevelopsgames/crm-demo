@@ -257,11 +257,16 @@ export default function NotificationBell() {
   }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete]);
 
   // Filter to show unread first, then read (only active notifications)
+  // Within each group (unread/read), sort by newest first (created_at descending)
   const sortedNotifications = [...activeNotifications].sort((a, b) => {
+    // First, sort by read status (unread first)
     if (a.is_read !== b.is_read) {
       return a.is_read ? 1 : -1; // Unread first
     }
-    return 0;
+    // Then sort by creation date (newest first)
+    const dateA = new Date(a.created_at || a.scheduled_for || 0);
+    const dateB = new Date(b.created_at || b.scheduled_for || 0);
+    return dateB - dateA; // Newest first
   });
 
   // Group notifications by type
@@ -292,6 +297,17 @@ export default function NotificationBell() {
     if (!currentUserId) return [];
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
+      // Sort notifications within each group by newest first (unread first, then by date)
+      const sortedGroupNotifications = [...notifications].sort((a, b) => {
+        // Unread first
+        if (a.is_read !== b.is_read) {
+          return a.is_read ? 1 : -1;
+        }
+        // Then by creation date (newest first)
+        const dateA = new Date(a.created_at || a.scheduled_for || 0);
+        const dateB = new Date(b.created_at || b.scheduled_for || 0);
+        return dateB - dateA;
+      });
       // Notifications are already filtered by user in groupedNotifications
       // For renewal_reminder and neglected_account, count unique accounts instead of total notifications
       // This prevents showing duplicate counts if there are multiple notifications per account
@@ -303,7 +319,7 @@ export default function NotificationBell() {
         // Additional safety: filter out any snoozed notifications (they should already be filtered, but double-check)
         // This ensures snoozed notifications don't affect the badge or unread count
         const now = new Date();
-        const activeNotificationsOnly = notifications.filter(n => {
+        const activeNotificationsOnly = sortedGroupNotifications.filter(n => {
           // Check if this notification is snoozed
           if (!snoozes || !Array.isArray(snoozes)) {
             return true; // If snoozes not loaded, include all
@@ -461,7 +477,7 @@ export default function NotificationBell() {
       
       const group = {
         type,
-        notifications, // Already filtered by user in groupedNotifications
+        notifications: sortedGroupNotifications, // Use sorted notifications (newest first, unread first)
         count,
         unreadCount
       };
