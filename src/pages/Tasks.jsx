@@ -2083,7 +2083,7 @@ export default function Tasks() {
                             <div className="flex flex-col items-center text-center space-y-3">
                               <UploadIcon className="w-10 h-10 text-slate-400" />
                               <div>
-                                <p className="font-semibold text-slate-900">
+                                <p className="font-semibold text-slate-900 dark:text-foreground">
                                   {isDragging
                                     ? "Drop file here"
                                     : "Drag and drop files here"}
