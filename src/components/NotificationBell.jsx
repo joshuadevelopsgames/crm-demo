@@ -724,7 +724,11 @@ export default function NotificationBell() {
                                   </h4>
                                   {hasMultiple && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {group.count}
+                                      {/* For renewal reminders and neglected accounts, show unread count (accounts with unread notifications) */}
+                                      {/* For other types, show total count */}
+                                      {(group.type === 'renewal_reminder' || group.type === 'neglected_account') 
+                                        ? (group.unreadCount > 0 ? group.unreadCount : group.count)
+                                        : group.count}
                                     </Badge>
                                   )}
                                   {group.unreadCount > 0 && (
