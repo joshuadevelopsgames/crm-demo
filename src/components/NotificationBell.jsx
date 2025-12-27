@@ -312,8 +312,9 @@ export default function NotificationBell() {
       // For renewal_reminder and neglected_account, count unique accounts instead of total notifications
       // This prevents showing duplicate counts if there are multiple notifications per account
       // Also ensures snoozed notifications are excluded (they should already be filtered in activeNotifications)
-      let count = notifications.length;
-      let unreadCount = notifications.filter(n => !n.is_read).length;
+      // Use sortedGroupNotifications for counts to match what we display
+      let count = sortedGroupNotifications.length;
+      let unreadCount = sortedGroupNotifications.filter(n => !n.is_read).length;
       
       if (type === 'renewal_reminder' || type === 'neglected_account') {
         // Additional safety: filter out any snoozed notifications (they should already be filtered, but double-check)
