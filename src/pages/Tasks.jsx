@@ -209,6 +209,19 @@ export default function Tasks() {
     },
   });
 
+  // Fetch all users for task assignment
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      try {
+        return await base44.entities.User.list();
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        return [];
+      }
+    },
+  });
+
   // Fetch comments for viewing/editing task
   const taskIdForComments = viewingTask?.id || editingTask?.id;
   const { data: taskComments = [] } = useQuery({
@@ -1444,7 +1457,16 @@ export default function Tasks() {
                               Assigned To
                             </Label>
                             <p className="mt-1 text-slate-900 dark:text-white">
-                              {viewingTask.assigned_to || "Unassigned"}
+                              {viewingTask.assigned_to
+                                ? (() => {
+                                    const assignedUser = users.find(
+                                      (u) => u.email === viewingTask.assigned_to
+                                    );
+                                    return assignedUser
+                                      ? assignedUser.full_name || assignedUser.name || assignedUser.email
+                                      : viewingTask.assigned_to;
+                                  })()
+                                : "Unassigned"}
                             </p>
                           </div>
                           <div>
@@ -1642,17 +1664,35 @@ export default function Tasks() {
                           />
                         </div>
                         <div>
-                          <Label>Assigned To (email)</Label>
-                          <Input
-                            value={newTask.assigned_to}
-                            onChange={(e) =>
+                          <Label>Assigned To</Label>
+                          <Select
+                            value={newTask.assigned_to || "unassigned"}
+                            onValueChange={(value) =>
                               setNewTask({
                                 ...newTask,
-                                assigned_to: e.target.value,
+                                assigned_to: value === "unassigned" ? "" : value,
                               })
                             }
-                            placeholder="team@company.com"
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select user" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
+                              {users.map((user) => (
+                                <SelectItem key={user.id || user.email} value={user.email}>
+                                  <div className="flex flex-col">
+                                    <span>{user.full_name || user.name || user.email}</span>
+                                    {user.email && (user.full_name || user.name) && (
+                                      <span className="text-xs text-slate-500">
+                                        {user.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label>Related Account</Label>
@@ -3051,10 +3091,17 @@ export default function Tasks() {
                                     {task.assigned_to && (
                                       <Badge
                                         variant="outline"
-                                        className="text-slate-600 flex items-center gap-1"
+                                        className="text-slate-600 dark:text-slate-300 flex items-center gap-1"
                                       >
                                         <User className="w-3 h-3" />
-                                        {task.assigned_to.split("@")[0]}
+                                        {(() => {
+                                          const assignedUser = users.find(
+                                            (u) => u.email === task.assigned_to
+                                          );
+                                          return assignedUser
+                                            ? assignedUser.full_name || assignedUser.name || task.assigned_to.split("@")[0]
+                                            : task.assigned_to.split("@")[0];
+                                        })()}
                                       </Badge>
                                     )}
                                     {accountName && (
