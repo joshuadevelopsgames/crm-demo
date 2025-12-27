@@ -3,6 +3,67 @@ import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMon
 import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 
 /**
+ * Parse assigned users from comma-separated string
+ */
+function parseAssignedUsers(assignedTo) {
+  if (!assignedTo || assignedTo.trim() === '') return [];
+  return assignedTo.split(',').map(email => email.trim()).filter(Boolean);
+}
+
+/**
+ * Create notifications when a task is assigned to users
+ */
+export async function createTaskAssignmentNotifications(task, previousAssignedTo = null) {
+  if (!task || !task.id) return;
+
+  const currentAssigned = parseAssignedUsers(task.assigned_to || '');
+  const previousAssigned = previousAssignedTo ? parseAssignedUsers(previousAssignedTo) : [];
+  
+  // Find newly assigned users (users in current but not in previous)
+  const newlyAssigned = currentAssigned.filter(email => !previousAssigned.includes(email));
+  
+  if (newlyAssigned.length === 0) return;
+
+  // Get all users
+  const users = await base44.entities.User.list();
+  
+  // Create assignment notification for each newly assigned user
+  for (const email of newlyAssigned) {
+    const user = users.find(u => u.email === email);
+    if (!user || !user.id) {
+      console.warn('Could not find user for assignment notification:', email);
+      continue;
+    }
+
+    // Check if assignment notification already exists
+    const existingNotifications = await base44.entities.Notification.filter({
+      user_id: user.id,
+      related_task_id: task.id,
+      type: 'task_assigned',
+      is_read: false
+    });
+
+    // Only create if no existing unread assignment notification
+    if (existingNotifications.length === 0) {
+      try {
+        await base44.entities.Notification.create({
+          user_id: user.id,
+          type: 'task_assigned',
+          title: 'Task Assigned to You',
+          message: `"${task.title}" has been assigned to you`,
+          related_task_id: task.id,
+          related_account_id: task.related_account_id || null,
+          scheduled_for: new Date().toISOString()
+        });
+        console.log(`✅ Created assignment notification for user: ${email}`);
+      } catch (error) {
+        console.error(`❌ Error creating assignment notification for ${email}:`, error);
+      }
+    }
+  }
+}
+
+/**
  * Create notifications for task reminders
  * This service automatically creates notifications when tasks are created or updated
  */
@@ -15,85 +76,90 @@ export async function createTaskNotifications(task) {
   const today = startOfDay(new Date());
   const taskDate = startOfDay(dueDate);
   
-  // Get the user assigned to the task (or default to current user)
+  // Get all assigned users (support multiple users)
+  const assignedUsers = parseAssignedUsers(task.assigned_to || '');
   const currentUser = await base44.auth.me();
-  const assignedUser = task.assigned_to || currentUser.email;
   
-  // Find user by email
-  const users = await base44.entities.User.list();
-  let user = users.find(u => u.email === assignedUser);
+  // If no assigned users, default to current user
+  const usersToNotify = assignedUsers.length > 0 ? assignedUsers : [currentUser.email];
   
-  // If user not found by email, use current user or first user as fallback
-  if (!user) {
-    user = currentUser.id ? users.find(u => u.id === currentUser.id) : users[0];
-  }
+  // Get all users
+  const allUsers = await base44.entities.User.list();
   
-  if (!user || !user.id) {
-    console.warn('Could not find user for notification:', assignedUser);
-    return;
-  }
-
   const daysUntilDue = differenceInDays(taskDate, today);
   const isOverdue = isPast(taskDate) && !isToday(taskDate);
   const isDueToday = isToday(taskDate);
 
-  // Check if notification already exists
-  const existingNotifications = await base44.entities.Notification.filter({
-    user_id: user.id,
-    related_task_id: task.id,
-    is_read: false
-  });
+  // Create notifications for each assigned user
+  for (const email of usersToNotify) {
+    const user = allUsers.find(u => u.email === email);
+    
+    // If user not found by email, skip
+    if (!user || !user.id) {
+      console.warn('Could not find user for notification:', email);
+      continue;
+    }
 
-  // Remove existing notifications for this task
-  for (const notif of existingNotifications) {
-    await base44.entities.Notification.update(notif.id, { is_read: true });
-  }
+    // Check if notification already exists
+    const existingNotifications = await base44.entities.Notification.filter({
+      user_id: user.id,
+      related_task_id: task.id,
+      is_read: false
+    });
 
-  // Create notification based on task status
-  if (isOverdue) {
-    // Task is overdue
-    await base44.entities.Notification.create({
-      user_id: user.id,
-      type: 'task_overdue',
-      title: 'Task Overdue',
-      message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
-      related_task_id: task.id,
-      related_account_id: task.related_account_id || null,
-      scheduled_for: new Date().toISOString()
-    });
-  } else if (isDueToday) {
-    // Task is due today
-    await base44.entities.Notification.create({
-      user_id: user.id,
-      type: 'task_due_today',
-      title: 'Task Due Today',
-      message: `"${task.title}" is due today`,
-      related_task_id: task.id,
-      related_account_id: task.related_account_id || null,
-      scheduled_for: new Date().toISOString()
-    });
-  } else if (daysUntilDue === 1) {
-    // Task is due tomorrow
-    await base44.entities.Notification.create({
-      user_id: user.id,
-      type: 'task_reminder',
-      title: 'Task Due Tomorrow',
-      message: `"${task.title}" is due tomorrow`,
-      related_task_id: task.id,
-      related_account_id: task.related_account_id || null,
-      scheduled_for: addDays(today, 1).toISOString()
-    });
-  } else if (daysUntilDue <= 7) {
-    // Task is due within a week
-    await base44.entities.Notification.create({
-      user_id: user.id,
-      type: 'task_reminder',
-      title: 'Task Due Soon',
-      message: `"${task.title}" is due in ${daysUntilDue} days`,
-      related_task_id: task.id,
-      related_account_id: task.related_account_id || null,
-      scheduled_for: taskDate.toISOString()
-    });
+    // Remove existing notifications for this task (except assignment notifications)
+    for (const notif of existingNotifications) {
+      if (notif.type !== 'task_assigned') {
+        await base44.entities.Notification.update(notif.id, { is_read: true });
+      }
+    }
+
+    // Create notification based on task status
+    if (isOverdue) {
+      // Task is overdue
+      await base44.entities.Notification.create({
+        user_id: user.id,
+        type: 'task_overdue',
+        title: 'Task Overdue',
+        message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
+        related_task_id: task.id,
+        related_account_id: task.related_account_id || null,
+        scheduled_for: new Date().toISOString()
+      });
+    } else if (isDueToday) {
+      // Task is due today
+      await base44.entities.Notification.create({
+        user_id: user.id,
+        type: 'task_due_today',
+        title: 'Task Due Today',
+        message: `"${task.title}" is due today`,
+        related_task_id: task.id,
+        related_account_id: task.related_account_id || null,
+        scheduled_for: new Date().toISOString()
+      });
+    } else if (daysUntilDue === 1) {
+      // Task is due tomorrow
+      await base44.entities.Notification.create({
+        user_id: user.id,
+        type: 'task_reminder',
+        title: 'Task Due Tomorrow',
+        message: `"${task.title}" is due tomorrow`,
+        related_task_id: task.id,
+        related_account_id: task.related_account_id || null,
+        scheduled_for: addDays(today, 1).toISOString()
+      });
+    } else if (daysUntilDue <= 7) {
+      // Task is due within a week
+      await base44.entities.Notification.create({
+        user_id: user.id,
+        type: 'task_reminder',
+        title: 'Task Due Soon',
+        message: `"${task.title}" is due in ${daysUntilDue} days`,
+        related_task_id: task.id,
+        related_account_id: task.related_account_id || null,
+        scheduled_for: taskDate.toISOString()
+      });
+    }
   }
 }
 

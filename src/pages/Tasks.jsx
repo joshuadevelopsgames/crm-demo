@@ -81,6 +81,7 @@ import {
 import {
   createTaskNotifications,
   cleanupTaskNotifications,
+  createTaskAssignmentNotifications,
 } from "../services/notificationService";
 import { unblockNextTask } from "../services/sequenceTaskService";
 import {
@@ -340,6 +341,10 @@ export default function Tasks() {
   const createTaskMutation = useMutation({
     mutationFn: async (data) => {
       const task = await base44.entities.Task.create(data);
+      // Create assignment notifications for assigned users
+      if (task.assigned_to) {
+        await createTaskAssignmentNotifications(task, null);
+      }
       // Create notifications for task reminders
       if (task.due_date) {
         await createTaskNotifications(task);
@@ -798,7 +803,11 @@ export default function Tasks() {
     }
 
     if (editingTask) {
-      updateTaskMutation.mutate({ id: editingTask.id, data: taskData });
+      updateTaskMutation.mutate({ 
+        id: editingTask.id, 
+        data: taskData,
+        previousAssignedTo: editingTask.assigned_to || null
+      });
     } else {
       createTaskMutation.mutate(taskData);
     }

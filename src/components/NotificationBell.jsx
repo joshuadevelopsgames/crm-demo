@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2 } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -494,6 +494,7 @@ export default function NotificationBell() {
     const priorities = {
       'renewal_reminder': 1,
       'neglected_account': 2,
+      'task_assigned': 2.5,
       'task_overdue': 3,
       'task_due_today': 4,
       'task_reminder': 5,
@@ -654,6 +655,8 @@ export default function NotificationBell() {
 
   const getNotificationColor = (type) => {
     switch (type) {
+      case 'task_assigned':
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
       case 'task_overdue':
         return 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800';
       case 'task_due_today':
