@@ -97,7 +97,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.name || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.name || '—'}</p>
             )}
           </div>
 
@@ -117,7 +117,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.address_1 || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.address_1 || '—'}</p>
             )}
           </div>
 
@@ -137,7 +137,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.address_2 || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.address_2 || '—'}</p>
             )}
           </div>
 
@@ -156,7 +156,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.city || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.city || '—'}</p>
             )}
           </div>
 
@@ -176,7 +176,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.state || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.state || '—'}</p>
             )}
           </div>
 
@@ -196,7 +196,7 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.postal_code || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.postal_code || '—'}</p>
             )}
           </div>
 
@@ -217,13 +217,13 @@ export default function GeneralInformation({ account, onUpdate }) {
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 dark:text-white mt-1">{formData.country || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-foreground mt-1">{formData.country || '—'}</p>
             )}
           </div>
 
           <div>
             <Label className="text-slate-600">Archived</Label>
-            <p className="font-medium text-slate-900 dark:text-white mt-1">
+            <p className="font-medium text-slate-900 dark:text-foreground mt-1">
               {formData.archived ? 'Yes' : 'No'}
             </p>
           </div>
