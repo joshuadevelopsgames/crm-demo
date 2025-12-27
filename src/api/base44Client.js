@@ -756,6 +756,18 @@ export const base44 = {
         );
         return userNotifications;
       },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/notifications?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to delete notification');
+        }
+        const result = await response.json();
+        if (result.success) return result;
+        throw new Error(result.error || 'Failed to delete notification');
+      },
     },
     Estimate: {
       list: async (forceRefresh = false) => {

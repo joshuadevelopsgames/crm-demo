@@ -190,7 +190,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                         return dateB - dateA;
                                       })
                                       .map((estimate) => (
-                                        <tr key={estimate.id} className="border-b border-slate-100 hover:bg-white">
+                                        <tr key={estimate.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800">
                                           <td className="p-2 text-slate-600">{estimate.estimate_number || 'N/A'}</td>
                                           <td className="p-2 text-slate-600">{estimate.project_name || 'N/A'}</td>
                                           <td className="p-2 text-slate-600">

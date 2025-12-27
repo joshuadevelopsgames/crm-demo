@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { createPageUrl } from '../utils';
 import { Capacitor } from '@capacitor/core';
 import { snoozeNotification } from '@/services/notificationService';
 import { useUser } from '@/contexts/UserContext';
+import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
@@ -313,6 +314,18 @@ export default function NotificationBell() {
     mutationFn: () => base44.entities.Notification.markAllAsRead(currentUserId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (id) => base44.entities.Notification.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('✓ Notification deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting notification:', error);
+      toast.error(error.message || 'Failed to delete notification');
     }
   });
 
@@ -630,6 +643,21 @@ export default function NotificationBell() {
                                       {!notification.is_read && (
                                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
                                       )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm('Are you sure you want to delete this notification?')) {
+                                            deleteNotificationMutation.mutate(notification.id);
+                                          }
+                                        }}
+                                        title="Delete this notification"
+                                        disabled={deleteNotificationMutation.isPending}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
                                       {(notification.type === 'renewal_reminder' || notification.type === 'neglected_account') && (
                                         <Button
                                           variant="ghost"
