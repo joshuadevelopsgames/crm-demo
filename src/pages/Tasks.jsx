@@ -82,6 +82,7 @@ import {
   createTaskNotifications,
   cleanupTaskNotifications,
 } from "../services/notificationService";
+import { unblockNextTask } from "../services/sequenceTaskService";
 import {
   Dialog,
   DialogContent,
@@ -311,6 +312,8 @@ export default function Tasks() {
       // Update notifications based on task status
       if (updatedTask.status === "completed") {
         await cleanupTaskNotifications(id);
+        // Unblock next task if this task was blocking others
+        await unblockNextTask(id);
       } else if (updatedTask.due_date) {
         await createTaskNotifications(updatedTask);
       }
@@ -820,12 +823,21 @@ export default function Tasks() {
 
   const handleStatusChange = async (taskId, newStatus) => {
     const task = tasks.find((t) => t.id === taskId);
+    
+    // Prevent completing blocked tasks
+    if (newStatus === "completed" && task?.status === "blocked") {
+      toast.error("Cannot complete a blocked task. Complete the blocking task first.");
+      return;
+    }
+    
     const completedDate =
       newStatus === "completed" ? new Date().toISOString() : null;
 
     // Clean up notifications if task is completed
     if (newStatus === "completed") {
       await cleanupTaskNotifications(taskId);
+      // Unblock next task if this task was blocking others
+      await unblockNextTask(taskId);
     }
 
     updateTaskMutation.mutate({
@@ -991,24 +1003,27 @@ export default function Tasks() {
     if (!matchesSearch || !matchesPriority || !matchesLabel) return false;
 
     // Apply tab filter
+    // Note: blocked tasks are excluded from main views but can be seen in "all" view
     switch (activeFilter) {
       case "inbox":
         return (
           task.status !== "completed" &&
+          task.status !== "blocked" &&
           !task.due_date &&
           task.assigned_to === currentUser?.email
         );
       case "today":
         return (
           task.status !== "completed" &&
+          task.status !== "blocked" &&
           (isTaskToday(task) || isTaskOverdue(task))
         );
       case "upcoming":
-        return task.status !== "completed" && isTaskUpcoming(task);
+        return task.status !== "completed" && task.status !== "blocked" && isTaskUpcoming(task);
       case "completed":
         return task.status === "completed";
       default:
-        return true;
+        return true; // "all" view shows all tasks including blocked
     }
   });
 
