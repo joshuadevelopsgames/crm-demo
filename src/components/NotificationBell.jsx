@@ -292,14 +292,30 @@ export default function NotificationBell() {
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
       // Notifications are already filtered by user in groupedNotifications
-      // For renewal_reminder, count unique accounts instead of total notifications
+      // For renewal_reminder and neglected_account, count unique accounts instead of total notifications
       // This prevents showing duplicate counts if there are multiple notifications per account
+      // Also ensures snoozed notifications are excluded (they should already be filtered in activeNotifications)
       let count = notifications.length;
       let unreadCount = notifications.filter(n => !n.is_read).length;
       
-      if (type === 'renewal_reminder') {
+      if (type === 'renewal_reminder' || type === 'neglected_account') {
+        // Additional safety: filter out any snoozed notifications (they should already be filtered, but double-check)
+        // This ensures snoozed notifications don't affect the badge or unread count
+        const now = new Date();
+        const activeNotificationsOnly = notifications.filter(n => {
+          // Check if this notification is snoozed
+          const isSnoozed = snoozes.some(snooze => 
+            snooze.notification_type === n.type &&
+            (n.related_account_id 
+              ? snooze.related_account_id === n.related_account_id
+              : (snooze.related_account_id === null || snooze.related_account_id === 'null')) &&
+            new Date(snooze.snoozed_until) > now
+          );
+          return !isSnoozed;
+        });
+        
         // Normalize account IDs to strings for proper Set deduplication
-        const allAccountIds = notifications
+        const allAccountIds = activeNotificationsOnly
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim());
@@ -308,7 +324,7 @@ export default function NotificationBell() {
         
         // For unread count, use the EXACT SAME logic as count, but only for unread notifications
         // This ensures consistency - if count works, unreadCount will work the same way
-        const unreadNotifications = notifications.filter(n => !n.is_read);
+        const unreadNotifications = activeNotificationsOnly.filter(n => !n.is_read);
         
         // Use EXACT same pattern as count calculation above
         const unreadAccountIds = unreadNotifications
@@ -331,9 +347,10 @@ export default function NotificationBell() {
           console.log(`🔔 All account IDs (with duplicates):`, unreadAccountIds.slice(0, 20));
         }
         
-        // Debug logging for renewal reminders
+        // Debug logging for renewal reminders and neglected accounts
         if (notifications.length > 0) {
-          console.log(`🔔 Renewal reminder group: ${notifications.length} notifications (already filtered by user), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
+          const typeLabel = type === 'renewal_reminder' ? 'Renewal reminder' : 'Neglected account';
+          console.log(`🔔 ${typeLabel} group: ${notifications.length} notifications (${activeNotificationsOnly.length} after snooze filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
           console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
           console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
           console.log(`🔔 CRITICAL: The badge should show ${count} and text should show "${unreadCount} unread notifications"`);
@@ -360,8 +377,8 @@ export default function NotificationBell() {
         unreadCount
       };
       
-      // Additional debug for renewal reminders
-      if (type === 'renewal_reminder' && notifications.length > 0) {
+      // Additional debug for renewal reminders and neglected accounts
+      if ((type === 'renewal_reminder' || type === 'neglected_account') && notifications.length > 0) {
         console.log(`🔔 Final group object for ${type}:`, {
           notificationsCount: group.notifications.length,
           count: group.count,
@@ -381,7 +398,7 @@ export default function NotificationBell() {
       
       return group;
     });
-  }, [groupedNotifications, currentUserId]);
+  }, [groupedNotifications, currentUserId, snoozes]);
 
   // Define notification type priority (lower number = higher priority)
   const getTypePriority = (type) => {
