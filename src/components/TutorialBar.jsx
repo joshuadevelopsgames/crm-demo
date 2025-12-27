@@ -14,8 +14,12 @@ const stepNames = {
   5: 'Interactions',
   6: 'Tasks',
   7: 'Sequences',
-  8: 'Google Sheets',
-  9: 'Complete'
+  8: 'Contacts',
+  9: 'Notifications',
+  10: 'Reports',
+  11: 'Settings',
+  12: 'Google Sheets',
+  13: 'Complete'
 };
 
 export default function TutorialBar() {

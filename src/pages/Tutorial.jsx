@@ -708,28 +708,64 @@ export default function Tutorial() {
     );
   }
 
-  // Force white background on mount
+  // Force white background on mount and clean up on unmount
   useEffect(() => {
+    // Store original styles
+    const originalBodyBg = document.body.style.backgroundColor;
+    const originalHtmlBg = document.documentElement.style.backgroundColor;
+    const root = document.getElementById('root');
+    const originalRootBg = root ? root.style.backgroundColor : '';
+    
+    // Apply tutorial page styles
     document.body.style.backgroundColor = '#ffffff';
     document.documentElement.style.backgroundColor = '#ffffff';
-    const root = document.getElementById('root');
     if (root) {
       root.style.backgroundColor = '#ffffff';
     }
+    
+    // Clean up on unmount - restore original styles
     return () => {
-      // Reset on unmount if needed
+      document.body.style.backgroundColor = originalBodyBg;
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      if (root) {
+        root.style.backgroundColor = originalRootBg;
+      }
+      // Remove any style tags we added
+      const styleTag = document.getElementById('tutorial-page-styles');
+      if (styleTag) {
+        styleTag.remove();
+      }
+    };
+  }, []);
+
+  // Inject styles only when this component is mounted
+  useEffect(() => {
+    // Create or update style tag with unique ID
+    let styleTag = document.getElementById('tutorial-page-styles');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'tutorial-page-styles';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = `
+      body { background-color: #ffffff !important; background-image: none !important; }
+      html { background-color: #ffffff !important; background-image: none !important; }
+      #root { background-color: #ffffff !important; background-image: none !important; }
+      #root > div { background-color: #ffffff !important; background-image: none !important; }
+      .bg-gradient-to-r { display: none !important; }
+    `;
+    
+    // Clean up on unmount
+    return () => {
+      const tag = document.getElementById('tutorial-page-styles');
+      if (tag) {
+        tag.remove();
+      }
     };
   }, []);
 
   return (
     <>
-      <style>{`
-        body { background-color: #ffffff !important; background-image: none !important; }
-        html { background-color: #ffffff !important; background-image: none !important; }
-        #root { background-color: #ffffff !important; background-image: none !important; }
-        #root > div { background-color: #ffffff !important; background-image: none !important; }
-        .bg-gradient-to-r { display: none !important; }
-      `}</style>
       <div 
         className="min-h-screen p-4" 
         style={{ 
