@@ -155,7 +155,7 @@ export default function Contacts() {
 
       {/* Tabs: Active / Archived */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full justify-start bg-white dark:bg-slate-900 border-b dark:border-slate-800 rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="active" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
@@ -255,7 +255,7 @@ export default function Contacts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
@@ -341,7 +341,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-surface-2 opacity-75' : 'bg-white dark:bg-surface-1'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
@@ -541,7 +541,7 @@ export default function Contacts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
@@ -627,7 +627,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-surface-2 opacity-75' : 'bg-white dark:bg-surface-1'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">

@@ -372,7 +372,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
-          <p className="text-slate-600 mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
+          <p className="text-slate-600 dark:text-text-muted mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
         </div>
         <Button 
           onClick={() => setIsImportDialogOpen(true)}
@@ -412,14 +412,14 @@ export default function Dashboard() {
               position="bottom"
             >
               <Card 
-                className={`border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                className={`border-slate-200/50 dark:border-border bg-white dark:bg-surface-1 backdrop-blur-sm hover:border-slate-300 dark:hover:border-border transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
                 onClick={isClickable ? handleClick : undefined}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{stat.title}</p>
-                      <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
+                      <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-text-muted mb-1">{stat.title}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-foreground">{stat.value}</p>
                     </div>
                     <div className={`${stat.bgColor} p-3 md:p-4 rounded-xl group-hover:scale-110 transition-transform`}>
                       <Icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
@@ -440,11 +440,11 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-          <Card className="border-red-200 bg-red-50/50">
+          <Card className="border-red-200 dark:border-border bg-red-50/50 dark:bg-surface-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-red-700 transition-colors"
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-red-700 dark:hover:text-red-400 transition-colors"
                   onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
                 >
                   <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -469,21 +469,21 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-600 mb-3">Renewing within 6 months</p>
+              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {atRiskRenewals.slice(0, 5).map(account => {
                   const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-red-900/30"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-border"
                     >
                       <Link
                         to={createPageUrl(`AccountDetail?id=${account.id}`)}
                         className="flex-1"
                       >
-                        <p className="font-medium text-slate-900 dark:text-slate-100">{account.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-text-muted">
                           Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
                         </p>
                       </Link>
@@ -503,7 +503,7 @@ export default function Dashboard() {
                   );
                 })}
                 {atRiskRenewals.length === 0 && (
-                  <p className="text-sm text-slate-500 text-center py-4">No at-risk renewals 🎉</p>
+                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No at-risk renewals 🎉</p>
                 )}
                 {atRiskRenewals.length > 5 && (
                   <Button
@@ -526,11 +526,11 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-amber-200 dark:border-border bg-amber-50/50 dark:bg-surface-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
                   onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
                 >
                   <Clock className="w-5 h-5 text-amber-600" />
@@ -555,12 +555,12 @@ export default function Dashboard() {
               </div>
             </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {neglectedAccounts.slice(0, 5).map(account => (
                 <div
                   key={account.id}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-amber-100 dark:border-amber-900/30"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-amber-100 dark:border-border"
                 >
                   <Link
                     to={createPageUrl(`AccountDetail?id=${account.id}`)}
@@ -588,7 +588,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {neglectedAccounts.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No neglected accounts 🎉</p>
               )}
               {neglectedAccounts.length > 5 && (
                 <Button
@@ -611,10 +611,10 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-        <Card className="border-orange-200 bg-orange-50/50">
+        <Card className="border-orange-200 dark:border-border bg-orange-50/50 dark:bg-surface-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
                 <AlertCircle className="w-5 h-5 text-orange-600" />
                 Overdue Tasks
               </CardTitle>
@@ -624,17 +624,17 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">Tasks past their due date</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Tasks past their due date</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {overdueTasks.slice(0, 5).map(task => (
                 <div
                   key={task.id}
                   onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-orange-100 dark:border-orange-900/30 cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-orange-100 dark:border-border cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{task.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="font-medium text-slate-900 dark:text-foreground">{task.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-text-muted">
                       Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
                     </p>
                   </div>
@@ -644,7 +644,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {overdueTasks.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No overdue tasks</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No overdue tasks</p>
               )}
             </div>
           </CardContent>
@@ -657,10 +657,10 @@ export default function Dashboard() {
           step={1}
           position="bottom"
         >
-        <Card className="border-indigo-200 bg-indigo-50/50">
+        <Card className="border-indigo-200 dark:border-border bg-indigo-50/50 dark:bg-surface-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
                 <TrendingUp className="w-5 h-5 text-indigo-600" />
                 Active Sequences
               </CardTitle>
@@ -670,18 +670,18 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">Accounts in sequences</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Accounts in sequences</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {sequences.filter(s => s.status === 'active').slice(0, 5).map(enrollment => {
                 const account = accounts.find(a => a.id === enrollment.account_id);
                 return (
                   <div
                     key={enrollment.id}
-                    className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100 dark:border-indigo-900/30"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-indigo-100 dark:border-border"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{account?.name || 'Unknown'}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="font-medium text-slate-900 dark:text-foreground">{account?.name || 'Unknown'}</p>
+                      <p className="text-xs text-slate-500 dark:text-text-muted">
                         Step {enrollment.current_step} • Next: {enrollment.next_action_date ? format(new Date(enrollment.next_action_date), 'MMM d') : 'TBD'}
                       </p>
                     </div>
@@ -689,7 +689,7 @@ export default function Dashboard() {
                 );
               })}
               {sequences.filter(s => s.status === 'active').length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No active sequences</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No active sequences</p>
               )}
             </div>
           </CardContent>

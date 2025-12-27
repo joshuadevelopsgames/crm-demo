@@ -1871,7 +1871,7 @@ export default function Tasks() {
                                             []
                                           ).includes(index)
                                             ? "bg-slate-900 text-white border-slate-900"
-                                            : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                            : "bg-white dark:bg-surface-2 text-slate-700 dark:text-foreground border-slate-300 dark:border-border hover:bg-slate-50 dark:hover:bg-surface-3"
                                         }`}
                                       >
                                         {day.slice(0, 3)}
@@ -2272,7 +2272,7 @@ export default function Tasks() {
                   : {}
               }
             >
-              <TabsList className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
+              <TabsList className="bg-white dark:bg-surface-1 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
                 <TabsTrigger value="inbox" className="flex items-center gap-2">
                   <Inbox className="w-4 h-4" />
                   Inbox ({counts.inbox})

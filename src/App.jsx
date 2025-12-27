@@ -238,7 +238,7 @@ function App() {
         <ThemeProvider>
           <UserProvider>
             <TutorialProvider>
-              <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
+              <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-bg">
                 <TutorialBar />
                 <AppContent />
                 <InstallPrompt />
