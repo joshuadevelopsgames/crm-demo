@@ -1871,7 +1871,7 @@ export default function Tasks() {
                                             []
                                           ).includes(index)
                                             ? "bg-slate-900 text-white border-slate-900"
-                                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                            : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                                         }`}
                                       >
                                         {day.slice(0, 3)}
@@ -1981,7 +1981,7 @@ export default function Tasks() {
                               taskComments.map((comment) => (
                                 <div
                                   key={comment.id}
-                                  className="border rounded-lg p-3 bg-slate-50"
+                                  className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                 >
                                   {editingCommentId === comment.id ? (
                                     <div className="space-y-2">
@@ -2077,7 +2077,7 @@ export default function Tasks() {
                             className={`border-2 border-dashed rounded-lg p-8 transition-all ${
                               isDragging
                                 ? "border-blue-500 bg-blue-50"
-                                : "border-slate-300 bg-slate-50"
+                                : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
                             }`}
                           >
                             <div className="flex flex-col items-center text-center space-y-3">
@@ -2165,7 +2165,7 @@ export default function Tasks() {
                               {taskAttachments.map((attachment) => (
                                 <div
                                   key={attachment.id}
-                                  className="border rounded-lg p-3 bg-slate-50 flex items-center justify-between"
+                                  className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center justify-between"
                                 >
                                   <div className="flex items-center gap-3 flex-1 min-w-0">
                                     <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
@@ -2272,7 +2272,7 @@ export default function Tasks() {
                   : {}
               }
             >
-              <TabsList className="bg-white/80 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
+              <TabsList className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
                 <TabsTrigger value="inbox" className="flex items-center gap-2">
                   <Inbox className="w-4 h-4" />
                   Inbox ({counts.inbox})
@@ -2608,7 +2608,7 @@ export default function Tasks() {
                                           ? "bg-red-50 text-red-700 border-red-200"
                                           : isTaskToday(task)
                                             ? "bg-amber-50 text-amber-700 border-amber-200"
-                                            : "text-slate-600 bg-slate-50 border-slate-200"
+                                            : "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                       }`}
                                     >
                                       <Calendar className="w-2.5 h-2.5" />
@@ -2623,7 +2623,7 @@ export default function Tasks() {
                                   {task.estimated_time && (
                                     <Badge
                                       variant="outline"
-                                      className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5"
+                                      className="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-0.5 px-1.5 py-0.5"
                                     >
                                       <Clock className="w-2.5 h-2.5" />
                                       {task.estimated_time}m
@@ -2780,7 +2780,7 @@ export default function Tasks() {
                                     }}
                                   >
                                     <SelectTrigger
-                                      className={`${isMobileView ? "w-[150px] min-w-[150px] h-9" : "w-[160px]"} px-3 py-1.5 border border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
+                                      className={`${isMobileView ? "w-[150px] min-w-[150px] h-9" : "w-[160px]"} px-3 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                       }}
@@ -2828,7 +2828,7 @@ export default function Tasks() {
                                           ? "bg-red-50 text-red-700 border-red-200"
                                           : isTaskToday(task)
                                             ? "bg-amber-50 text-amber-700 border-amber-200"
-                                            : "text-slate-600 bg-slate-50 border-slate-200"
+                                            : "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                       }`}
                                     >
                                       <Calendar className="w-3 h-3" />
@@ -3117,7 +3117,7 @@ export default function Tasks() {
                   {tasksToDelete.length === 1 &&
                     tasks.find((t) => t.id === tasksToDelete[0])
                       ?.assigned_to && (
-                      <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                      <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
                         <strong>Task assigned to:</strong>{" "}
                         {
                           tasks.find((t) => t.id === tasksToDelete[0])

@@ -304,7 +304,7 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white">
+          <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="px-4 py-3 space-y-1">
               {regularNavigation.map((item) => {
                 const Icon = item.icon;
@@ -316,8 +316,8 @@ export default function Layout({ children, currentPageName }) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-slate-900 dark:bg-slate-800 text-white'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                     style={(isPWA || isNativeApp) ? {
                       minHeight: '48px',
@@ -380,7 +380,49 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* Main Content - Responsive padding: different for PWA/mobile vs desktop */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={(isPWA || isNativeApp) ? { 
+      <main 
+        ref={(el) => {
+          if (el && isTutorialMode) {
+            // #region agent log
+            const mainBg = window.getComputedStyle(el).backgroundColor;
+            const mainDisplay = window.getComputedStyle(el).display;
+            const mainVisibility = window.getComputedStyle(el).visibility;
+            const mainZIndex = window.getComputedStyle(el).zIndex;
+            const mainRect = el.getBoundingClientRect();
+            // Check for backdrop/overlay elements
+            const allElements = document.querySelectorAll('*');
+            const backdropElements = Array.from(allElements).filter(el => {
+              const style = window.getComputedStyle(el);
+              const bg = style.backgroundColor;
+              const pos = style.position;
+              const zIdx = parseInt(style.zIndex) || 0;
+              return (bg.includes('rgb(37, 99, 235)') || bg.includes('rgb(79, 70, 229)')) && 
+                     (pos === 'fixed' || pos === 'absolute') && zIdx > 50;
+            });
+            // Check body/html/root backgrounds
+            const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+            const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+            const rootBg = document.getElementById('root') ? window.getComputedStyle(document.getElementById('root')).backgroundColor : 'no root';
+            // Check for any fixed/absolute elements covering the page
+            const allFixed = Array.from(document.querySelectorAll('*')).filter(el => {
+              const style = window.getComputedStyle(el);
+              return (style.position === 'fixed' || style.position === 'absolute') && 
+                     parseInt(style.zIndex) > 50;
+            }).map(el => ({
+              tag: el.tagName,
+              className: el.className,
+              position: window.getComputedStyle(el).position,
+              zIndex: window.getComputedStyle(el).zIndex,
+              bg: window.getComputedStyle(el).backgroundColor,
+              rect: el.getBoundingClientRect()
+            }));
+            const logData3 = {location:'Layout.jsx:main-ref',message:'Main content element styles and position',data:{mainBg,mainDisplay,mainVisibility,mainZIndex,mainRect:{top:mainRect.top,left:mainRect.left,width:mainRect.width,height:mainRect.height},backdropCount:backdropElements.length,bodyBg,htmlBg,rootBg,allFixedCount:allFixed.length,allFixed:allFixed.slice(0, 5)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['D','E','B']};
+            console.log('🔍 DEBUG Layout main:', JSON.stringify(logData3, null, 2));
+            fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(err=>console.error('Log fetch error:',err));
+            // #endregion
+          }
+        }}
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-slate-950`} style={(isPWA || isNativeApp) ? {
         // PWA and native app specific padding (with safe areas)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,

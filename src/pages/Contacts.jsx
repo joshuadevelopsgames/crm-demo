@@ -155,7 +155,7 @@ export default function Contacts() {
 
       {/* Tabs: Active / Archived */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full justify-start bg-white border-b rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-slate-900 border-b dark:border-slate-800 rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="active" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
@@ -236,7 +236,7 @@ export default function Contacts() {
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Contact
@@ -255,13 +255,13 @@ export default function Contacts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
                       <tr 
                         key={contact.id}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
                         <td className="px-6 py-4">
@@ -341,7 +341,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
@@ -522,7 +522,7 @@ export default function Contacts() {
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Contact
@@ -541,13 +541,13 @@ export default function Contacts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
                       <tr 
                         key={contact.id}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
                         <td className="px-6 py-4">
@@ -627,7 +627,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">

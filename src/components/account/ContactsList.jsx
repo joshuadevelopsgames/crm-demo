@@ -371,7 +371,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
           
           return (
-          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}>
+          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}>
             <CardContent className="p-5">
               <div className="space-y-4">
                 {/* Header with Avatar */}
@@ -467,7 +467,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Contact
@@ -486,7 +486,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredContacts.map((contact) => {
                   const isArchived = contact.status === 'archived' || contact.archived === true;
                   const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
@@ -494,7 +494,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   return (
                     <tr 
                       key={contact.id}
-                      className={`hover:bg-slate-50 transition-colors ${isArchived ? 'bg-slate-50' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">

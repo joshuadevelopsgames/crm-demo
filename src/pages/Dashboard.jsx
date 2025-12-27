@@ -412,14 +412,14 @@ export default function Dashboard() {
               position="bottom"
             >
               <Card 
-                className={`border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                className={`border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
                 onClick={isClickable ? handleClick : undefined}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs md:text-sm font-medium text-slate-600 mb-1">{stat.title}</p>
-                      <p className="text-2xl md:text-3xl font-bold text-slate-900">{stat.value}</p>
+                      <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{stat.title}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
                     </div>
                     <div className={`${stat.bgColor} p-3 md:p-4 rounded-xl group-hover:scale-110 transition-transform`}>
                       <Icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
@@ -476,14 +476,14 @@ export default function Dashboard() {
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-red-50 transition-colors border border-red-100"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-red-900/30"
                     >
                       <Link
                         to={createPageUrl(`AccountDetail?id=${account.id}`)}
                         className="flex-1"
                       >
-                        <p className="font-medium text-slate-900">{account.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="font-medium text-slate-900 dark:text-slate-100">{account.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
                         </p>
                       </Link>
@@ -560,14 +560,14 @@ export default function Dashboard() {
               {neglectedAccounts.slice(0, 5).map(account => (
                 <div
                   key={account.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-amber-100 dark:border-amber-900/30"
                 >
                   <Link
                     to={createPageUrl(`AccountDetail?id=${account.id}`)}
                     className="flex-1"
                   >
-                    <p className="font-medium text-slate-900">{account.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{account.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {account.last_interaction_date
                         ? `Last contact: ${format(new Date(account.last_interaction_date), 'MMM d, yyyy')}`
                         : 'No interactions logged'}
@@ -630,11 +630,11 @@ export default function Dashboard() {
                 <div
                   key={task.id}
                   onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 cursor-pointer hover:bg-orange-50 transition-colors"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-orange-100 dark:border-orange-900/30 cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900">{task.title}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{task.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
                     </p>
                   </div>
@@ -677,10 +677,10 @@ export default function Dashboard() {
                 return (
                   <div
                     key={enrollment.id}
-                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-100"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100 dark:border-indigo-900/30"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900">{account?.name || 'Unknown'}</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{account?.name || 'Unknown'}</p>
                       <p className="text-xs text-slate-500">
                         Step {enrollment.current_step} • Next: {enrollment.next_action_date ? format(new Date(enrollment.next_action_date), 'MMM d') : 'TBD'}
                       </p>
