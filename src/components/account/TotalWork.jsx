@@ -470,7 +470,7 @@ export default function TotalWork({ estimates = [] }) {
                 <div className="space-y-2">
                   {soldBreakdown.included.length > 0 ? (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Included ({soldBreakdown.included.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Included ({soldBreakdown.included.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {soldBreakdown.included.map((item, idx) => (
                           <div key={idx} className="text-xs bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded border border-emerald-200 dark:border-emerald-800">
@@ -498,7 +498,7 @@ export default function TotalWork({ estimates = [] }) {
                   
                   {soldBreakdown.excluded.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Excluded ({soldBreakdown.excluded.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Excluded ({soldBreakdown.excluded.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {soldBreakdown.excluded.map((item, idx) => (
                           <div key={idx} className="text-xs bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">

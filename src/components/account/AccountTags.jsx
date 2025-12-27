@@ -36,7 +36,7 @@ export default function AccountTags({ tags = [], onUpdateTags }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Tags
         </CardTitle>
       </CardHeader>
@@ -49,12 +49,12 @@ export default function AccountTags({ tags = [], onUpdateTags }) {
                 <Badge
                   key={index}
                   variant="outline"
-                  className="text-slate-700 border-slate-300 pr-1"
+                  className="text-slate-700 dark:text-slate-300 border-slate-300 pr-1"
                 >
                   {tag}
                   <button
                     onClick={() => handleRemoveTag(tag)}
-                    className="ml-1 hover:bg-slate-200 rounded-full p-0.5"
+                    className="ml-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full p-0.5"
                   >
                     <X className="w-3 h-3" />
                   </button>

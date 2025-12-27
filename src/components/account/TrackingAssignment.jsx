@@ -256,10 +256,10 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   variant="outline" 
                   className={
                     formData.icp_status === 'na' 
-                      ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' 
                       : formData.icp_status === 'required'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                   }
                 >
                   {formData.icp_status === 'na' ? 'N/A' : 

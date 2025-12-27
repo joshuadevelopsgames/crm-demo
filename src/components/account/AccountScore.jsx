@@ -360,14 +360,14 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                               const getBadgeColor = () => {
                                                 if (response.answer_text) {
                                                   // For text answers, use neutral color
-                                                  return 'bg-slate-50 text-slate-700 border-slate-200';
+                                                  return 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
                                                 }
                                                 const numAnswer = response.answer || 0;
-                                                if (numAnswer >= 4) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                                                if (numAnswer >= 3) return 'bg-blue-50 text-blue-700 border-blue-200';
-                                                if (numAnswer >= 2) return 'bg-amber-50 text-amber-700 border-amber-200';
-                                                if (numAnswer === 1) return 'bg-slate-50 text-slate-700 border-slate-200';
-                                                return 'bg-red-50 text-red-700 border-red-200'; // 0 or No
+                                                if (numAnswer >= 4) return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
+                                                if (numAnswer >= 3) return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+                                                if (numAnswer >= 2) return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                                                if (numAnswer === 1) return 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+                                                return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'; // 0 or No
                                               };
                                               
                                               return (

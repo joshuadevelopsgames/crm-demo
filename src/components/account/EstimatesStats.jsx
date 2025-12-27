@@ -36,7 +36,7 @@ export default function EstimatesStats({ estimates = [] }) {
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">ALL TIME</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">ALL TIME</p>
             <p className="text-2xl font-semibold text-slate-700 dark:text-slate-300 mt-1">
               {estimates.length}
             </p>
@@ -46,7 +46,7 @@ export default function EstimatesStats({ estimates = [] }) {
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <div>
-                  <p className="text-sm text-slate-600">WIN RATE</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">WIN RATE</p>
                   <p className={`text-2xl font-bold mt-1 ${
                     winPercentage >= 50
                       ? 'text-emerald-600'
