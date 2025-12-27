@@ -342,7 +342,7 @@ export default function NotificationBell() {
           if (unreadNotifications.length > unreadCount) {
             console.warn(`⚠️ WARNING: ${unreadNotifications.length} unread notifications but only ${unreadCount} unique accounts - this suggests duplicates`);
             const accountIdCounts = {};
-            accountIds.forEach(id => {
+            unreadAccountIds.forEach(id => {
               accountIdCounts[id] = (accountIdCounts[id] || 0) + 1;
             });
             const duplicates = Object.entries(accountIdCounts).filter(([id, count]) => count > 1);
