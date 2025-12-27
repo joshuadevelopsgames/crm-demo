@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
@@ -38,6 +38,17 @@ export default function Layout({ children, currentPageName }) {
   const { isAdmin } = useUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Ensure white background when in tutorial mode (but not on tutorial page)
+  useEffect(() => {
+    // Force white background on body and html
+    document.body.style.backgroundColor = '#ffffff';
+    document.documentElement.style.backgroundColor = '#ffffff';
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.backgroundColor = '#ffffff';
+    }
+  }, [isTutorialMode]);
 
   const regularNavigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
@@ -125,7 +136,12 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-white" style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen bg-white" style={{ 
+      overscrollBehavior: 'none', 
+      WebkitOverflowScrolling: 'touch',
+      backgroundColor: '#ffffff',
+      background: '#ffffff'
+    }}>
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -380,16 +396,18 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* Main Content - Responsive padding: different for PWA/mobile vs desktop */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={(isPWA || isNativeApp) ? { 
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white`} style={(isPWA || isNativeApp) ? { 
         // PWA and native app specific padding (with safe areas)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff !important',
+        background: '#ffffff !important',
         minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
       } : {
         // Desktop web browser styles - standard padding
         paddingTop: isTutorialMode ? '7rem' : isDesktop ? '6rem' : '5rem',
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff !important',
+        background: '#ffffff !important'
       }}>
         <div className="animate-in fade-in duration-300">
           {children}
