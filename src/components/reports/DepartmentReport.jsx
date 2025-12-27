@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Building2, TrendingUp } from 'lucide-react';
-import { calculateDepartmentStats } from '@/utils/reportCalculations';
+import { calculateDepartmentStats, formatCurrency } from '@/utils/reportCalculations';
 
 export default function DepartmentReport({ estimates }) {
   const deptStats = calculateDepartmentStats(estimates);
@@ -44,7 +44,7 @@ export default function DepartmentReport({ estimates }) {
                     {dept.won} won / {dept.decidedCount} decided
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    ${(dept.totalValue / 1000).toFixed(1)}K total
+                    {formatCurrency(dept.totalValue)} total
                   </p>
                 </div>
                 <Building2 className="w-10 h-10 text-blue-500 opacity-80" />
@@ -104,7 +104,7 @@ export default function DepartmentReport({ estimates }) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${(value / 1000).toFixed(1)}K`} />
+                <Tooltip formatter={(value) => formatCurrency(value * 1000)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -176,13 +176,13 @@ export default function DepartmentReport({ estimates }) {
                       </Badge>
                     </td>
                     <td className="p-3 text-right text-slate-600">
-                      ${(dept.totalValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.totalValue)}
                     </td>
                     <td className="p-3 text-right text-emerald-600 font-medium">
-                      ${(dept.wonValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.wonValue)}
                     </td>
                     <td className="p-3 text-right text-red-600 font-medium">
-                      ${(dept.lostValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.lostValue)}
                     </td>
                     <td className="p-3 text-right text-slate-600">{dept.estimatesVsWonRatio}%</td>
                   </tr>

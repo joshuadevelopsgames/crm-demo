@@ -21,7 +21,7 @@ import {
   PieChart,
   Building2
 } from 'lucide-react';
-import { filterEstimatesByYear } from '@/utils/reportCalculations';
+import { filterEstimatesByYear, formatCurrency } from '@/utils/reportCalculations';
 import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
 import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
@@ -273,7 +273,7 @@ export default function Reports() {
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Value</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                  ${(stats.totalValue / 1000).toFixed(1)}K
+                  {formatCurrency(stats.totalValue)}
                 </p>
               </div>
               <BarChart3 className="w-10 h-10 text-amber-500 opacity-80" />

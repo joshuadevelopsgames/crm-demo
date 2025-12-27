@@ -321,7 +321,7 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-600 mb-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Access comprehensive end of year reports with win/loss analysis, department breakdowns, and account performance metrics.
           </p>
           <Button

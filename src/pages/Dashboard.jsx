@@ -338,7 +338,7 @@ export default function Dashboard() {
       icon: Building2,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
-      tip: 'This shows your active accounts. These are accounts marked as active in your CRM.'
+      tip: 'Companies you\'re actively working with or pursuing. Click to view all accounts, filter by status, or search for specific companies. Use this to track your sales pipeline and customer base.'
     },
     {
       title: 'Total Contacts',
@@ -346,7 +346,7 @@ export default function Dashboard() {
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      tip: 'This shows your total contacts. This is the total number of contacts across all accounts.'
+      tip: 'All people you have relationships with across your accounts. Click to view the contacts page where you can see all contacts, filter by account, role, or search by name. Use this to manage your network and track who you know at each company.'
     },
     {
       title: 'Open Tasks',
@@ -354,7 +354,7 @@ export default function Dashboard() {
       icon: CheckSquare,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
-      tip: 'This shows your open tasks. These are tasks that haven\'t been completed yet.'
+      tip: 'Action items that need to be completed. Click to go to the Tasks page where you can view all tasks, filter by status or priority, create new tasks, and mark tasks as complete. Tasks help you stay organized and never miss a follow-up.'
     },
     {
       title: 'At Risk Accounts',
@@ -362,12 +362,33 @@ export default function Dashboard() {
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      tip: 'This shows your at risk accounts. These are accounts flagged as at-risk.'
+      tip: 'Accounts with contract renewals coming up within the next 6 months. These need attention to ensure they renew successfully. Click to view all at-risk accounts, then click individual accounts to prepare renewal proposals, review contracts, or schedule renewal meetings.'
     }
   ];
 
+  // #region agent log
+  useEffect(() => {
+    const logData5 = {location:'Dashboard.jsx:render',message:'Dashboard component rendering',data:{activeAccounts,contactsCount:contacts.length,myTasks,atRiskAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('🔍 DEBUG:', logData5);
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(err=>console.error('Log fetch error:',err));
+  }, [activeAccounts, contacts.length, myTasks, atRiskAccounts]);
+  // #endregion
+
   return (
-    <div className="space-y-8">
+    <div 
+      ref={(el) => {
+        if (el) {
+          // #region agent log
+          const dashBg = window.getComputedStyle(el).backgroundColor;
+          const dashDisplay = window.getComputedStyle(el).display;
+          const dashRect = el.getBoundingClientRect();
+          const logData6 = {location:'Dashboard.jsx:dash-ref',message:'Dashboard root div styles and position',data:{dashBg,dashDisplay,dashRect:{top:dashRect.top,left:dashRect.left,width:dashRect.width,height:dashRect.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          console.log('🔍 DEBUG:', logData6);
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(err=>console.error('Log fetch error:',err));
+          // #endregion
+        }
+      }}
+      className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>
@@ -436,7 +457,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* At Risk Accounts */}
         <TutorialTooltip
-          tip="Accounts with renewals coming up within 6 months. These are marked as at-risk and need attention. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Click the title to view all at-risk accounts."
+          tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
           step={1}
           position="bottom"
         >
@@ -522,7 +543,7 @@ export default function Dashboard() {
 
         {/* Neglected Accounts */}
         <TutorialTooltip
-          tip="Accounts here haven't been contacted recently (A/B segments: 30+ days, C/D segments: 90+ days). Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
+          tip="Accounts that haven't been contacted recently (A/B revenue segments: 30+ days, C/D segments: 90+ days). These relationships may be at risk. Click any account to view details, then log a new interaction (call, email, or meeting) to re-engage. Use the snooze button if you've already reached out. Regular contact prevents accounts from going cold."
           step={1}
           position="bottom"
         >
@@ -607,7 +628,7 @@ export default function Dashboard() {
 
         {/* Overdue Tasks */}
         <TutorialTooltip
-          tip="Tasks that are past their due date. These need immediate attention. Click on task titles to view details, update status, or reschedule. Staying on top of overdue tasks helps maintain client relationships."
+          tip="Tasks that are past their due date need immediate action. Click any task to open it, then either complete it, update the due date if it's been rescheduled, or mark it as in progress. Overdue tasks can damage client relationships, so prioritize these. You can also create a new task to follow up on overdue items."
           step={1}
           position="bottom"
         >
@@ -653,7 +674,7 @@ export default function Dashboard() {
 
         {/* Active Sequences */}
         <TutorialTooltip
-          tip="Accounts currently enrolled in automated outreach sequences. Sequences are multi-step automated follow-ups that help you stay in touch with prospects and customers. View active enrollments to see progress."
+          tip="Accounts currently enrolled in automated outreach sequences. Sequences create ordered, blocked tasks that guide your follow-up process. Each account shows its current step and next action date. Click to view the Sequences page where you can see all enrollments, create new template sequences, or enroll additional accounts in existing sequences."
           step={1}
           position="bottom"
         >

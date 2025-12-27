@@ -16,7 +16,18 @@ import {
   BookOpen,
   ListTodo,
   PlayCircle,
-  X
+  X,
+  Bell,
+  FileText,
+  BarChart3,
+  Settings,
+  Repeat,
+  Paperclip,
+  MessageCircle,
+  Lock,
+  GitBranch,
+  Calendar,
+  Tag
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTutorial } from '../contexts/TutorialContext';
@@ -244,35 +255,78 @@ const tutorialSteps = [
   {
     id: 'tasks',
     title: 'Tasks - Stay Organized',
-    description: 'Manage your to-do list with priorities and due dates',
+    description: 'Powerful task management with attachments, comments, recurring tasks, and more',
     content: (
       <div className="space-y-4">
-        <p>Tasks help you stay on top of follow-ups and actions:</p>
-        <div className="grid grid-cols-2 gap-3">
+        <p>Tasks help you stay on top of follow-ups and actions with advanced features:</p>
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <p className="font-semibold mb-2">Status:</p>
             <div className="space-y-1">
               <Badge variant="outline">To Do</Badge>
               <Badge variant="outline" className="ml-2">In Progress</Badge>
+              <Badge variant="outline" className="ml-2">Blocked</Badge>
               <Badge variant="outline" className="ml-2">Completed</Badge>
             </div>
           </div>
           <div>
             <p className="font-semibold mb-2">Priority:</p>
             <div className="space-y-1">
-              <Badge variant="outline">Low</Badge>
-              <Badge variant="outline" className="ml-2">Medium</Badge>
-              <Badge variant="outline" className="ml-2">High</Badge>
-              <Badge variant="outline" className="ml-2">Urgent</Badge>
+              <Badge variant="outline">Trivial</Badge>
+              <Badge variant="outline" className="ml-2">Minor</Badge>
+              <Badge variant="outline" className="ml-2">Normal</Badge>
+              <Badge variant="outline" className="ml-2">Major</Badge>
+              <Badge variant="outline" className="ml-2">Critical</Badge>
             </div>
           </div>
         </div>
-        <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
-          <li>Link tasks to accounts for context</li>
-          <li>Set due dates for time-sensitive items</li>
-          <li>Quick status updates by clicking badges</li>
-          <li>Filter by status or priority</li>
-        </ul>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Paperclip className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Attachments</p>
+              <p className="text-sm text-slate-600">Upload files, images, and documents to tasks</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <MessageCircle className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Comments</p>
+              <p className="text-sm text-slate-600">Add comments and collaborate on tasks</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Repeat className="w-5 h-5 text-purple-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Recurring Tasks</p>
+              <p className="text-sm text-slate-600">Set tasks to repeat daily, weekly, monthly, or yearly</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-orange-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Task Blocking</p>
+              <p className="text-sm text-slate-600">Tasks from sequences are automatically blocked until previous tasks complete</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Tag className="w-5 h-5 text-pink-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Labels & Categories</p>
+              <p className="text-sm text-slate-600">Organize tasks with custom labels and categories</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-indigo-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Due Dates & Times</p>
+              <p className="text-sm text-slate-600">Set specific due dates and times for precise scheduling</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p className="text-sm"><strong>💡 Tip:</strong> Tasks can be linked to accounts and contacts for better context. Use drag-and-drop to reorder tasks!</p>
+        </div>
       </div>
     ),
     action: {
@@ -282,12 +336,12 @@ const tutorialSteps = [
   },
   {
     id: 'sequences',
-    title: 'Sequences - Automate Outreach',
-    description: 'Create multi-step automated follow-up sequences',
+    title: 'Sequences - Automate Outreach & Create Tasks',
+    description: 'Create template sequences that automatically generate ordered, blocked tasks',
     content: (
       <div className="space-y-4">
-        <p>Sequences automate your outreach with timed steps:</p>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <p>Sequences automate your outreach and create task lists automatically:</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
           <p className="font-semibold mb-2">Example Sequence:</p>
           <ol className="list-decimal list-inside space-y-1 text-sm">
             <li>Day 0: Initial email</li>
@@ -296,20 +350,228 @@ const tutorialSteps = [
             <li>Day 14: Meeting request</li>
           </ol>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <GitBranch className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Create Template Sequences</p>
+              <p className="text-sm text-slate-600">Build reusable sequence templates with multiple steps</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <ListTodo className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Automatic Task Creation</p>
+              <p className="text-sm text-slate-600">When you enroll an account, tasks are created automatically from sequence steps</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-orange-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Ordered & Blocked</p>
+              <p className="text-sm text-slate-600">Tasks are ordered and blocked - next task unlocks when previous completes</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-purple-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Smart Scheduling</p>
+              <p className="text-sm text-slate-600">Due dates calculated from step delays (e.g., "3 days after previous")</p>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2 mt-4">
           <p className="font-semibold">Sequence Types:</p>
           <div className="flex flex-wrap gap-2">
             <Badge>Prospect</Badge>
             <Badge>High-Value</Badge>
             <Badge>Renewal</Badge>
+            <Badge>At Risk</Badge>
+            <Badge>General</Badge>
           </div>
         </div>
-        <p className="text-sm text-slate-600">Enroll accounts in sequences to automate follow-ups based on account type.</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p className="text-sm"><strong>💡 Tip:</strong> Create a template sequence, then enroll accounts. Tasks will appear on your Tasks page in the correct order!</p>
+        </div>
       </div>
     ),
     action: {
       label: 'View Sequences',
       route: '/sequences'
+    }
+  },
+  {
+    id: 'contacts',
+    title: 'Contacts - Manage People',
+    description: 'Track all contacts linked to your accounts',
+    content: (
+      <div className="space-y-4">
+        <p>Contacts are people within your accounts:</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Linked to Accounts</p>
+              <p className="text-sm text-slate-600">Every contact belongs to an account</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Contact Information</p>
+              <p className="text-sm text-slate-600">Email, phone, LinkedIn, title, and role</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Roles & Preferences</p>
+              <p className="text-sm text-slate-600">Track decision makers, influencers, and contact preferences</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">View All Contacts</p>
+              <p className="text-sm text-slate-600">See all contacts across all accounts in one place</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p className="text-sm"><strong>💡 Tip:</strong> Contacts can be linked to interactions and tasks for better tracking.</p>
+        </div>
+      </div>
+    ),
+    action: {
+      label: 'View Contacts',
+      route: '/contacts'
+    }
+  },
+  {
+    id: 'notifications',
+    title: 'Notifications - Stay Informed',
+    description: 'Get alerts for important events and reminders',
+    content: (
+      <div className="space-y-4">
+        <p>The notification bell keeps you informed about important events:</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Bell className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Task Reminders</p>
+              <p className="text-sm text-slate-600">Notifications for upcoming and overdue tasks</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Bell className="w-5 h-5 text-orange-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Renewal Reminders</p>
+              <p className="text-sm text-slate-600">Alerts for accounts with renewals coming up (6 months ahead)</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Bell className="w-5 h-5 text-red-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Neglected Accounts</p>
+              <p className="text-sm text-slate-600">Warnings for accounts with no interaction in 90+ days</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Snooze Notifications</p>
+              <p className="text-sm text-slate-600">Temporarily hide notifications you're not ready to act on</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p className="text-sm"><strong>💡 Tip:</strong> Click the bell icon in the top navigation to see all your notifications. Mark as read or snooze as needed.</p>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'reports',
+    title: 'Reports - Analyze Performance',
+    description: 'End of year analysis and performance metrics',
+    content: (
+      <div className="space-y-4">
+        <p>Reports help you analyze your sales performance and make data-driven decisions:</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <BarChart3 className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Win/Loss Report</p>
+              <p className="text-sm text-slate-600">Track win rates, total value, and performance by year</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Building2 className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Department Report</p>
+              <p className="text-sm text-slate-600">Analyze performance by department or division</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <TrendingUp className="w-5 h-5 text-purple-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Account Performance</p>
+              <p className="text-sm text-slate-600">See which accounts are performing best</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-orange-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Export Options</p>
+              <p className="text-sm text-slate-600">Export to XLSX or PDF for sharing and analysis</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+          <p className="text-sm"><strong>💡 Tip:</strong> Filter reports by year, account, or department to get specific insights.</p>
+        </div>
+      </div>
+    ),
+    action: {
+      label: 'View Reports',
+      route: '/reports'
+    }
+  },
+  {
+    id: 'settings',
+    title: 'Settings - Customize Your Experience',
+    description: 'Configure preferences and manage your account',
+    content: (
+      <div className="space-y-4">
+        <p>Settings let you customize your CRM experience:</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Bell className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Notification Preferences</p>
+              <p className="text-sm text-slate-600">Control email notifications, task reminders, and system announcements</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Settings className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Display Preferences</p>
+              <p className="text-sm text-slate-600">Customize how information is displayed</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-purple-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">End of Year Reports</p>
+              <p className="text-sm text-slate-600">Access and manage annual reports</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+    action: {
+      label: 'View Settings',
+      route: '/settings'
     }
   },
   {
@@ -364,11 +626,13 @@ const tutorialSteps = [
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
           <p className="font-semibold mb-2">Next Steps:</p>
           <ol className="list-decimal list-inside space-y-1 text-sm text-left">
-            <li>Explore the Dashboard to see your data</li>
-            <li>Click on an account to see the detail view</li>
-            <li>Complete your first scorecard</li>
-            <li>Log an interaction</li>
-            <li>Create a task</li>
+            <li>Explore the Dashboard to see your data and alerts</li>
+            <li>Click on an account to see the detail view with all tabs</li>
+            <li>Complete your first scorecard to rate an account</li>
+            <li>Log an interaction to track touchpoints</li>
+            <li>Create a task or enroll an account in a sequence</li>
+            <li>Check notifications for important reminders</li>
+            <li>Review Reports to analyze performance</li>
           </ol>
         </div>
         <div className="mt-6">
@@ -444,28 +708,64 @@ export default function Tutorial() {
     );
   }
 
-  // Force white background on mount
+  // Force white background on mount and clean up on unmount
   useEffect(() => {
+    // Store original styles
+    const originalBodyBg = document.body.style.backgroundColor;
+    const originalHtmlBg = document.documentElement.style.backgroundColor;
+    const root = document.getElementById('root');
+    const originalRootBg = root ? root.style.backgroundColor : '';
+    
+    // Apply tutorial page styles
     document.body.style.backgroundColor = '#ffffff';
     document.documentElement.style.backgroundColor = '#ffffff';
-    const root = document.getElementById('root');
     if (root) {
       root.style.backgroundColor = '#ffffff';
     }
+    
+    // Clean up on unmount - restore original styles
     return () => {
-      // Reset on unmount if needed
+      document.body.style.backgroundColor = originalBodyBg;
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      if (root) {
+        root.style.backgroundColor = originalRootBg;
+      }
+      // Remove any style tags we added
+      const styleTag = document.getElementById('tutorial-page-styles');
+      if (styleTag) {
+        styleTag.remove();
+      }
+    };
+  }, []);
+
+  // Inject styles only when this component is mounted
+  useEffect(() => {
+    // Create or update style tag with unique ID
+    let styleTag = document.getElementById('tutorial-page-styles');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'tutorial-page-styles';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = `
+      body { background-color: #ffffff !important; background-image: none !important; }
+      html { background-color: #ffffff !important; background-image: none !important; }
+      #root { background-color: #ffffff !important; background-image: none !important; }
+      #root > div { background-color: #ffffff !important; background-image: none !important; }
+      .bg-gradient-to-r { display: none !important; }
+    `;
+    
+    // Clean up on unmount
+    return () => {
+      const tag = document.getElementById('tutorial-page-styles');
+      if (tag) {
+        tag.remove();
+      }
     };
   }, []);
 
   return (
     <>
-      <style>{`
-        body { background-color: #ffffff !important; background-image: none !important; }
-        html { background-color: #ffffff !important; background-image: none !important; }
-        #root { background-color: #ffffff !important; background-image: none !important; }
-        #root > div { background-color: #ffffff !important; background-image: none !important; }
-        .bg-gradient-to-r { display: none !important; }
-      `}</style>
       <div 
         className="min-h-screen p-4" 
         style={{ 

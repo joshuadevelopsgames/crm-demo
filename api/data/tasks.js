@@ -115,6 +115,9 @@ export default async function handler(req, res) {
         if (taskData.related_contact_id === '' || taskData.related_contact_id === null || taskData.related_contact_id === undefined) {
           taskData.related_contact_id = null;
         }
+        if (taskData.blocked_by_task_id === '' || taskData.blocked_by_task_id === null || taskData.blocked_by_task_id === undefined) {
+          taskData.blocked_by_task_id = null;
+        }
         
         // Only include id if it's a valid UUID format
         if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -169,6 +172,9 @@ export default async function handler(req, res) {
       }
       if (updateData.related_contact_id === '' || updateData.related_contact_id === null || updateData.related_contact_id === undefined) {
         updateData.related_contact_id = null;
+      }
+      if (updateData.blocked_by_task_id === '' || updateData.blocked_by_task_id === null || updateData.blocked_by_task_id === undefined) {
+        updateData.blocked_by_task_id = null;
       }
       
       const { data: updated, error } = await supabase

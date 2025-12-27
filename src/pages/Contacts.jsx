@@ -134,7 +134,7 @@ export default function Contacts() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Contacts page. View all contacts across all accounts and search by name. Each contact belongs to an account and includes contact information and preferences."
+        tip="Your complete contact directory across all accounts. Search by name to quickly find anyone. Each contact shows their account, role, email, phone, and preferences. Click any contact to view full details including their interaction history, linked tasks, and notes. Use this to manage your network, find the right person at each company, and track who you know where."
         step={2}
         position="bottom"
       >

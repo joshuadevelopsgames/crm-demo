@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
@@ -38,6 +38,56 @@ export default function Layout({ children, currentPageName }) {
   const { isAdmin } = useUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Ensure white background when in tutorial mode (but not on tutorial page)
+  useEffect(() => {
+    // #region agent log
+    const logData = {location:'Layout.jsx:useEffect',message:'Layout useEffect - isTutorialMode state',data:{isTutorialMode,currentPageName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+    console.log('🔍 DEBUG Layout useEffect:', logData);
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(err=>console.error('Log fetch error:',err));
+    // #endregion
+    
+    // Check for Tutorial page fixed div that might still be in DOM
+    const tutorialFixedDivs = Array.from(document.querySelectorAll('div')).filter(div => {
+      const style = div.getAttribute('style') || '';
+      const computedStyle = window.getComputedStyle(div);
+      return (style.includes('position: fixed') || computedStyle.position === 'fixed') &&
+             (style.includes('top: 0') || computedStyle.top === '0px') &&
+             (style.includes('left: 0') || computedStyle.left === '0px') &&
+             computedStyle.zIndex !== 'auto' && parseInt(computedStyle.zIndex) <= 10;
+    });
+    
+    if (tutorialFixedDivs.length > 0) {
+      console.warn('⚠️ Found Tutorial page fixed divs still in DOM:', tutorialFixedDivs.map(d => ({
+        className: d.className,
+        style: d.getAttribute('style'),
+        zIndex: window.getComputedStyle(d).zIndex,
+        bg: window.getComputedStyle(d).backgroundColor
+      })));
+      // Remove them
+      tutorialFixedDivs.forEach(div => {
+        console.log('🗑️ Removing Tutorial fixed div');
+        div.remove();
+      });
+    }
+    
+    // Force white background on body and html
+    document.body.style.backgroundColor = '#ffffff';
+    document.documentElement.style.backgroundColor = '#ffffff';
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.backgroundColor = '#ffffff';
+    }
+    
+    // #region agent log
+    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+    const rootBg = root ? window.getComputedStyle(root).backgroundColor : 'no root';
+    const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg,tutorialFixedDivsRemoved:tutorialFixedDivs.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['B','E']};
+    console.log('🔍 DEBUG Layout backgrounds:', JSON.stringify(logData2, null, 2));
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(err=>console.error('Log fetch error:',err));
+    // #endregion
+  }, [isTutorialMode]);
 
   const regularNavigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
@@ -125,7 +175,10 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-bg" style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen bg-white dark:bg-slate-950" style={{ 
+      overscrollBehavior: 'none', 
+      WebkitOverflowScrolling: 'touch',
+    }}>
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -138,14 +191,13 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Top Navigation - Apply mobile/PWA styles without affecting desktop */}
       <nav 
-        className="bg-white dark:bg-surface-1 border-b border-slate-200/50 dark:border-border fixed left-0 right-0 z-50 shadow-sm" 
+        className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 z-50 shadow-sm" 
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
           top: isTutorialMode ? '3rem' : `max(0px, env(safe-area-inset-top, 0px))`,
           left: '0',
           right: '0',
           paddingTop: '0',
-          backgroundColor: 'hsl(var(--background))',
           position: 'fixed',
           willChange: 'transform',
           transform: 'translate3d(0, 0, 0)',
@@ -158,7 +210,6 @@ export default function Layout({ children, currentPageName }) {
         } : {
           // Desktop web browser styles (unchanged)
           top: isTutorialMode ? '3rem' : '0',
-          backgroundColor: 'hsl(var(--background))'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

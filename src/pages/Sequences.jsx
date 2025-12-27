@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { format, addDays } from 'date-fns';
 import TutorialTooltip from '../components/TutorialTooltip';
+import { createTasksFromSequence } from '@/services/sequenceTaskService';
 
 export default function Sequences() {
   const [isSequenceDialogOpen, setIsSequenceDialogOpen] = useState(false);
@@ -91,7 +92,7 @@ export default function Sequences() {
   });
 
   const createEnrollmentMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       const today = new Date();
       const sequence = sequences.find(s => s.id === data.sequence_id);
       const firstStep = sequence?.steps?.[0];
@@ -99,7 +100,8 @@ export default function Sequences() {
         ? addDays(today, firstStep.days_after_previous).toISOString().split('T')[0]
         : today.toISOString().split('T')[0];
 
-      return base44.entities.SequenceEnrollment.create({
+      // Create the enrollment
+      const enrollment = await base44.entities.SequenceEnrollment.create({
         ...data,
         status: 'active',
         current_step: 1,
@@ -107,9 +109,23 @@ export default function Sequences() {
         next_action_date: nextActionDate,
         completed_steps: []
       });
+
+      // Create tasks from sequence steps
+      if (sequence && data.account_id) {
+        try {
+          await createTasksFromSequence(enrollment, sequence, data.account_id);
+          console.log(`✅ Created tasks from sequence "${sequence.name}" for account ${data.account_id}`);
+        } catch (error) {
+          console.error('Error creating tasks from sequence:', error);
+          // Don't fail enrollment if task creation fails
+        }
+      }
+
+      return enrollment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sequence-enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setIsEnrollDialogOpen(false);
       setEnrollmentData({ account_id: '', sequence_id: '' });
     }
@@ -211,7 +227,7 @@ export default function Sequences() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Sequences page. Create multi-step automated outreach sequences to stay in touch with prospects and customers. Define different cadences for different account types."
+        tip="Create template sequences that automatically generate ordered, blocked tasks for your outreach. Click 'Create Template Sequence' to build a reusable sequence with multiple steps (emails, calls, meetings). Then use 'Enroll Account' to assign a sequence to an account - tasks will automatically appear on your Tasks page in the correct order, with each task blocked until the previous one completes. This automates your follow-up process and ensures nothing falls through the cracks."
         step={7}
         position="bottom"
       >
@@ -288,7 +304,7 @@ export default function Sequences() {
             <DialogTrigger asChild>
               <Button variant="outline" className="border-slate-300" onClick={resetSequenceForm}>
                 <Plus className="w-4 h-4 mr-2" />
-                New Sequence
+                Create Template Sequence
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

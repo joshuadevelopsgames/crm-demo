@@ -156,7 +156,7 @@ export default function AccountDetail() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is the Account Detail page. View complete information about an account including interactions, contacts, organization scores, sales insights, and research notes. Use the tabs to navigate between different sections."
+        tip="Complete account information hub. View all interactions (calls, emails, meetings) with a timeline, manage contacts at this company, see organization scorecard breakdowns, review sales insights and revenue data, and add research notes. Use tabs to navigate sections. Log new interactions to track your relationship, update the scorecard to reflect changes, and add notes to remember important details. This is your single source of truth for each account."
         step={3}
         position="bottom"
       >

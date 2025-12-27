@@ -6,7 +6,7 @@ import { ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { calculateAccountStats } from '@/utils/reportCalculations';
+import { calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
 
 export default function AccountPerformanceReport({ estimates, accounts, selectedYear }) {
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
             <div className="text-center">
               <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                ${(accountStats.reduce((sum, acc) => sum + acc.totalValue, 0) / 1000).toFixed(1)}K
+                {formatCurrency(accountStats.reduce((sum, acc) => sum + acc.totalValue, 0))}
               </p>
             </div>
           </CardContent>
@@ -79,7 +79,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
             <div className="text-center">
               <p className="text-sm text-slate-600 font-medium">Won Revenue</p>
               <p className="text-2xl font-bold text-emerald-600 mt-2">
-                ${(accountStats.reduce((sum, acc) => sum + acc.wonValue, 0) / 1000).toFixed(1)}K
+                {formatCurrency(accountStats.reduce((sum, acc) => sum + acc.wonValue, 0))}
               </p>
             </div>
           </CardContent>
@@ -143,10 +143,10 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                           </Badge>
                         </td>
                         <td className="p-3 text-right text-slate-600">
-                          ${(account.totalValue / 1000).toFixed(1)}K
+                          {formatCurrency(account.totalValue)}
                         </td>
                         <td className="p-3 text-right text-emerald-600 font-medium">
-                          ${(account.wonValue / 1000).toFixed(1)}K
+                          {formatCurrency(account.wonValue)}
                         </td>
                         <td className="p-3 text-right text-slate-600">{account.estimatesVsWonRatio}%</td>
                         <td className="p-3 text-center">
@@ -204,7 +204,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                               : 'N/A'}
                                           </td>
                                           <td className="p-2 text-right text-slate-600">
-                                            ${((parseFloat(estimate.total_price_with_tax) || 0) / 1000).toFixed(1)}K
+                                            {formatCurrency(parseFloat(estimate.total_price_with_tax) || 0)}
                                           </td>
                                           <td className="p-2 text-center">
                                             {getStatusBadge(estimate.status)}

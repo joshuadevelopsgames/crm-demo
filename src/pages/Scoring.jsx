@@ -265,7 +265,7 @@ export default function Scoring() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your ICP Template management page. Edit the Ideal Customer Profile scorecard template that all accounts use. When you update the template, a new version is created to preserve history."
+        tip="Manage your Ideal Customer Profile (ICP) scorecard template. This template defines the criteria used to score all accounts. Edit criteria, add or remove factors, adjust weights, and set target values. When you save changes, a new template version is created to preserve history, so you can see how your ICP definition evolved. All accounts are automatically scored against the current template version."
         step={4}
         position="bottom"
       >

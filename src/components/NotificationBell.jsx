@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2 } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function NotificationBell() {
   const currentUserId = currentUser?.id;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
-  const { data: allNotifications = [], refetch: refetchNotifications } = useQuery({
+  const { data: allNotificationsRaw = [], refetch: refetchNotifications } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) {
@@ -64,6 +64,17 @@ export default function NotificationBell() {
     refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
     refetchOnMount: true, // Always refetch on mount (not cached)
   });
+
+  // Safety check: Filter out any notifications that don't match current user (defensive programming)
+  // This ensures we never show notifications from other users, even if the API returns them
+  const allNotifications = useMemo(() => {
+    if (!currentUserId) return [];
+    const currentUserIdStr = String(currentUserId).trim();
+    return allNotificationsRaw.filter(notification => {
+      const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+      return notificationUserId === currentUserIdStr;
+    });
+  }, [allNotificationsRaw, currentUserId]);
 
   // Force fresh notification fetch on component mount
   useEffect(() => {
@@ -149,7 +160,17 @@ export default function NotificationBell() {
   }, [accounts, estimates, accountsLoading, estimatesLoading]);
   
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
-  const activeNotifications = allNotifications.filter(notification => {
+  // Also ensure we only show notifications for the current user
+  const activeNotifications = useMemo(() => {
+    if (!currentUserId) return [];
+    const currentUserIdStr = String(currentUserId).trim();
+    
+    return allNotifications.filter(notification => {
+      // First, ensure this notification belongs to the current user
+      const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+      if (notificationUserId !== currentUserIdStr) {
+        return false; // Not for current user
+      }
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
@@ -187,7 +208,8 @@ export default function NotificationBell() {
       new Date(snooze.snoozed_until) > now
     );
     return !isSnoozed;
-  });
+    });
+  }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes]);
 
   // Debug logging
   useEffect(() => {
@@ -243,36 +265,229 @@ export default function NotificationBell() {
   });
 
   // Group notifications by type
-  const groupedNotifications = sortedNotifications.reduce((groups, notification) => {
-    const type = notification.type;
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(notification);
-    return groups;
-  }, {});
+  // Additional safety: filter by current user before grouping
+  const groupedNotifications = useMemo(() => {
+    const currentUserIdStr = currentUserId ? String(currentUserId).trim() : null;
+    const userFilteredNotifications = currentUserIdStr 
+      ? sortedNotifications.filter(n => {
+          const notificationUserId = n.user_id ? String(n.user_id).trim() : null;
+          return notificationUserId === currentUserIdStr;
+        })
+      : sortedNotifications;
+    
+    return userFilteredNotifications.reduce((groups, notification) => {
+      const type = notification.type;
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(notification);
+      return groups;
+    }, {});
+  }, [sortedNotifications, currentUserId]);
 
   // Convert grouped object to array of groups
-  const notificationGroups = Object.entries(groupedNotifications).map(([type, notifications]) => {
-    // For renewal_reminder, count unique accounts instead of total notifications
-    // This prevents showing duplicate counts if there are multiple notifications per account
-    let count = notifications.length;
-    if (type === 'renewal_reminder') {
-      const uniqueAccountIds = new Set(
-        notifications
+  // Use useMemo to ensure recalculation when snoozes change
+  // Note: groupedNotifications already filters by current user, so notifications here are already filtered
+  const notificationGroups = useMemo(() => {
+    if (!currentUserId) return [];
+    
+    return Object.entries(groupedNotifications).map(([type, notifications]) => {
+      // Notifications are already filtered by user in groupedNotifications
+      // For renewal_reminder and neglected_account, count unique accounts instead of total notifications
+      // This prevents showing duplicate counts if there are multiple notifications per account
+      // Also ensures snoozed notifications are excluded (they should already be filtered in activeNotifications)
+      let count = notifications.length;
+      let unreadCount = notifications.filter(n => !n.is_read).length;
+      
+      if (type === 'renewal_reminder' || type === 'neglected_account') {
+        // Additional safety: filter out any snoozed notifications (they should already be filtered, but double-check)
+        // This ensures snoozed notifications don't affect the badge or unread count
+        const now = new Date();
+        const activeNotificationsOnly = notifications.filter(n => {
+          // Check if this notification is snoozed
+          if (!snoozes || !Array.isArray(snoozes)) {
+            return true; // If snoozes not loaded, include all
+          }
+          
+          // Check for snooze match - need to handle string/number/object comparisons
+          const isSnoozed = snoozes.some(snooze => {
+            // Type must match
+            if (snooze.notification_type !== n.type) return false;
+            
+            // Check if snooze is still active
+            const snoozedUntil = new Date(snooze.snoozed_until);
+            if (snoozedUntil <= now) return false; // Snooze expired
+            
+            // Check account ID match - handle null, undefined, and string comparisons
+            const snoozeAccountId = snooze.related_account_id ? String(snooze.related_account_id).trim() : null;
+            const notifAccountId = n.related_account_id ? String(n.related_account_id).trim() : null;
+            
+            // Both null/empty means match (general snooze for this type)
+            if (!snoozeAccountId && !notifAccountId) return true;
+            
+            // One is null, one isn't - no match
+            if (!snoozeAccountId || !notifAccountId) return false;
+            
+            // Both have values - compare as strings
+            return snoozeAccountId === notifAccountId;
+          });
+          
+          return !isSnoozed;
+        });
+        
+        // Debug: log if we filtered out any notifications
+        if (type === 'neglected_account') {
+          if (notifications.length !== activeNotificationsOnly.length) {
+            console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
+          } else {
+            console.log(`🔔 Neglected account: No snoozed notifications found (checked ${snoozes?.length || 0} snoozes)`);
+            // Debug: show what snoozes exist and why they're not matching
+            if (snoozes && snoozes.length > 0) {
+              const snoozeDetails = snoozes.map(s => ({
+                id: s.id,
+                notification_type: s.notification_type,
+                related_account_id: s.related_account_id,
+                related_account_id_type: typeof s.related_account_id,
+                snoozed_until: s.snoozed_until,
+                isExpired: new Date(s.snoozed_until) <= now
+              }));
+              console.log(`🔔 All snoozes (${snoozes.length}):`, JSON.stringify(snoozeDetails, null, 2));
+              const neglectedSnoozes = snoozes.filter(s => s.notification_type === 'neglected_account');
+              console.log(`🔔 Found ${neglectedSnoozes.length} neglected_account snoozes`);
+              
+              // Check why notifications aren't matching - test against ALL notifications
+              if (snoozes.length > 0 && notifications.length > 0) {
+                const sampleSnooze = snoozes[0];
+                console.log(`🔔 Sample snooze:`, JSON.stringify({
+                  id: sampleSnooze.id,
+                  notification_type: sampleSnooze.notification_type,
+                  related_account_id: sampleSnooze.related_account_id,
+                  related_account_id_type: typeof sampleSnooze.related_account_id,
+                  snoozed_until: sampleSnooze.snoozed_until,
+                  isExpired: new Date(sampleSnooze.snoozed_until) <= now
+                }, null, 2));
+                
+                // Test first few notifications
+                notifications.slice(0, 3).forEach((notif, idx) => {
+                  const snoozeAccountId = sampleSnooze.related_account_id ? String(sampleSnooze.related_account_id).trim() : null;
+                  const notifAccountId = notif.related_account_id ? String(notif.related_account_id).trim() : null;
+                  const typeMatch = sampleSnooze.notification_type === notif.type;
+                  const accountMatch = (snoozeAccountId === notifAccountId) || (!snoozeAccountId && !notifAccountId);
+                  const notExpired = new Date(sampleSnooze.snoozed_until) > now;
+                  const shouldMatch = typeMatch && accountMatch && notExpired;
+                  
+                  console.log(`🔔 Notification ${idx} match test:`, {
+                    notifType: notif.type,
+                    notifAccountId,
+                    snoozeType: sampleSnooze.notification_type,
+                    snoozeAccountId,
+                    typeMatch,
+                    accountMatch,
+                    notExpired,
+                    shouldMatch
+                  });
+                });
+              }
+            }
+          }
+        }
+        
+        // Normalize account IDs to strings for proper Set deduplication
+        const allAccountIds = activeNotificationsOnly
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
-      );
-      count = uniqueAccountIds.size;
-    }
-    
-    return {
-      type,
-      notifications,
-      count,
-      unreadCount: notifications.filter(n => !n.is_read).length
-    };
-  });
+          .map(id => String(id).trim());
+        const uniqueAccountIds = new Set(allAccountIds);
+        count = uniqueAccountIds.size;
+        
+        // For unread count, use the EXACT SAME logic as count, but only for unread notifications
+        // This ensures consistency - if count works, unreadCount will work the same way
+        const unreadNotifications = activeNotificationsOnly.filter(n => !n.is_read);
+        
+        // Use EXACT same pattern as count calculation above
+        const unreadAccountIds = unreadNotifications
+          .map(n => n.related_account_id)
+          .filter(id => id && id !== 'null' && id !== null)
+          .map(id => String(id).trim()); // Same normalization as count
+        const uniqueUnreadAccountIds = new Set(unreadAccountIds); // Same Set logic as count
+        unreadCount = uniqueUnreadAccountIds.size; // Same size calculation as count
+        
+        // Safety: if calculation somehow fails, fall back to count (all accounts have unread)
+        if (unreadCount > count) {
+          console.warn(`⚠️ unreadCount (${unreadCount}) > count (${count}), using count instead`);
+          unreadCount = count;
+        }
+        
+        // Debug: log account IDs if count doesn't match
+        if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
+          console.log(`🔔 Unread count mismatch: ${unreadNotifications.length} unread notifications, ${unreadCount} unique accounts`);
+          console.log(`🔔 Account IDs:`, Array.from(uniqueUnreadAccountIds).slice(0, 10));
+          console.log(`🔔 All account IDs (with duplicates):`, unreadAccountIds.slice(0, 20));
+        }
+        
+        // Debug logging for renewal reminders and neglected accounts
+        if (notifications.length > 0) {
+          const typeLabel = type === 'renewal_reminder' ? 'Renewal reminder' : 'Neglected account';
+          console.log(`🔔 ${typeLabel} group: ${notifications.length} notifications (${activeNotificationsOnly.length} after snooze filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
+          console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
+          console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
+          console.log(`🔔 CRITICAL: The badge should show ${count} and text should show "${unreadCount} unread notifications"`);
+          
+          // For neglected accounts, show detailed breakdown
+          if (type === 'neglected_account') {
+            console.log(`🔔 Neglected account breakdown: ${notifications.length} total, ${activeNotificationsOnly.length} after snooze, ${count} unique accounts (badge), ${unreadCount} unique unread accounts (text)`);
+            if (notifications.length !== activeNotificationsOnly.length) {
+              console.warn(`⚠️ WARNING: ${notifications.length - activeNotificationsOnly.length} notifications were filtered as snoozed`);
+            }
+            if (count !== unreadCount && unreadNotifications.length === activeNotificationsOnly.length) {
+              console.warn(`⚠️ WARNING: All ${activeNotificationsOnly.length} notifications are unread, but count (${count}) != unreadCount (${unreadCount})`);
+            }
+          }
+          
+          // Log the actual account IDs to verify uniqueness
+          if (unreadNotifications.length > unreadCount) {
+            console.warn(`⚠️ WARNING: ${unreadNotifications.length} unread notifications but only ${unreadCount} unique accounts - this suggests duplicates`);
+            const accountIdCounts = {};
+            unreadAccountIds.forEach(id => {
+              accountIdCounts[id] = (accountIdCounts[id] || 0) + 1;
+            });
+            const duplicates = Object.entries(accountIdCounts).filter(([id, count]) => count > 1);
+            if (duplicates.length > 0) {
+              console.warn(`⚠️ Found ${duplicates.length} accounts with multiple notifications:`, duplicates.slice(0, 5));
+            }
+          }
+        }
+      }
+      
+      const group = {
+        type,
+        notifications, // Already filtered by user in groupedNotifications
+        count,
+        unreadCount
+      };
+      
+      // Additional debug for renewal reminders and neglected accounts
+      if ((type === 'renewal_reminder' || type === 'neglected_account') && notifications.length > 0) {
+        console.log(`🔔 Final group object for ${type}:`, {
+          notificationsCount: group.notifications.length,
+          count: group.count,
+          unreadCount: group.unreadCount,
+          unreadNotificationsCount: group.notifications.filter(n => !n.is_read).length,
+          expectedUnreadCount: unreadCount // Should match group.unreadCount
+        });
+        
+        // CRITICAL CHECK: Verify unreadCount is correct
+        if (group.unreadCount !== unreadCount) {
+          console.error(`❌ ERROR: group.unreadCount (${group.unreadCount}) doesn't match calculated unreadCount (${unreadCount})`);
+        }
+        if (group.unreadCount === group.notifications.filter(n => !n.is_read).length && group.unreadCount > group.count) {
+          console.error(`❌ ERROR: unreadCount (${group.unreadCount}) equals total unread notifications but should equal unique accounts (${group.count})`);
+        }
+      }
+      
+      return group;
+    });
+  }, [groupedNotifications, currentUserId, snoozes]);
 
   // Define notification type priority (lower number = higher priority)
   const getTypePriority = (type) => {
@@ -565,7 +780,11 @@ export default function NotificationBell() {
                                   </h4>
                                   {hasMultiple && (
                                     <Badge variant="secondary" className="text-xs">
-                                      {group.count}
+                                      {/* For renewal reminders and neglected accounts, show unread count (accounts with unread notifications) */}
+                                      {/* For other types, show total count */}
+                                      {(group.type === 'renewal_reminder' || group.type === 'neglected_account') 
+                                        ? (group.unreadCount > 0 ? group.unreadCount : group.count)
+                                        : group.count}
                                     </Badge>
                                   )}
                                   {group.unreadCount > 0 && (
@@ -598,10 +817,15 @@ export default function NotificationBell() {
                               </div>
                               {hasMultiple && (
                                 <p className="text-sm text-slate-600 mt-1">
-                                  {group.unreadCount > 0 
-                                    ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
-                                    : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`
-                                  }
+                                  {(() => {
+                                    // Debug: log what value is being used for display
+                                    if (group.type === 'renewal_reminder') {
+                                      console.log(`🔔 RENDERING TEXT: group.unreadCount=${group.unreadCount}, group.count=${group.count}, showing: ${group.unreadCount > 0 ? group.unreadCount : group.count}`);
+                                    }
+                                    return group.unreadCount > 0 
+                                      ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
+                                      : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`;
+                                  })()}
                                 </p>
                               )}
                               {!hasMultiple && group.notifications[0] && (

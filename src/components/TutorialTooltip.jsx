@@ -74,7 +74,7 @@ export default function TutorialTooltip({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <Card className="bg-blue-600 text-white border-blue-500 shadow-xl max-w-xs">
+          <Card className="bg-blue-600 text-white border-blue-500 shadow-xl max-w-md">
             <CardContent className="p-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />

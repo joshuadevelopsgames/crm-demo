@@ -4,6 +4,24 @@
  */
 
 /**
+ * Format currency value with appropriate suffix (K for thousands, M for millions)
+ * @param {number} value - The currency value to format
+ * @returns {string} Formatted string like "$1.2M" or "$52.3K"
+ */
+export function formatCurrency(value) {
+  if (value === 0) return '$0';
+  if (value < 0) return '-' + formatCurrency(-value);
+  
+  if (value >= 1000000) {
+    return `$${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}K`;
+  } else {
+    return `$${value.toFixed(0)}`;
+  }
+}
+
+/**
  * Calculate overall win/loss statistics
  * @param {Array} estimates - Array of estimate objects
  * @returns {Object} Statistics object

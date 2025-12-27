@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, FileText } from 'lucide-react';
-import { calculateOverallStats, calculateAccountStats } from '@/utils/reportCalculations';
+import { calculateOverallStats, calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
 
 export default function WinLossReport({ estimates, accounts, selectedYear }) {
   const overallStats = calculateOverallStats(estimates);
@@ -66,10 +66,10 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Value</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                  ${(overallStats.totalValue / 1000).toFixed(1)}K
+                  {formatCurrency(overallStats.totalValue)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Won: ${(overallStats.wonValue / 1000).toFixed(1)}K
+                  Won: {formatCurrency(overallStats.wonValue)}
                 </p>
               </div>
               <DollarSign className="w-10 h-10 text-amber-500 opacity-80" />
@@ -193,10 +193,10 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
                       </Badge>
                     </td>
                     <td className="p-3 text-right text-slate-600">
-                      ${(account.totalValue / 1000).toFixed(1)}K
+                      {formatCurrency(account.totalValue)}
                     </td>
                     <td className="p-3 text-right text-emerald-600 font-medium">
-                      ${(account.wonValue / 1000).toFixed(1)}K
+                      {formatCurrency(account.wonValue)}
                     </td>
                     <td className="p-3 text-right text-slate-600">{account.estimatesVsWonRatio}%</td>
                   </tr>
