@@ -27,28 +27,37 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
   
   if (shouldUseMobileStyle) {
     // Ant Design style switch: 28px width, 16px height, 12px thumb
+    // Use inline styles to ensure they persist and can't be overridden
     return (
       <SwitchPrimitives.Root
         className={cn(
           "peer inline-flex shrink-0 cursor-pointer items-center border-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
-          "h-[16px] w-[28px] rounded-[8px] p-[2px]",
-          // Unchecked: rgba(0,0,0,.25) or rgba(255,255,255,.35) in dark
-          "data-[state=unchecked]:bg-[rgba(0,0,0,0.25)] dark:data-[state=unchecked]:bg-[rgba(255,255,255,0.35)]",
-          // Checked: #1890ff or #177ddc in dark
-          "data-[state=checked]:bg-[#1890ff] dark:data-[state=checked]:bg-[#177ddc]",
           className
         )}
+        style={{
+          height: '16px',
+          width: '28px',
+          borderRadius: '8px',
+          padding: '2px',
+          backgroundColor: props.checked 
+            ? (isDarkMode ? '#177ddc' : '#1890ff')
+            : (isDarkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)')
+        }}
         {...props}
         ref={ref}
       >
         <SwitchPrimitives.Thumb
           className={cn(
             "pointer-events-none block bg-white ring-0 transition-all duration-200 relative",
-            "w-[12px] h-[12px] rounded-[6px]",
-            "shadow-[0_2px_4px_0_rgb(0_35_11_/_20%)]",
-            "data-[state=unchecked]:translate-x-0",
-            "data-[state=checked]:translate-x-[12px]"
+            "rounded-[6px]",
+            "shadow-[0_2px_4px_0_rgb(0_35_11_/_20%)]"
           )}
+          style={{
+            width: '12px',
+            height: '12px',
+            transform: props.checked ? 'translateX(12px)' : 'translateX(0px)',
+            backgroundColor: '#ffffff'
+          }}
         />
       </SwitchPrimitives.Root>
     );
