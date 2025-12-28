@@ -1759,10 +1759,10 @@ export default function Tasks() {
                                   : "Select users"}
                               </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="max-h-[300px]">
-                              <div className="p-2 space-y-2">
+                            <SelectContent className={isMobile || isPWA || isNativeApp ? "max-h-[60vh] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
+                              <div className={isMobile || isPWA || isNativeApp ? "p-2 space-y-1" : "p-2 space-y-2"}>
                                 <div
-                                  className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                                  className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
                                   onClick={() => {
                                     setNewTask({
                                       ...newTask,
@@ -1774,7 +1774,7 @@ export default function Tasks() {
                                     type="checkbox"
                                     checked={parseAssignedUsers(newTask.assigned_to).length === 0}
                                     onChange={() => {}}
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    className={`${isMobile || isPWA || isNativeApp ? "h-5 w-5" : "h-4 w-4"} rounded border-gray-300 text-blue-600 focus:ring-blue-500`}
                                   />
                                   <Label className="cursor-pointer font-normal">Unassigned</Label>
                                 </div>
@@ -1783,23 +1783,23 @@ export default function Tasks() {
                                   return (
                                     <div
                                       key={user.id || user.email}
-                                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                                      className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
                                       onClick={() => toggleUserAssignment(user.email)}
                                     >
                                       <input
                                         type="checkbox"
                                         checked={isAssigned}
                                         onChange={() => {}}
-                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        className={`${isMobile || isPWA || isNativeApp ? "h-5 w-5" : "h-4 w-4"} rounded border-gray-300 text-blue-600 focus:ring-blue-500`}
                                       />
-                                      <div className="flex flex-col flex-1">
-                                        <Label className="cursor-pointer font-normal">
+                                      <div className="flex flex-col flex-1 min-w-0">
+                                        <Label className="cursor-pointer font-normal truncate">
                                           {user.email === currentUser?.email
                                             ? "You"
                                             : user.full_name || user.name || user.email}
                                         </Label>
                                         {user.email && (user.full_name || user.name) && user.email !== currentUser?.email && (
-                                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                             {user.email}
                                           </span>
                                         )}
@@ -3018,12 +3018,35 @@ export default function Tasks() {
                                   {accountName && (
                                     <Badge
                                       variant="outline"
-                                      className="text-xs px-2 py-0.5 text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-1 truncate max-w-[120px]"
+                                      className="text-xs px-2 py-0.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800 flex items-center gap-1 truncate max-w-[120px]"
                                     >
                                       <Building2 className="w-3 h-3 flex-shrink-0" />
                                       <span className="truncate">
                                         {accountName}
                                       </span>
+                                    </Badge>
+                                  )}
+                                  {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs px-2 py-0.5 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-1"
+                                    >
+                                      <User className="w-3 h-3" />
+                                      {(() => {
+                                        const assignedEmails = parseAssignedUsers(task.assigned_to);
+                                        if (assignedEmails.length === 1) {
+                                          const email = assignedEmails[0];
+                                          if (email === currentUser?.email) return "You";
+                                          const user = users.find((u) => u.email === email);
+                                          return user
+                                            ? user.full_name || user.name || email.split("@")[0]
+                                            : email.split("@")[0];
+                                        }
+                                        const includesYou = assignedEmails.includes(currentUser?.email);
+                                        return includesYou
+                                          ? `You + ${assignedEmails.length - 1}`
+                                          : `${assignedEmails.length} people`;
+                                      })()}
                                     </Badge>
                                   )}
                                   {task.labels &&
@@ -3034,13 +3057,13 @@ export default function Tasks() {
                                         <Badge
                                           key={idx}
                                           variant="outline"
-                                          className="text-xs px-2 py-0.5 text-purple-700 bg-purple-50 border-purple-200"
+                                          className="text-xs px-2 py-0.5 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
                                         >
                                           {label}
                                         </Badge>
                                       ))}
                                   {task.labels && task.labels.length > 2 && (
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
                                       +{task.labels.length - 2}
                                     </span>
                                   )}
@@ -3208,7 +3231,7 @@ export default function Tasks() {
                                     {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (
                                       <Badge
                                         variant="outline"
-                                        className="text-slate-600 dark:text-slate-300 flex items-center gap-1"
+                                        className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-1"
                                       >
                                         <User className="w-3 h-3" />
                                         {(() => {

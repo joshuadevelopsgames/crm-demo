@@ -546,22 +546,22 @@ export default function Accounts() {
               <table className="w-full min-w-[800px]">
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Account
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Segment
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Score
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Last Contact
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -578,7 +578,7 @@ export default function Accounts() {
                         onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
                               <Building2 className="w-5 h-5 text-slate-600" />
@@ -589,12 +589,12 @@ export default function Accounts() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <Badge variant="outline" className={getAccountTypeColor(account.account_type)}>
                             {account.account_type}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <Badge className={getStatusColor(account.status)}>
                             {account.status}
                           </Badge>
@@ -602,7 +602,7 @@ export default function Accounts() {
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {account.revenue_segment || '-'}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -613,7 +613,7 @@ export default function Accounts() {
                             <span className="text-sm text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-2">
                             {neglectStatus.days !== null && neglectStatus.days > 30 && (
                               <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -827,22 +827,22 @@ export default function Accounts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Type
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Segment
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Score
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Last Contact
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -860,7 +860,7 @@ export default function Accounts() {
                           onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
                           className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                                 <Building2 className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
@@ -879,12 +879,12 @@ export default function Accounts() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <Badge variant="outline" className={`${getAccountTypeColor(account.account_type)} ${isArchived ? 'opacity-60' : ''}`}>
                               {account.account_type}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                               {account.status}
                             </Badge>
@@ -892,7 +892,7 @@ export default function Accounts() {
                           <td className={`px-6 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                             {account.revenue_segment || '-'}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                               <div className="flex items-center gap-2">
                                 <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isArchived ? 'text-slate-400' : 'text-emerald-600'}`} />
@@ -903,7 +903,7 @@ export default function Accounts() {
                               <span className="text-sm text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="flex items-center gap-2">
                               {neglectStatus.days !== null && neglectStatus.days > 30 && !isArchived && (
                                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />

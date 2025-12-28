@@ -238,13 +238,13 @@ export default function Contacts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
                       <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -264,7 +264,7 @@ export default function Contacts() {
                         className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                               <Users className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
@@ -284,7 +284,7 @@ export default function Contacts() {
                             </div>
                           </div>
                         </td>
-                        <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`px-2 sm:px-4 py-3 sm:py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                           {contact.title || '-'}
                         </td>
                         <td className="px-4 py-4">
@@ -524,13 +524,13 @@ export default function Contacts() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
                       <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -550,7 +550,7 @@ export default function Contacts() {
                         className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                               <Users className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
@@ -570,7 +570,7 @@ export default function Contacts() {
                             </div>
                           </div>
                         </td>
-                        <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`px-2 sm:px-4 py-3 sm:py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                           {contact.title || '-'}
                         </td>
                         <td className="px-4 py-4">

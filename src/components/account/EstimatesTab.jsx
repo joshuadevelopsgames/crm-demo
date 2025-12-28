@@ -355,13 +355,13 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                     <table className="w-full">
                       <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
+                          <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Estimate #
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
+                          <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Date
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
+                          <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
                             Description
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
@@ -375,18 +375,18 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                         {departmentEstimates.map((estimate) => (
                           <tr key={estimate.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                            <td className="px-4 py-4">
+                            <td className="px-2 sm:px-4 py-3 sm:py-4">
                               <span className="font-mono text-sm font-medium text-slate-900 dark:text-[#ffffff]">
                                 {estimate.estimate_number || estimate.id}
                               </span>
                             </td>
-                            <td className="px-4 py-4">
+                            <td className="px-2 sm:px-4 py-3 sm:py-4">
                               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                 <Calendar className="w-4 h-4" />
                                 {estimate.estimate_date ? format(new Date(estimate.estimate_date), 'MMM d, yyyy') : '—'}
                               </div>
                             </td>
-                            <td className="px-4 py-4">
+                            <td className="px-2 sm:px-4 py-3 sm:py-4">
                               <p className="text-sm text-slate-900 dark:text-[#ffffff]">{estimate.project_name || estimate.description || '—'}</p>
                               {estimate.notes && (
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{estimate.notes}</p>

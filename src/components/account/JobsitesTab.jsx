@@ -95,19 +95,19 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
               <table className="w-full">
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Jobsite
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Address
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Notes
                     </th>
                   </tr>
@@ -118,7 +118,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                       key={jobsite.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
                             <MapPin className="w-5 h-5 text-emerald-600" />
@@ -139,7 +139,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                           jobsite.postal_code
                         ].filter(Boolean).join(', ') || 'No address'}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4">
                         {jobsite.contact_name ? (
                           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                             <Phone className="w-4 h-4" />
@@ -152,7 +152,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                           <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4">
                         {jobsite.status ? (
                           <Badge variant="outline" className="text-slate-600">
                             {jobsite.status}
@@ -161,7 +161,7 @@ export default function JobsitesTab({ jobsites = [], accountId }) {
                           <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4">
                         {jobsite.notes ? (
                           <p className="text-sm text-slate-600 dark:text-slate-400 italic line-clamp-2">{jobsite.notes}</p>
                         ) : (

@@ -469,19 +469,19 @@ export default function ContactsList({ contacts, accountId, accountName }) {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Phone
                   </th>
                 </tr>
@@ -496,7 +496,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                       key={contact.id}
                       className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             isArchived ? 'bg-slate-200' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
