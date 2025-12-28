@@ -256,17 +256,22 @@ export default function NotificationBell() {
     }
   }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete]);
 
-  // Filter to show unread first, then read (only active notifications)
-  // Within each group (unread/read), sort by newest first (created_at descending)
+  // Sort by newest first (created_at descending), then unread status
+  // This ensures newest notifications (usually tasks) appear at the top
   const sortedNotifications = [...activeNotifications].sort((a, b) => {
-    // First, sort by read status (unread first)
-    if (a.is_read !== b.is_read) {
-      return a.is_read ? 1 : -1; // Unread first
-    }
-    // Then sort by creation date (newest first)
+    // First, sort by creation date (newest first)
     const dateA = new Date(a.created_at || a.scheduled_for || 0);
     const dateB = new Date(b.created_at || b.scheduled_for || 0);
-    return dateB - dateA; // Newest first
+    const dateDiff = dateB - dateA; // Newest first
+    
+    // If dates are the same (or very close), prioritize unread
+    if (Math.abs(dateDiff) < 1000) { // Within 1 second
+      if (a.is_read !== b.is_read) {
+        return a.is_read ? 1 : -1; // Unread first
+      }
+    }
+    
+    return dateDiff; // Newest first
   });
 
   // Group notifications by type
@@ -297,16 +302,21 @@ export default function NotificationBell() {
     if (!currentUserId) return [];
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
-      // Sort notifications within each group by newest first (unread first, then by date)
+      // Sort notifications within each group by newest first, then unread status
       const sortedGroupNotifications = [...notifications].sort((a, b) => {
-        // Unread first
-        if (a.is_read !== b.is_read) {
-          return a.is_read ? 1 : -1;
-        }
-        // Then by creation date (newest first)
+        // First, sort by creation date (newest first)
         const dateA = new Date(a.created_at || a.scheduled_for || 0);
         const dateB = new Date(b.created_at || b.scheduled_for || 0);
-        return dateB - dateA;
+        const dateDiff = dateB - dateA; // Newest first
+        
+        // If dates are the same (or very close), prioritize unread
+        if (Math.abs(dateDiff) < 1000) { // Within 1 second
+          if (a.is_read !== b.is_read) {
+            return a.is_read ? 1 : -1; // Unread first
+          }
+        }
+        
+        return dateDiff; // Newest first
       });
       // Notifications are already filtered by user in groupedNotifications
       // For renewal_reminder and neglected_account, count unique accounts instead of total notifications
@@ -520,9 +530,19 @@ export default function NotificationBell() {
     return priorities[type] || 99; // Unknown types go last
   };
 
-  // Sort groups by priority, then unread count, then total count
+  // Sort groups by newest notification first, then priority, then unread count
   notificationGroups.sort((a, b) => {
-    // First, sort by type priority
+    // First, sort by newest notification in each group (newest groups first)
+    const newestA = a.notifications.length > 0 
+      ? new Date(a.notifications[0].created_at || a.notifications[0].scheduled_for || 0).getTime()
+      : 0;
+    const newestB = b.notifications.length > 0 
+      ? new Date(b.notifications[0].created_at || b.notifications[0].scheduled_for || 0).getTime()
+      : 0;
+    if (newestA !== newestB) {
+      return newestB - newestA; // Newest first
+    }
+    // Then by type priority
     const priorityA = getTypePriority(a.type);
     const priorityB = getTypePriority(b.type);
     if (priorityA !== priorityB) {
@@ -820,21 +840,40 @@ export default function NotificationBell() {
                                       className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                                     />
                                   )}
-                                  {!hasMultiple && (group.notifications[0]?.type === 'renewal_reminder' || group.notifications[0]?.type === 'neglected_account') && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 px-2 text-xs"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (group.notifications[0]) {
-                                          handleSnoozeClick(e, group.notifications[0]);
-                                        }
-                                      }}
-                                      title="Snooze this notification"
-                                    >
-                                      <BellOff className="w-3 h-3" />
-                                    </Button>
+                                  {!hasMultiple && (
+                                    <>
+                                      {(group.notifications[0]?.type === 'renewal_reminder' || group.notifications[0]?.type === 'neglected_account') && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 px-2 text-xs"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (group.notifications[0]) {
+                                              handleSnoozeClick(e, group.notifications[0]);
+                                            }
+                                          }}
+                                          title="Snooze this notification"
+                                        >
+                                          <BellOff className="w-3 h-3" />
+                                        </Button>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (group.notifications[0] && confirm('Are you sure you want to delete this notification?')) {
+                                            deleteNotificationMutation.mutate(group.notifications[0].id);
+                                          }
+                                        }}
+                                        title="Delete this notification"
+                                        disabled={deleteNotificationMutation.isPending}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </div>

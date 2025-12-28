@@ -54,7 +54,14 @@ export default function Accounts() {
   const [sortBy, setSortBy] = useState('score');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
+  // Default to card view on mobile, list view on desktop
+  // Use lazy initializer to check device on initial render
+  const [viewMode, setViewMode] = useState(() => {
+    // Check if mobile on initial render (screen width or user agent)
+    if (typeof window === 'undefined') return 'list';
+    const isMobileDevice = window.innerWidth < 768 || /iPad|iPhone|iPod|Android/.test(navigator.userAgent);
+    return isMobileDevice ? 'card' : 'list';
+  }); // 'list' or 'card'
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
   const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
   
