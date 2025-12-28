@@ -9,12 +9,16 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
   const isMobileDevice = isMobile || isPWA || isNativeApp;
   
   if (isMobileDevice) {
-    // Slim horizontal cylinder style: 16px height, 48px width, 14px thumb for perfect pill shape
+    // Ant Design style switch: 28px width, 16px height, 12px thumb
     return (
       <SwitchPrimitives.Root
         className={cn(
-          "peer inline-flex shrink-0 cursor-pointer items-center border-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=checked]:bg-emerald-600 dark:data-[state=unchecked]:bg-slate-600 touch-manipulation",
-          "h-[16px] w-[48px] p-[1px] rounded-[8px]", // Perfect cylinder: 16px height, 8px radius (half height)
+          "peer inline-flex shrink-0 cursor-pointer items-center border-0 p-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
+          "h-[16px] w-[28px] rounded-[8px]", // 8px = 16/2 for perfect pill
+          // Unchecked: rgba(0,0,0,.25) or rgba(255,255,255,.35) in dark
+          "data-[state=unchecked]:bg-[rgba(0,0,0,0.25)] dark:data-[state=unchecked]:bg-[rgba(255,255,255,0.35)]",
+          // Checked: #1890ff or #177ddc in dark
+          "data-[state=checked]:bg-[#1890ff] dark:data-[state=checked]:bg-[#177ddc]",
           className
         )}
         {...props}
@@ -22,9 +26,15 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
       >
         <SwitchPrimitives.Thumb
           className={cn(
-            "pointer-events-none block rounded-full bg-white shadow-sm ring-0 transition-transform",
-            "w-[14px] h-[14px]",
-            "data-[state=checked]:translate-x-[33px] data-[state=unchecked]:translate-x-[1px]"
+            "pointer-events-none block bg-white ring-0 transition-all duration-200",
+            "w-[12px] h-[12px] rounded-[6px]", // 12px thumb with 6px radius
+            "shadow-[0_2px_4px_0_rgb(0_35_11_/_20%)]", // Ant Design shadow
+            // Padding: 2px on switchBase, so translate from 2px
+            "data-[state=unchecked]:translate-x-[2px]",
+            // Checked: translateX(12px) from the 2px padding position
+            "data-[state=checked]:translate-x-[14px]", // 2px padding + 12px = 14px
+            // Active state: thumb expands to 15px width, translateX(9px) from padding
+            "active:w-[15px] active:data-[state=checked]:translate-x-[11px]" // 2px + 9px = 11px
           )}
         />
       </SwitchPrimitives.Root>
