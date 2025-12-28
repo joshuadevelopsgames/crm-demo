@@ -13,26 +13,19 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
     return (
       <SwitchPrimitives.Root
         className={cn(
-          "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=checked]:bg-emerald-600 dark:data-[state=unchecked]:bg-slate-600 touch-manipulation",
+          "peer inline-flex shrink-0 cursor-pointer items-center border-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=checked]:bg-emerald-600 dark:data-[state=unchecked]:bg-slate-600 touch-manipulation",
+          "h-[16px] w-[48px] p-[1px] rounded-[8px]", // Perfect cylinder: 16px height, 8px radius (half height)
           className
         )}
-        style={{
-          height: '16px',
-          width: '48px',
-          borderRadius: '8px', // Half of height for perfect cylinder
-          padding: '1px'
-        }}
         {...props}
         ref={ref}
       >
         <SwitchPrimitives.Thumb
           className={cn(
-            "pointer-events-none block rounded-full bg-white shadow-sm ring-0 transition-transform data-[state=checked]:translate-x-[33px] data-[state=unchecked]:translate-x-[1px]"
+            "pointer-events-none block rounded-full bg-white shadow-sm ring-0 transition-transform",
+            "w-[14px] h-[14px]",
+            "data-[state=checked]:translate-x-[33px] data-[state=unchecked]:translate-x-[1px]"
           )}
-          style={{
-            width: '14px',
-            height: '14px'
-          }}
         />
       </SwitchPrimitives.Root>
     );
