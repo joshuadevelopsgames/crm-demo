@@ -9,7 +9,7 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
   const isMobileDevice = isMobile || isPWA || isNativeApp;
   
   if (isMobileDevice) {
-    // iOS/Material Design inspired mobile switch: thinner profile, 22px height, 51px width, 18px thumb
+    // Slim horizontal cylinder style: 16px height, 48px width, 14px thumb for perfect pill shape
     return (
       <SwitchPrimitives.Root
         className={cn(
@@ -17,21 +17,21 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
           className
         )}
         style={{
-          height: '22px',
-          width: '51px',
-          borderRadius: '11px',
-          padding: '2px'
+          height: '16px',
+          width: '48px',
+          borderRadius: '8px', // Half of height for perfect cylinder
+          padding: '1px'
         }}
         {...props}
         ref={ref}
       >
         <SwitchPrimitives.Thumb
           className={cn(
-            "pointer-events-none block rounded-full bg-white shadow-md ring-0 transition-transform data-[state=checked]:translate-x-[31px] data-[state=unchecked]:translate-x-[2px]"
+            "pointer-events-none block rounded-full bg-white shadow-sm ring-0 transition-transform data-[state=checked]:translate-x-[33px] data-[state=unchecked]:translate-x-[1px]"
           )}
           style={{
-            width: '18px',
-            height: '18px'
+            width: '14px',
+            height: '14px'
           }}
         />
       </SwitchPrimitives.Root>
