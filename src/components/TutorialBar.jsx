@@ -102,14 +102,14 @@ export default function TutorialBar() {
         maxHeight: '3rem',
         overflow: 'hidden'
       }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-12">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              <span className="font-semibold">Tutorial Mode</span>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                Step {currentStep + 1}: {stepNames[currentStep] || 'Tutorial'}
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="flex items-center justify-between h-12 gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-semibold text-xs sm:text-sm hidden xs:inline">Tutorial</span>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+                {currentStep + 1}: {stepNames[currentStep]?.split(' ')[0] || 'Tutorial'}
               </Badge>
             </div>
             <div className="hidden md:flex items-center gap-2 text-sm text-blue-100">
@@ -117,21 +117,21 @@ export default function TutorialBar() {
               <span>Hover over highlighted elements for tips</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => goToTutorialStep(currentStep)}
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/20 h-8 sm:h-9 px-2 sm:px-3"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Tutorial</span>
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={exitTutorial}
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/20 h-8 w-8 sm:h-9 sm:w-9 p-0"
             >
               <X className="w-4 h-4" />
             </Button>
