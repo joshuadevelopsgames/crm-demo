@@ -49,8 +49,8 @@ export async function createTaskAssignmentNotifications(task, previousAssignedTo
         await base44.entities.Notification.create({
           user_id: user.id,
           type: 'task_assigned',
-          title: 'Task Assigned to You',
-          message: `"${task.title}" has been assigned to you`,
+          title: 'Task Assigned',
+          message: `The task "${task.title}" has been assigned to you`,
           related_task_id: task.id,
           related_account_id: task.related_account_id || null,
           scheduled_for: new Date().toISOString()

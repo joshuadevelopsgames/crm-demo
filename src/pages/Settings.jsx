@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { 
   User, 
   Bell, 
@@ -244,7 +245,7 @@ export default function Settings() {
               <Label>Dark Mode</Label>
               <p className="text-sm text-slate-500 dark:text-slate-400">Switch to dark theme for better viewing in low light</p>
             </div>
-            <Switch
+            <ThemeSwitch
               checked={isDarkMode}
               onCheckedChange={toggleDarkMode}
             />
