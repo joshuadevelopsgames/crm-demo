@@ -9,7 +9,7 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
   const isMobileDevice = isMobile || isPWA || isNativeApp;
   
   if (isMobileDevice) {
-    // iOS/Material Design inspired mobile switch: 31px height, 51px width, 27px thumb
+    // iOS/Material Design inspired mobile switch: thinner profile, 22px height, 51px width, 18px thumb
     return (
       <SwitchPrimitives.Root
         className={cn(
@@ -17,9 +17,9 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
           className
         )}
         style={{
-          height: '31px',
+          height: '22px',
           width: '51px',
-          borderRadius: '15.5px',
+          borderRadius: '11px',
           padding: '2px'
         }}
         {...props}
@@ -27,11 +27,11 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => {
       >
         <SwitchPrimitives.Thumb
           className={cn(
-            "pointer-events-none block rounded-full bg-white shadow-md ring-0 transition-transform"
+            "pointer-events-none block rounded-full bg-white shadow-md ring-0 transition-transform data-[state=checked]:translate-x-[31px] data-[state=unchecked]:translate-x-[2px]"
           )}
           style={{
-            width: '27px',
-            height: '27px'
+            width: '18px',
+            height: '18px'
           }}
         />
       </SwitchPrimitives.Root>
