@@ -1,14 +1,31 @@
 import * as React from "react"
 import * as SwitchPrimitives from "@radix-ui/react-switch"
 import { useDeviceDetection } from "@/hooks/useDeviceDetection"
+import { useTheme } from "@/contexts/ThemeContext"
 
 import { cn } from "@/lib/utils"
 
 const Switch = React.forwardRef(({ className, ...props }, ref) => {
   const { isMobile, isPWA, isNativeApp } = useDeviceDetection();
+  const { isDarkMode } = useTheme();
   const isMobileDevice = isMobile || isPWA || isNativeApp;
   
-  if (isMobileDevice) {
+  // Also check window width as fallback for SSR/hydration issues
+  const [isMobileWindow, setIsMobileWindow] = React.useState(
+    typeof window !== 'undefined' && window.innerWidth < 768
+  );
+  
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkMobile = () => setIsMobileWindow(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  const shouldUseMobileStyle = isMobileDevice || isMobileWindow;
+  
+  if (shouldUseMobileStyle) {
     // Ant Design style switch: 28px width, 16px height, 12px thumb
     return (
       <SwitchPrimitives.Root
