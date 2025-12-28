@@ -17,35 +17,37 @@ export const ThemeSwitch = React.forwardRef(({ className, checked, onCheckedChan
   const moonIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>`;
 
   if (isMobileDevice) {
-    // Material-UI style for mobile - exact specifications
+    // Material-UI style for mobile - exact specifications with perfect track fit
     return (
       <SwitchPrimitives.Root
         ref={ref}
         checked={checked}
         onCheckedChange={onCheckedChange}
         className={cn(
-          "relative inline-flex h-[34px] w-[62px] shrink-0 cursor-pointer items-center rounded-full border-0 p-[7px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
+          "relative inline-flex h-[34px] w-[62px] shrink-0 cursor-pointer items-center rounded-full border-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation",
           checked 
             ? "bg-[#8796A5]" 
             : "bg-[#aab4be]",
           className
         )}
         style={{
-          borderRadius: '20px'
+          borderRadius: '17px', // Half of height for perfect rounded
+          padding: '1px' // Minimal padding for perfect fit
         }}
         {...props}
       >
         <SwitchPrimitives.Thumb
           className={cn(
-            "pointer-events-none relative block h-8 w-8 rounded-full shadow-lg ring-0 transition-transform"
+            "pointer-events-none relative block rounded-full shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-[28px] data-[state=unchecked]:translate-x-[1px]"
           )}
           style={{
+            width: '32px',
+            height: '32px',
             backgroundImage: checked ? `url('${moonIcon}')` : `url('${sunIcon}')`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundSize: '20px 20px',
-            backgroundColor: isDarkMode ? '#003892' : '#001e3c',
-            transform: checked ? 'translateX(22px)' : 'translateX(6px)'
+            backgroundColor: isDarkMode ? '#003892' : '#001e3c'
           }}
         />
       </SwitchPrimitives.Root>
