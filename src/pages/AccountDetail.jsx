@@ -32,6 +32,7 @@ import TotalWork from '../components/account/TotalWork';
 import GeneralInformation from '../components/account/GeneralInformation';
 import TrackingAssignment from '../components/account/TrackingAssignment';
 import AccountTags from '../components/account/AccountTags';
+import AccountNotes from '../components/account/AccountNotes';
 import EstimatesTab from '../components/account/EstimatesTab';
 import JobsitesTab from '../components/account/JobsitesTab';
 import AddInteractionDialog from '../components/account/AddInteractionDialog';
@@ -307,6 +308,9 @@ export default function AccountDetail() {
               />
             </CardContent>
           </Card>
+
+          {/* Account Notes */}
+          <AccountNotes account={account} />
         </TabsContent>
 
         {/* Contacts Tab */}

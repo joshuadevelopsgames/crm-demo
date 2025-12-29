@@ -7,24 +7,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileText, Edit2, Save, X, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function ContactNotes({ contact }) {
+export default function AccountNotes({ account }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [notes, setNotes] = useState(contact?.notes || '');
+  const [notes, setNotes] = useState(account?.notes || '');
   const queryClient = useQueryClient();
 
-  // Update notes when contact changes
+  // Update notes when account changes
   useEffect(() => {
-    setNotes(contact?.notes || '');
-    setIsEditing(false); // Reset editing state when contact changes
-  }, [contact?.id, contact?.notes]);
+    setNotes(account?.notes || '');
+    setIsEditing(false); // Reset editing state when account changes
+  }, [account?.id, account?.notes]);
 
   const updateNotesMutation = useMutation({
     mutationFn: async (newNotes) => {
-      return await base44.entities.Contact.update(contact.id, { notes: newNotes });
+      return await base44.entities.Account.update(account.id, { notes: newNotes });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contact', contact.id] });
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['account', account.id] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setIsEditing(false);
       toast.success('✓ Notes saved');
     },
@@ -39,17 +39,17 @@ export default function ContactNotes({ contact }) {
   };
 
   const handleCancel = () => {
-    setNotes(contact?.notes || '');
+    setNotes(account?.notes || '');
     setIsEditing(false);
   };
 
   return (
-    <Card className="md:col-span-2">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Contact Notes
+            Account Notes
           </CardTitle>
           {!isEditing && (
             <Button
@@ -59,7 +59,7 @@ export default function ContactNotes({ contact }) {
               className="border-slate-300"
             >
               <Edit2 className="w-4 h-4 mr-2" />
-              {contact?.notes ? 'Edit' : 'Add Notes'}
+              {account?.notes ? 'Edit' : 'Add Notes'}
             </Button>
           )}
         </div>
@@ -78,7 +78,7 @@ export default function ContactNotes({ contact }) {
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about this contact (e.g., communication preferences, important details, relationship history)..."
+              placeholder="Add notes about this account (e.g., important details, relationship history, special considerations)..."
               rows={8}
               className="min-h-[200px]"
             />
@@ -103,13 +103,13 @@ export default function ContactNotes({ contact }) {
           </div>
         ) : (
           <div>
-            {contact?.notes ? (
+            {account?.notes ? (
               <p className="text-slate-700 dark:text-white whitespace-pre-wrap min-h-[100px]">
-                {contact.notes}
+                {account.notes}
               </p>
             ) : (
               <p className="text-slate-400 dark:text-slate-500 italic min-h-[100px] flex items-center">
-                No notes yet. Click "Add Notes" to add information about this contact.
+                No notes yet. Click "Add Notes" to add information about this account.
               </p>
             )}
           </div>
