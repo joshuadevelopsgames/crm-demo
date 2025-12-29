@@ -279,6 +279,7 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
+        console.log('Sequence.create called with data:', data);
         const response = await fetch('/api/data/sequences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
