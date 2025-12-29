@@ -33,6 +33,7 @@ async function getData(entityType, forceRefresh = false) {
 
 // Placeholder - replace with actual base44 SDK initialization
 // Currently using Google Sheets data (with mock fallback)
+// BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
 export const base44 = {
   entities: {
     Account: {
