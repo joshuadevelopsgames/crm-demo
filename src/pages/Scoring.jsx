@@ -265,13 +265,13 @@ export default function Scoring() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your ICP Template management page. Edit the Ideal Customer Profile scorecard template that all accounts use. When you update the template, a new version is created to preserve history."
+        tip="Manage your Ideal Customer Profile (ICP) scorecard template. This template defines the criteria used to score all accounts. Edit criteria, add or remove factors, adjust weights, and set target values. When you save changes, a new template version is created to preserve history, so you can see how your ICP definition evolved. All accounts are automatically scored against the current template version."
         step={4}
         position="bottom"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">ICP Template</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">ICP Template</h1>
             <p className="text-slate-600 mt-1">Manage the Ideal Customer Profile scorecard template</p>
           </div>
           <div className="flex gap-2">
@@ -350,7 +350,7 @@ export default function Scoring() {
               {/* Questions */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-slate-900">Questions</h3>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Questions</h3>
                   <Button variant="outline" size="sm" onClick={addQuestion}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Question
@@ -468,7 +468,7 @@ export default function Scoring() {
         <Card>
           <CardContent className="p-12 text-center">
             <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No ICP Template</h3>
             <p className="text-slate-600 mb-4">Import or create an ICP template to start scoring accounts</p>
             <Button 
               variant="outline" 
@@ -554,7 +554,7 @@ export default function Scoring() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900">Version {version.version_number}</span>
+                            <span className="font-medium text-slate-900 dark:text-white">Version {version.version_number}</span>
                             <Badge variant="outline" className="text-xs">
                               {format(new Date(version.created_at), 'MMM d, yyyy')}
                             </Badge>

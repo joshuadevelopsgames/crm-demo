@@ -9,7 +9,7 @@ export default function PaymentMethod({ account, onAddPayment }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Payment Method
         </CardTitle>
       </CardHeader>
@@ -17,20 +17,20 @@ export default function PaymentMethod({ account, onAddPayment }) {
         {hasPaymentMethod ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-slate-400" />
-              <span className="font-medium text-slate-900">
+              <CreditCard className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+              <span className="font-medium text-slate-900 dark:text-[#ffffff]">
                 {account.payment_method_type || 'Card on file'}
               </span>
             </div>
             {account.payment_last_four && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 •••• {account.payment_last_four}
               </p>
             )}
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               A payment method has not been set up for this customer.
             </p>
             <Button
@@ -48,6 +48,7 @@ export default function PaymentMethod({ account, onAddPayment }) {
     </Card>
   );
 }
+
 
 
 

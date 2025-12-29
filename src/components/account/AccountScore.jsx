@@ -86,7 +86,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {/* Current Score (from most recent scorecard) */}
       <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-black">
             <TrendingUp className="w-5 h-5 text-emerald-600" />
             Current Organization Score
           </CardTitle>
@@ -98,7 +98,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                 ? mostRecentScorecard.normalized_score 
                 : '—'}
             </div>
-            <div className="text-slate-600">
+            <div className="text-slate-600 dark:text-slate-400">
               <p className="text-sm">Out of 100</p>
               <p className="text-xs mt-1">
                 {mostRecentScorecard
@@ -106,7 +106,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                   : 'No scorecards completed yet'}
               </p>
               {mostRecentScorecard && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Based on: {mostRecentScorecard.template_name || 'Custom Scorecard'}
                 </p>
               )}
@@ -119,7 +119,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {!isICPNA && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">ICP Scorecard</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">ICP Scorecard</h3>
             {canManageICP && (
               <Link to={createPageUrl('Scoring')}>
                 <Button variant="outline" size="sm">
@@ -132,15 +132,15 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
           {icpLoading ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <p className="text-slate-600">Loading ICP template...</p>
+              <p className="text-slate-600 dark:text-slate-400">Loading ICP template...</p>
             </CardContent>
           </Card>
         ) : !icpTemplate ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No ICP Template</h3>
-              <p className="text-slate-600 mb-4">
+              <Award className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No ICP Template</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
                 {canManageICP 
                   ? 'Create an ICP template on the Scoring page to start scoring accounts'
                   : 'Contact your administrator to set up an ICP template'}
@@ -160,9 +160,9 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                 <CardContent className="p-5">
               <div className="flex items-center justify-between">
                     <div>
-                  <h4 className="font-semibold text-slate-900">{icpTemplate.name}</h4>
-                  <p className="text-sm text-slate-600 mt-1">{icpTemplate.description || 'Ideal Customer Profile scoring'}</p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <h4 className="font-semibold text-slate-900 dark:text-[#ffffff]">{icpTemplate.name}</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{icpTemplate.description || 'Ideal Customer Profile scoring'}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Version {icpTemplate.version_number || 1} • {icpTemplate.questions?.length || 0} questions
                   </p>
                     </div>
@@ -187,7 +187,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
               <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
                 ICP Status: N/A
               </Badge>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 This account is marked as N/A and is excluded from ICP scoring requirements.
               </p>
             </div>
@@ -198,7 +198,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
       {/* Scorecard History */}
       {scorecards.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Scorecard History</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff] mb-4">Scorecard History</h3>
           <div className="space-y-3">
             {scorecards.sort((a, b) => {
               const dateA = new Date(a.completed_date || a.scorecard_date || 0);
@@ -239,7 +239,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-slate-900">{scorecard.template_name || 'Custom Scorecard'}</h4>
+                          <h4 className="font-medium text-slate-900 dark:text-[#ffffff]">{scorecard.template_name || 'Custom Scorecard'}</h4>
                           <Badge 
                             className={isPass 
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
@@ -259,11 +259,11 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                             )}
                           </Badge>
                         </div>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           Date: {scorecardDate} • Completed by {scorecard.completed_by}
                         </p>
                         {templateVersion && (
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                             ICP Template Version {templateVersion.version_number || 1}
                           </p>
                         )}
@@ -298,13 +298,13 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                               <div className="mt-3 space-y-3">
                                 {/* Template Version Details */}
                                 {templateVersion && (
-                                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                                    <p className="text-xs font-semibold text-slate-700 mb-2">Template Version Details:</p>
-                                    <p className="text-xs text-slate-600">
+                                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Template Version Details:</p>
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
                                       Version {templateVersion.version_number} • Created {format(new Date(templateVersion.created_at), 'MMM d, yyyy')}
                                     </p>
                                     {templateVersion.description && (
-                                      <p className="text-xs text-slate-600 mt-1">{templateVersion.description}</p>
+                                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{templateVersion.description}</p>
                                     )}
                                   </div>
                                 )}
@@ -312,7 +312,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                 {/* Questions and Answers */}
                                 {scorecard.responses && scorecard.responses.length > 0 && (
                                   <div className="space-y-3">
-                                    <p className="text-xs font-semibold text-slate-700">Questions & Answers:</p>
+                                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Questions & Answers:</p>
                                     
                                     {/* Group responses by section */}
                                     {(() => {
@@ -328,9 +328,9 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                       return Object.entries(responsesBySection).map(([section, responses]) => (
                                         <div key={section} className="border border-slate-200 rounded-lg overflow-hidden">
                                           {/* Section Header */}
-                                          <div className="bg-slate-100 px-3 py-2 border-b border-slate-200">
+                                          <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                                             <div className="flex items-center justify-between">
-                                              <span className="text-sm font-semibold text-slate-900">{section}</span>
+                                              <span className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">{section}</span>
                                               {scorecard.section_scores && scorecard.section_scores[section] !== undefined && (
                                                 <Badge variant="outline" className="text-xs">
                                                   Section Score: {scorecard.section_scores[section]}
@@ -340,7 +340,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                           </div>
                                           
                                           {/* Questions in this section */}
-                                          <div className="divide-y divide-slate-100">
+                                          <div className="divide-y divide-slate-100 dark:divide-slate-700">
                                             {responses.map((response, idx) => {
                                               // Get answer text - prefer answer_text if available, otherwise map numeric answer
                                               let answerText;
@@ -360,26 +360,26 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                               const getBadgeColor = () => {
                                                 if (response.answer_text) {
                                                   // For text answers, use neutral color
-                                                  return 'bg-slate-50 text-slate-700 border-slate-200';
+                                                  return 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
                                                 }
                                                 const numAnswer = response.answer || 0;
-                                                if (numAnswer >= 4) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                                                if (numAnswer >= 3) return 'bg-blue-50 text-blue-700 border-blue-200';
-                                                if (numAnswer >= 2) return 'bg-amber-50 text-amber-700 border-amber-200';
-                                                if (numAnswer === 1) return 'bg-slate-50 text-slate-700 border-slate-200';
-                                                return 'bg-red-50 text-red-700 border-red-200'; // 0 or No
+                                                if (numAnswer >= 4) return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
+                                                if (numAnswer >= 3) return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+                                                if (numAnswer >= 2) return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                                                if (numAnswer === 1) return 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+                                                return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'; // 0 or No
                                               };
                                               
                                               return (
-                                                <div key={idx} className="px-3 py-2.5 hover:bg-slate-50">
+                                                <div key={idx} className="px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800">
                                                   <div className="flex items-start justify-between gap-4">
                                                     <div className="flex-1 min-w-0">
-                                                      <p className="text-sm text-slate-900 font-medium mb-1">
+                                                      <p className="text-sm text-slate-900 dark:text-[#ffffff] font-medium mb-1">
                                                         {response.question_text}
                                                       </p>
                                                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                         <div className="flex items-center gap-1.5">
-                                                          <span className="text-xs text-slate-600">Answer:</span>
+                                                          <span className="text-xs text-slate-600 dark:text-slate-400">Answer:</span>
                                                           <Badge 
                                                             variant="outline" 
                                                             className={`text-xs ${getBadgeColor()}`}
@@ -388,16 +388,16 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                                           </Badge>
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
-                                                          <span className="text-xs text-slate-600">Weight:</span>
-                                                          <span className="text-xs font-medium text-slate-700">{response.weight || 1}</span>
+                                                          <span className="text-xs text-slate-600 dark:text-slate-400">Weight:</span>
+                                                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{response.weight || 1}</span>
                                                         </div>
                                                       </div>
                                                     </div>
                                                     <div className="text-right flex-shrink-0">
-                                                      <div className="text-sm font-semibold text-slate-900">
+                                                      <div className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
                                                         {response.weighted_score || 0}
                                                       </div>
-                                                      <div className="text-xs text-slate-500">points</div>
+                                                      <div className="text-xs text-slate-500 dark:text-slate-400">points</div>
                                                     </div>
                                                   </div>
                                                 </div>
@@ -412,8 +412,8 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                                 
                                 {/* Fallback if no responses */}
                                 {(!scorecard.responses || scorecard.responses.length === 0) && (
-                                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                                    <p className="text-xs text-slate-600">No question details available for this scorecard.</p>
+                                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">No question details available for this scorecard.</p>
                                   </div>
                                 )}
                               </div>
@@ -426,7 +426,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                           <div className={`text-3xl font-bold ${isPass ? 'text-emerald-600' : 'text-red-600'}`}>
                             {scorecard.normalized_score}
                           </div>
-                          <div className="text-xs text-slate-500">out of 100</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">out of 100</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -469,12 +469,12 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
               {scorecardToDelete && (
                 <div className="mt-2 text-sm">
                   <p className="font-medium">Scorecard Details:</p>
-                  <p className="text-slate-600">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Date: {scorecardToDelete.scorecard_date 
                       ? format(new Date(scorecardToDelete.scorecard_date), 'MMM d, yyyy')
                       : format(new Date(scorecardToDelete.completed_date), 'MMM d, yyyy')}
                   </p>
-                  <p className="text-slate-600">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Score: {scorecardToDelete.normalized_score} / 100
                   </p>
                 </div>

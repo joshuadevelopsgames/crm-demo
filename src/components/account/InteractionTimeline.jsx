@@ -113,9 +113,9 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
     return (
       <Card>
         <CardContent className="p-12 text-center">
-          <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No interactions yet</h3>
-          <p className="text-slate-600">Log your first interaction to start tracking engagement</p>
+          <MessageSquare className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No interactions yet</h3>
+          <p className="text-slate-600 dark:text-slate-400">Log your first interaction to start tracking engagement</p>
         </CardContent>
       </Card>
     );
@@ -137,12 +137,12 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   interaction.type.includes('email') ? 'bg-blue-50' :
                   interaction.type === 'call' ? 'bg-purple-50' :
-                  interaction.type === 'meeting' ? 'bg-indigo-50' : 'bg-slate-50'
+                  interaction.type === 'meeting' ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'bg-slate-50 dark:bg-slate-800'
                 }`}>
                   <Icon className={`w-6 h-6 ${
                     interaction.type.includes('email') ? 'text-blue-600' :
                     interaction.type === 'call' ? 'text-purple-600' :
-                    interaction.type === 'meeting' ? 'text-indigo-600' : 'text-slate-600'
+                    interaction.type === 'meeting' ? 'text-indigo-600' : 'text-slate-600 dark:text-slate-400'
                   }`} />
                 </div>
                 <div className="flex-1">
@@ -153,7 +153,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                           {interaction.type.replace(/_/g, ' ')}
                         </Badge>
                         {interaction.direction && (
-                          <Badge variant="outline" className="text-slate-600">
+                          <Badge variant="outline" className="text-slate-600 dark:text-slate-400">
                             {interaction.direction}
                           </Badge>
                         )}
@@ -164,9 +164,9 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         )}
                       </div>
                       {interaction.subject && (
-                        <h3 className="font-semibold text-slate-900">{interaction.subject}</h3>
+                        <h3 className="font-semibold text-slate-900 dark:text-[#ffffff]">{interaction.subject}</h3>
                       )}
-                      <div className="flex items-center gap-3 text-sm text-slate-600 mt-1">
+                      <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mt-1">
                         <span>{format(new Date(interaction.interaction_date), 'MMM d, yyyy • h:mm a')}</span>
                         {contactName && (
                           <>
@@ -187,7 +187,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditClick(interaction)}
-                        className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        className="text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                         title="Edit interaction"
                       >
                         <Edit className="w-4 h-4" />
@@ -204,8 +204,8 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                     </div>
                   </div>
                   {interaction.content && (
-                    <div className="bg-slate-50 rounded-lg p-4 mt-3">
-                      <p className="text-slate-700 whitespace-pre-wrap">{interaction.content}</p>
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mt-3">
+                      <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{interaction.content}</p>
                     </div>
                   )}
                   {interaction.gmail_link && (
@@ -255,8 +255,8 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
             <AlertDialogDescription>
               Are you sure you want to delete this interaction? This action cannot be undone.
               {interactionToDelete?.subject && (
-                <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
-                  <strong>Subject:</strong> {interactionToDelete.subject}
+                <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
+                  <strong className="text-slate-900 dark:text-[#ffffff]">Subject:</strong> <span className="text-slate-900 dark:text-[#ffffff]">{interactionToDelete.subject}</span>
                 </div>
               )}
             </AlertDialogDescription>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Building2, TrendingUp } from 'lucide-react';
-import { calculateDepartmentStats } from '@/utils/reportCalculations';
+import { calculateDepartmentStats, formatCurrency } from '@/utils/reportCalculations';
 
 export default function DepartmentReport({ estimates }) {
   const deptStats = calculateDepartmentStats(estimates);
@@ -39,12 +39,12 @@ export default function DepartmentReport({ estimates }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600 font-medium">{dept.division}</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{dept.winRate}%</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{dept.winRate}%</p>
                   <p className="text-xs text-slate-500 mt-1">
                     {dept.won} won / {dept.decidedCount} decided
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
-                    ${(dept.totalValue / 1000).toFixed(1)}K total
+                    {formatCurrency(dept.totalValue)} total
                   </p>
                 </div>
                 <Building2 className="w-10 h-10 text-blue-500 opacity-80" />
@@ -104,7 +104,7 @@ export default function DepartmentReport({ estimates }) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${(value / 1000).toFixed(1)}K`} />
+                <Tooltip formatter={(value) => formatCurrency(value * 1000)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -149,21 +149,21 @@ export default function DepartmentReport({ estimates }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left p-3 font-semibold text-slate-900">Department</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Total</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Won</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Lost</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Win Rate</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Total Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Won Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Lost Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Est. vs Won</th>
+                  <th className="text-left p-3 font-semibold text-slate-900 dark:text-white">Department</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Lost</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Win Rate</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Lost Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Est. vs Won</th>
                 </tr>
               </thead>
               <tbody>
                 {deptStats.map((dept) => (
                   <tr key={dept.division} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-3 text-slate-900 font-medium">{dept.division}</td>
+                    <td className="p-3 text-slate-900 dark:text-white font-medium">{dept.division}</td>
                     <td className="p-3 text-right text-slate-600">{dept.total}</td>
                     <td className="p-3 text-right text-emerald-600 font-medium">{dept.won}</td>
                     <td className="p-3 text-right text-red-600 font-medium">{dept.lost}</td>
@@ -176,13 +176,13 @@ export default function DepartmentReport({ estimates }) {
                       </Badge>
                     </td>
                     <td className="p-3 text-right text-slate-600">
-                      ${(dept.totalValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.totalValue)}
                     </td>
                     <td className="p-3 text-right text-emerald-600 font-medium">
-                      ${(dept.wonValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.wonValue)}
                     </td>
                     <td className="p-3 text-right text-red-600 font-medium">
-                      ${(dept.lostValue / 1000).toFixed(1)}K
+                      {formatCurrency(dept.lostValue)}
                     </td>
                     <td className="p-3 text-right text-slate-600">{dept.estimatesVsWonRatio}%</td>
                   </tr>

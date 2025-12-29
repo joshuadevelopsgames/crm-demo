@@ -54,7 +54,14 @@ export default function Accounts() {
   const [sortBy, setSortBy] = useState('score');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
+  // Default to card view on mobile, list view on desktop
+  // Use lazy initializer to check device on initial render
+  const [viewMode, setViewMode] = useState(() => {
+    // Check if mobile on initial render (screen width or user agent)
+    if (typeof window === 'undefined') return 'list';
+    const isMobileDevice = window.innerWidth < 768 || /iPad|iPhone|iPod|Android/.test(navigator.userAgent);
+    return isMobileDevice ? 'card' : 'list';
+  }); // 'list' or 'card'
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
   const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
   
@@ -365,24 +372,24 @@ export default function Accounts() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <TutorialTooltip
-          tip="This is your Accounts page. Here you can view all companies, search and filter them by type or segment, and click on any account to see detailed information."
+          tip="Your central hub for managing all companies. Search by name, filter by type (prospect, customer, partner) or revenue segment (A, B, C, D), and sort by score, name, or last interaction. Click any account to view full details including interactions, contacts, scorecards, and sales insights. Use this to track your sales pipeline and customer relationships."
           step={2}
           position="bottom"
         >
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Accounts</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
             <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
           </div>
         </TutorialTooltip>
         <div className="flex items-center gap-3">
           <TutorialTooltip
-            tip="Click this button to import leads from LMN (golmn.com) via CSV. Upload both files to create accounts and contacts with complete data."
+            tip="Import accounts and contacts from LMN (golmn.com) by uploading CSV files. This creates new accounts and contacts with all their data (names, emails, phone numbers, etc.). Use this when you have new leads or want to bulk import data from your LMN system. The import will match existing accounts or create new ones."
             step={2}
             position="bottom"
           >
             <Button 
               onClick={() => setIsImportDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
             >
               <Upload className="w-4 h-4 mr-2" />
               Import from LMN
@@ -409,16 +416,16 @@ export default function Accounts() {
 
       {/* Tabs: Active / Archived */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full justify-start bg-white border-b rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="active" 
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3 text-foreground/70 data-[state=active]:text-foreground"
           >
             Active ({accounts.filter(a => a.status !== 'archived' && a.archived !== true).length})
           </TabsTrigger>
           <TabsTrigger 
             value="archived"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3 text-foreground/70 data-[state=active]:text-foreground"
           >
             <Archive className="w-4 h-4 mr-2" />
             Archived ({accounts.filter(a => a.status === 'archived' || a.archived === true).length})
@@ -458,7 +465,7 @@ export default function Accounts() {
       
       {/* Filters & Search */}
       <TutorialTooltip
-        tip="Use these filters to search accounts by name, filter by type or segment, sort by different criteria, and toggle between list and card views."
+        tip="Powerful filtering and search tools to find exactly what you need. Search by account name to quickly locate specific companies. Filter by account type (prospect, customer, etc.) or revenue segment to focus on specific account groups. Sort by organization score, name, or last interaction date to prioritize your work. Switch between list and card views to see more or less detail per account."
         step={2}
         position="bottom"
       >
@@ -516,7 +523,7 @@ export default function Accounts() {
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                className={`h-8 px-3 ${viewMode === 'list' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
               >
                 <List className="w-4 h-4" />
               </Button>
@@ -524,7 +531,7 @@ export default function Accounts() {
                 variant={viewMode === 'card' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('card')}
-                className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                className={`h-8 px-3 ${viewMode === 'card' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
               >
                 <LayoutGrid className="w-4 h-4" />
               </Button>
@@ -537,64 +544,64 @@ export default function Accounts() {
       {/* Accounts List View */}
       {viewMode === 'list' ? (
         <TutorialTooltip
-          tip="This is the list view of all accounts. Click on any row to view the account details. You can see the account name, type, status, segment, organization score, last contact date, and revenue at a glance."
+          tip="List view shows all accounts in a table format for quick scanning. Each row displays key information: account name, type, status, revenue segment, organization score, last contact date, and revenue. Click any row to open the full account detail page where you can view interactions, contacts, scorecards, and more. Use this view to quickly identify accounts that need attention based on score or last contact date."
           step={2}
           position="bottom"
         >
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px]">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Account
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Segment
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Score
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Last Contact
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Revenue
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                   {filteredAccounts.map((account) => {
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
                     return (
                       <tr 
                         key={account.id} 
                         onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
                               <Building2 className="w-5 h-5 text-slate-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-slate-900">{account.name}</div>
+                              <div className="font-medium text-slate-900 dark:text-foreground">{account.name}</div>
                               <div className="text-sm text-slate-500">{account.industry || 'No industry'}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <Badge variant="outline" className={getAccountTypeColor(account.account_type)}>
                             {account.account_type}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <Badge className={getStatusColor(account.status)}>
                             {account.status}
                           </Badge>
@@ -602,7 +609,7 @@ export default function Accounts() {
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {account.revenue_segment || '-'}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -613,7 +620,7 @@ export default function Accounts() {
                             <span className="text-sm text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-2">
                             {neglectStatus.days !== null && neglectStatus.days > 30 && (
                               <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -623,7 +630,7 @@ export default function Accounts() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-slate-900 font-medium">
+                        <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
                           {(() => {
                             const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
                             return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
@@ -650,7 +657,7 @@ export default function Accounts() {
                 const isArchived = account.status === 'archived' || account.archived === true;
             return (
               <Link key={account.id} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
-                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 h-full ${isArchived ? 'bg-slate-50' : ''}`}>
+                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
                   <div className="space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between">
@@ -660,7 +667,7 @@ export default function Accounts() {
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</h3>
+                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</h3>
                               {isArchived && (
                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                   <Archive className="w-3 h-3 mr-1" />
@@ -711,7 +718,7 @@ export default function Accounts() {
                         return revenue > 0 ? (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                               ${revenue.toLocaleString()}
                             </span>
                           </div>
@@ -738,7 +745,7 @@ export default function Accounts() {
       {filteredAccounts.length === 0 && (
         <Card className="p-12 text-center">
           <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-900 mb-1">No accounts found</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No accounts found</h3>
           <p className="text-slate-600 mb-4">
             {searchTerm || filterType !== 'all' || filterSegment !== 'all'
               ? 'Try adjusting your filters'
@@ -803,7 +810,7 @@ export default function Accounts() {
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('list')}
-                    className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                    className={`h-8 px-3 ${viewMode === 'list' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -811,7 +818,7 @@ export default function Accounts() {
                     variant={viewMode === 'card' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('card')}
-                    className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
+                    className={`h-8 px-3 ${viewMode === 'card' ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-foreground/70 hover:bg-surface-2'}`}
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
@@ -825,32 +832,32 @@ export default function Accounts() {
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Type
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Segment
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Score
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Last Contact
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Revenue
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredAccounts.map((account) => {
                       const neglectStatus = getNeglectStatus(account.last_interaction_date);
                       const isArchived = account.status === 'archived' || account.archived === true;
@@ -858,16 +865,16 @@ export default function Accounts() {
                         <tr 
                           key={account.id} 
                           onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
-                          className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
+                          className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                                 <Building2 className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</span>
+                                  <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</span>
                                   {isArchived && (
                                     <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                       <Archive className="w-3 h-3 mr-1" />
@@ -879,12 +886,12 @@ export default function Accounts() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <Badge variant="outline" className={`${getAccountTypeColor(account.account_type)} ${isArchived ? 'opacity-60' : ''}`}>
                               {account.account_type}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                               {account.status}
                             </Badge>
@@ -892,7 +899,7 @@ export default function Accounts() {
                           <td className={`px-6 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                             {account.revenue_segment || '-'}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
                               <div className="flex items-center gap-2">
                                 <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isArchived ? 'text-slate-400' : 'text-emerald-600'}`} />
@@ -903,7 +910,7 @@ export default function Accounts() {
                               <span className="text-sm text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="flex items-center gap-2">
                               {neglectStatus.days !== null && neglectStatus.days > 30 && !isArchived && (
                                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -913,7 +920,7 @@ export default function Accounts() {
                               </span>
                             </div>
                           </td>
-                          <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                          <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                             {(() => {
                               const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
                               return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
@@ -934,7 +941,7 @@ export default function Accounts() {
                 const isArchived = account.status === 'archived' || account.archived === true;
                 return (
                 <Link key={account.id} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
-                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 h-full ${isArchived ? 'bg-slate-50' : ''}`}>
+                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
                     <div className="space-y-4">
                       {/* Header */}
                       <div className="flex items-start justify-between">
@@ -944,7 +951,7 @@ export default function Accounts() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>{account.name}</h3>
+                              <h3 className={`font-semibold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>{account.name}</h3>
                               {isArchived && (
                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
                                   <Archive className="w-3 h-3 mr-1" />
@@ -993,7 +1000,7 @@ export default function Accounts() {
                         {account.annual_revenue && (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                               ${account.annual_revenue.toLocaleString()}
                             </span>
                           </div>
@@ -1018,7 +1025,7 @@ export default function Accounts() {
           {filteredAccounts.length === 0 && (
             <Card className="p-12 text-center">
               <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No archived accounts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No archived accounts found</h3>
               <p className="text-slate-600 mb-4">
                 {searchTerm || filterType !== 'all' || filterSegment !== 'all'
                   ? 'Try adjusting your filters'

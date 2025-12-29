@@ -45,10 +45,10 @@ export default function GeneralInformation({ account, onUpdate }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
             General Information
           </CardTitle>
-          <Lock className="w-4 h-4 text-slate-400" />
+          <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
         </div>
         {!isEditing ? (
           <Button
@@ -83,7 +83,7 @@ export default function GeneralInformation({ account, onUpdate }) {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <Label className="text-slate-600">Name</Label>
+            <Label className="text-slate-600 dark:text-slate-400">Name</Label>
             {isEditing ? (
               <>
                 <Input
@@ -93,11 +93,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import. Update the source data to change it.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import. Update the source data to change it.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.name || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.name || '—'}</p>
             )}
           </div>
 
@@ -113,11 +113,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.address_1 || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.address_1 || '—'}</p>
             )}
           </div>
 
@@ -133,11 +133,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.address_2 || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.address_2 || '—'}</p>
             )}
           </div>
 
@@ -152,11 +152,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.city || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.city || '—'}</p>
             )}
           </div>
 
@@ -172,11 +172,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.state || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.state || '—'}</p>
             )}
           </div>
 
@@ -192,11 +192,11 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.postal_code || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.postal_code || '—'}</p>
             )}
           </div>
 
@@ -213,17 +213,17 @@ export default function GeneralInformation({ account, onUpdate }) {
                   disabled={isImported}
                 />
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.country || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.country || '—'}</p>
             )}
           </div>
 
           <div>
             <Label className="text-slate-600">Archived</Label>
-            <p className="font-medium text-slate-900 mt-1">
+            <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">
               {formData.archived ? 'Yes' : 'No'}
             </p>
           </div>

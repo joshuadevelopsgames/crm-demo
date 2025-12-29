@@ -152,7 +152,7 @@ export default function ImportLeads() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Import Leads from LMN</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Import Leads from LMN</h1>
         <p className="text-slate-600 mt-2">
           Upload a CSV file from golmn.com to automatically create accounts and contacts
         </p>
@@ -167,7 +167,7 @@ export default function ImportLeads() {
             </div>
             
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
                 Upload LMN Leads CSV
               </h2>
               <p className="text-slate-600 max-w-md">
@@ -185,7 +185,7 @@ export default function ImportLeads() {
             />
             
             <label htmlFor="csv-file-input">
-              <Button asChild className="bg-blue-600 hover:bg-blue-700 cursor-pointer">
+              <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground cursor-pointer">
                 <span>
                   <FileText className="w-4 h-4 mr-2" />
                   Choose CSV File
@@ -197,13 +197,13 @@ export default function ImportLeads() {
               <p className="font-semibold mb-2">Expected CSV Columns:</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-left">
                 <div>
-                  <p className="font-medium text-slate-700 mb-1">Required:</p>
+                  <p className="font-medium text-slate-700 dark:text-white mb-1">Required:</p>
                   <ul className="space-y-0.5">
                     <li>• <strong>Lead Name</strong> (Account)</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="font-medium text-slate-700 mb-1">Contact Fields:</p>
+                  <p className="font-medium text-slate-700 dark:text-white mb-1">Contact Fields:</p>
                   <ul className="space-y-0.5">
                     <li>• First Name, Last Name</li>
                     <li>• Position, Billing Contact</li>
@@ -253,7 +253,7 @@ export default function ImportLeads() {
                 <FileText className="w-8 h-8 text-blue-600" />
                 <div>
                   <p className="text-sm text-slate-600">Total Rows</p>
-                  <p className="text-2xl font-bold text-slate-900">{parsedData.stats.totalRows}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{parsedData.stats.totalRows}</p>
                 </div>
               </div>
             </Card>
@@ -263,7 +263,7 @@ export default function ImportLeads() {
                 <Building2 className="w-8 h-8 text-emerald-600" />
                 <div>
                   <p className="text-sm text-slate-600">Accounts Found</p>
-                  <p className="text-2xl font-bold text-slate-900">{parsedData.stats.accountsCreated}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{parsedData.stats.accountsCreated}</p>
                 </div>
               </div>
             </Card>
@@ -273,7 +273,7 @@ export default function ImportLeads() {
                 <Users className="w-8 h-8 text-purple-600" />
                 <div>
                   <p className="text-sm text-slate-600">Contacts Found</p>
-                  <p className="text-2xl font-bold text-slate-900">{parsedData.stats.contactsCreated}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{parsedData.stats.contactsCreated}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     Avg {parsedData.stats.averageContactsPerAccount} per account
                   </p>
@@ -284,13 +284,13 @@ export default function ImportLeads() {
 
           {/* Preview Table */}
           <Card className="p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Data Preview (First 5 rows)</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Data Preview (First 5 rows)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b">
                   <tr>
                     {preview.headers.map((header, idx) => (
-                      <th key={idx} className="px-4 py-2 text-left text-xs font-semibold text-slate-700 uppercase">
+                      <th key={idx} className="px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-white uppercase">
                         {header}
                       </th>
                     ))}
@@ -314,7 +314,7 @@ export default function ImportLeads() {
           {/* Validation Results */}
           {validation && (
             <Card className="p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">Validation Results</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Validation Results</h3>
               
               {validation.isValid ? (
                 <div className="flex items-center gap-2 text-emerald-700 mb-4">
@@ -357,7 +357,7 @@ export default function ImportLeads() {
             <Button
               onClick={handleImport}
               disabled={!validation?.isValid || importStatus === 'importing'}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
             >
               {importStatus === 'importing' ? (
                 <>
@@ -388,7 +388,7 @@ export default function ImportLeads() {
             </div>
             
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 Import Successful!
               </h2>
               <p className="text-slate-600">
@@ -420,7 +420,7 @@ export default function ImportLeads() {
             )}
 
             <div className="flex gap-3 mt-6">
-              <Button onClick={() => window.location.href = '/accounts'} className="bg-slate-900">
+              <Button onClick={() => window.location.href = '/accounts'} variant="outline" className="border-slate-300">
                 <Building2 className="w-4 h-4 mr-2" />
                 View Accounts
               </Button>

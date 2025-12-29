@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/contexts/UserContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { base44 } from '@/api/base44Client';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,20 +9,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { 
   User, 
   Bell, 
   Monitor, 
   FileText,
   Save,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
+import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
 
 export default function Settings() {
-  const { profile, user } = useUser();
+  const { profile, user, isAdmin } = useUser();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const supabase = getSupabaseAuth();
@@ -31,6 +37,8 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
   const [systemAnnouncements, setSystemAnnouncements] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(null);
 
   // Update state when profile/user data loads
   useEffect(() => {
@@ -90,11 +98,47 @@ export default function Settings() {
     });
   };
 
+  const handleExportAllData = async () => {
+    setIsExporting(true);
+    setExportProgress({ message: 'Preparing export...', accounts: 0, contacts: 0 });
+    
+    try {
+      toast.loading('Exporting data to Google Sheets...', { id: 'export-toast' });
+      
+      const result = await exportAllDataToGoogleSheet();
+      
+      if (result.success) {
+        const { accountsExported, contactsExported, totalRecords } = result.summary;
+        toast.success(
+          `✓ Export complete! ${accountsExported} accounts and ${contactsExported} contacts exported.`,
+          { id: 'export-toast', duration: 5000 }
+        );
+        setExportProgress({
+          message: 'Export complete!',
+          accounts: accountsExported,
+          contacts: contactsExported,
+          total: totalRecords
+        });
+      } else {
+        throw new Error(result.error || 'Export failed');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(
+        `Export failed: ${error.message || 'Unknown error'}`,
+        { id: 'export-toast', duration: 5000 }
+      );
+      setExportProgress(null);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-600 mt-1">Manage your account settings and preferences</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your account settings and preferences</p>
       </div>
 
       {/* Profile Settings */}
@@ -107,7 +151,7 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="fullName" className="dark:text-[#ffffff]">Full Name</Label>
             <Input
               id="fullName"
               value={fullName}
@@ -116,7 +160,7 @@ export default function Settings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Label htmlFor="phoneNumber" className="dark:text-[#ffffff]">Phone Number</Label>
             <Input
               id="phoneNumber"
               value={phoneNumber}
@@ -126,18 +170,18 @@ export default function Settings() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label className="dark:text-[#ffffff]">Email</Label>
             <Input
               value={profile?.email || user?.email || ''}
               disabled
-              className="bg-slate-50"
+              className="bg-slate-50 dark:bg-slate-800 dark:text-[#ffffff]"
             />
-            <p className="text-xs text-slate-500">Email cannot be changed</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Email cannot be changed</p>
           </div>
           <Button 
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="bg-slate-900 hover:bg-slate-800"
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
           >
             <Save className="w-4 h-4 mr-2" />
             {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
@@ -195,10 +239,79 @@ export default function Settings() {
             Display Preferences
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-500">Display preferences coming soon</p>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Dark Mode</Label>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Switch to dark theme for better viewing in low light</p>
+            </div>
+            <ThemeSwitch
+              checked={isDarkMode}
+              onCheckedChange={toggleDarkMode}
+            />
+          </div>
         </CardContent>
       </Card>
+
+      {/* Data Export - Admin Only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Data Export
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Export all accounts and contacts data to Google Sheets. The data will be organized into separate tabs:
+              </p>
+              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1 ml-2">
+                <li><strong>Imported Accounts</strong> - All account information</li>
+                <li><strong>Imported Contacts</strong> - All contact information</li>
+                <li><strong>All Data</strong> - Combined view with account and contact data together</li>
+              </ul>
+            </div>
+            
+            {exportProgress && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">{exportProgress.message}</p>
+                {exportProgress.total > 0 && (
+                  <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                    <p>✓ Accounts exported: {exportProgress.accounts}</p>
+                    <p>✓ Contacts exported: {exportProgress.contacts}</p>
+                    <p className="font-medium mt-2">Total records: {exportProgress.total}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <Button
+              onClick={handleExportAllData}
+              disabled={isExporting}
+              variant="outline"
+              className="border-slate-300 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export All Data to Google Sheets
+                </>
+              )}
+            </Button>
+            
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Note: This may take a few minutes for large datasets. The export will update existing data in your Google Sheet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* End of Year Reports */}
       <Card>
@@ -209,12 +322,13 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-600 mb-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Access comprehensive end of year reports with win/loss analysis, department breakdowns, and account performance metrics.
           </p>
           <Button
             onClick={() => navigate(createPageUrl('Reports'))}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            variant="outline"
+            className="border-slate-300"
           >
             <LinkIcon className="w-4 h-4 mr-2" />
             Go to Reports

@@ -268,20 +268,20 @@ export default function TotalWork({ estimates = [] }) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
             Total Work
           </CardTitle>
-          <TrendingUp className="w-5 h-5 text-slate-400" />
+          <TrendingUp className="w-5 h-5 text-slate-400 dark:text-slate-500" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           <div>
-            <p className="text-sm text-slate-600">ESTIMATED</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">
+            <p className="text-sm text-slate-600 dark:text-slate-400">ESTIMATED</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-[#ffffff] mt-1">
               ${totalEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               {estimatedBreakdown.included.length} estimate{estimatedBreakdown.included.length !== 1 ? 's' : ''} included
             </p>
           </div>
@@ -293,7 +293,7 @@ export default function TotalWork({ estimates = [] }) {
                 <span className="text-base ml-2">({soldPercentage}%)</span>
               )}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               {soldBreakdown.included.length} won estimate{soldBreakdown.included.length !== 1 ? 's' : ''} included
             </p>
           </div>
@@ -304,7 +304,7 @@ export default function TotalWork({ estimates = [] }) {
               variant="ghost" 
               size="sm" 
               onClick={() => setShowBreakdown(!showBreakdown)}
-              className="w-full justify-between text-xs text-slate-600 hover:text-slate-900"
+              className="w-full justify-between text-xs text-slate-600 hover:text-slate-900 dark:hover:text-white"
             >
               <span className="flex items-center gap-1">
                 <Info className="w-3 h-3" />
@@ -404,21 +404,21 @@ export default function TotalWork({ estimates = [] }) {
               
               {/* ESTIMATED Breakdown */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 mb-2">ESTIMATED Breakdown</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-[#ffffff] mb-2">ESTIMATED Breakdown</h4>
                 <div className="space-y-2">
                   {estimatedBreakdown.included.length > 0 ? (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Included ({estimatedBreakdown.included.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Included ({estimatedBreakdown.included.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {estimatedBreakdown.included.map((item, idx) => (
-                          <div key={idx} className="text-xs bg-slate-50 p-2 rounded border border-slate-200">
+                          <div key={idx} className="text-xs bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-200 dark:border-slate-700">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-[#ffffff]">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
-                                <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
-                                <p className="text-slate-500 mt-0.5">
+                                <p className="text-slate-600 dark:text-slate-400 mt-0.5">{item.determinationMethod}</p>
+                                <p className="text-slate-500 dark:text-slate-400 mt-0.5">
                                   Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   {item.value !== item.totalPrice && (
                                     <span> → Value: ${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -431,29 +431,29 @@ export default function TotalWork({ estimates = [] }) {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">No estimates included</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">No estimates included</p>
                   )}
                   
                   {estimatedBreakdown.excluded.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Excluded ({estimatedBreakdown.excluded.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Excluded ({estimatedBreakdown.excluded.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {estimatedBreakdown.excluded.map((item, idx) => (
-                          <div key={idx} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
+                          <div key={idx} className="text-xs bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-[#ffffff]">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (
-                                  <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
+                                  <p className="text-slate-600 dark:text-slate-400 mt-0.5">{item.determinationMethod}</p>
                                 )}
                                 {item.totalPrice > 0 && (
-                                  <p className="text-slate-500 mt-0.5">
+                                  <p className="text-slate-500 dark:text-slate-400 mt-0.5">
                                     Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </p>
                                 )}
-                                <p className="text-amber-700 mt-0.5 font-medium">Reason: {item.reason}</p>
+                                <p className="text-amber-700 dark:text-amber-400 mt-0.5 font-medium">Reason: {item.reason}</p>
                               </div>
                             </div>
                           </div>
@@ -466,21 +466,21 @@ export default function TotalWork({ estimates = [] }) {
               
               {/* SOLD Breakdown */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 mb-2">SOLD Breakdown (Won Estimates Only)</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-[#ffffff] mb-2">SOLD Breakdown (Won Estimates Only)</h4>
                 <div className="space-y-2">
                   {soldBreakdown.included.length > 0 ? (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Included ({soldBreakdown.included.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Included ({soldBreakdown.included.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {soldBreakdown.included.map((item, idx) => (
-                          <div key={idx} className="text-xs bg-emerald-50 p-2 rounded border border-emerald-200">
+                          <div key={idx} className="text-xs bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded border border-emerald-200 dark:border-emerald-800">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-[#ffffff]">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
-                                <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
-                                <p className="text-slate-500 mt-0.5">
+                                <p className="text-slate-600 dark:text-slate-400 mt-0.5">{item.determinationMethod}</p>
+                                <p className="text-slate-500 dark:text-slate-400 mt-0.5">
                                   Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   {item.value !== item.totalPrice && (
                                     <span> → Value: ${item.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -498,24 +498,24 @@ export default function TotalWork({ estimates = [] }) {
                   
                   {soldBreakdown.excluded.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-slate-700 mb-1">Excluded ({soldBreakdown.excluded.length}):</p>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Excluded ({soldBreakdown.excluded.length}):</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto">
                         {soldBreakdown.excluded.map((item, idx) => (
-                          <div key={idx} className="text-xs bg-amber-50 p-2 rounded border border-amber-200">
+                          <div key={idx} className="text-xs bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-slate-900">
+                                <p className="font-medium text-slate-900 dark:text-[#ffffff]">
                                   ID: {getReadableEstimateId(item.estimate)}
                                 </p>
                                 {item.determinationMethod && (
-                                  <p className="text-slate-600 mt-0.5">{item.determinationMethod}</p>
+                                  <p className="text-slate-600 dark:text-slate-400 mt-0.5">{item.determinationMethod}</p>
                                 )}
                                 {item.totalPrice > 0 && (
-                                  <p className="text-slate-500 mt-0.5">
+                                  <p className="text-slate-500 dark:text-slate-400 mt-0.5">
                                     Total: ${item.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </p>
                                 )}
-                                <p className="text-amber-700 mt-0.5 font-medium">Reason: {item.reason}</p>
+                                <p className="text-amber-700 dark:text-amber-400 mt-0.5 font-medium">Reason: {item.reason}</p>
                               </div>
                             </div>
                           </div>

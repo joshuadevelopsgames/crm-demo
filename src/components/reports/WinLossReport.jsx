@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, FileText } from 'lucide-react';
-import { calculateOverallStats, calculateAccountStats } from '@/utils/reportCalculations';
+import { calculateOverallStats, calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
 
 export default function WinLossReport({ estimates, accounts, selectedYear }) {
   const overallStats = calculateOverallStats(estimates);
@@ -35,7 +35,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Win Rate</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{overallStats.winRate}%</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{overallStats.winRate}%</p>
                 <p className="text-xs text-slate-500 mt-1">
                   {overallStats.won} won / {overallStats.decidedCount} decided
                 </p>
@@ -50,7 +50,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Estimates</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{overallStats.total}</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{overallStats.total}</p>
                 <p className="text-xs text-slate-500 mt-1">
                   {overallStats.won} won, {overallStats.lost} lost, {overallStats.pending} pending
                 </p>
@@ -65,11 +65,11 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Value</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">
-                  ${(overallStats.totalValue / 1000).toFixed(1)}K
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+                  {formatCurrency(overallStats.totalValue)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Won: ${(overallStats.wonValue / 1000).toFixed(1)}K
+                  Won: {formatCurrency(overallStats.wonValue)}
                 </p>
               </div>
               <DollarSign className="w-10 h-10 text-amber-500 opacity-80" />
@@ -82,7 +82,7 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Est. vs Won</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                   {overallStats.estimatesVsWonRatio}%
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
@@ -167,20 +167,20 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left p-3 font-semibold text-slate-900">Account</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Total</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Won</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Lost</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Win Rate</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Total Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Won Value</th>
-                  <th className="text-right p-3 font-semibold text-slate-900">Est. vs Won</th>
+                  <th className="text-left p-3 font-semibold text-slate-900 dark:text-white">Account</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Lost</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Win Rate</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won Value</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Est. vs Won</th>
                 </tr>
               </thead>
               <tbody>
                 {accountStats.map((account, index) => (
                   <tr key={account.accountId} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-3 text-slate-900 font-medium">{account.accountName}</td>
+                    <td className="p-3 text-slate-900 dark:text-white font-medium">{account.accountName}</td>
                     <td className="p-3 text-right text-slate-600">{account.total}</td>
                     <td className="p-3 text-right text-emerald-600 font-medium">{account.won}</td>
                     <td className="p-3 text-right text-red-600 font-medium">{account.lost}</td>
@@ -193,10 +193,10 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
                       </Badge>
                     </td>
                     <td className="p-3 text-right text-slate-600">
-                      ${(account.totalValue / 1000).toFixed(1)}K
+                      {formatCurrency(account.totalValue)}
                     </td>
                     <td className="p-3 text-right text-emerald-600 font-medium">
-                      ${(account.wonValue / 1000).toFixed(1)}K
+                      {formatCurrency(account.wonValue)}
                     </td>
                     <td className="p-3 text-right text-slate-600">{account.estimatesVsWonRatio}%</td>
                   </tr>

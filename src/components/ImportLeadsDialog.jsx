@@ -1643,7 +1643,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                                   </div>
                                   
                                   <div className="pt-2 border-t border-amber-200">
-                                    <Label className="text-xs text-slate-700 mb-1.5 block">
+                                    <Label className="text-xs text-slate-700 dark:text-white mb-1.5 block">
                                       Link to Account:
                                     </Label>
                                     <Select
@@ -2078,7 +2078,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
               </div>
               
               <div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                   Import Complete!
                 </h3>
                 <p className="text-slate-600 text-sm">

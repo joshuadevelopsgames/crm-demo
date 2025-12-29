@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../utils';
 
@@ -38,6 +38,62 @@ export default function Layout({ children, currentPageName }) {
   const { isAdmin } = useUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Ensure white background when in tutorial mode (but not on tutorial page)
+  useEffect(() => {
+    // #region agent log
+    const logData = {location:'Layout.jsx:useEffect',message:'Layout useEffect - isTutorialMode state',data:{isTutorialMode,currentPageName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+    console.log('🔍 DEBUG Layout useEffect:', logData);
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(err=>console.error('Log fetch error:',err));
+    // #endregion
+    
+    // Check for Tutorial page fixed div that might still be in DOM
+    const tutorialFixedDivs = Array.from(document.querySelectorAll('div')).filter(div => {
+      const style = div.getAttribute('style') || '';
+      const computedStyle = window.getComputedStyle(div);
+      return (style.includes('position: fixed') || computedStyle.position === 'fixed') &&
+             (style.includes('top: 0') || computedStyle.top === '0px') &&
+             (style.includes('left: 0') || computedStyle.left === '0px') &&
+             computedStyle.zIndex !== 'auto' && parseInt(computedStyle.zIndex) <= 10;
+    });
+    
+    if (tutorialFixedDivs.length > 0) {
+      console.warn('⚠️ Found Tutorial page fixed divs still in DOM:', tutorialFixedDivs.map(d => ({
+        className: d.className,
+        style: d.getAttribute('style'),
+        zIndex: window.getComputedStyle(d).zIndex,
+        bg: window.getComputedStyle(d).backgroundColor
+      })));
+      // Remove them
+      tutorialFixedDivs.forEach(div => {
+        console.log('🗑️ Removing Tutorial fixed div');
+        div.remove();
+      });
+    }
+    
+    // Force white background on body and html
+    document.body.style.backgroundColor = '#ffffff';
+    document.documentElement.style.backgroundColor = '#ffffff';
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.backgroundColor = '#ffffff';
+    }
+    
+    // #region agent log
+    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+    const rootBg = root ? window.getComputedStyle(root).backgroundColor : 'no root';
+    const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg,tutorialFixedDivsRemoved:tutorialFixedDivs.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['B','E']};
+    console.log('🔍 DEBUG Layout backgrounds:', JSON.stringify(logData2, null, 2));
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(err=>console.error('Log fetch error:',err));
+    // #endregion
+  }, [isTutorialMode]);
 
   const regularNavigation = [
     { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
@@ -125,7 +181,10 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen bg-white" style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-screen bg-white dark:bg-slate-950" style={{ 
+      overscrollBehavior: 'none', 
+      WebkitOverflowScrolling: 'touch',
+    }}>
       <style>{`
         :root {
           --primary-navy: #0f172a;
@@ -138,14 +197,13 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Top Navigation - Apply mobile/PWA styles without affecting desktop */}
       <nav 
-        className="bg-white border-b border-slate-200/50 fixed left-0 right-0 z-50 shadow-sm" 
+        className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 z-50 shadow-sm" 
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
           top: isTutorialMode ? '3rem' : `max(0px, env(safe-area-inset-top, 0px))`,
           left: '0',
           right: '0',
           paddingTop: '0',
-          backgroundColor: '#ffffff',
           position: 'fixed',
           willChange: 'transform',
           transform: 'translate3d(0, 0, 0)',
@@ -158,7 +216,6 @@ export default function Layout({ children, currentPageName }) {
         } : {
           // Desktop web browser styles (unchanged)
           top: isTutorialMode ? '3rem' : '0',
-          backgroundColor: '#ffffff'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -179,7 +236,7 @@ export default function Layout({ children, currentPageName }) {
                     }}
                   />
                 </div>
-                <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">LECRM</span>
+                <span className="text-xl md:text-2xl font-bold text-foreground">LECRM</span>
               </Link>
             </div>
 
@@ -194,8 +251,8 @@ export default function Layout({ children, currentPageName }) {
                     to={createPageUrl(item.path)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                       isActive
-                        ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
@@ -210,9 +267,9 @@ export default function Layout({ children, currentPageName }) {
                   trigger={
                     <button
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                        adminNavigation.some(item => currentPageName === item.path)
-                          ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-md'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                        adminNavigation.some(item => currentPageName === item.path) || currentPageName === 'Tutorial'
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                       }`}
                     >
                       <Settings className="w-4 h-4" />
@@ -240,42 +297,57 @@ export default function Layout({ children, currentPageName }) {
                         </SimpleDropdownItem>
                       );
                     })}
+                    <SimpleDropdownItem
+                      onClick={() => {
+                        navigate('/tutorial');
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 ${
+                        currentPageName === 'Tutorial' ? 'bg-slate-100 font-medium' : ''
+                      }`}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Tutorial
+                    </SimpleDropdownItem>
                   </div>
                 </SimpleDropdown>
               )}
-              <Link
-                to="/tutorial"
-                className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                title="Interactive Tutorial"
-              >
-                <HelpCircle className="w-4 h-4" />
-                <span className="hidden lg:inline">Tutorial</span>
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  title="Interactive Tutorial"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  <span className="hidden lg:inline">Tutorial</span>
+                </Link>
+              )}
               <NotificationBell />
               <ProfileDropdown />
             </div>
 
             {/* Mobile menu button - Better touch targets for PWA/mobile */}
             <div className="md:hidden flex items-center gap-1" style={(isPWA || isNativeApp) ? { gap: '4px' } : {}}>
-              <Link
-                to="/tutorial"
-                className="text-slate-600 hover:text-slate-900"
-                title="Tutorial"
-                style={(isPWA || isNativeApp) ? {
-                  padding: '10px',
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation'
-                } : {
-                  padding: '8px'
-                }}
-              >
-                <HelpCircle className="w-6 h-6" />
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  className="text-slate-600 hover:text-slate-900"
+                  title="Tutorial"
+                  style={(isPWA || isNativeApp) ? {
+                    padding: '10px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation'
+                  } : {
+                    padding: '8px'
+                  }}
+                >
+                  <HelpCircle className="w-6 h-6" />
+                </Link>
+              )}
               <NotificationBell />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -304,7 +376,7 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white">
+          <div className="md:hidden border-t border-slate-200 dark:border-border bg-white dark:bg-surface-1">
             <div className="px-4 py-3 space-y-1">
               {regularNavigation.map((item) => {
                 const Icon = item.icon;
@@ -316,8 +388,8 @@ export default function Layout({ children, currentPageName }) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground/70 hover:bg-surface-2'
                     }`}
                     style={(isPWA || isNativeApp) ? {
                       minHeight: '48px',
@@ -347,8 +419,8 @@ export default function Layout({ children, currentPageName }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                           isActive
-                            ? 'bg-slate-900 text-white'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-foreground/70 hover:bg-surface-2'
                         }`}
                         style={(isPWA || isNativeApp) ? {
                           minHeight: '48px',
@@ -361,16 +433,35 @@ export default function Layout({ children, currentPageName }) {
                       </Link>
                     );
                   })}
+                  <Link
+                    to="/tutorial"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                      currentPageName === 'Tutorial'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-foreground/70 hover:bg-surface-2'
+                    }`}
+                    style={(isPWA || isNativeApp) ? {
+                      minHeight: '48px',
+                      WebkitTapHighlightColor: 'transparent',
+                      touchAction: 'manipulation'
+                    } : {}}
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                    Tutorial
+                  </Link>
                 </>
               )}
-              <Link
-                to="/tutorial"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
-              >
-                <HelpCircle className="w-5 h-5" />
-                Tutorial
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to="/tutorial"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                  Tutorial
+                </Link>
+              )}
               <div className="px-4 py-2">
                 <ProfileDropdown />
               </div>
@@ -380,16 +471,58 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* Main Content - Responsive padding: different for PWA/mobile vs desktop */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8`} style={(isPWA || isNativeApp) ? { 
+      <main 
+        ref={(el) => {
+          if (el && isTutorialMode) {
+            // #region agent log
+            const mainBg = window.getComputedStyle(el).backgroundColor;
+            const mainDisplay = window.getComputedStyle(el).display;
+            const mainVisibility = window.getComputedStyle(el).visibility;
+            const mainZIndex = window.getComputedStyle(el).zIndex;
+            const mainRect = el.getBoundingClientRect();
+            // Check for backdrop/overlay elements
+            const allElements = document.querySelectorAll('*');
+            const backdropElements = Array.from(allElements).filter(el => {
+              const style = window.getComputedStyle(el);
+              const bg = style.backgroundColor;
+              const pos = style.position;
+              const zIdx = parseInt(style.zIndex) || 0;
+              return (bg.includes('rgb(37, 99, 235)') || bg.includes('rgb(79, 70, 229)')) && 
+                     (pos === 'fixed' || pos === 'absolute') && zIdx > 50;
+            });
+            // Check body/html/root backgrounds
+            const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+            const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
+            const rootBg = document.getElementById('root') ? window.getComputedStyle(document.getElementById('root')).backgroundColor : 'no root';
+            // Check for any fixed/absolute elements covering the page
+            const allFixed = Array.from(document.querySelectorAll('*')).filter(el => {
+              const style = window.getComputedStyle(el);
+              return (style.position === 'fixed' || style.position === 'absolute') && 
+                     parseInt(style.zIndex) > 50;
+            }).map(el => ({
+              tag: el.tagName,
+              className: el.className,
+              position: window.getComputedStyle(el).position,
+              zIndex: window.getComputedStyle(el).zIndex,
+              bg: window.getComputedStyle(el).backgroundColor,
+              rect: el.getBoundingClientRect()
+            }));
+            const logData3 = {location:'Layout.jsx:main-ref',message:'Main content element styles and position',data:{mainBg,mainDisplay,mainVisibility,mainZIndex,mainRect:{top:mainRect.top,left:mainRect.left,width:mainRect.width,height:mainRect.height},backdropCount:backdropElements.length,bodyBg,htmlBg,rootBg,allFixedCount:allFixed.length,allFixed:allFixed.slice(0, 5)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['D','E','B']};
+            console.log('🔍 DEBUG Layout main:', JSON.stringify(logData3, null, 2));
+            fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(err=>console.error('Log fetch error:',err));
+            // #endregion
+          }
+        }}
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} style={(isPWA || isNativeApp) ? {
         // PWA and native app specific padding (with safe areas)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
-        backgroundColor: '#ffffff',
+        backgroundColor: 'hsl(var(--background))',
         minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
       } : {
         // Desktop web browser styles - standard padding
         paddingTop: isTutorialMode ? '7rem' : isDesktop ? '6rem' : '5rem',
-        backgroundColor: '#ffffff'
+        backgroundColor: 'hsl(var(--background))'
       }}>
         <div className="animate-in fade-in duration-300">
           {children}

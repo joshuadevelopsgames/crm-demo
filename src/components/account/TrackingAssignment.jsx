@@ -72,7 +72,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
           Tracking + Assignment
         </CardTitle>
         {!isEditing ? (
@@ -108,7 +108,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
       <CardContent>
         <div className="space-y-4">
           <div>
-            <Label className="text-slate-600">Type</Label>
+            <Label className="text-slate-600 dark:text-slate-400">Type</Label>
             {isEditing ? (
               <>
                 <Select
@@ -128,11 +128,11 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   </SelectContent>
                 </Select>
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1 capitalize">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 capitalize">
                 {formData.account_type || '—'}
               </p>
             )}
@@ -159,11 +159,11 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   </SelectContent>
                 </Select>
                 {isImported && (
-                  <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This field is managed by import.</p>
                 )}
               </>
             ) : (
-              <p className="font-medium text-slate-900 mt-1 capitalize">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 capitalize">
                 {formData.classification?.replace('_', ' ') || '—'}
               </p>
             )}
@@ -179,7 +179,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 placeholder="Sales rep email or name"
               />
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.assigned_to || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.assigned_to || '—'}</p>
             )}
           </div>
 
@@ -193,7 +193,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 placeholder="Referral source"
               />
             ) : (
-              <p className="font-medium text-slate-900 mt-1">{formData.referral || '—'}</p>
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1">{formData.referral || '—'}</p>
             )}
           </div>
 
@@ -208,7 +208,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                 rows={3}
               />
             ) : (
-              <p className="font-medium text-slate-900 mt-1 whitespace-pre-wrap">
+              <p className="font-medium text-slate-900 dark:text-[#ffffff] mt-1 whitespace-pre-wrap">
                 {formData.referral_note || '—'}
               </p>
             )}
@@ -240,7 +240,7 @@ export default function TrackingAssignment({ account, onUpdate }) {
                       handleICPStatusChange(newStatus);
                     }}
                   />
-                  <Label htmlFor="icp-required" className="text-xs text-slate-600">
+                  <Label htmlFor="icp-required" className="text-xs text-slate-600 dark:text-slate-400">
                     ICP Required
                   </Label>
                 </div>
@@ -256,10 +256,10 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   variant="outline" 
                   className={
                     formData.icp_status === 'na' 
-                      ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' 
                       : formData.icp_status === 'required'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                   }
                 >
                   {formData.icp_status === 'na' ? 'N/A' : 

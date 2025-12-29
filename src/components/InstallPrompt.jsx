@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     // Check if already installed (standalone mode)
@@ -197,7 +199,7 @@ export default function InstallPrompt() {
             margin: '0 0 8px 0', 
             fontSize: '18px', 
             fontWeight: '600', 
-            color: '#0f172a'
+            color: isDarkMode ? 'white' : '#0f172a'
           }}>
             Install LECRM
           </h3>

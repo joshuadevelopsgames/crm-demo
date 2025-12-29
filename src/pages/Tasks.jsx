@@ -81,7 +81,9 @@ import {
 import {
   createTaskNotifications,
   cleanupTaskNotifications,
+  createTaskAssignmentNotifications,
 } from "../services/notificationService";
+import { unblockNextTask } from "../services/sequenceTaskService";
 import {
   Dialog,
   DialogContent,
@@ -208,6 +210,19 @@ export default function Tasks() {
     },
   });
 
+  // Fetch all users for task assignment
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      try {
+        return await base44.entities.User.list();
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        return [];
+      }
+    },
+  });
+
   // Fetch comments for viewing/editing task
   const taskIdForComments = viewingTask?.id || editingTask?.id;
   const { data: taskComments = [] } = useQuery({
@@ -252,7 +267,50 @@ export default function Tasks() {
     recurrence_end_date: "",
     recurrence_count: null,
   });
+  const [assignedUsersOpen, setAssignedUsersOpen] = useState(false);
   const [newLabelInput, setNewLabelInput] = useState("");
+
+  // Helper functions for multi-user assignment
+  const parseAssignedUsers = (assignedTo) => {
+    if (!assignedTo || assignedTo.trim() === "") return [];
+    return assignedTo.split(",").map((email) => email.trim()).filter(Boolean);
+  };
+
+  const formatAssignedUsers = (emails) => {
+    return emails.filter(Boolean).join(",");
+  };
+
+  const toggleUserAssignment = (userEmail) => {
+    const currentAssignments = parseAssignedUsers(newTask.assigned_to);
+    const isAssigned = currentAssignments.includes(userEmail);
+    
+    if (isAssigned) {
+      const updated = currentAssignments.filter((email) => email !== userEmail);
+      setNewTask({
+        ...newTask,
+        assigned_to: formatAssignedUsers(updated),
+      });
+    } else {
+      const updated = [...currentAssignments, userEmail];
+      setNewTask({
+        ...newTask,
+        assigned_to: formatAssignedUsers(updated),
+      });
+    }
+  };
+
+  const getAssignedUserDisplay = (assignedTo, currentUserEmail) => {
+    const assignedEmails = parseAssignedUsers(assignedTo);
+    if (assignedEmails.length === 0) return "Unassigned";
+    
+    return assignedEmails
+      .map((email) => {
+        if (email === currentUserEmail) return "You";
+        const user = users.find((u) => u.email === email);
+        return user ? (user.full_name || user.name || email) : email;
+      })
+      .join(", ");
+  };
 
   const resetTaskForm = () => {
     setNewTask({
@@ -283,6 +341,10 @@ export default function Tasks() {
   const createTaskMutation = useMutation({
     mutationFn: async (data) => {
       const task = await base44.entities.Task.create(data);
+      // Create assignment notifications for assigned users
+      if (task.assigned_to) {
+        await createTaskAssignmentNotifications(task, null);
+      }
       // Create notifications for task reminders
       if (task.due_date) {
         await createTaskNotifications(task);
@@ -311,6 +373,8 @@ export default function Tasks() {
       // Update notifications based on task status
       if (updatedTask.status === "completed") {
         await cleanupTaskNotifications(id);
+        // Unblock next task if this task was blocking others
+        await unblockNextTask(id);
       } else if (updatedTask.due_date) {
         await createTaskNotifications(updatedTask);
       }
@@ -338,20 +402,117 @@ export default function Tasks() {
       const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
       await Promise.all(
         taskIdsArray.map(async (taskId) => {
-          await base44.entities.Task.delete(taskId);
-          await cleanupTaskNotifications(taskId);
+          const task = tasks.find((t) => t.id === taskId);
+          if (!task) {
+            throw new Error("Task not found");
+          }
+
+          const assignedEmails = parseAssignedUsers(task.assigned_to || "");
+          const currentUserEmail = currentUser?.email;
+
+          // If user is assigned to the task, remove them from assignment instead of deleting
+          if (assignedEmails.includes(currentUserEmail)) {
+            const updatedAssignments = assignedEmails.filter(
+              (email) => email !== currentUserEmail
+            );
+
+            // If removing this user leaves no assigned users, fully delete the task
+            if (updatedAssignments.length === 0) {
+              await base44.entities.Task.delete(taskId);
+              await cleanupTaskNotifications(taskId);
+            } else {
+              // Remove user from assignment
+              await base44.entities.Task.update(taskId, {
+                assigned_to: formatAssignedUsers(updatedAssignments),
+              });
+              // Clean up notifications for this user only
+              // (other users' notifications remain)
+            }
+          } else {
+            // User is not assigned - just remove from their view (no database change)
+            // The task will remain for other assigned users
+            // We'll handle this in the onSuccess by filtering it from the cache
+          }
         }),
       );
     },
-    onSuccess: (_, taskIds) => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    onSuccess: async (_, taskIds) => {
+      const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
+      
+      // Optimistically remove tasks from cache immediately
+      queryClient.setQueryData(["tasks"], (oldTasks = []) => {
+        return oldTasks.filter((task) => {
+          const assignedEmails = parseAssignedUsers(task.assigned_to || "");
+          const currentUserEmail = currentUser?.email;
+          
+          // If task is in deletion list
+          if (taskIdsArray.includes(task.id)) {
+            // If user was assigned, check if they should still see it
+            if (assignedEmails.includes(currentUserEmail)) {
+              const remainingAssignments = assignedEmails.filter(
+                (email) => email !== currentUserEmail
+              );
+              // If no assignments left, remove from cache (task was fully deleted)
+              // If assignments remain, keep it (user was just unassigned)
+              return remainingAssignments.length > 0;
+            }
+            // User wasn't assigned - remove from their view (task remains in DB for others)
+            return false;
+          }
+          return true;
+        });
+      });
+      
+      // Then invalidate and refetch to ensure server state is synced
+      // Note: For tasks user wasn't assigned to, we don't refetch since we only removed from view
+      const tasksToRefetch = taskIdsArray.filter((taskId) => {
+        const task = tasks.find((t) => t.id === taskId);
+        const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+        return assignedEmails.includes(currentUser?.email);
+      });
+      
+      if (tasksToRefetch.length > 0) {
+        await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        await queryClient.refetchQueries({ queryKey: ["tasks"] });
+        await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        await queryClient.refetchQueries({ queryKey: ["notifications"] });
+      }
+      
       setDeleteDialogOpen(false);
-      const count = Array.isArray(taskIds) ? taskIds.length : 1;
+      const count = taskIdsArray.length;
+      
+      // Determine success message based on what happened
       if (count === 1) {
-        toast.success("✓ Task deleted");
+        const task = tasks.find((t) => t.id === taskIdsArray[0]);
+        const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+        const currentUserEmail = currentUser?.email;
+        const wasAssigned = assignedEmails.includes(currentUserEmail);
+        const remainingAssignments = assignedEmails.filter(
+          (email) => email !== currentUserEmail
+        );
+
+        if (!wasAssigned) {
+          toast.success("✓ Task removed from view");
+        } else if (remainingAssignments.length === 0) {
+          toast.success("✓ Task deleted");
+        } else {
+          toast.success("✓ Removed from task assignment");
+        }
       } else {
-        toast.success(`✓ Deleted ${count} tasks`);
+        // Count how many were assigned vs not assigned
+        const assignedCount = taskIdsArray.filter((taskId) => {
+          const task = tasks.find((t) => t.id === taskId);
+          const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+          return assignedEmails.includes(currentUser?.email);
+        }).length;
+        
+        if (assignedCount === 0) {
+          toast.success(`✓ Removed ${count} task${count > 1 ? 's' : ''} from view`);
+        } else if (assignedCount === count) {
+          toast.success(`✓ Removed from ${count} task assignment${count > 1 ? 's' : ''}`);
+        } else {
+          toast.success(`✓ Removed ${count} task${count > 1 ? 's' : ''} from view and assignments`);
+        }
       }
       setTasksToDelete([]);
     },
@@ -739,7 +900,11 @@ export default function Tasks() {
     }
 
     if (editingTask) {
-      updateTaskMutation.mutate({ id: editingTask.id, data: taskData });
+      updateTaskMutation.mutate({ 
+        id: editingTask.id, 
+        data: taskData,
+        previousAssignedTo: editingTask.assigned_to || null
+      });
     } else {
       createTaskMutation.mutate(taskData);
     }
@@ -820,12 +985,21 @@ export default function Tasks() {
 
   const handleStatusChange = async (taskId, newStatus) => {
     const task = tasks.find((t) => t.id === taskId);
+    
+    // Prevent completing blocked tasks
+    if (newStatus === "completed" && task?.status === "blocked") {
+      toast.error("Cannot complete a blocked task. Complete the blocking task first.");
+      return;
+    }
+    
     const completedDate =
       newStatus === "completed" ? new Date().toISOString() : null;
 
     // Clean up notifications if task is completed
     if (newStatus === "completed") {
       await cleanupTaskNotifications(taskId);
+      // Unblock next task if this task was blocking others
+      await unblockNextTask(taskId);
     }
 
     updateTaskMutation.mutate({
@@ -991,24 +1165,26 @@ export default function Tasks() {
     if (!matchesSearch || !matchesPriority || !matchesLabel) return false;
 
     // Apply tab filter
+    // Note: blocked tasks are excluded from main views but can be seen in "all" view
     switch (activeFilter) {
       case "inbox":
         return (
           task.status !== "completed" &&
-          !task.due_date &&
-          task.assigned_to === currentUser?.email
+          task.status !== "blocked" &&
+          parseAssignedUsers(task.assigned_to).includes(currentUser?.email)
         );
       case "today":
         return (
           task.status !== "completed" &&
+          task.status !== "blocked" &&
           (isTaskToday(task) || isTaskOverdue(task))
         );
       case "upcoming":
-        return task.status !== "completed" && isTaskUpcoming(task);
+        return task.status !== "completed" && task.status !== "blocked" && isTaskUpcoming(task);
       case "completed":
         return task.status === "completed";
       default:
-        return true;
+        return true; // "all" view shows all tasks including blocked
     }
   });
 
@@ -1205,8 +1381,8 @@ export default function Tasks() {
     const inbox = tasks.filter(
       (task) =>
         task.status !== "completed" &&
-        !task.due_date &&
-        task.assigned_to === currentUser?.email,
+        task.status !== "blocked" &&
+        parseAssignedUsers(task.assigned_to).includes(currentUser?.email),
     ).length;
     const today = tasks.filter(
       (task) =>
@@ -1231,12 +1407,12 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <TutorialTooltip
-          tip="This is your Tasks page. Manage all your follow-ups and action items here. Create tasks, set priorities and due dates, and track their status. Press ⌘K to quickly add a task."
+          tip="Your central task management hub. Create tasks for follow-ups, meetings, and action items. Use tabs to filter by status (Today, Upcoming, Completed). Click any task to view details, add comments or attachments, update status, or mark as complete. Tasks from sequences are automatically created and blocked until previous tasks complete. Press ⌘K (or Ctrl+K) to quickly create a new task."
           step={6}
           position="bottom"
         >
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Tasks</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Tasks</h1>
             <p className="text-slate-600 mt-1">
               {filteredTasks.length}{" "}
               {activeFilter === "today"
@@ -1261,14 +1437,15 @@ export default function Tasks() {
           </div>
         </TutorialTooltip>
         <TutorialTooltip
-          tip="Click this button to create a new task. Tasks help you track follow-ups, meetings, and other action items related to your accounts and contacts."
+          tip="Create a new task to track any action item. Set a title, description, due date, priority, and link it to an account or contact for context. You can also make tasks recurring (daily, weekly, monthly), add attachments, and create subtasks. Tasks help you never miss a follow-up or deadline."
           step={6}
           position="bottom"
         >
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
-                className="bg-slate-900 hover:bg-slate-800"
+                variant="outline"
+                className="border-slate-300"
                 onClick={() => {
                   setEditingTask(null);
                   setViewingTask(null);
@@ -1357,11 +1534,11 @@ export default function Tasks() {
                     {isViewMode && viewingTask && (
                       <div className="space-y-6">
                         <div>
-                          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                             {viewingTask.title}
                           </h2>
                           {viewingTask.description && (
-                            <p className="text-slate-700 whitespace-pre-wrap">
+                            <p className="text-slate-700 dark:text-white whitespace-pre-wrap">
                               {viewingTask.description}
                             </p>
                           )}
@@ -1404,7 +1581,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Category
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.category || "Other"}
                             </p>
                           </div>
@@ -1412,7 +1589,7 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Due Date
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.due_date
                                 ? format(
                                     new Date(viewingTask.due_date),
@@ -1427,15 +1604,15 @@ export default function Tasks() {
                             <Label className="text-slate-500 text-xs uppercase">
                               Assigned To
                             </Label>
-                            <p className="mt-1 text-slate-900">
-                              {viewingTask.assigned_to || "Unassigned"}
+                            <p className="mt-1 text-slate-900 dark:text-white">
+                              {getAssignedUserDisplay(viewingTask.assigned_to, currentUser?.email)}
                             </p>
                           </div>
                           <div>
                             <Label className="text-slate-500 text-xs uppercase">
                               Estimated Time
                             </Label>
-                            <p className="mt-1 text-slate-900">
+                            <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.estimated_time || 30} minutes
                             </p>
                           </div>
@@ -1444,7 +1621,7 @@ export default function Tasks() {
                               <Label className="text-slate-500 text-xs uppercase">
                                 Related Account
                               </Label>
-                              <p className="mt-1 text-slate-900">
+                              <p className="mt-1 text-slate-900 dark:text-white">
                                 {accounts.find(
                                   (a) =>
                                     a.id === viewingTask.related_account_id,
@@ -1477,7 +1654,7 @@ export default function Tasks() {
                               <Label className="text-slate-500 text-xs uppercase">
                                 Recurring
                               </Label>
-                              <p className="mt-1 text-slate-900">
+                              <p className="mt-1 text-slate-900 dark:text-white">
                                 {viewingTask.recurrence_pattern} (every{" "}
                                 {viewingTask.recurrence_interval})
                               </p>
@@ -1626,17 +1803,69 @@ export default function Tasks() {
                           />
                         </div>
                         <div>
-                          <Label>Assigned To (email)</Label>
-                          <Input
-                            value={newTask.assigned_to}
-                            onChange={(e) =>
-                              setNewTask({
-                                ...newTask,
-                                assigned_to: e.target.value,
-                              })
-                            }
-                            placeholder="team@company.com"
-                          />
+                          <Label>Assigned To</Label>
+                          <Select
+                            open={assignedUsersOpen}
+                            onOpenChange={setAssignedUsersOpen}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select users">
+                                {parseAssignedUsers(newTask.assigned_to).length > 0
+                                  ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
+                                  : "Select users"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className={isMobile || isPWA || isNativeApp ? "max-h-[60vh] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
+                              <div className={isMobile || isPWA || isNativeApp ? "p-2 space-y-1" : "p-2 space-y-2"}>
+                                <div
+                                  className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
+                                  onClick={() => {
+                                    setNewTask({
+                                      ...newTask,
+                                      assigned_to: "",
+                                    });
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={parseAssignedUsers(newTask.assigned_to).length === 0}
+                                    onChange={() => {}}
+                                    className={`${isMobile || isPWA || isNativeApp ? "h-5 w-5" : "h-4 w-4"} rounded border-gray-300 text-blue-600 focus:ring-blue-500`}
+                                  />
+                                  <Label className="cursor-pointer font-normal">Unassigned</Label>
+                                </div>
+                                {users.map((user) => {
+                                  const isAssigned = parseAssignedUsers(newTask.assigned_to).includes(user.email);
+                                  return (
+                                    <div
+                                      key={user.id || user.email}
+                                      className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
+                                      onClick={() => toggleUserAssignment(user.email)}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isAssigned}
+                                        onChange={() => {}}
+                                        className={`${isMobile || isPWA || isNativeApp ? "h-5 w-5" : "h-4 w-4"} rounded border-gray-300 text-blue-600 focus:ring-blue-500`}
+                                      />
+                                      <div className="flex flex-col flex-1 min-w-0">
+                                        <Label className="cursor-pointer font-normal truncate">
+                                          {user.email === currentUser?.email
+                                            ? "You"
+                                            : user.full_name || user.name || user.email}
+                                        </Label>
+                                        {user.email && (user.full_name || user.name) && user.email !== currentUser?.email && (
+                                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                            {user.email}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label>Related Account</Label>
@@ -1758,7 +1987,7 @@ export default function Tasks() {
                                   is_recurring: e.target.checked,
                                 })
                               }
-                              className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+                              className="w-4 h-4 rounded border-slate-300 text-slate-900 dark:text-white focus:ring-slate-500"
                             />
                             <Label
                               htmlFor="is_recurring"
@@ -1871,7 +2100,7 @@ export default function Tasks() {
                                             []
                                           ).includes(index)
                                             ? "bg-slate-900 text-white border-slate-900"
-                                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                                            : "bg-white dark:bg-surface-2 text-slate-700 dark:text-foreground border-slate-300 dark:border-border hover:bg-slate-50 dark:hover:bg-surface-3"
                                         }`}
                                       >
                                         {day.slice(0, 3)}
@@ -1981,7 +2210,7 @@ export default function Tasks() {
                               taskComments.map((comment) => (
                                 <div
                                   key={comment.id}
-                                  className="border rounded-lg p-3 bg-slate-50"
+                                  className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                 >
                                   {editingCommentId === comment.id ? (
                                     <div className="space-y-2">
@@ -2018,7 +2247,7 @@ export default function Tasks() {
                                     <>
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                          <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                                          <p className="text-sm text-slate-900 dark:text-white whitespace-pre-wrap">
                                             {comment.content}
                                           </p>
                                           <p className="text-xs text-slate-500 mt-1">
@@ -2077,13 +2306,13 @@ export default function Tasks() {
                             className={`border-2 border-dashed rounded-lg p-8 transition-all ${
                               isDragging
                                 ? "border-blue-500 bg-blue-50"
-                                : "border-slate-300 bg-slate-50"
+                                : "border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
                             }`}
                           >
                             <div className="flex flex-col items-center text-center space-y-3">
                               <UploadIcon className="w-10 h-10 text-slate-400" />
                               <div>
-                                <p className="font-semibold text-slate-900">
+                                <p className="font-semibold text-slate-900 dark:text-foreground">
                                   {isDragging
                                     ? "Drop file here"
                                     : "Drag and drop files here"}
@@ -2129,7 +2358,7 @@ export default function Tasks() {
                                   >
                                     <div className="flex items-center gap-2">
                                       <Paperclip className="w-4 h-4 text-blue-600" />
-                                      <span className="text-sm text-slate-900">
+                                      <span className="text-sm text-slate-900 dark:text-white">
                                         {file.name}
                                       </span>
                                       <span className="text-xs text-slate-500">
@@ -2165,7 +2394,7 @@ export default function Tasks() {
                               {taskAttachments.map((attachment) => (
                                 <div
                                   key={attachment.id}
-                                  className="border rounded-lg p-3 bg-slate-50 flex items-center justify-between"
+                                  className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center justify-between"
                                 >
                                   <div className="flex items-center gap-3 flex-1 min-w-0">
                                     <Paperclip className="w-5 h-5 text-slate-400 flex-shrink-0" />
@@ -2174,7 +2403,7 @@ export default function Tasks() {
                                         onClick={(e) =>
                                           handleFileDownload(attachment, e)
                                         }
-                                        className="text-sm font-medium text-slate-900 hover:text-slate-700 truncate block text-left w-full"
+                                        className="text-sm font-medium text-slate-900 dark:text-foreground hover:text-slate-700 dark:hover:text-text-muted truncate block text-left w-full"
                                         title="Click to download"
                                       >
                                         {attachment.file_name}
@@ -2234,7 +2463,7 @@ export default function Tasks() {
               {/* Footer buttons - only show when creating a new task or editing (not viewing) */}
               {!isViewMode && (taskDialogTab === "details" || !editingTask) && (
                       <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={closeDialog}>
+                        <Button variant="outline" onClick={closeDialog} className="border-slate-300">
                           Cancel
                         </Button>
                         <Button
@@ -2252,7 +2481,7 @@ export default function Tasks() {
 
       {/* Tabs and Filters */}
       <TutorialTooltip
-        tip="Use tabs to filter tasks: Inbox (no due date), Today (due today or overdue), Upcoming (future dates), and Completed. Use the search and priority filter to narrow down further."
+        tip="Organize your tasks with smart filtering. Use tabs: Inbox (tasks without due dates), Today (due today or overdue - prioritize these), Upcoming (future tasks), and Completed (your finished work). Use the search bar to find specific tasks by title or description. Filter by priority to focus on urgent items first. Switch between list, grid, and calendar views to see your tasks in different formats."
         step={6}
         position="bottom"
       >
@@ -2272,7 +2501,7 @@ export default function Tasks() {
                   : {}
               }
             >
-              <TabsList className="bg-white/80 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
+              <TabsList className="bg-white dark:bg-surface-1 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
                 <TabsTrigger value="inbox" className="flex items-center gap-2">
                   <Inbox className="w-4 h-4" />
                   Inbox ({counts.inbox})
@@ -2452,7 +2681,7 @@ export default function Tasks() {
 
       {/* Tasks List */}
       <TutorialTooltip
-        tip="This is your task list. Click on any task to edit it, update its status, or change its priority. Drag tasks to reorder them. Tasks can be linked to accounts for better organization."
+        tip="Your complete task list. Click any task to view or edit it - you can update status, change priority, add comments or attachments, set due dates, and link to accounts. Drag and drop tasks to reorder them manually. Tasks from sequences are automatically ordered and blocked until previous tasks complete. Use bulk selection mode to complete or delete multiple tasks at once."
         step={6}
         position="bottom"
       >
@@ -2563,9 +2792,9 @@ export default function Tasks() {
                               {/* Task Title */}
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <h3
-                                  className={`font-semibold text-slate-900 text-sm line-clamp-2 leading-snug flex-1 ${
+                                  className={`font-semibold text-slate-900 dark:text-foreground text-sm line-clamp-2 leading-snug flex-1 ${
                                     task.status === "completed"
-                                      ? "line-through text-slate-500"
+                                      ? "line-through text-slate-500 dark:text-text-muted"
                                       : ""
                                   }`}
                                 >
@@ -2608,7 +2837,7 @@ export default function Tasks() {
                                           ? "bg-red-50 text-red-700 border-red-200"
                                           : isTaskToday(task)
                                             ? "bg-amber-50 text-amber-700 border-amber-200"
-                                            : "text-slate-600 bg-slate-50 border-slate-200"
+                                            : "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                       }`}
                                     >
                                       <Calendar className="w-2.5 h-2.5" />
@@ -2623,7 +2852,7 @@ export default function Tasks() {
                                   {task.estimated_time && (
                                     <Badge
                                       variant="outline"
-                                      className="text-slate-600 bg-slate-50 border-slate-200 flex items-center gap-0.5 px-1.5 py-0.5"
+                                      className="text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-0.5 px-1.5 py-0.5"
                                     >
                                       <Clock className="w-2.5 h-2.5" />
                                       {task.estimated_time}m
@@ -2756,9 +2985,9 @@ export default function Tasks() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <h3
-                                        className={`font-semibold ${isMobileView ? "text-base" : "text-base"} text-slate-900 leading-tight ${
+                                        className={`font-semibold ${isMobileView ? "text-base" : "text-base"} text-slate-900 dark:text-foreground leading-tight ${
                                           task.status === "completed"
-                                            ? "line-through text-slate-500"
+                                            ? "line-through text-slate-500 dark:text-text-muted"
                                             : ""
                                         }`}
                                       >
@@ -2780,7 +3009,7 @@ export default function Tasks() {
                                     }}
                                   >
                                     <SelectTrigger
-                                      className={`${isMobileView ? "w-[150px] min-w-[150px] h-9" : "w-[160px]"} px-3 py-1.5 border border-slate-300 hover:bg-slate-50 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
+                                      className={`${isMobileView ? "w-[150px] min-w-[150px] h-9" : "w-[160px]"} px-3 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-2 flex-shrink-0 touch-manipulation`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                       }}
@@ -2828,7 +3057,7 @@ export default function Tasks() {
                                           ? "bg-red-50 text-red-700 border-red-200"
                                           : isTaskToday(task)
                                             ? "bg-amber-50 text-amber-700 border-amber-200"
-                                            : "text-slate-600 bg-slate-50 border-slate-200"
+                                            : "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                                       }`}
                                     >
                                       <Calendar className="w-3 h-3" />
@@ -2845,12 +3074,35 @@ export default function Tasks() {
                                   {accountName && (
                                     <Badge
                                       variant="outline"
-                                      className="text-xs px-2 py-0.5 text-blue-600 bg-blue-50 border-blue-200 flex items-center gap-1 truncate max-w-[120px]"
+                                      className="text-xs px-2 py-0.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800 flex items-center gap-1 truncate max-w-[120px]"
                                     >
                                       <Building2 className="w-3 h-3 flex-shrink-0" />
                                       <span className="truncate">
                                         {accountName}
                                       </span>
+                                    </Badge>
+                                  )}
+                                  {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs px-2 py-0.5 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-1"
+                                    >
+                                      <User className="w-3 h-3" />
+                                      {(() => {
+                                        const assignedEmails = parseAssignedUsers(task.assigned_to);
+                                        if (assignedEmails.length === 1) {
+                                          const email = assignedEmails[0];
+                                          if (email === currentUser?.email) return "You";
+                                          const user = users.find((u) => u.email === email);
+                                          return user
+                                            ? user.full_name || user.name || email.split("@")[0]
+                                            : email.split("@")[0];
+                                        }
+                                        const includesYou = assignedEmails.includes(currentUser?.email);
+                                        return includesYou
+                                          ? `You + ${assignedEmails.length - 1}`
+                                          : `${assignedEmails.length} people`;
+                                      })()}
                                     </Badge>
                                   )}
                                   {task.labels &&
@@ -2861,13 +3113,13 @@ export default function Tasks() {
                                         <Badge
                                           key={idx}
                                           variant="outline"
-                                          className="text-xs px-2 py-0.5 text-purple-700 bg-purple-50 border-purple-200"
+                                          className="text-xs px-2 py-0.5 text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
                                         >
                                           {label}
                                         </Badge>
                                       ))}
                                   {task.labels && task.labels.length > 2 && (
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
                                       +{task.labels.length - 2}
                                     </span>
                                   )}
@@ -2944,7 +3196,7 @@ export default function Tasks() {
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
                                         <h3
-                                          className={`font-semibold text-slate-900 ${
+                                          className={`font-semibold text-slate-900 dark:text-foreground ${
                                             task.status === "completed"
                                               ? "line-through"
                                               : ""
@@ -3005,7 +3257,7 @@ export default function Tasks() {
                                     {task.category && (
                                       <Badge
                                         variant="outline"
-                                        className="text-slate-700"
+                                        className="text-slate-700 dark:text-white"
                                       >
                                         {task.category.replace("_", " ")}
                                       </Badge>
@@ -3032,13 +3284,27 @@ export default function Tasks() {
                                               )}
                                       </Badge>
                                     )}
-                                    {task.assigned_to && (
+                                    {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (
                                       <Badge
                                         variant="outline"
-                                        className="text-slate-600 flex items-center gap-1"
+                                        className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex items-center gap-1"
                                       >
                                         <User className="w-3 h-3" />
-                                        {task.assigned_to.split("@")[0]}
+                                        {(() => {
+                                          const assignedEmails = parseAssignedUsers(task.assigned_to);
+                                          if (assignedEmails.length === 1) {
+                                            const email = assignedEmails[0];
+                                            if (email === currentUser?.email) return "You";
+                                            const user = users.find((u) => u.email === email);
+                                            return user
+                                              ? user.full_name || user.name || email.split("@")[0]
+                                              : email.split("@")[0];
+                                          }
+                                          const includesYou = assignedEmails.includes(currentUser?.email);
+                                          return includesYou
+                                            ? `You + ${assignedEmails.length - 1}`
+                                            : `${assignedEmails.length} people`;
+                                        })()}
                                       </Badge>
                                     )}
                                     {accountName && (
@@ -3083,7 +3349,7 @@ export default function Tasks() {
         {filteredTasks.length === 0 && (
           <Card className="p-12 text-center">
             <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">
+            <h3 className="text-lg font-medium text-slate-900 dark:text-foreground mb-1">
               No tasks found
             </h3>
             <p className="text-slate-600">
@@ -3104,27 +3370,93 @@ export default function Tasks() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {tasksToDelete.length > 1
-                ? "Delete Multiple Tasks"
-                : "Delete Task"}
+                ? "Remove from Tasks"
+                : "Remove from Task"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {tasksToDelete.length > 1 ? (
-                `Are you sure you want to delete ${tasksToDelete.length} tasks? This action cannot be undone.`
+                <>
+                  {(() => {
+                    const assignedTasks = tasksToDelete.filter((id) => {
+                      const task = tasks.find((t) => t.id === id);
+                      const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                      return assignedEmails.includes(currentUser?.email);
+                    });
+                    const unassignedTasks = tasksToDelete.length - assignedTasks.length;
+                    
+                    if (assignedTasks.length > 0 && unassignedTasks > 0) {
+                      return (
+                        <>
+                          Are you sure you want to remove {tasksToDelete.length} tasks from your view?
+                          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
+                            {assignedTasks.length} task{assignedTasks.length > 1 ? 's' : ''} you're assigned to will remove you from the assignment. {unassignedTasks} task{unassignedTasks > 1 ? 's' : ''} will be removed from your view only.
+                          </div>
+                        </>
+                      );
+                    } else if (assignedTasks.length > 0) {
+                      return (
+                        <>
+                          Are you sure you want to remove yourself from {tasksToDelete.length} tasks?
+                          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
+                            This will remove you from the assignment. Other assigned users will still see these tasks.
+                          </div>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          Are you sure you want to remove {tasksToDelete.length} tasks from your view?
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                            These tasks will be removed from your view only. Other assigned users will still see them.
+                          </div>
+                        </>
+                      );
+                    }
+                  })()}
+                </>
               ) : (
                 <>
-                  Are you sure you want to delete this task? This action cannot
-                  be undone.
-                  {tasksToDelete.length === 1 &&
-                    tasks.find((t) => t.id === tasksToDelete[0])
-                      ?.assigned_to && (
-                      <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
-                        <strong>Task assigned to:</strong>{" "}
-                        {
-                          tasks.find((t) => t.id === tasksToDelete[0])
-                            ?.assigned_to
-                        }
-                      </div>
-                    )}
+                  {(() => {
+                    const task = tasks.find((t) => t.id === tasksToDelete[0]);
+                    const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                    const currentUserEmail = currentUser?.email;
+                    const isAssigned = assignedEmails.includes(currentUserEmail);
+                    const remainingAssignments = assignedEmails.filter(
+                      (email) => email !== currentUserEmail
+                    );
+
+                    if (!isAssigned) {
+                      return (
+                        <>
+                          Are you sure you want to remove this task from your view?
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                            This task will be removed from your view only. Other assigned users will still see it.
+                          </div>
+                        </>
+                      );
+                    }
+
+                    if (remainingAssignments.length === 0) {
+                      return (
+                        <>
+                          Are you sure you want to delete this task? You are the only assigned user, so this will permanently delete the task.
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        This will remove you from this task assignment. The task will remain for other assigned users.
+                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
+                          <strong>Task will remain assigned to:</strong>{" "}
+                          {getAssignedUserDisplay(
+                            formatAssignedUsers(remainingAssignments),
+                            currentUserEmail
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </AlertDialogDescription>
@@ -3143,7 +3475,23 @@ export default function Tasks() {
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteTaskMutation.isPending}
             >
-              {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteTaskMutation.isPending ? "Removing..." : 
+                (() => {
+                  if (tasksToDelete.length === 1) {
+                    const task = tasks.find((t) => t.id === tasksToDelete[0]);
+                    const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
+                    const currentUserEmail = currentUser?.email;
+                    const isAssigned = assignedEmails.includes(currentUserEmail);
+                    const remainingAssignments = assignedEmails.filter(
+                      (email) => email !== currentUserEmail
+                    );
+                    
+                    if (!isAssigned) return "Remove from View";
+                    if (remainingAssignments.length === 0) return "Delete";
+                    return "Remove Me";
+                  }
+                  return "Remove";
+                })()}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

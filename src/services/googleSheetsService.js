@@ -1416,6 +1416,102 @@ export async function writeJobsitesToSheet(jobsites) {
 }
 
 /**
+ * Export all accounts and contacts to Google Sheets
+ * Fetches all data from Supabase and writes to Google Sheets
+ * This function handles batching to avoid timeouts for large datasets
+ */
+export async function exportAllDataToGoogleSheet() {
+  try {
+    console.log('🔄 Starting full data export to Google Sheets...');
+    
+    // Fetch all accounts from Supabase
+    const accountsResponse = await fetch('/api/data/accounts');
+    if (!accountsResponse.ok) {
+      throw new Error('Failed to fetch accounts');
+    }
+    const accountsData = await accountsResponse.json();
+    const accounts = accountsData.data || [];
+    
+    console.log(`📊 Found ${accounts.length} accounts`);
+    
+    // Fetch all contacts from Supabase
+    const contactsResponse = await fetch('/api/data/contacts');
+    if (!contactsResponse.ok) {
+      throw new Error('Failed to fetch contacts');
+    }
+    const contactsData = await contactsResponse.json();
+    const contacts = contactsData.data || [];
+    
+    console.log(`📊 Found ${contacts.length} contacts`);
+    
+    // Export in batches to avoid timeout
+    const batchSize = 100;
+    let accountsExported = 0;
+    let contactsExported = 0;
+    
+    // Export accounts in batches
+    if (accounts.length > 0) {
+      const totalBatches = Math.ceil(accounts.length / batchSize);
+      for (let i = 0; i < accounts.length; i += batchSize) {
+        const batch = accounts.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        console.log(`📤 Exporting accounts batch ${batchNumber} of ${totalBatches}...`);
+        const result = await writeAccountsToSheet(batch);
+        if (result.success) {
+          accountsExported += result.result?.total || batch.length;
+        } else {
+          throw new Error(result.error || 'Failed to export accounts batch');
+        }
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < accounts.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    // Export contacts in batches
+    if (contacts.length > 0) {
+      const totalBatches = Math.ceil(contacts.length / batchSize);
+      for (let i = 0; i < contacts.length; i += batchSize) {
+        const batch = contacts.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        console.log(`📤 Exporting contacts batch ${batchNumber} of ${totalBatches}...`);
+        const result = await writeContactsToSheet(batch);
+        if (result.success) {
+          contactsExported += result.result?.total || batch.length;
+        } else {
+          throw new Error(result.error || 'Failed to export contacts batch');
+        }
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < contacts.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    console.log('✅ Export complete!', {
+      accountsExported,
+      contactsExported
+    });
+    
+    return {
+      success: true,
+      summary: {
+        accountsExported,
+        contactsExported,
+        totalRecords: accountsExported + contactsExported
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error exporting data to Google Sheets:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to export data'
+    };
+  }
+}
+
+/**
  * Parse scorecard template structure from the primary scorecard Google Sheet
  * Extracts questions, sections, weights, and answer types to create a template
  * 

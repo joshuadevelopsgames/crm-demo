@@ -122,9 +122,12 @@ export default async function handler(req, res) {
           enrollmentData.sequence_id = null;
         }
         
-        // Only include id if it's provided and valid
+        // Generate ID if not provided
         if (id) {
           enrollmentData.id = id;
+        } else {
+          // Generate a simple ID if not provided
+          enrollmentData.id = `enroll_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         }
         
         const { data: created, error } = await supabase
@@ -134,14 +137,29 @@ export default async function handler(req, res) {
           .single();
         
         if (error) {
+          // Log the actual error for debugging
+          console.error('Error creating sequence enrollment:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          console.error('Error details:', error.details);
+          console.error('Error hint:', error.hint);
+          console.error('Enrollment data:', enrollmentData);
+          
           // Provide helpful error message if table doesn't exist
-          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
+          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204' || error.code === '42P01')) {
             return res.status(500).json({
               success: false,
-              error: 'sequence_enrollments table not found. Please create the table in Supabase first.'
+              error: `sequence_enrollments table not found. Please create the table in Supabase first. Error: ${error.message}`
             });
           }
-          throw error;
+          
+          // Return the actual error message
+          return res.status(500).json({
+            success: false,
+            error: error.message || error.details || 'Failed to create sequence enrollment',
+            errorCode: error.code,
+            errorHint: error.hint
+          });
         }
         
         return res.status(201).json({

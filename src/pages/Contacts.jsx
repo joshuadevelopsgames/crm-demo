@@ -47,7 +47,14 @@ export default function Contacts() {
   const [sortBy, setSortBy] = useState('name'); // 'name' or 'account'
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
+  // Default to card view on mobile, list view on desktop
+  // Use lazy initializer to check device on initial render
+  const [viewMode, setViewMode] = useState(() => {
+    // Check if mobile on initial render (screen width or user agent)
+    if (typeof window === 'undefined') return 'list';
+    const isMobileDevice = window.innerWidth < 768 || /iPad|iPhone|iPod|Android/.test(navigator.userAgent);
+    return isMobileDevice ? 'card' : 'list';
+  }); // 'list' or 'card'
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
 
   const queryClient = useQueryClient();
@@ -134,18 +141,18 @@ export default function Contacts() {
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Contacts page. View all contacts across all accounts and search by name. Each contact belongs to an account and includes contact information and preferences."
+        tip="Your complete contact directory across all accounts. Search by name to quickly find anyone. Each contact shows their account, role, email, phone, and preferences. Click any contact to view full details including their interaction history, linked tasks, and notes. Use this to manage your network, find the right person at each company, and track who you know where."
         step={2}
         position="bottom"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Contacts</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Contacts</h1>
             <p className="text-slate-600 mt-1">{filteredContacts.length} total contacts</p>
           </div>
           <Button 
             onClick={() => setIsImportDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
           >
             <Upload className="w-4 h-4 mr-2" />
             Import from LMN
@@ -155,7 +162,7 @@ export default function Contacts() {
 
       {/* Tabs: Active / Archived */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full justify-start bg-white border-b rounded-none h-auto p-0 space-x-0">
+        <TabsList className="w-full justify-start bg-white dark:bg-surface-1 border-b dark:border-border rounded-none h-auto p-0 space-x-0">
           <TabsTrigger 
             value="active" 
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:bg-transparent px-6 py-3"
@@ -236,42 +243,42 @@ export default function Contacts() {
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
                       <tr 
                         key={contact.id}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                               <Users className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                                <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                   {contact.first_name} {contact.last_name}
                                 </span>
                                 {isArchived && (
@@ -284,7 +291,7 @@ export default function Contacts() {
                             </div>
                           </div>
                         </td>
-                        <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`px-2 sm:px-4 py-3 sm:py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                           {contact.title || '-'}
                         </td>
                         <td className="px-4 py-4">
@@ -341,7 +348,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-surface-2 opacity-75' : 'bg-white dark:bg-surface-1'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
@@ -356,7 +363,7 @@ export default function Contacts() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </h3>
                               {contact.title && (
@@ -447,7 +454,7 @@ export default function Contacts() {
           {filteredContacts.length === 0 && (
             <Card className="p-12 text-center">
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No contacts found</h3>
               <p className="text-slate-600 mb-4">
                 {(filterName || filterAccount !== 'all')
                   ? 'Try adjusting your filters'
@@ -522,42 +529,42 @@ export default function Contacts() {
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Contact
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Title
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Account
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <th className="px-0.5 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                         Phone
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredContacts.map((contact) => {
                       const isArchived = contact.status === 'archived' || contact.archived === true;
                       return (
                       <tr 
                         key={contact.id}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50' : ''}`}
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isArchived ? 'bg-slate-200' : 'bg-slate-100'}`}>
                               <Users className={`w-5 h-5 ${isArchived ? 'text-slate-500' : 'text-slate-600'}`} />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                                <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                   {contact.first_name} {contact.last_name}
                                 </span>
                                 {isArchived && (
@@ -570,7 +577,7 @@ export default function Contacts() {
                             </div>
                           </div>
                         </td>
-                        <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                        <td className={`px-2 sm:px-4 py-3 sm:py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
                           {contact.title || '-'}
                         </td>
                         <td className="px-4 py-4">
@@ -627,7 +634,7 @@ export default function Contacts() {
                 return (
                 <Card 
                   key={contact.id} 
-                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}
+                  className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-surface-2 opacity-75' : 'bg-white dark:bg-surface-1'}`}
                   onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                 >
                   <CardContent className="p-5">
@@ -642,7 +649,7 @@ export default function Contacts() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <h3 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-foreground'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </h3>
                               {contact.title && (
@@ -733,7 +740,7 @@ export default function Contacts() {
           {filteredContacts.length === 0 && (
             <Card className="p-12 text-center">
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No archived contacts found</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No archived contacts found</h3>
               <p className="text-slate-600 mb-4">
                 {(filterName || filterAccount !== 'all')
                   ? 'Try adjusting your filters'

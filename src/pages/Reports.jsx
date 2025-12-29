@@ -21,7 +21,7 @@ import {
   PieChart,
   Building2
 } from 'lucide-react';
-import { filterEstimatesByYear } from '@/utils/reportCalculations';
+import { filterEstimatesByYear, formatCurrency } from '@/utils/reportCalculations';
 import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
 import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
@@ -151,7 +151,7 @@ export default function Reports() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
           <p className="text-slate-600 mt-1">End of year analysis and performance metrics</p>
         </div>
         <div className="flex gap-2">
@@ -239,7 +239,7 @@ export default function Reports() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Estimates</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.total}</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{stats.total}</p>
               </div>
               <FileText className="w-10 h-10 text-blue-500 opacity-80" />
             </div>
@@ -261,7 +261,7 @@ export default function Reports() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Win Rate</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.winRate}%</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{stats.winRate}%</p>
               </div>
               <PieChart className="w-10 h-10 text-purple-500 opacity-80" />
             </div>
@@ -272,8 +272,8 @@ export default function Reports() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-medium">Total Value</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">
-                  ${(stats.totalValue / 1000).toFixed(1)}K
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+                  {formatCurrency(stats.totalValue)}
                 </p>
               </div>
               <BarChart3 className="w-10 h-10 text-amber-500 opacity-80" />

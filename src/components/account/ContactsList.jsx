@@ -87,9 +87,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
       <>
         <Card>
           <CardContent className="p-12 text-center">
-            <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts yet</h3>
-            <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
+            <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No contacts yet</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Contact
@@ -196,7 +196,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
     return (
       <>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">{contacts.length} Contacts</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">{contacts.length} Contacts</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch
@@ -204,7 +204,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 checked={showArchived}
                 onCheckedChange={setShowArchived}
               />
-              <label htmlFor="show-archived" className="text-sm text-slate-600 cursor-pointer">
+              <label htmlFor="show-archived" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                 Show Archived
               </label>
             </div>
@@ -217,9 +217,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
 
         <Card>
           <CardContent className="p-12 text-center">
-            <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 mb-1">No contacts yet</h3>
-            <p className="text-slate-600 mb-4">Add contacts to start building relationships</p>
+            <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No contacts yet</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
             <Button onClick={() => setShowDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add First Contact
@@ -324,7 +324,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">
           {filteredContacts.length} {showArchived ? 'Archived' : 'Active'} Contact{filteredContacts.length !== 1 ? 's' : ''}
         </h3>
         <div className="flex items-center gap-4">
@@ -371,7 +371,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
           
           return (
-          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 opacity-75' : 'bg-white'}`}>
+          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}>
             <CardContent className="p-5">
               <div className="space-y-4">
                 {/* Header with Avatar */}
@@ -384,17 +384,17 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                        <h4 className={`font-semibold text-lg truncate ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-[#ffffff]'}`}>
                           {fullName || 'Unnamed Contact'}
                     </h4>
                         {contact.title && (
-                          <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <p className={`text-sm mt-0.5 truncate ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                             {contact.title}
                           </p>
                         )}
                       </div>
                     {isArchived && (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300 flex-shrink-0">
+                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 flex-shrink-0">
                         <Archive className="w-3 h-3 mr-1" />
                         Archived
                       </Badge>
@@ -410,7 +410,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
 
                 {/* Contact Info */}
                 <div className={`space-y-2 pt-2 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
-                  <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                     <Mail className="w-4 h-4 flex-shrink-0" />
                     <a 
                       href={`mailto:${contact.email}`} 
@@ -421,7 +421,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                     </a>
                   </div>
                   {contact.phone && (
-                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                       <Phone className="w-4 h-4 flex-shrink-0" />
                       <a 
                         href={`tel:${contact.phone}`} 
@@ -433,7 +433,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                     </div>
                   )}
                   {contact.linkedin_url && (
-                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <div className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                       <Linkedin className="w-4 h-4 flex-shrink-0" />
                       <a 
                         href={contact.linkedin_url} 
@@ -451,8 +451,8 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 {/* Preferences/Notes */}
                 {contact.preferences && (
                   <div className={`pt-3 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
-                    <p className={`text-xs mb-1 font-medium ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>Notes:</p>
-                    <p className={`text-sm line-clamp-2 ${isArchived ? 'text-slate-500' : 'text-slate-700'}`}>
+                    <p className={`text-xs mb-1 font-medium ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>Notes:</p>
+                    <p className={`text-sm line-clamp-2 ${isArchived ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       {contact.preferences}
                     </p>
                   </div>
@@ -467,26 +467,26 @@ export default function ContactsList({ contacts, accountId, accountName }) {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                     Phone
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredContacts.map((contact) => {
                   const isArchived = contact.status === 'archived' || contact.archived === true;
                   const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
@@ -494,9 +494,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   return (
                     <tr 
                       key={contact.id}
-                      className={`hover:bg-slate-50 transition-colors ${isArchived ? 'bg-slate-50' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             isArchived ? 'bg-slate-200' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
@@ -511,11 +511,11 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+                              <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-[#ffffff]'}`}>
                                 {fullName || 'Unnamed Contact'}
                               </span>
                               {isArchived && (
-                                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">
+                                <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700">
                                   <Archive className="w-3 h-3 mr-1" />
                                   Archived
                                 </Badge>
@@ -524,7 +524,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           </div>
                         </div>
                       </td>
-                      <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <td className={`px-4 py-4 text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-400'}`}>
                         {contact.title || '-'}
                       </td>
                       <td className="px-4 py-4">
@@ -535,7 +535,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                       <td className="px-4 py-4">
                         <a 
                           href={`mailto:${contact.email}`}
-                          className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                          className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
                         >
                           {contact.email}
                         </a>
@@ -544,12 +544,12 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                         {contact.phone ? (
                           <a 
                             href={`tel:${contact.phone}`}
-                            className={`text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-slate-600 hover:text-blue-600'}`}
+                            className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
                           >
                             {contact.phone}
                           </a>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-slate-400 dark:text-slate-500">-</span>
                         )}
                       </td>
                     </tr>

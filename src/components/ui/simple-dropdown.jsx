@@ -55,21 +55,44 @@ export function SimpleDropdown({
   React.useEffect(() => {
     if (!isOpen || !triggerRef.current || !dropdownRef.current) return
 
-    const triggerRect = triggerRef.current.getBoundingClientRect()
-    const dropdownRect = dropdownRef.current.getBoundingClientRect()
-    
-    let left = triggerRect.left
-    
-    if (align === "end") {
-      left = triggerRect.right - dropdownRect.width
-    } else if (align === "center") {
-      left = triggerRect.left + (triggerRect.width - dropdownRect.width) / 2
+    // Use requestAnimationFrame to ensure dropdown is fully rendered and measured
+    const updatePosition = () => {
+      if (!triggerRef.current || !dropdownRef.current) return
+
+      const triggerRect = triggerRef.current.getBoundingClientRect()
+      const dropdownRect = dropdownRef.current.getBoundingClientRect()
+      const viewportWidth = window.innerWidth
+      const padding = 8 // Minimum padding from screen edges
+      
+      let left = triggerRect.left
+      
+      if (align === "end") {
+        left = triggerRect.right - dropdownRect.width
+      } else if (align === "center") {
+        left = triggerRect.left + (triggerRect.width - dropdownRect.width) / 2
+      }
+
+      // Ensure dropdown stays within viewport bounds
+      // If it would go off the left edge, align to the left with padding
+      if (left < padding) {
+        left = padding
+      }
+      // If it would go off the right edge, align to the right with padding
+      const dropdownWidth = dropdownRect.width || 240 // Fallback width if not measured yet
+      if (left + dropdownWidth > viewportWidth - padding) {
+        left = Math.max(padding, viewportWidth - dropdownWidth - padding)
+      }
+
+      setPosition({
+        top: triggerRect.bottom + 4,
+        left,
+        width: triggerRect.width
+      })
     }
 
-    setPosition({
-      top: triggerRect.bottom + 4,
-      left,
-      width: triggerRect.width
+    // Use requestAnimationFrame to ensure layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(updatePosition)
     })
   }, [isOpen, align])
 

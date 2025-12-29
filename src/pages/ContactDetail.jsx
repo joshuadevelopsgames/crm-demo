@@ -112,7 +112,7 @@ export default function ContactDetail() {
         <Users className="w-12 h-12 text-slate-400" />
         <h2 className="text-xl font-semibold text-slate-900">Contact not found</h2>
         <p className="text-slate-600">The contact you're looking for doesn't exist.</p>
-        <Button onClick={() => navigate(createPageUrl('Contacts'))} variant="outline">
+        <Button onClick={() => navigate(createPageUrl('Contacts'))} variant="outline" className="border-slate-300">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Contacts
         </Button>
@@ -143,7 +143,7 @@ export default function ContactDetail() {
               {initials || <Users className="w-8 h-8" />}
             </div>
             <div>
-              <h1 className={`text-3xl font-bold ${isArchived ? 'text-slate-500' : 'text-slate-900'}`}>
+              <h1 className={`text-3xl font-bold ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                 {fullName}
               </h1>
               {contact.title && (
@@ -162,7 +162,7 @@ export default function ContactDetail() {
             </div>
           </div>
         </div>
-        <Button onClick={() => setShowEditContact(true)} variant="outline">
+        <Button onClick={() => setShowEditContact(true)} variant="outline" className="border-slate-300">
           <Edit className="w-4 h-4 mr-2" />
           Edit Contact
         </Button>
@@ -192,7 +192,7 @@ export default function ContactDetail() {
                       <p className="text-sm text-slate-500">Email</p>
                       <a 
                         href={`mailto:${contact.email || contact.email_1}`}
-                        className="text-slate-900 hover:text-blue-600"
+                        className="text-slate-900 dark:text-white hover:text-blue-600"
                       >
                         {contact.email || contact.email_1}
                       </a>
@@ -215,7 +215,7 @@ export default function ContactDetail() {
                       <p className="text-sm text-slate-500">Phone</p>
                       <a 
                         href={`tel:${contact.phone || contact.phone_1}`}
-                        className="text-slate-900 hover:text-blue-600"
+                        className="text-slate-900 dark:text-white hover:text-blue-600"
                       >
                         {contact.phone || contact.phone_1}
                       </a>
@@ -308,7 +308,7 @@ export default function ContactDetail() {
                   <CardTitle>Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-700 whitespace-pre-wrap">{contact.notes}</p>
+                  <p className="text-slate-700 dark:text-white whitespace-pre-wrap">{contact.notes}</p>
                 </CardContent>
               </Card>
             )}
@@ -318,7 +318,7 @@ export default function ContactDetail() {
         <TabsContent value="interactions" className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900">Interaction History</h3>
-            <Button onClick={() => setShowAddInteraction(true)} className="bg-slate-900 hover:bg-slate-800">
+            <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
               <Plus className="w-4 h-4 mr-2" />
               Log Interaction
             </Button>

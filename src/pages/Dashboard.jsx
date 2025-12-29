@@ -338,7 +338,7 @@ export default function Dashboard() {
       icon: Building2,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
-      tip: 'This shows your active accounts. These are accounts marked as active in your CRM.'
+      tip: 'Companies you\'re actively working with or pursuing. Click to view all accounts, filter by status, or search for specific companies. Use this to track your sales pipeline and customer base.'
     },
     {
       title: 'Total Contacts',
@@ -346,7 +346,7 @@ export default function Dashboard() {
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      tip: 'This shows your total contacts. This is the total number of contacts across all accounts.'
+      tip: 'All people you have relationships with across your accounts. Click to view the contacts page where you can see all contacts, filter by account, role, or search by name. Use this to manage your network and track who you know at each company.'
     },
     {
       title: 'Open Tasks',
@@ -354,7 +354,7 @@ export default function Dashboard() {
       icon: CheckSquare,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
-      tip: 'This shows your open tasks. These are tasks that haven\'t been completed yet.'
+      tip: 'Action items that need to be completed. Click to go to the Tasks page where you can view all tasks, filter by status or priority, create new tasks, and mark tasks as complete. Tasks help you stay organized and never miss a follow-up.'
     },
     {
       title: 'At Risk Accounts',
@@ -362,21 +362,42 @@ export default function Dashboard() {
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      tip: 'This shows your at risk accounts. These are accounts flagged as at-risk.'
+      tip: 'Accounts with contract renewals coming up within the next 6 months. These need attention to ensure they renew successfully. Click to view all at-risk accounts, then click individual accounts to prepare renewal proposals, review contracts, or schedule renewal meetings.'
     }
   ];
 
+  // #region agent log
+  useEffect(() => {
+    const logData5 = {location:'Dashboard.jsx:render',message:'Dashboard component rendering',data:{activeAccounts,contactsCount:contacts.length,myTasks,atRiskAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    console.log('🔍 DEBUG:', logData5);
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(err=>console.error('Log fetch error:',err));
+  }, [activeAccounts, contacts.length, myTasks, atRiskAccounts]);
+  // #endregion
+
   return (
-    <div className="space-y-8">
+    <div 
+      ref={(el) => {
+        if (el) {
+          // #region agent log
+          const dashBg = window.getComputedStyle(el).backgroundColor;
+          const dashDisplay = window.getComputedStyle(el).display;
+          const dashRect = el.getBoundingClientRect();
+          const logData6 = {location:'Dashboard.jsx:dash-ref',message:'Dashboard root div styles and position',data:{dashBg,dashDisplay,dashRect:{top:dashRect.top,left:dashRect.left,width:dashRect.width,height:dashRect.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          console.log('🔍 DEBUG:', logData6);
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(err=>console.error('Log fetch error:',err));
+          // #endregion
+        }
+      }}
+      className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Dashboard</h1>
-          <p className="text-slate-600 mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-foreground">Dashboard</h1>
+          <p className="text-slate-600 dark:text-text-muted mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
         </div>
         <Button 
           onClick={() => setIsImportDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
         >
           <Upload className="w-4 h-4 mr-2" />
           Import from LMN
@@ -412,14 +433,14 @@ export default function Dashboard() {
               position="bottom"
             >
               <Card 
-                className={`border-slate-200/50 bg-white/80 backdrop-blur-sm hover:border-slate-300 transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                className={`border-slate-200/50 dark:border-border bg-white dark:bg-surface-1 backdrop-blur-sm hover:border-slate-300 dark:hover:border-border transition-all group ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
                 onClick={isClickable ? handleClick : undefined}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-xs md:text-sm font-medium text-slate-600 mb-1">{stat.title}</p>
-                      <p className="text-2xl md:text-3xl font-bold text-slate-900">{stat.value}</p>
+                      <p className="text-xs md:text-sm font-medium text-slate-600 dark:text-text-muted mb-1">{stat.title}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-foreground">{stat.value}</p>
                     </div>
                     <div className={`${stat.bgColor} p-3 md:p-4 rounded-xl group-hover:scale-110 transition-transform`}>
                       <Icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
@@ -436,15 +457,15 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* At Risk Accounts */}
         <TutorialTooltip
-          tip="Accounts with renewals coming up within 6 months. These are marked as at-risk and need attention. Click on account names to prepare renewal proposals, review contracts, or schedule renewal meetings. Click the title to view all at-risk accounts."
+          tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
           step={1}
           position="bottom"
         >
-          <Card className="border-red-200 bg-red-50/50">
+          <Card className="border-red-200 dark:border-border bg-red-50/50 dark:bg-surface-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-red-700 transition-colors"
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-red-700 dark:hover:text-red-400 transition-colors"
                   onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
                 >
                   <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -469,21 +490,21 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-600 mb-3">Renewing within 6 months</p>
+              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {atRiskRenewals.slice(0, 5).map(account => {
                   const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-red-50 transition-colors border border-red-100"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-border"
                     >
                       <Link
                         to={createPageUrl(`AccountDetail?id=${account.id}`)}
                         className="flex-1"
                       >
-                        <p className="font-medium text-slate-900">{account.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-text-muted">
                           Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
                         </p>
                       </Link>
@@ -503,7 +524,7 @@ export default function Dashboard() {
                   );
                 })}
                 {atRiskRenewals.length === 0 && (
-                  <p className="text-sm text-slate-500 text-center py-4">No at-risk renewals 🎉</p>
+                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No at-risk renewals 🎉</p>
                 )}
                 {atRiskRenewals.length > 5 && (
                   <Button
@@ -522,15 +543,15 @@ export default function Dashboard() {
 
         {/* Neglected Accounts */}
         <TutorialTooltip
-          tip="Accounts here haven't been contacted recently (A/B segments: 30+ days, C/D segments: 90+ days). Click any account name to view details, log interactions, or update contact information. Click 'View All' to see all neglected accounts. This helps you identify accounts that need attention."
+          tip="Accounts that haven't been contacted recently (A/B revenue segments: 30+ days, C/D segments: 90+ days). These relationships may be at risk. Click any account to view details, then log a new interaction (call, email, or meeting) to re-engage. Use the snooze button if you've already reached out. Regular contact prevents accounts from going cold."
           step={1}
           position="bottom"
         >
-          <Card className="border-amber-200 bg-amber-50/50">
+          <Card className="border-amber-200 dark:border-border bg-amber-50/50 dark:bg-surface-1">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 cursor-pointer hover:text-amber-700 transition-colors"
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
                   onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
                 >
                   <Clock className="w-5 h-5 text-amber-600" />
@@ -555,19 +576,19 @@ export default function Dashboard() {
               </div>
             </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">No contact (A/B: 30+ days, C/D: 90+ days)</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {neglectedAccounts.slice(0, 5).map(account => (
                 <div
                   key={account.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-amber-50 transition-colors border border-amber-100"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-amber-100 dark:border-border"
                 >
                   <Link
                     to={createPageUrl(`AccountDetail?id=${account.id}`)}
                     className="flex-1"
                   >
-                    <p className="font-medium text-slate-900">{account.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{account.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {account.last_interaction_date
                         ? `Last contact: ${format(new Date(account.last_interaction_date), 'MMM d, yyyy')}`
                         : 'No interactions logged'}
@@ -588,7 +609,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {neglectedAccounts.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No neglected accounts 🎉</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No neglected accounts 🎉</p>
               )}
               {neglectedAccounts.length > 5 && (
                 <Button
@@ -607,14 +628,14 @@ export default function Dashboard() {
 
         {/* Overdue Tasks */}
         <TutorialTooltip
-          tip="Tasks that are past their due date. These need immediate attention. Click on task titles to view details, update status, or reschedule. Staying on top of overdue tasks helps maintain client relationships."
+          tip="Tasks that are past their due date need immediate action. Click any task to open it, then either complete it, update the due date if it's been rescheduled, or mark it as in progress. Overdue tasks can damage client relationships, so prioritize these. You can also create a new task to follow up on overdue items."
           step={1}
           position="bottom"
         >
-        <Card className="border-orange-200 bg-orange-50/50">
+        <Card className="border-orange-200 dark:border-border bg-orange-50/50 dark:bg-surface-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
                 <AlertCircle className="w-5 h-5 text-orange-600" />
                 Overdue Tasks
               </CardTitle>
@@ -624,17 +645,17 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">Tasks past their due date</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Tasks past their due date</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {overdueTasks.slice(0, 5).map(task => (
                 <div
                   key={task.id}
                   onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 cursor-pointer hover:bg-orange-50 transition-colors"
+                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-orange-100 dark:border-border cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900">{task.title}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-foreground">{task.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-text-muted">
                       Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
                     </p>
                   </div>
@@ -644,7 +665,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {overdueTasks.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No overdue tasks</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No overdue tasks</p>
               )}
             </div>
           </CardContent>
@@ -653,14 +674,14 @@ export default function Dashboard() {
 
         {/* Active Sequences */}
         <TutorialTooltip
-          tip="Accounts currently enrolled in automated outreach sequences. Sequences are multi-step automated follow-ups that help you stay in touch with prospects and customers. View active enrollments to see progress."
+          tip="Accounts currently enrolled in automated outreach sequences. Sequences create ordered, blocked tasks that guide your follow-up process. Each account shows its current step and next action date. Click to view the Sequences page where you can see all enrollments, create new template sequences, or enroll additional accounts in existing sequences."
           step={1}
           position="bottom"
         >
-        <Card className="border-indigo-200 bg-indigo-50/50">
+        <Card className="border-indigo-200 dark:border-border bg-indigo-50/50 dark:bg-surface-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 text-slate-900">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
                 <TrendingUp className="w-5 h-5 text-indigo-600" />
                 Active Sequences
               </CardTitle>
@@ -670,18 +691,18 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-3">Accounts in sequences</p>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Accounts in sequences</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {sequences.filter(s => s.status === 'active').slice(0, 5).map(enrollment => {
                 const account = accounts.find(a => a.id === enrollment.account_id);
                 return (
                   <div
                     key={enrollment.id}
-                    className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-100"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-indigo-100 dark:border-border"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900">{account?.name || 'Unknown'}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="font-medium text-slate-900 dark:text-foreground">{account?.name || 'Unknown'}</p>
+                      <p className="text-xs text-slate-500 dark:text-text-muted">
                         Step {enrollment.current_step} • Next: {enrollment.next_action_date ? format(new Date(enrollment.next_action_date), 'MMM d') : 'TBD'}
                       </p>
                     </div>
@@ -689,7 +710,7 @@ export default function Dashboard() {
                 );
               })}
               {sequences.filter(s => s.status === 'active').length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">No active sequences</p>
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No active sequences</p>
               )}
             </div>
           </CardContent>
