@@ -87,7 +87,13 @@ export default function ProfileDropdown() {
     }
   };
 
-  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || profile?.email || user?.email || 'User';
+  // Try multiple fallbacks for display name
+  const displayName = profile?.full_name || 
+                      user?.user_metadata?.full_name || 
+                      user?.user_metadata?.name || 
+                      profile?.email || 
+                      user?.email || 
+                      (isLoading ? 'Loading...' : 'User');
   const displayEmail = profile?.email || user?.email || '';
   const displayPhone = profile?.phone_number || '';
   const displayRole = profile?.role === 'system_admin' || profile?.role === 'admin' ? 'Admin' : 'User';

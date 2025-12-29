@@ -41,26 +41,49 @@ export default function NotificationBell() {
   }, []);
 
   // Get current user from UserContext (more reliable than base44.auth.me)
-  const { user: contextUser, profile } = useUser();
-  const currentUser = contextUser || profile;
+  const { user: contextUser, profile, isLoading: userLoading } = useUser();
+  const [fallbackUser, setFallbackUser] = useState(null);
+  
+  // Fallback: if UserContext doesn't provide user, try base44.auth.me()
+  useEffect(() => {
+    if (!contextUser && !profile && !userLoading) {
+      base44.auth.me().then(user => {
+        if (user?.id) {
+          console.log('🔔 NotificationBell: Using fallback user from base44.auth.me()', user.id);
+          setFallbackUser(user);
+        }
+      }).catch(err => {
+        console.error('🔔 NotificationBell: Error getting fallback user:', err);
+      });
+    } else {
+      setFallbackUser(null);
+    }
+  }, [contextUser, profile, userLoading]);
+  
+  const currentUser = contextUser || profile || fallbackUser;
   const currentUserId = currentUser?.id;
 
   // Fetch notifications for current user (all notifications, sorted by newest first)
-  const { data: allNotificationsRaw = [], refetch: refetchNotifications } = useQuery({
+  const { data: allNotificationsRaw = [], refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) {
-        console.log('🔔 NotificationBell: No current user ID');
+        console.log('🔔 NotificationBell: No current user ID', { hasContextUser: !!contextUser, hasProfile: !!profile, userLoading });
         return [];
       }
-      const notifications = await base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
-      console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
-        renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
-        unread: notifications.filter(n => !n.is_read).length
-      });
-      return notifications;
+      try {
+        const notifications = await base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
+        console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
+          renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
+          unread: notifications.filter(n => !n.is_read).length
+        });
+        return notifications;
+      } catch (error) {
+        console.error('🔔 NotificationBell: Error fetching notifications:', error);
+        return [];
+      }
     },
-    enabled: !!currentUser?.id,
+    enabled: !!currentUser?.id && !userLoading, // Wait for user to load before fetching
     refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
     refetchOnMount: true, // Always refetch on mount (not cached)
   });
@@ -103,7 +126,7 @@ export default function NotificationBell() {
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
-    enabled: !!currentUser?.id
+    enabled: !!currentUser?.id && !userLoading // Wait for user to load
   });
   
   const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
@@ -114,7 +137,7 @@ export default function NotificationBell() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     },
-    enabled: !!currentUser?.id
+    enabled: !!currentUser?.id && !userLoading // Wait for user to load
   });
   
   // Calculate which accounts SHOULD be at_risk based on renewal dates (source of truth)
@@ -478,6 +501,9 @@ export default function NotificationBell() {
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim()); // Same normalization as count
         
+        // Declare uniqueUnreadAccountIds in outer scope
+        let uniqueUnreadAccountIds;
+        
         // For neglected_account type, filter to only accounts that are currently neglected
         if (type === 'neglected_account' && accounts.length > 0) {
           const today = startOfDay(new Date());
@@ -500,10 +526,10 @@ export default function NotificationBell() {
               .map(acc => String(acc.id).trim())
           );
           const filteredUnreadAccountIds = unreadAccountIds.filter(id => currentlyNeglectedAccountIds.has(id));
-          const uniqueUnreadAccountIds = new Set(filteredUnreadAccountIds);
+          uniqueUnreadAccountIds = new Set(filteredUnreadAccountIds);
           unreadCount = uniqueUnreadAccountIds.size;
         } else {
-          const uniqueUnreadAccountIds = new Set(unreadAccountIds);
+          uniqueUnreadAccountIds = new Set(unreadAccountIds);
           unreadCount = uniqueUnreadAccountIds.size;
         }
         

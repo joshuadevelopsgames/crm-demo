@@ -24,6 +24,7 @@ import { createPageUrl } from '@/utils';
 import InteractionTimeline from '../components/account/InteractionTimeline';
 import AddInteractionDialog from '../components/account/AddInteractionDialog';
 import EditContactDialog from '../components/contact/EditContactDialog';
+import ContactNotes from '../components/contact/ContactNotes';
 
 export default function ContactDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -301,17 +302,8 @@ export default function ContactDetail() {
               </Card>
             )}
 
-            {/* Notes */}
-            {contact.notes && (
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-700 dark:text-white whitespace-pre-wrap">{contact.notes}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Contact Notes */}
+            <ContactNotes contact={contact} />
           </div>
         </TabsContent>
 
