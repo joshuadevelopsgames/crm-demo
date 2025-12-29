@@ -13,7 +13,8 @@ import {
   Pause,
   Edit,
   Building2,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,6 +23,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -42,6 +53,8 @@ export default function Sequences() {
   const [selectedSequence, setSelectedSequence] = useState(null);
   const [editingSequence, setEditingSequence] = useState(null);
   const [preSelectedSequenceId, setPreSelectedSequenceId] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sequenceToDelete, setSequenceToDelete] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -100,6 +113,21 @@ export default function Sequences() {
     onError: (error) => {
       console.error('Error updating sequence:', error);
       toast.error(error.message || 'Failed to update sequence');
+    }
+  });
+
+  const deleteSequenceMutation = useMutation({
+    mutationFn: (id) => base44.entities.Sequence.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sequences'] });
+      queryClient.invalidateQueries({ queryKey: ['sequence-enrollments'] });
+      setDeleteDialogOpen(false);
+      setSequenceToDelete(null);
+      toast.success('✓ Sequence deleted successfully');
+    },
+    onError: (error) => {
+      console.error('Error deleting sequence:', error);
+      toast.error(error.message || 'Failed to delete sequence');
     }
   });
 
@@ -238,6 +266,17 @@ export default function Sequences() {
 
   const getSequenceName = (sequenceId) => {
     return sequences.find(s => s.id === sequenceId)?.name || 'Unknown';
+  };
+
+  const handleDeleteSequence = (sequence) => {
+    setSequenceToDelete(sequence);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteSequence = () => {
+    if (sequenceToDelete) {
+      deleteSequenceMutation.mutate(sequenceToDelete.id);
+    }
   };
 
   return (
@@ -566,6 +605,14 @@ export default function Sequences() {
                       <Play className="w-4 h-4 mr-2" />
                       Enroll
                     </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteSequence(sequence)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -653,6 +700,36 @@ export default function Sequences() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sequence</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the sequence <strong>{sequenceToDelete?.name}</strong>? 
+              This action cannot be undone. Any active enrollments will remain, but the sequence template will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSequenceToDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSequence}
+              disabled={deleteSequenceMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteSequenceMutation.isPending ? 'Deleting...' : 'Delete Sequence'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
