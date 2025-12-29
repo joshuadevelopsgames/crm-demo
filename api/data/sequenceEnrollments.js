@@ -122,9 +122,12 @@ export default async function handler(req, res) {
           enrollmentData.sequence_id = null;
         }
         
-        // Only include id if it's provided and valid
+        // Generate ID if not provided
         if (id) {
           enrollmentData.id = id;
+        } else {
+          // Generate a simple ID if not provided
+          enrollmentData.id = `enroll_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         }
         
         const { data: created, error } = await supabase
