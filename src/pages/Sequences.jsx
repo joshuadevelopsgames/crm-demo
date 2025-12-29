@@ -34,6 +34,7 @@ import {
 import { format, addDays } from 'date-fns';
 import TutorialTooltip from '../components/TutorialTooltip';
 import { createTasksFromSequence } from '@/services/sequenceTaskService';
+import toast from 'react-hot-toast';
 
 export default function Sequences() {
   const [isSequenceDialogOpen, setIsSequenceDialogOpen] = useState(false);
@@ -79,6 +80,11 @@ export default function Sequences() {
       queryClient.invalidateQueries({ queryKey: ['sequences'] });
       setIsSequenceDialogOpen(false);
       resetSequenceForm();
+      toast.success('✓ Sequence created successfully');
+    },
+    onError: (error) => {
+      console.error('Error creating sequence:', error);
+      toast.error(error.message || 'Failed to create sequence');
     }
   });
 
@@ -88,6 +94,11 @@ export default function Sequences() {
       queryClient.invalidateQueries({ queryKey: ['sequences'] });
       setIsSequenceDialogOpen(false);
       resetSequenceForm();
+      toast.success('✓ Sequence updated successfully');
+    },
+    onError: (error) => {
+      console.error('Error updating sequence:', error);
+      toast.error(error.message || 'Failed to update sequence');
     }
   });
 
@@ -300,9 +311,18 @@ export default function Sequences() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isSequenceDialogOpen} onOpenChange={setIsSequenceDialogOpen}>
+          <Dialog 
+            open={isSequenceDialogOpen} 
+            onOpenChange={(open) => {
+              setIsSequenceDialogOpen(open);
+              if (open && !editingSequence) {
+                // Reset form when opening for new sequence
+                resetSequenceForm();
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-slate-300" onClick={resetSequenceForm}>
+              <Button variant="outline" className="border-slate-300">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template Sequence
               </Button>
