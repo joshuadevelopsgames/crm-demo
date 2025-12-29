@@ -16,7 +16,7 @@ export async function createTasksFromSequence(enrollment, sequence, accountId) {
   }
 
   const today = startOfDay(new Date());
-  const startedDate = enrollment.started_date ? new Date(enrollment.started_date) : today;
+  const startedDate = enrollment.started_date ? startOfDay(new Date(enrollment.started_date)) : today;
   const createdTasks = [];
   let previousTaskId = null;
   let cumulativeDays = 0;
@@ -29,13 +29,32 @@ export async function createTasksFromSequence(enrollment, sequence, accountId) {
     console.warn('Could not get current user for task assignment:', error);
   }
 
+  console.log('Creating tasks from sequence:', {
+    sequenceName: sequence.name,
+    stepsCount: sequence.steps?.length,
+    startedDate: startedDate.toISOString(),
+    steps: sequence.steps
+  });
+
   // Create tasks for each step in the sequence
-  for (let i = 0; i < sequence.steps.length; i++) {
-    const step = sequence.steps[i];
-    cumulativeDays += step.days_after_previous || 0;
+  // Sort steps by step_number to ensure correct order
+  const sortedSteps = [...(sequence.steps || [])].sort((a, b) => {
+    const aNum = parseInt(a.step_number || a.stepNumber || 0, 10);
+    const bNum = parseInt(b.step_number || b.stepNumber || 0, 10);
+    return aNum - bNum;
+  });
+
+  for (let i = 0; i < sortedSteps.length; i++) {
+    const step = sortedSteps[i];
+    // Ensure days_after_previous is a number (might be string from JSONB)
+    const daysAfterPrevious = parseInt(step.days_after_previous || step.daysAfterPrevious || 0, 10);
+    // Add days for this step to cumulative total
+    cumulativeDays += daysAfterPrevious;
     
     // Calculate due date based on cumulative days from start
     const dueDate = addDays(startedDate, cumulativeDays);
+    
+    console.log(`Step ${i + 1} (step_number: ${step.step_number}): days_after_previous=${daysAfterPrevious}, cumulativeDays=${cumulativeDays}, dueDate=${dueDate.toISOString().split('T')[0]}`);
     
     // Create task title from step
     const actionTypeLabels = {
@@ -78,7 +97,7 @@ export async function createTasksFromSequence(enrollment, sequence, accountId) {
       createdTasks.push(task.id);
       previousTaskId = task.id;
 
-      console.log(`✅ Created task "${taskTitle}" for sequence step ${step.step_number} (${taskStatus})`);
+      console.log(`✅ Created task "${taskTitle}" for sequence step ${step.step_number} (${taskStatus}) with due date ${dueDate.toISOString().split('T')[0]}`);
     } catch (error) {
       console.error(`❌ Error creating task for step ${step.step_number}:`, error);
     }
