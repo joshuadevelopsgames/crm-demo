@@ -328,17 +328,24 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        const newEnrollment = { ...data, id: Date.now().toString() };
-        mockSequenceEnrollments.push(newEnrollment);
-        return newEnrollment;
+        const response = await fetch('/api/data/sequenceEnrollments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create sequence enrollment');
       },
       update: async (id, data) => {
-        const index = mockSequenceEnrollments.findIndex(e => e.id === id);
-        if (index !== -1) {
-          mockSequenceEnrollments[index] = { ...mockSequenceEnrollments[index], ...data };
-          return mockSequenceEnrollments[index];
-        }
-        return data;
+        const response = await fetch('/api/data/sequenceEnrollments', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update sequence enrollment');
       },
     },
     ScorecardTemplate: {

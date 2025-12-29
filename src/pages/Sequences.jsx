@@ -169,6 +169,11 @@ export default function Sequences() {
       setIsEnrollDialogOpen(false);
       setEnrollmentData({ account_id: '', sequence_id: '' });
       setPreSelectedSequenceId(null);
+      toast.success('✓ Account enrolled successfully');
+    },
+    onError: (error) => {
+      console.error('Error enrolling account:', error);
+      toast.error(error.message || 'Failed to enroll account');
     }
   });
 
