@@ -3486,11 +3486,11 @@ export default function Tasks() {
                       (email) => email !== currentUserEmail
                     );
                     
-                    if (!isAssigned) return "Cannot Remove";
+                    if (!isAssigned) return "Remove from View";
                     if (remainingAssignments.length === 0) return "Delete";
                     return "Remove Me";
                   }
-                  return "Remove Me";
+                  return "Remove";
                 })()}
             </AlertDialogAction>
           </AlertDialogFooter>
