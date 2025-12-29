@@ -141,7 +141,13 @@ export default async function handler(req, res) {
               error: 'sequence_enrollments table not found. Please create the table in Supabase first.'
             });
           }
-          throw error;
+          // Log the actual error for debugging
+          console.error('Error creating sequence enrollment:', error);
+          console.error('Enrollment data:', enrollmentData);
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to create sequence enrollment'
+          });
         }
         
         return res.status(201).json({
