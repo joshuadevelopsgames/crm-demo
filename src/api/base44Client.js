@@ -279,17 +279,24 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        const newSequence = { ...data, id: Date.now().toString() };
-        mockSequences.push(newSequence);
-        return newSequence;
+        const response = await fetch('/api/data/sequences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to create sequence');
       },
       update: async (id, data) => {
-        const index = mockSequences.findIndex(s => s.id === id);
-        if (index !== -1) {
-          mockSequences[index] = { ...mockSequences[index], ...data };
-          return mockSequences[index];
-        }
-        return data;
+        const response = await fetch('/api/data/sequences', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to update sequence');
       },
     },
     SequenceEnrollment: {
