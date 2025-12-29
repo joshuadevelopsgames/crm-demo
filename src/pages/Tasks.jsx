@@ -429,9 +429,10 @@ export default function Tasks() {
               // (other users' notifications remain)
             }
           } else {
-            // User is not assigned - just remove from their view (no database change)
-            // The task will remain for other assigned users
-            // We'll handle this in the onSuccess by filtering it from the cache
+            // User is not assigned - delete the task from database
+            // If other users are assigned, they will no longer see it either
+            await base44.entities.Task.delete(taskId);
+            await cleanupTaskNotifications(taskId);
           }
         }),
       );
@@ -464,19 +465,10 @@ export default function Tasks() {
       });
       
       // Then invalidate and refetch to ensure server state is synced
-      // Note: For tasks user wasn't assigned to, we don't refetch since we only removed from view
-      const tasksToRefetch = taskIdsArray.filter((taskId) => {
-        const task = tasks.find((t) => t.id === taskId);
-        const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
-        return assignedEmails.includes(currentUser?.email);
-      });
-      
-      if (tasksToRefetch.length > 0) {
-        await queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        await queryClient.refetchQueries({ queryKey: ["tasks"] });
-        await queryClient.invalidateQueries({ queryKey: ["notifications"] });
-        await queryClient.refetchQueries({ queryKey: ["notifications"] });
-      }
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      await queryClient.refetchQueries({ queryKey: ["tasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await queryClient.refetchQueries({ queryKey: ["notifications"] });
       
       setDeleteDialogOpen(false);
       const count = taskIdsArray.length;
@@ -492,7 +484,7 @@ export default function Tasks() {
         );
 
         if (!wasAssigned) {
-          toast.success("✓ Task removed from view");
+          toast.success("✓ Task deleted");
         } else if (remainingAssignments.length === 0) {
           toast.success("✓ Task deleted");
         } else {
@@ -507,11 +499,11 @@ export default function Tasks() {
         }).length;
         
         if (assignedCount === 0) {
-          toast.success(`✓ Removed ${count} task${count > 1 ? 's' : ''} from view`);
+          toast.success(`✓ Deleted ${count} task${count > 1 ? 's' : ''}`);
         } else if (assignedCount === count) {
           toast.success(`✓ Removed from ${count} task assignment${count > 1 ? 's' : ''}`);
         } else {
-          toast.success(`✓ Removed ${count} task${count > 1 ? 's' : ''} from view and assignments`);
+          toast.success(`✓ Deleted ${count - assignedCount} task${count - assignedCount > 1 ? 's' : ''} and removed from ${assignedCount} assignment${assignedCount > 1 ? 's' : ''}`);
         }
       }
       setTasksToDelete([]);
@@ -527,8 +519,21 @@ export default function Tasks() {
     const tasksToCheck = taskIdsArray
       .map((id) => tasks.find((t) => t.id === id))
       .filter(Boolean);
-    const needsConfirmation =
-      taskIdsArray.length > 1 || tasksToCheck.some((t) => t?.assigned_to);
+    
+    // Show confirmation if:
+    // 1. Multiple tasks (batch deletion)
+    // 2. User is assigned and there are other assignees (removing from assignment)
+    const needsConfirmation = taskIdsArray.length > 1 || tasksToCheck.some((task) => {
+      if (!task) return false;
+      const assignedEmails = parseAssignedUsers(task.assigned_to || "");
+      const currentUserEmail = currentUser?.email;
+      const isAssigned = assignedEmails.includes(currentUserEmail);
+      const remainingAssignments = assignedEmails.filter(
+        (email) => email !== currentUserEmail
+      );
+      // Show confirmation if user is assigned AND there are other assignees
+      return isAssigned && remainingAssignments.length > 0;
+    });
 
     if (needsConfirmation) {
       setTasksToDelete(taskIdsArray);
@@ -3387,9 +3392,9 @@ export default function Tasks() {
                     if (assignedTasks.length > 0 && unassignedTasks > 0) {
                       return (
                         <>
-                          Are you sure you want to remove {tasksToDelete.length} tasks from your view?
+                          Are you sure you want to remove {tasksToDelete.length} tasks?
                           <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm">
-                            {assignedTasks.length} task{assignedTasks.length > 1 ? 's' : ''} you're assigned to will remove you from the assignment. {unassignedTasks} task{unassignedTasks > 1 ? 's' : ''} will be removed from your view only.
+                            {assignedTasks.length} task{assignedTasks.length > 1 ? 's' : ''} you're assigned to will remove you from the assignment. {unassignedTasks} task{unassignedTasks > 1 ? 's' : ''} will be permanently deleted.
                           </div>
                         </>
                       );
@@ -3405,10 +3410,7 @@ export default function Tasks() {
                     } else {
                       return (
                         <>
-                          Are you sure you want to remove {tasksToDelete.length} tasks from your view?
-                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
-                            These tasks will be removed from your view only. Other assigned users will still see them.
-                          </div>
+                          Are you sure you want to delete {tasksToDelete.length} tasks? These will be permanently deleted from the database.
                         </>
                       );
                     }
@@ -3425,21 +3427,22 @@ export default function Tasks() {
                       (email) => email !== currentUserEmail
                     );
 
+                    // This case (single task, not assigned) should not show dialog
+                    // But if it does, show delete message
                     if (!isAssigned) {
                       return (
                         <>
-                          Are you sure you want to remove this task from your view?
-                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
-                            This task will be removed from your view only. Other assigned users will still see it.
-                          </div>
+                          Are you sure you want to delete this task? This will permanently delete it from the database.
                         </>
                       );
                     }
 
+                    // Single task, user is assigned, no other assignees - should not show dialog
+                    // But if it does, show delete message
                     if (remainingAssignments.length === 0) {
                       return (
                         <>
-                          Are you sure you want to delete this task? You are the only assigned user, so this will permanently delete the task.
+                          Are you sure you want to delete this task? This will permanently delete the task.
                         </>
                       );
                     }
@@ -3486,7 +3489,7 @@ export default function Tasks() {
                       (email) => email !== currentUserEmail
                     );
                     
-                    if (!isAssigned) return "Remove from View";
+                    if (!isAssigned) return "Delete";
                     if (remainingAssignments.length === 0) return "Delete";
                     return "Remove Me";
                   }
