@@ -327,11 +327,11 @@ export default function Sequences() {
                 Create Template Sequence
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>{editingSequence ? 'Edit Sequence' : 'Create New Sequence'}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-6 py-4">
+              <div className="space-y-6 py-4 overflow-y-auto flex-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <Label>Sequence Name *</Label>
@@ -442,15 +442,26 @@ export default function Sequences() {
                     ))}
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsSequenceDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateOrUpdateSequence} disabled={!newSequence.name}>
-                    {editingSequence ? 'Update Sequence' : 'Create Sequence'}
-                  </Button>
-                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 border-t mt-4 flex-shrink-0">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsSequenceDialogOpen(false)}
+                  disabled={createSequenceMutation.isPending || updateSequenceMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateOrUpdateSequence} 
+                  disabled={!newSequence.name?.trim() || createSequenceMutation.isPending || updateSequenceMutation.isPending}
+                >
+                  {createSequenceMutation.isPending || updateSequenceMutation.isPending 
+                    ? 'Creating...' 
+                    : editingSequence 
+                      ? 'Update Sequence' 
+                      : 'Create Sequence'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
