@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Building2, 
@@ -18,9 +20,15 @@ import {
   FileText,
   Lightbulb,
   BookOpen,
-  BellOff
+  BellOff,
+  Upload as UploadIcon,
+  Download,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '@/contexts/UserContext';
+import toast from 'react-hot-toast';
 import InteractionTimeline from '../components/account/InteractionTimeline';
 import ContactsList from '../components/account/ContactsList';
 import AccountScore from '../components/account/AccountScore';
@@ -47,6 +55,10 @@ export default function AccountDetail() {
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showEditAccount, setShowEditAccount] = useState(false);
   const [showSnoozeDialog, setShowSnoozeDialog] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { user: currentUser } = useUser();
 
   const queryClient = useQueryClient();
 
@@ -72,6 +84,13 @@ export default function AccountDetail() {
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', accountId],
     queryFn: () => base44.entities.Task.filter({ related_account_id: accountId })
+  });
+
+  // Fetch account attachments
+  const { data: attachments = [], refetch: refetchAttachments } = useQuery({
+    queryKey: ['accountAttachments', accountId],
+    queryFn: () => base44.entities.AccountAttachment.list(accountId),
+    enabled: !!accountId
   });
 
   const { data: scorecards = [] } = useQuery({
@@ -133,6 +152,140 @@ export default function AccountDetail() {
       queryClient.invalidateQueries({ queryKey: ['account', accountId] });
     }
   });
+
+  // File upload mutation
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: async ({ file, fileName, accountId, userId, userEmail, fileType }) => {
+      return await base44.entities.AccountAttachment.upload(
+        file,
+        fileName,
+        accountId,
+        userId,
+        userEmail,
+        fileType
+      );
+    },
+    onSuccess: () => {
+      refetchAttachments();
+      toast.success('✓ File uploaded');
+    },
+    onError: (error) => {
+      console.error('Error uploading file:', error);
+      toast.error(error.message || 'Failed to upload file');
+    }
+  });
+
+  // File delete mutation
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: (id) => base44.entities.AccountAttachment.delete(id),
+    onSuccess: () => {
+      refetchAttachments();
+      toast.success('✓ File deleted');
+    },
+    onError: (error) => {
+      console.error('Error deleting file:', error);
+      toast.error(error.message || 'Failed to delete file');
+    }
+  });
+
+  // File upload handler
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser?.id || !accountId) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be less than 10MB');
+      return;
+    }
+
+    uploadAttachmentMutation.mutate({
+      file,
+      fileName: file.name,
+      accountId,
+      userId: currentUser.id,
+      userEmail: currentUser.email,
+      fileType: file.type
+    });
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      if (!currentUser?.id || !accountId) return;
+      uploadAttachmentMutation.mutate({
+        file,
+        fileName: file.name,
+        accountId,
+        userId: currentUser.id,
+        userEmail: currentUser.email,
+        fileType: file.type
+      });
+    }
+  };
+
+  // Handle file download
+  const handleFileDownload = async (attachment, event) => {
+    event.preventDefault();
+    try {
+      if (attachment.storage_path) {
+        const downloadUrl = `/api/storage/download?path=${encodeURIComponent(attachment.storage_path)}&filename=${encodeURIComponent(attachment.file_name)}`;
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error('Failed to download file');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = attachment.file_name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else if (attachment.file_url) {
+        window.open(attachment.file_url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+    }
+  };
+
+  // Handle delete file
+  const handleDeleteFile = (attachmentId) => {
+    if (confirm('Are you sure you want to delete this file?')) {
+      deleteAttachmentMutation.mutate(attachmentId);
+    }
+  };
+
+  // Handle New To-Do button click
+  const handleNewTodo = () => {
+    navigate(`/tasks?accountId=${accountId}`);
+  };
 
   if (isLoading || !account) {
     return (
@@ -351,7 +504,7 @@ export default function AccountDetail() {
         <TabsContent value="todos" className="space-y-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">To-Dos ({tasks.length})</h3>
-            <Button variant="outline" className="border-slate-300">
+            <Button variant="outline" className="border-slate-300" onClick={handleNewTodo}>
               <Plus className="w-4 h-4 mr-2" />
               New To-Do
             </Button>
@@ -394,18 +547,104 @@ export default function AccountDetail() {
         </TabsContent>
 
         {/* Files Tab */}
-        <TabsContent value="files">
-          <Card className="p-12 text-center">
-            <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No files yet</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              Upload documents, images, or other files related to this account
-            </p>
-            <Button variant="outline" className="border-slate-300">
-              <Plus className="w-4 h-4 mr-2" />
-              Upload File
-            </Button>
-          </Card>
+        <TabsContent value="files" className="space-y-6">
+          {attachments.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">Files ({attachments.length})</h3>
+                <Button
+                  variant="outline"
+                  className="border-slate-300"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadAttachmentMutation.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload File
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {attachments.map((attachment) => (
+                  <Card key={attachment.id} className="p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                          <p className="font-medium text-slate-900 dark:text-[#ffffff] truncate">
+                            {attachment.file_name}
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                        </p>
+                        {attachment.user_email && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                            Uploaded by {attachment.user_email}
+                          </p>
+                        )}
+                        {attachment.created_at && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            {format(new Date(attachment.created_at), 'MMM d, yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleFileDownload(attachment, e)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        {attachment.user_id === currentUser?.id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFile(attachment.id)}
+                            disabled={deleteAttachmentMutation.isPending}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Card
+              className={`p-12 text-center transition-all ${
+                isDragging ? 'border-blue-500 bg-blue-50' : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No files yet</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                {isDragging ? 'Drop file here' : 'Upload documents, images, or other files related to this account'}
+              </p>
+              <Button
+                variant="outline"
+                className="border-slate-300"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadAttachmentMutation.isPending}
+              >
+                <UploadIcon className="w-4 h-4 mr-2" />
+                Upload File
+              </Button>
+            </Card>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            className="hidden"
+            disabled={uploadAttachmentMutation.isPending}
+          />
         </TabsContent>
 
       </Tabs>

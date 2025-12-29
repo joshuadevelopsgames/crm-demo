@@ -991,6 +991,48 @@ export const base44 = {
         throw new Error(result.error || 'Failed to delete attachment');
       },
     },
+    AccountAttachment: {
+      list: async (accountId) => {
+        const response = await fetch(`/api/data/accountAttachments?account_id=${accountId}`);
+        const result = await response.json();
+        if (result.success) return result.data || [];
+        throw new Error(result.error || 'Failed to fetch account attachments');
+      },
+      upload: async (file, fileName, accountId, userId, userEmail, fileType) => {
+        // Convert file to base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const response = await fetch('/api/upload/accountAttachment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file: base64,
+            fileName,
+            accountId,
+            userId,
+            userEmail,
+            fileType: fileType || file.type
+          })
+        });
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to upload attachment');
+      },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/accountAttachments?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) return true;
+        throw new Error(result.error || 'Failed to delete attachment');
+      },
+    },
   },
   auth: {
     me: async () => {

@@ -1059,6 +1059,33 @@ export default function Tasks() {
     }
   }, [tasks, isLoading, viewingTask, editingTask]);
 
+  // Check for accountId in URL params and open task dialog with account pre-selected
+  useEffect(() => {
+    if (accounts.length > 0 && !isLoading && !isDialogOpen) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accountId = urlParams.get('accountId');
+      if (accountId) {
+        const account = accounts.find(a => a.id === accountId);
+        if (account) {
+          // Set the account in newTask and open the dialog
+          setNewTask((prev) => ({
+            ...prev,
+            related_account_id: accountId,
+          }));
+          setEditingTask(null);
+          setViewingTask(null);
+          setIsViewMode(false);
+          setPendingAttachments([]);
+          setTaskDialogTab("details");
+          setIsDialogOpen(true);
+          // Clean up URL param
+          const newUrl = window.location.pathname + window.location.search.replace(/[?&]accountId=[^&]*/, '').replace(/^\?/, '');
+          window.history.replaceState({}, '', newUrl || window.location.pathname);
+        }
+      }
+    }
+  }, [accounts, isLoading, isDialogOpen]);
+
   const openEditDialog = (task) => {
     setEditingTask(task);
     setViewingTask(null);

@@ -224,12 +224,9 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Label>Revenue Segment</Label>
               <Select
                 value={formData.revenue_segment}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, revenue_segment: value });
-                  setAutoCalculateSegment(false); // Disable auto-calc if manually changed
-                }}
+                disabled={true}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-50 cursor-not-allowed">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,6 +236,7 @@ export default function EditAccountDialog({ open, onClose, account }) {
                   <SelectItem value="D">Segment D (Project Only)</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-slate-500 mt-1">This field is calculated automatically by the system.</p>
             </div>
             <div>
               <Label>Industry</Label>
