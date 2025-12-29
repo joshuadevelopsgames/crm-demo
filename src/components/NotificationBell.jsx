@@ -5,7 +5,7 @@ import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, A
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format, isToday, isPast, differenceInDays, addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { format, isToday, isPast, differenceInDays, addDays, addWeeks, addMonths, addYears, startOfDay } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { Capacitor } from '@capacitor/core';
@@ -424,8 +424,49 @@ export default function NotificationBell() {
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim());
-        const uniqueAccountIds = new Set(allAccountIds);
-        count = uniqueAccountIds.size;
+        
+        // For neglected_account type, filter to only accounts that are currently neglected
+        // This ensures the count matches the dashboard calculation
+        if (type === 'neglected_account' && accounts.length > 0) {
+          const today = startOfDay(new Date());
+          const currentlyNeglectedAccountIds = new Set(
+            accounts
+              .filter(account => {
+                // Skip archived accounts
+                if (account.archived) return false;
+                
+                // Skip accounts with ICP status = 'na' (permanently excluded)
+                if (account.icp_status === 'na') return false;
+                
+                // Skip if snoozed
+                if (account.snoozed_until) {
+                  const snoozeDate = new Date(account.snoozed_until);
+                  if (snoozeDate > new Date()) {
+                    return false; // Still snoozed
+                  }
+                }
+                
+                // Determine threshold based on revenue segment
+                const segment = account.revenue_segment || 'C';
+                const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+                
+                // Check if no interaction beyond threshold
+                if (!account.last_interaction_date) return true;
+                const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+                const daysSince = differenceInDays(today, lastInteractionDate);
+                return daysSince > thresholdDays;
+              })
+              .map(acc => String(acc.id).trim())
+          );
+          
+          // Filter account IDs to only those that are currently neglected
+          const filteredAccountIds = allAccountIds.filter(id => currentlyNeglectedAccountIds.has(id));
+          const uniqueAccountIds = new Set(filteredAccountIds);
+          count = uniqueAccountIds.size;
+        } else {
+          const uniqueAccountIds = new Set(allAccountIds);
+          count = uniqueAccountIds.size;
+        }
         
         // For unread count, use the EXACT SAME logic as count, but only for unread notifications
         // This ensures consistency - if count works, unreadCount will work the same way
@@ -436,8 +477,35 @@ export default function NotificationBell() {
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim()); // Same normalization as count
-        const uniqueUnreadAccountIds = new Set(unreadAccountIds); // Same Set logic as count
-        unreadCount = uniqueUnreadAccountIds.size; // Same size calculation as count
+        
+        // For neglected_account type, filter to only accounts that are currently neglected
+        if (type === 'neglected_account' && accounts.length > 0) {
+          const today = startOfDay(new Date());
+          const currentlyNeglectedAccountIds = new Set(
+            accounts
+              .filter(account => {
+                if (account.archived) return false;
+                if (account.icp_status === 'na') return false;
+                if (account.snoozed_until) {
+                  const snoozeDate = new Date(account.snoozed_until);
+                  if (snoozeDate > new Date()) return false;
+                }
+                const segment = account.revenue_segment || 'C';
+                const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+                if (!account.last_interaction_date) return true;
+                const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+                const daysSince = differenceInDays(today, lastInteractionDate);
+                return daysSince > thresholdDays;
+              })
+              .map(acc => String(acc.id).trim())
+          );
+          const filteredUnreadAccountIds = unreadAccountIds.filter(id => currentlyNeglectedAccountIds.has(id));
+          const uniqueUnreadAccountIds = new Set(filteredUnreadAccountIds);
+          unreadCount = uniqueUnreadAccountIds.size;
+        } else {
+          const uniqueUnreadAccountIds = new Set(unreadAccountIds);
+          unreadCount = uniqueUnreadAccountIds.size;
+        }
         
         // Safety: if calculation somehow fails, fall back to count (all accounts have unread)
         if (unreadCount > count) {
