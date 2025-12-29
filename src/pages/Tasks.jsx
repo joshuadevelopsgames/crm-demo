@@ -1185,7 +1185,9 @@ export default function Tasks() {
           (isTaskToday(task) || isTaskOverdue(task))
         );
       case "upcoming":
-        return task.status !== "completed" && task.status !== "blocked" && isTaskUpcoming(task);
+        // Must have a due_date to be upcoming
+        if (!task.due_date) return false;
+        return task.status !== "completed" && isTaskUpcoming(task);
       case "completed":
         return task.status === "completed";
       default:
@@ -1382,21 +1384,27 @@ export default function Tasks() {
   };
 
   // Get task counts for tabs
+  // Note: Counts should match what would be displayed (excluding search/priority/label filters)
   const getTaskCounts = () => {
     const inbox = tasks.filter(
       (task) =>
         task.status !== "completed" &&
         task.status !== "blocked" &&
-        parseAssignedUsers(task.assigned_to).includes(currentUser?.email),
+        parseAssignedUsers(task.assigned_to || "").includes(currentUser?.email),
     ).length;
     const today = tasks.filter(
       (task) =>
         task.status !== "completed" &&
+        task.status !== "blocked" &&
         (isTaskToday(task) || isTaskOverdue(task)),
     ).length;
     const upcoming = tasks.filter(
-      (task) => task.status !== "completed" && isTaskUpcoming(task),
-    ).length;
+      (task) => {
+        // Must have a due_date to be upcoming
+        if (!task.due_date) return false;
+        return task.status !== "completed" && isTaskUpcoming(task);
+      }
+    ).length; // Includes blocked tasks
     const completed = tasks.filter(
       (task) => task.status === "completed",
     ).length;
@@ -3352,20 +3360,37 @@ export default function Tasks() {
         )}
 
         {filteredTasks.length === 0 && (
-          <Card className="p-12 text-center">
-            <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-slate-900 dark:text-foreground mb-1">
-              No tasks found
-            </h3>
-            <p className="text-slate-600">
-              {searchTerm ||
-              activeFilter !== "today" ||
-              filterPriority !== "all" ||
-              filterLabel !== "all"
-                ? "Try adjusting your filters"
-                : "Create your first task to get started"}
-            </p>
-          </Card>
+          <>
+            {(searchTerm || filterPriority !== "all" || filterLabel !== "all") && counts[activeFilter] > 0 ? (
+              <Card className="p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-foreground mb-1">
+                  No tasks match your current filters
+                </h3>
+                <p className="text-slate-600">
+                  {counts[activeFilter]} task{counts[activeFilter] !== 1 ? 's' : ''} {counts[activeFilter] === 1 ? 'matches' : 'match'} this tab but {counts[activeFilter] === 1 ? 'is' : 'are'} hidden by your search/priority/label filters.
+                </p>
+                <p className="text-sm text-slate-500 mt-2">
+                  Try adjusting your filters to see them.
+                </p>
+              </Card>
+            ) : (
+              <Card className="p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-foreground mb-1">
+                  No tasks found
+                </h3>
+                <p className="text-slate-600">
+                  {searchTerm ||
+                  activeFilter !== "today" ||
+                  filterPriority !== "all" ||
+                  filterLabel !== "all"
+                    ? "Try adjusting your filters"
+                    : "Create your first task to get started"}
+                </p>
+              </Card>
+            )}
+          </>
         )}
       </TutorialTooltip>
 
