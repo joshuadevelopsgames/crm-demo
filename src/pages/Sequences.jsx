@@ -41,6 +41,7 @@ export default function Sequences() {
   const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
   const [selectedSequence, setSelectedSequence] = useState(null);
   const [editingSequence, setEditingSequence] = useState(null);
+  const [preSelectedSequenceId, setPreSelectedSequenceId] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -139,6 +140,7 @@ export default function Sequences() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setIsEnrollDialogOpen(false);
       setEnrollmentData({ account_id: '', sequence_id: '' });
+      setPreSelectedSequenceId(null);
     }
   });
 
@@ -215,7 +217,11 @@ export default function Sequences() {
   };
 
   const handleEnroll = () => {
-    createEnrollmentMutation.mutate(enrollmentData);
+    const enrollmentPayload = {
+      ...enrollmentData,
+      sequence_id: enrollmentData.sequence_id || preSelectedSequenceId
+    };
+    createEnrollmentMutation.mutate(enrollmentPayload);
   };
 
   const toggleEnrollmentStatus = (enrollment) => {
@@ -248,7 +254,17 @@ export default function Sequences() {
             <p className="text-slate-600 mt-1">Automate your outreach cadences</p>
           </div>
         <div className="flex gap-3">
-          <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
+          <Dialog 
+            open={isEnrollDialogOpen} 
+            onOpenChange={(open) => {
+              setIsEnrollDialogOpen(open);
+              if (!open) {
+                // Reset when dialog closes
+                setEnrollmentData({ account_id: '', sequence_id: '' });
+                setPreSelectedSequenceId(null);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Play className="w-4 h-4 mr-2" />
@@ -257,9 +273,20 @@ export default function Sequences() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Enroll Account in Sequence</DialogTitle>
+                <DialogTitle>
+                  {preSelectedSequenceId 
+                    ? `Enroll Account in ${sequences.find(s => s.id === preSelectedSequenceId)?.name || 'Sequence'}`
+                    : 'Enroll Account in Sequence'}
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                {preSelectedSequenceId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Sequence:</strong> {sequences.find(s => s.id === preSelectedSequenceId)?.name}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label>Select Account *</Label>
                   <Select
@@ -278,31 +305,40 @@ export default function Sequences() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Select Sequence *</Label>
-                  <Select
-                    value={enrollmentData.sequence_id}
-                    onValueChange={(value) => setEnrollmentData({ ...enrollmentData, sequence_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose sequence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sequences.filter(s => s.is_active).map(sequence => (
-                        <SelectItem key={sequence.id} value={sequence.id}>
-                          {sequence.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!preSelectedSequenceId && (
+                  <div>
+                    <Label>Select Sequence *</Label>
+                    <Select
+                      value={enrollmentData.sequence_id}
+                      onValueChange={(value) => setEnrollmentData({ ...enrollmentData, sequence_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose sequence" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sequences.filter(s => s.is_active).map(sequence => (
+                          <SelectItem key={sequence.id} value={sequence.id}>
+                            {sequence.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsEnrollDialogOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEnrollDialogOpen(false);
+                      setEnrollmentData({ account_id: '', sequence_id: '' });
+                      setPreSelectedSequenceId(null);
+                    }}
+                  >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleEnroll}
-                    disabled={!enrollmentData.account_id || !enrollmentData.sequence_id}
+                    disabled={!enrollmentData.account_id || (!enrollmentData.sequence_id && !preSelectedSequenceId)}
                   >
                     Enroll Account
                   </Button>
@@ -522,7 +558,8 @@ export default function Sequences() {
                       size="sm"
                       className="flex-1"
                       onClick={() => {
-                        setEnrollmentData({ ...enrollmentData, sequence_id: sequence.id });
+                        setPreSelectedSequenceId(sequence.id);
+                        setEnrollmentData({ account_id: '', sequence_id: sequence.id });
                         setIsEnrollDialogOpen(true);
                       }}
                     >
