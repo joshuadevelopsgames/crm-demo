@@ -215,18 +215,68 @@ function extractNamesFromText(text, accounts, contacts) {
   const accountsList = Array.isArray(accounts) ? accounts : [];
   const contactsList = Array.isArray(contacts) ? contacts : [];
   
+  // Extract potential company name from patterns like "Company - Activity" or "Company:" 
+  let potentialCompanyName = null;
+  const dashMatch = text.match(/^([^-]+?)\s*-\s*/);
+  if (dashMatch) {
+    potentialCompanyName = dashMatch[1].trim();
+  } else {
+    const colonMatch = text.match(/^([^:]+?):/);
+    if (colonMatch) {
+      potentialCompanyName = colonMatch[1].trim();
+    }
+  }
+  
   // Try to find account names in the text
   for (const account of accountsList) {
     const accountName = normalizeName(account.name);
     if (accountName.length < 3) continue; // Skip very short names
     
-    // Check if account name appears in text (whole word match preferred)
-    const nameWords = accountName.split(' ');
-    const namePattern = new RegExp(`\\b${nameWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+')}\\b`, 'i');
+    let matchFound = false;
+    let matchQuality = 0;
     
-    if (namePattern.test(text)) {
-      // Calculate match quality (longer names, exact matches score higher)
-      const matchQuality = accountName.length + (textLower.includes(accountName) ? 10 : 0);
+    // Check if full account name appears in text
+    if (textLower.includes(accountName)) {
+      matchFound = true;
+      matchQuality = accountName.length + 20; // Full match gets high score
+    }
+    // Check if account name words appear in text (whole word match)
+    else {
+      const nameWords = accountName.split(' ').filter(w => w.length > 2);
+      if (nameWords.length > 0) {
+        const allWordsMatch = nameWords.every(word => {
+          const wordPattern = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          return wordPattern.test(text);
+        });
+        if (allWordsMatch) {
+          matchFound = true;
+          matchQuality = accountName.length + 10; // Partial match
+        }
+      }
+    }
+    
+    // Special handling for potential company name extracted from "Company - Activity" pattern
+    if (potentialCompanyName) {
+      const potentialNormalized = normalizeName(potentialCompanyName);
+      const accountNameWords = accountName.split(' ');
+      const potentialWords = potentialNormalized.split(' ');
+      
+      // Check if potential name matches first word(s) of account name
+      if (accountNameWords.length > 0 && potentialWords.length > 0) {
+        const firstWordMatch = accountNameWords[0] === potentialWords[0];
+        const multipleWordsMatch = potentialWords.every((word, idx) => 
+          accountNameWords[idx] === word
+        );
+        
+        if (firstWordMatch || multipleWordsMatch) {
+          matchFound = true;
+          // Higher quality if more words match
+          matchQuality = Math.max(matchQuality, potentialNormalized.length + (multipleWordsMatch ? 15 : 5));
+        }
+      }
+    }
+    
+    if (matchFound) {
       accountMatches.push({ account, quality: matchQuality });
     }
   }
@@ -247,7 +297,15 @@ function extractNamesFromText(text, accounts, contacts) {
   }
   
   // Sort by quality and pick the best match
-  accountMatches.sort((a, b) => b.quality - a.quality);
+  // Prefer longer/more specific account names when quality is similar
+  accountMatches.sort((a, b) => {
+    const qualityDiff = b.quality - a.quality;
+    if (Math.abs(qualityDiff) < 5) {
+      // If quality is similar, prefer longer name (more specific)
+      return b.account.name.length - a.account.name.length;
+    }
+    return qualityDiff;
+  });
   contactMatches.sort((a, b) => b.quality - a.quality);
   
   const bestAccount = accountMatches.length > 0 ? accountMatches[0].account : null;
