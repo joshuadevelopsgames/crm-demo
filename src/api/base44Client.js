@@ -279,7 +279,7 @@ export const base44 = {
         return results;
       },
       create: async (data) => {
-        console.log('Sequence.create called with data:', data);
+        // v2.0 - Fixed: Use API endpoint instead of mockSequences
         const response = await fetch('/api/data/sequences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
