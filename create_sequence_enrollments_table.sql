@@ -42,3 +42,7 @@ DROP POLICY IF EXISTS sequence_enrollments_authenticated_all ON sequence_enrollm
 CREATE POLICY sequence_enrollments_authenticated_all ON sequence_enrollments
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+-- Policy to allow service role (for API operations)
+CREATE POLICY sequence_enrollments_service_role_all ON sequence_enrollments
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+

@@ -134,19 +134,28 @@ export default async function handler(req, res) {
           .single();
         
         if (error) {
-          // Provide helpful error message if table doesn't exist
-          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
-            return res.status(500).json({
-              success: false,
-              error: 'sequence_enrollments table not found. Please create the table in Supabase first.'
-            });
-          }
           // Log the actual error for debugging
           console.error('Error creating sequence enrollment:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          console.error('Error details:', error.details);
+          console.error('Error hint:', error.hint);
           console.error('Enrollment data:', enrollmentData);
+          
+          // Provide helpful error message if table doesn't exist
+          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204' || error.code === '42P01')) {
+            return res.status(500).json({
+              success: false,
+              error: `sequence_enrollments table not found. Please create the table in Supabase first. Error: ${error.message}`
+            });
+          }
+          
+          // Return the actual error message
           return res.status(500).json({
             success: false,
-            error: error.message || 'Failed to create sequence enrollment'
+            error: error.message || error.details || 'Failed to create sequence enrollment',
+            errorCode: error.code,
+            errorHint: error.hint
           });
         }
         
