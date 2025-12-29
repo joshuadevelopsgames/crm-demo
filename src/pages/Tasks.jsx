@@ -437,13 +437,46 @@ export default function Tasks() {
         }),
       );
     },
-    onSuccess: (_, taskIds) => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    onSuccess: async (_, taskIds) => {
+      const taskIdsArray = Array.isArray(taskIds) ? taskIds : [taskIds];
+      
+      // Optimistically remove tasks from cache immediately
+      queryClient.setQueryData(["tasks"], (oldTasks = []) => {
+        return oldTasks.filter((task) => {
+          const assignedEmails = parseAssignedUsers(task.assigned_to || "");
+          const currentUserEmail = currentUser?.email;
+          
+          // If task is in deletion list
+          if (taskIdsArray.includes(task.id)) {
+            // If user was assigned, check if they should still see it
+            if (assignedEmails.includes(currentUserEmail)) {
+              const remainingAssignments = assignedEmails.filter(
+                (email) => email !== currentUserEmail
+              );
+              // If no assignments left, remove from cache (task was fully deleted)
+              // If assignments remain, keep it (user was just unassigned)
+              return remainingAssignments.length > 0;
+            }
+            // User wasn't assigned, so task shouldn't be visible anyway
+            return false;
+          }
+          return true;
+        });
+      });
+      
+      // Then invalidate and refetch to ensure server state is synced
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      await queryClient.refetchQueries({ queryKey: ["tasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await queryClient.refetchQueries({ queryKey: ["notifications"] });
+      
       setDeleteDialogOpen(false);
-      const count = Array.isArray(taskIds) ? taskIds.length : 1;
+      const count = taskIdsArray.length;
+      
+      // Get fresh tasks data for toast message
+      const freshTasks = queryClient.getQueryData(["tasks"]) || [];
       if (count === 1) {
-        const task = tasks.find((t) => t.id === taskIds[0]);
+        const task = tasks.find((t) => t.id === taskIdsArray[0]);
         const assignedEmails = parseAssignedUsers(task?.assigned_to || "");
         const currentUserEmail = currentUser?.email;
         const remainingAssignments = assignedEmails.filter(
