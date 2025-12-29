@@ -1,0 +1,552 @@
+/**
+ * Import Monday Activities Excel file as interaction logs
+ * Everything before "activities to-do" section is imported
+ * Uses name matching to link to accounts/contacts
+ * 
+ * Usage:
+ *   node import-monday-activities.js <path-to-excel-file>
+ * 
+ * Example:
+ *   node import-monday-activities.js "monday activities.xlsx"
+ * 
+ * Requires environment variables:
+ *   SUPABASE_URL - Your Supabase project URL
+ *   SUPABASE_SERVICE_ROLE_KEY - Your Supabase service role key
+ */
+
+import XLSX from 'xlsx';
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+// Try to load .env file if it exists (for local development)
+try {
+  const envPath = join(process.cwd(), '.env');
+  if (existsSync(envPath)) {
+    const envContent = readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').replace(/^["']|["']$/g, ''); // Remove quotes
+          if (!process.env[key]) {
+            process.env[key] = value;
+          }
+        }
+      }
+    });
+  }
+} catch (error) {
+  // Silently fail if .env doesn't exist or can't be read
+}
+
+// Initialize Supabase client
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase environment variables not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env or environment');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+// Normalize name for matching (lowercase, trim, remove extra spaces)
+function normalizeName(name) {
+  if (!name) return '';
+  return name.toString().toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+// Find account by name (fuzzy matching)
+async function findAccountByName(supabase, name) {
+  if (!name) return null;
+  
+  const normalizedName = normalizeName(name);
+  
+  // Try exact match first
+  const { data: exactMatch } = await supabase
+    .from('accounts')
+    .select('id, name')
+    .ilike('name', name.trim())
+    .maybeSingle();
+  
+  if (exactMatch) return exactMatch.id;
+  
+  // Try normalized match
+  const { data: accounts } = await supabase
+    .from('accounts')
+    .select('id, name');
+  
+  if (!accounts) return null;
+  
+  // Find best match
+  for (const account of accounts) {
+    if (normalizeName(account.name) === normalizedName) {
+      return account.id;
+    }
+  }
+  
+  // Try partial match (contains)
+  for (const account of accounts) {
+    const accountName = normalizeName(account.name);
+    if (accountName.includes(normalizedName) || normalizedName.includes(accountName)) {
+      console.log(`  ⚠️  Partial match: "${name}" -> "${account.name}"`);
+      return account.id;
+    }
+  }
+  
+  return null;
+}
+
+// Find contact by name (fuzzy matching)
+async function findContactByName(supabase, name, accountId = null) {
+  if (!name) return null;
+  
+  const normalizedName = normalizeName(name);
+  
+  // If account is known, search within that account first
+  if (accountId) {
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('id, name, account_id')
+      .eq('account_id', accountId);
+    
+    if (contacts) {
+      for (const contact of contacts) {
+        if (normalizeName(contact.name) === normalizedName) {
+          return contact.id;
+        }
+      }
+    }
+  }
+  
+  // Try exact match
+  const { data: exactMatch } = await supabase
+    .from('contacts')
+    .select('id, name')
+    .ilike('name', name.trim())
+    .maybeSingle();
+  
+  if (exactMatch) return exactMatch.id;
+  
+  // Try normalized match across all contacts
+  const { data: contacts } = await supabase
+    .from('contacts')
+    .select('id, name');
+  
+  if (!contacts) return null;
+  
+  for (const contact of contacts) {
+    if (normalizeName(contact.name) === normalizedName) {
+      return contact.id;
+    }
+  }
+  
+  return null;
+}
+
+// Parse date from various formats
+function parseDate(dateValue) {
+  if (!dateValue) return new Date();
+  
+  // If it's already a Date object
+  if (dateValue instanceof Date) {
+    return dateValue;
+  }
+  
+  // If it's a number (Excel serial date)
+  if (typeof dateValue === 'number') {
+    // Excel serial date: days since 1900-01-01
+    const excelEpoch = new Date(1899, 11, 30);
+    return new Date(excelEpoch.getTime() + dateValue * 24 * 60 * 60 * 1000);
+  }
+  
+  // Try parsing as string
+  const date = new Date(dateValue);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+  
+  return new Date();
+}
+
+// Determine interaction type from activity description
+function determineInteractionType(description) {
+  if (!description) return 'other';
+  
+  const desc = description.toLowerCase();
+  
+  if (desc.includes('email') || desc.includes('sent') || desc.includes('replied')) {
+    return 'email_sent';
+  }
+  if (desc.includes('call') || desc.includes('phone')) {
+    return 'call';
+  }
+  if (desc.includes('meeting') || desc.includes('zoom') || desc.includes('teams')) {
+    return 'meeting';
+  }
+  if (desc.includes('linkedin') || desc.includes('linked in')) {
+    return 'linkedin';
+  }
+  if (desc.includes('note') || desc.includes('note')) {
+    return 'note';
+  }
+  
+  return 'other';
+}
+
+// Extract potential account/contact names from activity text
+// Looks for patterns like "with [Name]", "to [Name]", "[Name] -", etc.
+function extractNamesFromText(text, accounts, contacts) {
+  if (!text) return { accountId: null, contactId: null };
+  
+  const textLower = text.toLowerCase();
+  const accountMatches = [];
+  const contactMatches = [];
+  
+  // Ensure accounts and contacts are arrays
+  const accountsList = Array.isArray(accounts) ? accounts : [];
+  const contactsList = Array.isArray(contacts) ? contacts : [];
+  
+  // Try to find account names in the text
+  for (const account of accountsList) {
+    const accountName = normalizeName(account.name);
+    if (accountName.length < 3) continue; // Skip very short names
+    
+    // Check if account name appears in text (whole word match preferred)
+    const nameWords = accountName.split(' ');
+    const namePattern = new RegExp(`\\b${nameWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+')}\\b`, 'i');
+    
+    if (namePattern.test(text)) {
+      // Calculate match quality (longer names, exact matches score higher)
+      const matchQuality = accountName.length + (textLower.includes(accountName) ? 10 : 0);
+      accountMatches.push({ account, quality: matchQuality });
+    }
+  }
+  
+  // Try to find contact names in the text
+  for (const contact of contactsList) {
+    const contactName = normalizeName(contact.name);
+    if (contactName.length < 3) continue; // Skip very short names
+    
+    // Check if contact name appears in text
+    const nameWords = contactName.split(' ');
+    const namePattern = new RegExp(`\\b${nameWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+')}\\b`, 'i');
+    
+    if (namePattern.test(text)) {
+      const matchQuality = contactName.length + (textLower.includes(contactName) ? 10 : 0);
+      contactMatches.push({ contact, quality: matchQuality });
+    }
+  }
+  
+  // Sort by quality and pick the best match
+  accountMatches.sort((a, b) => b.quality - a.quality);
+  contactMatches.sort((a, b) => b.quality - a.quality);
+  
+  const bestAccount = accountMatches.length > 0 ? accountMatches[0].account : null;
+  const bestContact = contactMatches.length > 0 ? contactMatches[0].contact : null;
+  
+  // If we found a contact, try to get its account_id
+  let accountId = bestAccount?.id || null;
+  let contactId = bestContact?.id || null;
+  
+  // If contact has an account_id, prefer that over standalone account match
+  if (bestContact?.account_id) {
+    accountId = bestContact.account_id;
+  }
+  
+  return { accountId, contactId };
+}
+
+// Main import function
+async function importMondayActivities(filePath) {
+  console.log(`📖 Reading Excel file: ${filePath}`);
+  
+  const workbook = XLSX.readFile(filePath);
+  const supabase = getSupabase();
+  
+  // Get all accounts and contacts for matching
+  console.log('📋 Loading accounts and contacts...');
+  const { data: accounts } = await supabase.from('accounts').select('id, name');
+  const { data: contacts } = await supabase.from('contacts').select('id, name, account_id');
+  
+  console.log(`  Found ${accounts?.length || 0} accounts and ${contacts?.length || 0} contacts`);
+  
+  let totalImported = 0;
+  let totalSkipped = 0;
+  let errors = [];
+  
+  // Process each sheet
+  for (const sheetName of workbook.SheetNames) {
+    console.log(`\n📄 Processing sheet: ${sheetName}`);
+    
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
+    
+    if (data.length === 0) {
+      console.log('  ⚠️  Sheet is empty, skipping');
+      continue;
+    }
+    
+    // Find where "activities to-do" section starts
+    let stopIndex = data.length;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowValues = Object.values(row).map(v => String(v || '').toLowerCase());
+      const rowText = rowValues.join(' ');
+      
+      if (rowText.includes('activities to-do') || rowText.includes('activities to do')) {
+        stopIndex = i;
+        console.log(`  🛑 Found "activities to-do" section at row ${i + 1}, stopping import`);
+        break;
+      }
+    }
+    
+    const rowsToProcess = data.slice(0, stopIndex);
+    console.log(`  Processing ${rowsToProcess.length} rows (before "activities to-do" section)`);
+    
+    // Try to identify column structure
+    // Common column names: Date, Account/Company, Contact/Person, Activity/Description/Notes, Type, etc.
+    const firstRow = rowsToProcess[0];
+    const columns = Object.keys(firstRow);
+    
+    console.log(`  Columns found: ${columns.join(', ')}`);
+    
+    // Try to find header row by looking for common column names in the data
+    // Sometimes Excel files have headers in the first few rows
+    let headerRowIndex = 0;
+    let foundHeaders = false;
+    
+    for (let i = 0; i < Math.min(5, rowsToProcess.length); i++) {
+      const row = rowsToProcess[i];
+      const rowValues = Object.values(row).map(v => String(v || '').toLowerCase());
+      const rowText = rowValues.join(' ');
+      
+      // Check if this row looks like headers
+      if (rowText.includes('date') || rowText.includes('account') || rowText.includes('company') || 
+          rowText.includes('contact') || rowText.includes('activity') || rowText.includes('description')) {
+        headerRowIndex = i;
+        foundHeaders = true;
+        console.log(`  📋 Found header row at index ${i + 1}`);
+        break;
+      }
+    }
+    
+    // If we found headers, skip that row and use it to map columns
+    const dataRows = foundHeaders ? rowsToProcess.slice(headerRowIndex + 1) : rowsToProcess;
+    const headerRow = foundHeaders ? rowsToProcess[headerRowIndex] : firstRow;
+    
+    // Try to map columns from header row
+    const dateCol = columns.find(c => {
+      const val = String(headerRow[c] || c || '').toLowerCase();
+      return val.includes('date') || val.includes('time') || c.toLowerCase().includes('date');
+    });
+    const accountCol = columns.find(c => {
+      const val = String(headerRow[c] || c || '').toLowerCase();
+      return val.includes('account') || val.includes('company') || val.includes('client') ||
+             c.toLowerCase().includes('account') || c.toLowerCase().includes('company');
+    });
+    const contactCol = columns.find(c => {
+      const val = String(headerRow[c] || c || '').toLowerCase();
+      return val.includes('contact') || val.includes('person') || val.includes('name') ||
+             (c.toLowerCase().includes('contact') && !c.toLowerCase().includes('account'));
+    });
+    const activityCol = columns.find(c => {
+      const val = String(headerRow[c] || c || '').toLowerCase();
+      return val.includes('activity') || val.includes('description') || val.includes('notes') ||
+             val.includes('note') || val.includes('summary') || val.includes('update') ||
+             c.toLowerCase().includes('activity') || c.toLowerCase() === 'activities';
+    });
+    const typeCol = columns.find(c => {
+      const val = String(headerRow[c] || c || '').toLowerCase();
+      return val.includes('type') || val.includes('category');
+    });
+    
+    console.log(`  Mapped columns:`);
+    console.log(`    Date: ${dateCol || 'NOT FOUND'}`);
+    console.log(`    Account: ${accountCol || 'NOT FOUND'}`);
+    console.log(`    Contact: ${contactCol || 'NOT FOUND'}`);
+    console.log(`    Activity: ${activityCol || 'NOT FOUND'}`);
+    console.log(`    Type: ${typeCol || 'NOT FOUND'}`);
+    
+    // If we still can't find columns, try using the first non-empty column as activity
+    let finalActivityCol = activityCol;
+    if (!finalActivityCol) {
+      // Try to find the first column with substantial data
+      for (const col of columns) {
+        const sampleValues = dataRows.slice(0, 10).map(r => String(r[col] || '')).filter(v => v.length > 10);
+        if (sampleValues.length > 3) {
+          finalActivityCol = col;
+          console.log(`  🔍 Using column "${col}" as activity (detected from data)`);
+          break;
+        }
+      }
+    }
+    
+    if (!finalActivityCol) {
+      console.log('  ⚠️  Could not identify activity column, skipping sheet');
+      continue;
+    }
+    
+    // Process each row
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      
+      // Skip empty rows
+      const hasData = Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== '');
+      if (!hasData) continue;
+      
+      try {
+        // Extract data
+        const dateValue = dateCol ? row[dateCol] : null;
+        const accountName = accountCol ? row[accountCol] : null;
+        const contactName = contactCol ? row[contactCol] : null;
+        const activity = finalActivityCol ? row[finalActivityCol] : null;
+        const typeValue = typeCol ? row[typeCol] : null;
+        
+        // Skip if no activity/description
+        if (!activity || String(activity).trim() === '') {
+          continue;
+        }
+        
+        // Parse date
+        const interactionDate = parseDate(dateValue);
+        
+        // Find account from explicit column or extract from activity text
+        let accountId = null;
+        if (accountName) {
+          accountId = await findAccountByName(supabase, accountName);
+          if (!accountId) {
+            console.log(`  ⚠️  Row ${i + 1}: Account not found: "${accountName}"`);
+          }
+        }
+        
+        // Find contact from explicit column or extract from activity text
+        let contactId = null;
+        if (contactName) {
+          contactId = await findContactByName(supabase, contactName, accountId);
+          if (!contactId && contactName) {
+            console.log(`  ⚠️  Row ${i + 1}: Contact not found: "${contactName}"`);
+          }
+        }
+        
+              // If we didn't find account/contact from columns, try extracting from activity text
+        if ((!accountId && !contactId) && activity) {
+          const extracted = extractNamesFromText(activity, accounts || [], contacts || []);
+          if (extracted.accountId && !accountId) {
+            accountId = extracted.accountId;
+            console.log(`  ✓ Row ${i + 1}: Found account in activity text`);
+          }
+          if (extracted.contactId && !contactId) {
+            contactId = extracted.contactId;
+            // If contact has an account_id, use that
+            const contactsList = Array.isArray(contacts) ? contacts : [];
+            const contact = contactsList.find(c => c.id === contactId);
+            if (contact?.account_id && !accountId) {
+              accountId = contact.account_id;
+            }
+            console.log(`  ✓ Row ${i + 1}: Found contact in activity text`);
+          }
+        }
+        
+        // Determine interaction type
+        const interactionType = typeValue 
+          ? typeValue.toLowerCase().replace(/\s+/g, '_')
+          : determineInteractionType(activity);
+        
+        // Create interaction
+        const interactionData = {
+          account_id: accountId,
+          contact_id: contactId,
+          type: interactionType,
+          subject: activity.substring(0, 200), // Limit subject length
+          content: activity,
+          direction: 'outbound', // Default to outbound
+          sentiment: 'neutral',
+          interaction_date: interactionDate.toISOString(),
+          logged_by: 'import_script',
+          tags: accountName ? [accountName] : [],
+          metadata: {
+            imported_from: 'monday_activities',
+            sheet_name: sheetName,
+            row_number: i + 1,
+            original_data: row
+          }
+        };
+        
+        const { data: interaction, error } = await supabase
+          .from('interactions')
+          .insert(interactionData)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error(`  ❌ Row ${i + 1}: Error creating interaction:`, error.message);
+          errors.push({ row: i + 1, error: error.message, data: row });
+          totalSkipped++;
+        } else {
+          totalImported++;
+          if (totalImported % 10 === 0) {
+            process.stdout.write(`  ✓ Imported ${totalImported} interactions...\r`);
+          }
+        }
+        
+        // Update account's last_interaction_date if account found
+        if (accountId) {
+          await supabase
+            .from('accounts')
+            .update({ 
+              last_interaction_date: interactionDate.toISOString().split('T')[0],
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', accountId);
+        }
+        
+      } catch (error) {
+        console.error(`  ❌ Row ${i + 1}: Unexpected error:`, error.message);
+        errors.push({ row: i + 1, error: error.message, data: row });
+        totalSkipped++;
+      }
+    }
+  }
+  
+  console.log(`\n\n✅ Import complete!`);
+  console.log(`  ✓ Imported: ${totalImported} interactions`);
+  console.log(`  ⚠️  Skipped: ${totalSkipped} rows`);
+  
+  if (errors.length > 0) {
+    console.log(`\n❌ Errors (${errors.length}):`);
+    errors.slice(0, 10).forEach(err => {
+      console.log(`  Row ${err.row}: ${err.error}`);
+    });
+    if (errors.length > 10) {
+      console.log(`  ... and ${errors.length - 10} more errors`);
+    }
+  }
+}
+
+// Run the import
+const filePath = process.argv[2] || 'monday activities.xlsx';
+
+if (!filePath) {
+  console.error('Usage: node import-monday-activities.js <path-to-excel-file>');
+  process.exit(1);
+}
+
+importMondayActivities(filePath)
+  .then(() => {
+    console.log('\n✅ Done!');
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error('\n❌ Fatal error:', error);
+    process.exit(1);
+  });
+
