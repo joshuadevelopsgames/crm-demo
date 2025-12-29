@@ -88,7 +88,7 @@ export default function TutorialBar() {
           }));
           const logData4 = {location:'TutorialBar.jsx:bar-ref',message:'TutorialBar element styles and dimensions',data:{barBg,barPosition,barZIndex,barRect:{top:barRect.top,left:barRect.left,width:barRect.width,height:barRect.height,bottom:barRect.bottom},viewportHeight,viewportWidth,parentBg,parentHeight,parentPosition,rootComputedBg,rootComputedHeight,tutorialFixedDivsCount:tutorialFixedDivs.length,allFixedCount:allFixed.length,bodyBg,htmlBg,rootBg,rootChildren,visibleElements},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['A','B','E']};
           console.log('🔍 DEBUG TutorialBar:', JSON.stringify(logData4, null, 2));
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(err=>console.error('Log fetch error:',err));
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(()=>{});
           // #endregion
         }
       }}

@@ -50,7 +50,7 @@ export default function Layout({ children, currentPageName }) {
     // #region agent log
     const logData = {location:'Layout.jsx:useEffect',message:'Layout useEffect - isTutorialMode state',data:{isTutorialMode,currentPageName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
     console.log('🔍 DEBUG Layout useEffect:', logData);
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(err=>console.error('Log fetch error:',err));
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
     // #endregion
     
     // Check for Tutorial page fixed div that might still be in DOM
@@ -91,7 +91,7 @@ export default function Layout({ children, currentPageName }) {
     const rootBg = root ? window.getComputedStyle(root).backgroundColor : 'no root';
     const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg,tutorialFixedDivsRemoved:tutorialFixedDivs.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['B','E']};
     console.log('🔍 DEBUG Layout backgrounds:', JSON.stringify(logData2, null, 2));
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(err=>console.error('Log fetch error:',err));
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
     // #endregion
   }, [isTutorialMode]);
 
@@ -509,7 +509,7 @@ export default function Layout({ children, currentPageName }) {
             }));
             const logData3 = {location:'Layout.jsx:main-ref',message:'Main content element styles and position',data:{mainBg,mainDisplay,mainVisibility,mainZIndex,mainRect:{top:mainRect.top,left:mainRect.left,width:mainRect.width,height:mainRect.height},backdropCount:backdropElements.length,bodyBg,htmlBg,rootBg,allFixedCount:allFixed.length,allFixed:allFixed.slice(0, 5)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['D','E','B']};
             console.log('🔍 DEBUG Layout main:', JSON.stringify(logData3, null, 2));
-            fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(err=>console.error('Log fetch error:',err));
+            fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
             // #endregion
           }
         }}

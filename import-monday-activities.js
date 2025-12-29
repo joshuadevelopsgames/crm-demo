@@ -346,7 +346,22 @@ async function importMondayActivities(filePath) {
     console.log(`\n📄 Processing sheet: ${sheetName}`);
     
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
+    
+    // Try to read with header row at index 4 (where actual headers are in Monday export)
+    // First try with header row 4
+    let data = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false, header: 4, range: 4 });
+    
+    // Check if we got proper column names (Monday format)
+    const hasMondayFormat = data.length > 0 && (
+      'ActivityDate' in data[0] || 
+      'link to Accounts' in data[0] || 
+      'link to Contacts' in data[0]
+    );
+    
+    if (!hasMondayFormat) {
+      // Fall back to default parsing
+      data = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
+    }
     
     if (data.length === 0) {
       console.log('  ⚠️  Sheet is empty, skipping');
@@ -370,62 +385,38 @@ async function importMondayActivities(filePath) {
     const rowsToProcess = data.slice(0, stopIndex);
     console.log(`  Processing ${rowsToProcess.length} rows (before "activities to-do" section)`);
     
-    // Try to identify column structure
-    // Common column names: Date, Account/Company, Contact/Person, Activity/Description/Notes, Type, etc.
+    // Get column names
     const firstRow = rowsToProcess[0];
     const columns = Object.keys(firstRow);
     
     console.log(`  Columns found: ${columns.join(', ')}`);
     
-    // Try to find header row by looking for common column names in the data
-    // Sometimes Excel files have headers in the first few rows
-    let headerRowIndex = 0;
-    let foundHeaders = false;
-    
-    for (let i = 0; i < Math.min(5, rowsToProcess.length); i++) {
-      const row = rowsToProcess[i];
-      const rowValues = Object.values(row).map(v => String(v || '').toLowerCase());
-      const rowText = rowValues.join(' ');
-      
-      // Check if this row looks like headers
-      if (rowText.includes('date') || rowText.includes('account') || rowText.includes('company') || 
-          rowText.includes('contact') || rowText.includes('activity') || rowText.includes('description')) {
-        headerRowIndex = i;
-        foundHeaders = true;
-        console.log(`  📋 Found header row at index ${i + 1}`);
-        break;
-      }
-    }
-    
-    // If we found headers, skip that row and use it to map columns
-    const dataRows = foundHeaders ? rowsToProcess.slice(headerRowIndex + 1) : rowsToProcess;
-    const headerRow = foundHeaders ? rowsToProcess[headerRowIndex] : firstRow;
-    
-    // Try to map columns from header row
-    const dateCol = columns.find(c => {
-      const val = String(headerRow[c] || c || '').toLowerCase();
-      return val.includes('date') || val.includes('time') || c.toLowerCase().includes('date');
-    });
-    const accountCol = columns.find(c => {
-      const val = String(headerRow[c] || c || '').toLowerCase();
-      return val.includes('account') || val.includes('company') || val.includes('client') ||
-             c.toLowerCase().includes('account') || c.toLowerCase().includes('company');
-    });
-    const contactCol = columns.find(c => {
-      const val = String(headerRow[c] || c || '').toLowerCase();
-      return val.includes('contact') || val.includes('person') || val.includes('name') ||
-             (c.toLowerCase().includes('contact') && !c.toLowerCase().includes('account'));
-    });
-    const activityCol = columns.find(c => {
-      const val = String(headerRow[c] || c || '').toLowerCase();
-      return val.includes('activity') || val.includes('description') || val.includes('notes') ||
-             val.includes('note') || val.includes('summary') || val.includes('update') ||
-             c.toLowerCase().includes('activity') || c.toLowerCase() === 'activities';
-    });
-    const typeCol = columns.find(c => {
-      const val = String(headerRow[c] || c || '').toLowerCase();
-      return val.includes('type') || val.includes('category');
-    });
+    // Map columns - prioritize Monday.com format columns
+    const dateCol = columns.find(c => 
+      c === 'ActivityDate' || 
+      c.toLowerCase().includes('activitydate') ||
+      c.toLowerCase().includes('date')
+    );
+    const accountCol = columns.find(c => 
+      c === 'link to Accounts' ||
+      c.toLowerCase().includes('link to accounts') ||
+      c.toLowerCase().includes('account') && !c.toLowerCase().includes('activity')
+    );
+    const contactCol = columns.find(c => 
+      c === 'link to Contacts' ||
+      c.toLowerCase().includes('link to contacts') ||
+      (c.toLowerCase().includes('contact') && !c.toLowerCase().includes('account'))
+    );
+    const activityCol = columns.find(c => 
+      c === 'Name' ||
+      c.toLowerCase() === 'name' ||
+      c.toLowerCase().includes('activity') && !c.toLowerCase().includes('type') && !c.toLowerCase().includes('date')
+    );
+    const typeCol = columns.find(c => 
+      c === 'Activity Type' ||
+      c.toLowerCase().includes('activity type') ||
+      c.toLowerCase().includes('type') && !c.toLowerCase().includes('date')
+    );
     
     console.log(`  Mapped columns:`);
     console.log(`    Date: ${dateCol || 'NOT FOUND'}`);
@@ -433,6 +424,10 @@ async function importMondayActivities(filePath) {
     console.log(`    Contact: ${contactCol || 'NOT FOUND'}`);
     console.log(`    Activity: ${activityCol || 'NOT FOUND'}`);
     console.log(`    Type: ${typeCol || 'NOT FOUND'}`);
+    
+    // Process each row (rowsToProcess already has the data, no need to skip header again if using Monday format)
+    // If we're using Monday format, the data is already clean. Otherwise, skip the header row.
+    const dataRows = hasMondayFormat ? rowsToProcess : (rowsToProcess.length > 0 && Object.keys(rowsToProcess[0]).some(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('account')) ? rowsToProcess : rowsToProcess.slice(1));
     
     // If we still can't find columns, try using the first non-empty column as activity
     let finalActivityCol = activityCol;
@@ -474,8 +469,19 @@ async function importMondayActivities(filePath) {
           continue;
         }
         
-        // Parse date
-        const interactionDate = parseDate(dateValue);
+        // Parse date - ActivityDate is in YYYY-MM-DD format
+        let interactionDate = parseDate(dateValue);
+        
+        // If dateValue looks like YYYY-MM-DD, parse it directly
+        if (dateValue && typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+          const dateParts = dateValue.split(' ')[0].split('-');
+          if (dateParts.length === 3) {
+            const year = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
+            const day = parseInt(dateParts[2], 10);
+            interactionDate = new Date(year, month, day);
+          }
+        }
         
         // Find account from explicit column or extract from activity text
         let accountId = null;

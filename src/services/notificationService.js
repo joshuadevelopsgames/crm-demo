@@ -284,6 +284,9 @@ export async function createRenewalNotifications() {
 
     const today = startOfDay(new Date());
     
+    // Phase 1: Collect all notifications to create (without creating them yet)
+    const notificationsToCreate = [];
+    
     // Process each account
     for (const account of accounts) {
       if (account.archived) continue;
@@ -375,49 +378,68 @@ export async function createRenewalNotifications() {
         continue; // Notification is snoozed for all users
       }
       
-      // Create notifications based on renewal date (source of truth), not status field
-      // If renewal is within 6 months, account should be at_risk regardless of status update success
-      
-      // Create notification for all users
+      // Collect notification data for all users (don't create yet)
       for (const user of usersToNotify) {
         if (!user?.id) continue;
+        notificationsToCreate.push({
+          user_id: user.id,
+          type: 'renewal_reminder',
+          title: `Renewal Coming Up: ${account.name}`,
+          message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
+          related_account_id: account.id,
+          related_task_id: null,
+          scheduled_for: renewalDateStart.toISOString(),
+          accountName: account.name,
+          daysUntilRenewal: daysUntilRenewal
+        });
+      }
+    }
+    
+    // Phase 2: Batch check existing notifications and create missing ones
+    console.log(`📋 Collected ${notificationsToCreate.length} notifications to create`);
+    
+    if (notificationsToCreate.length > 0) {
+      // Get all existing renewal notifications for all users in one batch
+      const allExistingNotifications = await base44.entities.Notification.filter({
+        type: 'renewal_reminder'
+      });
+      
+      // Create a set of existing notification keys (user_id + account_id + today)
+      const today = startOfDay(new Date());
+      const existingKeys = new Set();
+      for (const notif of allExistingNotifications) {
+        const notifDate = startOfDay(new Date(notif.created_at));
+        if (notifDate.getTime() === today.getTime()) {
+          existingKeys.add(`${notif.user_id}:${notif.related_account_id}`);
+        }
+      }
+      
+      // Create all missing notifications
+      for (const notifData of notificationsToCreate) {
+        const key = `${notifData.user_id}:${notifData.related_account_id}`;
+        
+        if (existingKeys.has(key)) {
+          skippedCount++;
+          continue; // Already created today
+        }
         
         try {
-          // Check if notification already exists (unread or read - avoid duplicates)
-          const existingNotifications = await base44.entities.Notification.filter({
-            user_id: user.id,
-            type: 'renewal_reminder',
-            related_account_id: account.id
-          });
-          
-          // Check if there's an existing notification created today (to avoid duplicates)
-          const today = startOfDay(new Date());
-          const hasNotificationToday = existingNotifications.some(notif => {
-            const notifDate = startOfDay(new Date(notif.created_at));
-            return notifDate.getTime() === today.getTime();
-          });
-          
-          if (hasNotificationToday) {
-            skippedCount++;
-            continue; // Already created today
-          }
-          
-          // Create the notification
           await base44.entities.Notification.create({
-            user_id: user.id,
-            type: 'renewal_reminder',
-            title: `Renewal Coming Up: ${account.name}`,
-            message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
-            related_account_id: account.id,
-            related_task_id: null,
-            scheduled_for: renewalDateStart.toISOString()
+            user_id: notifData.user_id,
+            type: notifData.type,
+            title: notifData.title,
+            message: notifData.message,
+            related_account_id: notifData.related_account_id,
+            related_task_id: notifData.related_task_id,
+            scheduled_for: notifData.scheduled_for
           });
           
           createdCount++;
-          console.log(`✅ Created notification for ${account.name} (${daysUntilRenewal} days) for user ${user.email || user.id}`);
+          // Add to existing keys to avoid duplicates in same batch
+          existingKeys.add(key);
         } catch (error) {
           errorCount++;
-          console.error(`❌ Error creating notification for ${account.name} for user ${user.email || user.id}:`, error);
+          console.error(`❌ Error creating notification for ${notifData.accountName}:`, error);
         }
       }
     }
@@ -531,6 +553,9 @@ export async function createNeglectedAccountNotifications() {
 
     const today = startOfDay(new Date());
     
+    // Phase 1: Collect all notifications to create (without creating them yet)
+    const notificationsToCreate = [];
+    
     // Process each account
     for (const account of accounts) {
       // Skip archived accounts
@@ -584,56 +609,87 @@ export async function createNeglectedAccountNotifications() {
         continue; // Notification is snoozed for all users
       }
       
-      // Create notification for all users
-      let accountNotificationCreated = false;
+      // Collect notification data for all users (don't create yet)
+      const message = daysSinceInteraction === null
+        ? `No interactions logged - account needs attention (${segment || 'C/D'} segment)`
+        : `No contact in ${daysSinceInteraction} day${daysSinceInteraction !== 1 ? 's' : ''} - account needs attention (${segment || 'C/D'} segment, ${thresholdDays}+ day threshold)`;
+      
       for (const user of usersToNotify) {
         if (!user?.id) continue;
+        notificationsToCreate.push({
+          user_id: user.id,
+          type: 'neglected_account',
+          title: `Neglected Account: ${account.name}`,
+          message: message,
+          related_account_id: account.id,
+          related_task_id: null,
+          scheduled_for: today.toISOString(),
+          accountName: account.name,
+          accountId: account.id,
+          daysSinceInteraction: daysSinceInteraction,
+          isSnoozed: isSnoozed
+        });
+      }
+    }
+    
+    // Phase 2: Batch check existing notifications and create missing ones
+    console.log(`📋 Collected ${notificationsToCreate.length} notifications to create`);
+    
+    if (notificationsToCreate.length > 0) {
+      // Get all existing neglected account notifications for all users in one batch
+      const allExistingNotifications = await base44.entities.Notification.filter({
+        type: 'neglected_account'
+      });
+      
+      // Create a set of existing notification keys (user_id + account_id)
+      // For neglected accounts, we check if ANY notification exists (not just today's)
+      const existingKeys = new Set();
+      for (const notif of allExistingNotifications) {
+        existingKeys.add(`${notif.user_id}:${notif.related_account_id}`);
+      }
+      
+      // Track which accounts had at least one notification created
+      const accountsWithNotifications = new Set();
+      
+      // Create all missing notifications
+      for (const notifData of notificationsToCreate) {
+        const key = `${notifData.user_id}:${notifData.related_account_id}`;
+        
+        if (existingKeys.has(key)) {
+          skippedByExisting++;
+          accountsWithNotifications.add(notifData.accountId);
+          continue; // Already exists
+        }
         
         try {
-          // Check if notification already exists for this account and user
-          // We want to ensure every neglected account has a notification, so we check if ANY notification exists
-          // (not just today's) to avoid duplicates, but we'll create one if none exists
-          const existingNotifications = await base44.entities.Notification.filter({
-            user_id: user.id,
-            type: 'neglected_account',
-            related_account_id: account.id
-          });
-          
-          // If a notification already exists (regardless of when it was created), skip creating a new one
-          // This prevents duplicates while ensuring all neglected accounts have notifications
-          if (existingNotifications.length > 0) {
-            skippedByExisting++;
-            accountNotificationCreated = true; // At least one user has a notification for this account
-            continue; // Notification already exists
-          }
-          
-          // Create the notification
-          const message = daysSinceInteraction === null
-            ? `No interactions logged - account needs attention (${segment || 'C/D'} segment)`
-            : `No contact in ${daysSinceInteraction} day${daysSinceInteraction !== 1 ? 's' : ''} - account needs attention (${segment || 'C/D'} segment, ${thresholdDays}+ day threshold)`;
-          
           await base44.entities.Notification.create({
-            user_id: user.id,
-            type: 'neglected_account',
-            title: `Neglected Account: ${account.name}`,
-            message: message,
-            related_account_id: account.id,
-            related_task_id: null,
-            scheduled_for: today.toISOString()
+            user_id: notifData.user_id,
+            type: notifData.type,
+            title: notifData.title,
+            message: notifData.message,
+            related_account_id: notifData.related_account_id,
+            related_task_id: notifData.related_task_id,
+            scheduled_for: notifData.scheduled_for
           });
           
           createdCount++;
-          accountNotificationCreated = true;
-          console.log(`✅ Created neglected account notification for ${account.name} (${daysSinceInteraction === null ? 'no interaction date' : `${daysSinceInteraction} days`}) for user ${user.email || user.id}`);
+          accountsWithNotifications.add(notifData.accountId);
+          // Add to existing keys to avoid duplicates in same batch
+          existingKeys.add(key);
+          console.log(`✅ Created neglected account notification for ${notifData.accountName} (${notifData.daysSinceInteraction === null ? 'no interaction date' : `${notifData.daysSinceInteraction} days`})`);
         } catch (error) {
           errorCount++;
-          console.error(`❌ Error creating neglected account notification for ${account.name} for user ${user.email || user.id}:`, error);
+          console.error(`❌ Error creating neglected account notification for ${notifData.accountName}:`, error);
         }
       }
       
       // Track accounts that should have notifications but don't
-      if (!accountNotificationCreated && !isSnoozed) {
-        console.warn(`⚠️ Account ${account.name} (${account.id}) is neglected but no notification was created (may have errors for all users)`);
+      const accountIdsInNotifications = new Set(notificationsToCreate.map(n => n.accountId));
+      for (const accountId of accountIdsInNotifications) {
+        const accountNotif = notificationsToCreate.find(n => n.accountId === accountId);
+        if (accountNotif && !accountsWithNotifications.has(accountId) && !accountNotif.isSnoozed) {
+          console.warn(`⚠️ Account ${accountNotif.accountName} (${accountId}) is neglected but no notification was created (may have errors for all users)`);
+        }
       }
     }
     

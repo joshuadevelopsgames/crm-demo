@@ -27,7 +27,7 @@ import {
   BellOff,
   Upload
 } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, startOfDay } from 'date-fns';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -51,9 +51,12 @@ export default function Dashboard() {
 
   // Create renewal notifications on mount and daily
   useEffect(() => {
+    let lastNotificationCheck = 0;
+    const NOTIFICATION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes - don't run full check more often than this
+    
     // Check if renewal notifications already exist for today
     // This prevents duplicate runs across different browser sessions/devices
-    const checkAndRunRenewals = async () => {
+    const checkAndRunRenewals = async (force = false) => {
       try {
         // Get current user to filter notifications
         const currentUser = await base44.auth.me();
@@ -83,6 +86,7 @@ export default function Dashboard() {
           // Invalidate queries to refresh both notifications and accounts (for at_risk status)
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
           queryClient.invalidateQueries({ queryKey: ['accounts'] });
+          lastNotificationCheck = Date.now();
         }
       } catch (error) {
         console.error('Error checking/creating renewal notifications:', error);
@@ -91,8 +95,14 @@ export default function Dashboard() {
     
     // Create neglected account notifications on mount and daily
     // Always run to ensure all neglected accounts have notifications (function handles duplicates)
-    const checkAndRunNeglected = async () => {
+    const checkAndRunNeglected = async (force = false) => {
       try {
+        // Skip if we just ran recently (unless forced)
+        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
+        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
+          return; // Skip to avoid too frequent checks
+        }
+        
         // Get current user to filter notifications
         const currentUser = await base44.auth.me();
         if (!currentUser?.id) {
@@ -100,20 +110,27 @@ export default function Dashboard() {
           return;
         }
         
-        // Always run notification creation - it will skip accounts that already have notifications
+        // Run notification creation - it will skip accounts that already have notifications
         // This ensures newly neglected accounts get notifications even if the function ran earlier today
         await createNeglectedAccountNotifications();
         // Invalidate queries to refresh notifications
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        lastNotificationCheck = Date.now();
       } catch (error) {
         console.error('Error checking/creating neglected account notifications:', error);
       }
     };
     
-    // Run on mount
-    checkAndRunRenewals();
-    checkAndRunNeglected();
+    // Run on mount (force run)
+    checkAndRunRenewals(true);
+    checkAndRunNeglected(true);
+    
+    // Schedule periodic check every minute (but functions will skip if run too recently)
+    const intervalId = setInterval(async () => {
+      await checkAndRunRenewals();
+      await checkAndRunNeglected();
+    }, 60 * 1000); // Check every minute, but functions throttle themselves
     
     // Schedule daily check at midnight
     const scheduleNextRun = () => {
@@ -134,7 +151,10 @@ export default function Dashboard() {
     
     const timeoutId = scheduleNextRun();
     
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
   }, [queryClient]);
   
   const { data: accounts = [] } = useQuery({
@@ -211,8 +231,11 @@ export default function Dashboard() {
     const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
     
     // Check if no interaction beyond threshold
+    // Use startOfDay for consistent date comparison (matches notification service)
+    const today = startOfDay(new Date());
     if (!account.last_interaction_date) return true;
-    const daysSince = differenceInDays(new Date(), new Date(account.last_interaction_date));
+    const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+    const daysSince = differenceInDays(today, lastInteractionDate);
     return daysSince > thresholdDays;
   });
   
@@ -370,7 +393,7 @@ export default function Dashboard() {
   useEffect(() => {
     const logData5 = {location:'Dashboard.jsx:render',message:'Dashboard component rendering',data:{activeAccounts,contactsCount:contacts.length,myTasks,atRiskAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
     console.log('🔍 DEBUG:', logData5);
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(err=>console.error('Log fetch error:',err));
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(()=>{});
   }, [activeAccounts, contacts.length, myTasks, atRiskAccounts]);
   // #endregion
 
@@ -384,7 +407,7 @@ export default function Dashboard() {
           const dashRect = el.getBoundingClientRect();
           const logData6 = {location:'Dashboard.jsx:dash-ref',message:'Dashboard root div styles and position',data:{dashBg,dashDisplay,dashRect:{top:dashRect.top,left:dashRect.left,width:dashRect.width,height:dashRect.height}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
           console.log('🔍 DEBUG:', logData6);
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(err=>console.error('Log fetch error:',err));
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(()=>{});
           // #endregion
         }
       }}

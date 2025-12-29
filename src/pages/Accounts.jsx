@@ -592,7 +592,9 @@ export default function Accounts() {
                             </div>
                             <div>
                               <div className="font-medium text-slate-900 dark:text-foreground">{account.name}</div>
-                              <div className="text-sm text-slate-500">{account.industry || 'No industry'}</div>
+                              {account.industry && (
+                                <div className="text-sm text-slate-500">{account.industry}</div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -675,7 +677,9 @@ export default function Accounts() {
                                 </Badge>
                               )}
                             </div>
-                            <p className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry || 'No industry'}</p>
+                            {account.industry && (
+                              <p className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry}</p>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -882,7 +886,9 @@ export default function Accounts() {
                                     </Badge>
                                   )}
                                 </div>
-                                <div className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry || 'No industry'}</div>
+                                {account.industry && (
+                                  <div className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry}</div>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -959,7 +965,9 @@ export default function Accounts() {
                                 </Badge>
                               )}
                             </div>
-                            <p className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry || 'No industry'}</p>
+                            {account.industry && (
+                              <p className={`text-sm ${isArchived ? 'text-slate-400' : 'text-slate-500'}`}>{account.industry}</p>
+                            )}
                           </div>
                         </div>
                       </div>
