@@ -13,7 +13,8 @@ import {
   Pause,
   Edit,
   Building2,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,6 +23,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -33,12 +44,17 @@ import {
 } from "@/components/ui/select";
 import { format, addDays } from 'date-fns';
 import TutorialTooltip from '../components/TutorialTooltip';
+import { createTasksFromSequence } from '@/services/sequenceTaskService';
+import toast from 'react-hot-toast';
 
 export default function Sequences() {
   const [isSequenceDialogOpen, setIsSequenceDialogOpen] = useState(false);
   const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
   const [selectedSequence, setSelectedSequence] = useState(null);
   const [editingSequence, setEditingSequence] = useState(null);
+  const [preSelectedSequenceId, setPreSelectedSequenceId] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sequenceToDelete, setSequenceToDelete] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -78,6 +94,11 @@ export default function Sequences() {
       queryClient.invalidateQueries({ queryKey: ['sequences'] });
       setIsSequenceDialogOpen(false);
       resetSequenceForm();
+      toast.success('✓ Sequence created successfully');
+    },
+    onError: (error) => {
+      console.error('Error creating sequence:', error);
+      toast.error(error.message || 'Failed to create sequence');
     }
   });
 
@@ -87,11 +108,31 @@ export default function Sequences() {
       queryClient.invalidateQueries({ queryKey: ['sequences'] });
       setIsSequenceDialogOpen(false);
       resetSequenceForm();
+      toast.success('✓ Sequence updated successfully');
+    },
+    onError: (error) => {
+      console.error('Error updating sequence:', error);
+      toast.error(error.message || 'Failed to update sequence');
+    }
+  });
+
+  const deleteSequenceMutation = useMutation({
+    mutationFn: (id) => base44.entities.Sequence.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sequences'] });
+      queryClient.invalidateQueries({ queryKey: ['sequence-enrollments'] });
+      setDeleteDialogOpen(false);
+      setSequenceToDelete(null);
+      toast.success('✓ Sequence deleted successfully');
+    },
+    onError: (error) => {
+      console.error('Error deleting sequence:', error);
+      toast.error(error.message || 'Failed to delete sequence');
     }
   });
 
   const createEnrollmentMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       const today = new Date();
       const sequence = sequences.find(s => s.id === data.sequence_id);
       const firstStep = sequence?.steps?.[0];
@@ -99,7 +140,8 @@ export default function Sequences() {
         ? addDays(today, firstStep.days_after_previous).toISOString().split('T')[0]
         : today.toISOString().split('T')[0];
 
-      return base44.entities.SequenceEnrollment.create({
+      // Create the enrollment
+      const enrollment = await base44.entities.SequenceEnrollment.create({
         ...data,
         status: 'active',
         current_step: 1,
@@ -107,11 +149,26 @@ export default function Sequences() {
         next_action_date: nextActionDate,
         completed_steps: []
       });
+
+      // Create tasks from sequence steps
+      if (sequence && data.account_id) {
+        try {
+          await createTasksFromSequence(enrollment, sequence, data.account_id);
+          console.log(`✅ Created tasks from sequence "${sequence.name}" for account ${data.account_id}`);
+        } catch (error) {
+          console.error('Error creating tasks from sequence:', error);
+          // Don't fail enrollment if task creation fails
+        }
+      }
+
+      return enrollment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sequence-enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setIsEnrollDialogOpen(false);
       setEnrollmentData({ account_id: '', sequence_id: '' });
+      setPreSelectedSequenceId(null);
     }
   });
 
@@ -188,7 +245,11 @@ export default function Sequences() {
   };
 
   const handleEnroll = () => {
-    createEnrollmentMutation.mutate(enrollmentData);
+    const enrollmentPayload = {
+      ...enrollmentData,
+      sequence_id: enrollmentData.sequence_id || preSelectedSequenceId
+    };
+    createEnrollmentMutation.mutate(enrollmentPayload);
   };
 
   const toggleEnrollmentStatus = (enrollment) => {
@@ -207,21 +268,42 @@ export default function Sequences() {
     return sequences.find(s => s.id === sequenceId)?.name || 'Unknown';
   };
 
+  const handleDeleteSequence = (sequence) => {
+    setSequenceToDelete(sequence);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteSequence = () => {
+    if (sequenceToDelete) {
+      deleteSequenceMutation.mutate(sequenceToDelete.id);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <TutorialTooltip
-        tip="This is your Sequences page. Create multi-step automated outreach sequences to stay in touch with prospects and customers. Define different cadences for different account types."
+        tip="Create template sequences that automatically generate ordered, blocked tasks for your outreach. Click 'Create Template Sequence' to build a reusable sequence with multiple steps (emails, calls, meetings). Then use 'Enroll Account' to assign a sequence to an account - tasks will automatically appear on your Tasks page in the correct order, with each task blocked until the previous one completes. This automates your follow-up process and ensures nothing falls through the cracks."
         step={7}
         position="bottom"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Sequences</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Sequences</h1>
             <p className="text-slate-600 mt-1">Automate your outreach cadences</p>
           </div>
         <div className="flex gap-3">
-          <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
+          <Dialog 
+            open={isEnrollDialogOpen} 
+            onOpenChange={(open) => {
+              setIsEnrollDialogOpen(open);
+              if (!open) {
+                // Reset when dialog closes
+                setEnrollmentData({ account_id: '', sequence_id: '' });
+                setPreSelectedSequenceId(null);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Play className="w-4 h-4 mr-2" />
@@ -230,9 +312,20 @@ export default function Sequences() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Enroll Account in Sequence</DialogTitle>
+                <DialogTitle>
+                  {preSelectedSequenceId 
+                    ? `Enroll Account in ${sequences.find(s => s.id === preSelectedSequenceId)?.name || 'Sequence'}`
+                    : 'Enroll Account in Sequence'}
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                {preSelectedSequenceId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800">
+                      <strong>Sequence:</strong> {sequences.find(s => s.id === preSelectedSequenceId)?.name}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label>Select Account *</Label>
                   <Select
@@ -251,31 +344,40 @@ export default function Sequences() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Select Sequence *</Label>
-                  <Select
-                    value={enrollmentData.sequence_id}
-                    onValueChange={(value) => setEnrollmentData({ ...enrollmentData, sequence_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose sequence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sequences.filter(s => s.is_active).map(sequence => (
-                        <SelectItem key={sequence.id} value={sequence.id}>
-                          {sequence.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!preSelectedSequenceId && (
+                  <div>
+                    <Label>Select Sequence *</Label>
+                    <Select
+                      value={enrollmentData.sequence_id}
+                      onValueChange={(value) => setEnrollmentData({ ...enrollmentData, sequence_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose sequence" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sequences.filter(s => s.is_active).map(sequence => (
+                          <SelectItem key={sequence.id} value={sequence.id}>
+                            {sequence.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsEnrollDialogOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEnrollDialogOpen(false);
+                      setEnrollmentData({ account_id: '', sequence_id: '' });
+                      setPreSelectedSequenceId(null);
+                    }}
+                  >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleEnroll}
-                    disabled={!enrollmentData.account_id || !enrollmentData.sequence_id}
+                    disabled={!enrollmentData.account_id || (!enrollmentData.sequence_id && !preSelectedSequenceId)}
                   >
                     Enroll Account
                   </Button>
@@ -284,18 +386,27 @@ export default function Sequences() {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isSequenceDialogOpen} onOpenChange={setIsSequenceDialogOpen}>
+          <Dialog 
+            open={isSequenceDialogOpen} 
+            onOpenChange={(open) => {
+              setIsSequenceDialogOpen(open);
+              if (open && !editingSequence) {
+                // Reset form when opening for new sequence
+                resetSequenceForm();
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button className="bg-slate-900 hover:bg-slate-800" onClick={resetSequenceForm}>
+              <Button variant="outline" className="border-slate-300">
                 <Plus className="w-4 h-4 mr-2" />
-                New Sequence
+                Create Template Sequence
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>{editingSequence ? 'Edit Sequence' : 'Create New Sequence'}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-6 py-4">
+              <div className="space-y-6 py-4 overflow-y-auto flex-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <Label>Sequence Name *</Label>
@@ -337,7 +448,7 @@ export default function Sequences() {
                 {/* Steps */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-slate-900">Sequence Steps</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">Sequence Steps</h3>
                     <Button variant="outline" size="sm" onClick={addStep}>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Step
@@ -406,15 +517,26 @@ export default function Sequences() {
                     ))}
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setIsSequenceDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateOrUpdateSequence} disabled={!newSequence.name}>
-                    {editingSequence ? 'Update Sequence' : 'Create Sequence'}
-                  </Button>
-                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 border-t mt-4 flex-shrink-0">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsSequenceDialogOpen(false)}
+                  disabled={createSequenceMutation.isPending || updateSequenceMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateOrUpdateSequence} 
+                  disabled={!newSequence.name?.trim() || createSequenceMutation.isPending || updateSequenceMutation.isPending}
+                >
+                  {createSequenceMutation.isPending || updateSequenceMutation.isPending 
+                    ? 'Creating...' 
+                    : editingSequence 
+                      ? 'Update Sequence' 
+                      : 'Create Sequence'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -475,12 +597,21 @@ export default function Sequences() {
                       size="sm"
                       className="flex-1"
                       onClick={() => {
-                        setEnrollmentData({ ...enrollmentData, sequence_id: sequence.id });
+                        setPreSelectedSequenceId(sequence.id);
+                        setEnrollmentData({ account_id: '', sequence_id: sequence.id });
                         setIsEnrollDialogOpen(true);
                       }}
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Enroll
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteSequence(sequence)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -491,7 +622,7 @@ export default function Sequences() {
           {sequences.length === 0 && (
             <Card className="p-12 text-center">
               <GitBranch className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No sequences yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No sequences yet</h3>
               <p className="text-slate-600">Create your first sequence to automate outreach</p>
             </Card>
           )}
@@ -512,7 +643,7 @@ export default function Sequences() {
                           <Building2 className="w-6 h-6 text-slate-600" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900">{accountName}</h4>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">{accountName}</h4>
                           <p className="text-sm text-slate-600">{sequenceName}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <Badge variant="outline" className="text-xs">
@@ -563,12 +694,42 @@ export default function Sequences() {
           {enrollments.length === 0 && (
             <Card className="p-12 text-center">
               <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No enrollments yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No enrollments yet</h3>
               <p className="text-slate-600">Enroll accounts in sequences to start automated outreach</p>
             </Card>
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sequence</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the sequence <strong>{sequenceToDelete?.name}</strong>? 
+              This action cannot be undone. Any active enrollments will remain, but the sequence template will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSequenceToDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteSequence}
+              disabled={deleteSequenceMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteSequenceMutation.isPending ? 'Deleting...' : 'Delete Sequence'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

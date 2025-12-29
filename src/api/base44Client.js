@@ -300,6 +300,15 @@ export const base44 = {
         if (result.success) return result.data;
         throw new Error(result.error || 'Failed to update sequence');
       },
+      delete: async (id) => {
+        const response = await fetch(`/api/data/sequences?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success) return true;
+        throw new Error(result.error || 'Failed to delete sequence');
+      },
     },
     SequenceEnrollment: {
       list: async () => {
