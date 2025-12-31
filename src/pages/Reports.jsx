@@ -30,16 +30,12 @@ import AccountPerformanceReport from '@/components/reports/AccountPerformanceRep
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
 export default function Reports() {
-  console.log('📊 Reports: Component mounted/rendered');
-  
   const [searchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
   const yearFromUrl = searchParams.get('year');
   const [selectedYear, setSelectedYear] = useState(yearFromUrl ? parseInt(yearFromUrl) : currentYear);
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  
-  console.log('📊 Reports: Initial state', { currentYear, selectedYear, yearFromUrl });
 
   // Update selected year if URL parameter changes
   useEffect(() => {
@@ -58,7 +54,6 @@ export default function Reports() {
   }, [currentYear]);
 
   // Fetch estimates (regular database estimates)
-  console.log('📊 Reports: Setting up estimates query');
   const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
@@ -80,14 +75,16 @@ export default function Reports() {
     enabled: true
   });
   
-  console.log('📊 Reports: Estimates query state', {
-    isLoading: estimatesLoading,
-    hasError: !!estimatesError,
-    dataLength: estimates.length
-  });
+  // Log estimates query state
+  useEffect(() => {
+    console.log('📊 Reports: Estimates query state', {
+      isLoading: estimatesLoading,
+      hasError: !!estimatesError,
+      dataLength: estimates.length
+    });
+  }, [estimatesLoading, estimatesError, estimates.length]);
 
   // Fetch yearly official LMN data (from detailed exports) - source of truth
-  console.log('📊 Reports: Setting up yearlyOfficialData query, selectedYear:', selectedYear);
   const { data: yearlyOfficialData = [], isLoading: yearlyOfficialLoading, error: yearlyOfficialError } = useQuery({
     queryKey: ['yearlyOfficialData', selectedYear],
     queryFn: async () => {
@@ -121,7 +118,6 @@ export default function Reports() {
   });
 
   // Get available years with official data
-  console.log('📊 Reports: Setting up availableOfficialYears query');
   const { data: availableOfficialYears = [], isLoading: availableYearsLoading, error: availableYearsError } = useQuery({
     queryKey: ['availableOfficialYears'],
     queryFn: async () => {
