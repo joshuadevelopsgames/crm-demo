@@ -55,6 +55,43 @@ export PROD_SUPABASE_SERVICE_ROLE_KEY="your-prod-service-role-key"
 
 ## Step 3: Run Data Migration Script
 
+Run the main migration script:
+
+```bash
+node migrate-data-dev-to-prod.js
+```
+
+This will migrate all tables except `profiles` (which requires special handling).
+
+## Step 4: Migrate Profiles (After Users Sign In)
+
+**Important**: Profiles have a foreign key to `auth.users`, so users must exist in production first.
+
+### Option A: Users Already Signed In to Production
+
+If users have already signed in to production (or were created via admin API), run:
+
+```bash
+node migrate-profiles-dev-to-prod.js
+```
+
+This script will:
+- ✅ Copy profiles for users that exist in prod `auth.users`
+- ⏭️ Skip profiles for users that don't exist yet (they'll be auto-created when they sign in)
+
+### Option B: Users Haven't Signed In Yet
+
+If users haven't signed in to production yet:
+
+1. **Have users sign in** to production at least once (this auto-creates their profile)
+2. **Then run** the profiles migration script to copy additional data (role, phone, etc.):
+
+```bash
+node migrate-profiles-dev-to-prod.js
+```
+
+**Note**: The profile trigger will auto-create basic profiles when users sign in, but the migration script will copy additional fields like `role`, `phone`, etc.
+
 ```bash
 node migrate-data-dev-to-prod.js
 ```
