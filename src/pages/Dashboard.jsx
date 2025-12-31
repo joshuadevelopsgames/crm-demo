@@ -149,7 +149,7 @@ export default function Dashboard() {
       }
     };
     
-    // Run on mount (force run) - only check on page load
+    // Run on mount (force run)
     checkAndRunRenewals(true);
     checkAndRunNeglected(true);
     checkAndRunOverdueTasks(true);
@@ -159,10 +159,19 @@ export default function Dashboard() {
       console.error('Error generating recurring task instances:', error);
     });
     
+    // Schedule periodic check every 15 minutes
+    const intervalId = setInterval(async () => {
+      await checkAndRunRenewals();
+      await checkAndRunNeglected();
+      await checkAndRunOverdueTasks();
+    }, 15 * 60 * 1000); // Check every 15 minutes
+    
     // Note: Task assignment notifications are already handled automatically when tasks are created/updated
     // via createTaskAssignmentNotifications() in Tasks.jsx, so no periodic check needed for those
     
-    // No cleanup needed since we're not using intervals or timeouts
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [queryClient]);
   
   const { data: accounts = [] } = useQuery({
