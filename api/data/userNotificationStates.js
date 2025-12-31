@@ -56,9 +56,11 @@ export default async function handler(req, res) {
         });
       }
       
+      // Use service role key which bypasses RLS
+      // Add timeout and error handling for large JSONB queries
       const { data, error } = await supabase
         .from('user_notification_states')
-        .select('*')
+        .select('user_id, notifications, created_at, updated_at')
         .eq('user_id', user_id)
         .single();
       
@@ -87,6 +89,23 @@ export default async function handler(req, res) {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }
+          });
+        }
+        // Check for RLS/permission errors
+        if (error.message?.includes('permission') || error.message?.includes('policy') || error.code === '42501') {
+          console.error(`❌ RLS policy error fetching user_notification_states for user ${user_id}:`, error.message);
+          console.error(`   This might indicate the service role key is not configured correctly or RLS is blocking access.`);
+          return res.status(500).json({
+            success: false,
+            error: `Permission denied: ${error.message}. Check RLS policies and service role key configuration.`
+          });
+        }
+        // Check for query timeout or size limits
+        if (error.message?.includes('timeout') || error.message?.includes('limit') || error.code === '57014') {
+          console.error(`❌ Query timeout or limit error for user ${user_id}:`, error.message);
+          return res.status(500).json({
+            success: false,
+            error: `Query timeout or size limit exceeded: ${error.message}. Consider paginating notifications.`
           });
         }
         console.error('Supabase error fetching user_notification_states:', error);
