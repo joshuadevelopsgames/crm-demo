@@ -75,19 +75,19 @@ export default function Reports() {
     }
   });
 
-  // Calculate available years from estimates (use same logic: close_date -> estimate_date -> created_at)
+  // Calculate available years from estimates (use same logic: close_date -> estimate_date, exclude if neither exists)
   const availableYears = useMemo(() => {
     const years = new Set();
     estimates.forEach(e => {
-      // Use same logic as filtering: close_date takes priority, then estimate_date, then created_at
+      // Use same logic as filtering: close_date takes priority, then estimate_date
+      // Don't use created_at - that's when we imported, not when estimate was created
       let dateToUse = null;
       if (e.estimate_close_date) {
         dateToUse = e.estimate_close_date;
       } else if (e.estimate_date) {
         dateToUse = e.estimate_date;
-      } else {
-        dateToUse = e.created_at;
       }
+      // If neither exists, skip (don't use created_at)
       if (dateToUse) {
         const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
@@ -272,18 +272,18 @@ export default function Reports() {
       }))
     });
     
-    // Check what years are available in the data (using same logic: close_date -> estimate_date -> created_at)
+    // Check what years are available in the data (using same logic: close_date -> estimate_date, exclude if neither exists)
     const yearsInData = new Set();
     uniqueEstimates.forEach(e => {
-      // Use same logic as filtering: close_date takes priority, then estimate_date, then created_at
+      // Use same logic as filtering: close_date takes priority, then estimate_date
+      // Don't use created_at - that's when we imported, not when estimate was created
       let dateToUse = null;
       if (e.estimate_close_date) {
         dateToUse = e.estimate_close_date;
       } else if (e.estimate_date) {
         dateToUse = e.estimate_date;
-      } else {
-        dateToUse = e.created_at;
       }
+      // If neither exists, skip (don't use created_at)
       if (dateToUse) {
         const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
@@ -311,7 +311,7 @@ export default function Reports() {
       // Business logic for year filtering:
       // 1. If estimate has a close date → use that year (counts in year it closed)
       // 2. Otherwise, use estimate_date → use that year (counts in year it was made, even if for future year)
-      // 3. Fall back to created_at as last resort
+      // If neither exists, exclude from reports (don't use created_at - that's just when we imported it)
       let dateToUse = null;
       
       // Priority 1: If estimate closed, count it in the year it closed
@@ -322,13 +322,11 @@ export default function Reports() {
       else if (estimate.estimate_date) {
         dateToUse = estimate.estimate_date;
       }
-      // Priority 3: Last resort - use created_at (when we imported it)
-      else {
-        dateToUse = estimate.created_at;
-      }
+      // If neither exists, exclude from year-based reports
+      // (created_at is when we imported, not when estimate was created, so it's not useful for reporting)
       
       if (!dateToUse) {
-        return false; // Skip estimates without any date
+        return false; // Skip estimates without estimate_close_date or estimate_date
       }
       
       // Handle different date formats

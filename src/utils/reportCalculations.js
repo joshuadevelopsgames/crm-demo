@@ -231,7 +231,7 @@ export function filterEstimatesByYear(estimates, year) {
     // Business logic for year filtering:
     // 1. If estimate has a close date → use that year (counts in year it closed)
     // 2. Otherwise, use estimate_date → use that year (counts in year it was made, even if for future year)
-    // 3. Fall back to created_at as last resort
+    // If neither exists, exclude from reports (don't use created_at - that's just when we imported it)
     let dateToUse = null;
     
     // Priority 1: If estimate closed, count it in the year it closed
@@ -242,10 +242,8 @@ export function filterEstimatesByYear(estimates, year) {
     else if (estimate.estimate_date) {
       dateToUse = estimate.estimate_date;
     }
-    // Priority 3: Last resort - use created_at (when we imported it)
-    else {
-      dateToUse = estimate.created_at;
-    }
+    // If neither exists, exclude from year-based reports
+    // (created_at is when we imported, not when estimate was created, so it's not useful for reporting)
     
     if (!dateToUse) return false;
     
