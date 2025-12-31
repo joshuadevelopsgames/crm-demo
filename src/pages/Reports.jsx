@@ -54,7 +54,16 @@ export default function Reports() {
   // Fetch estimates
   const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
     queryKey: ['estimates'],
-    queryFn: () => base44.entities.Estimate.list()
+    queryFn: async () => {
+      const data = await base44.entities.Estimate.list();
+      console.log('📊 Reports: Fetched estimates', {
+        total: data.length,
+        withEstimateDate: data.filter(e => e.estimate_date).length,
+        sampleDates: data.filter(e => e.estimate_date).slice(0, 5).map(e => e.estimate_date),
+        selectedYear
+      });
+      return data;
+    }
   });
 
   // Fetch accounts
@@ -67,6 +76,8 @@ export default function Reports() {
   // Use estimate_date only (not estimate_close_date) to match LMN's counting logic
   // Also exclude estimates with exclude_stats=true and remove duplicates by lmn_estimate_id
   const filteredEstimates = useMemo(() => {
+    console.log('📊 Reports: Starting filter', { totalEstimates: estimates.length, selectedYear });
+    
     // First, remove duplicates by lmn_estimate_id (keep first occurrence)
     const uniqueEstimates = [];
     const seenLmnIds = new Set();
@@ -81,8 +92,10 @@ export default function Reports() {
         uniqueEstimates.push(est);
       }
     });
+    
+    console.log('📊 Reports: After deduplication', { uniqueCount: uniqueEstimates.length });
 
-    return uniqueEstimates.filter(estimate => {
+    const filtered = uniqueEstimates.filter(estimate => {
       // Filter by year (using estimate_date only to match LMN)
       // Use string extraction to avoid timezone issues (LMN dates are UTC)
       if (!estimate.estimate_date) {
@@ -123,6 +136,21 @@ export default function Reports() {
 
       return true;
     });
+    
+    console.log('📊 Reports: After filtering', {
+      filteredCount: filtered.length,
+      selectedYear,
+      selectedAccount,
+      selectedDepartment,
+      sampleFiltered: filtered.slice(0, 3).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        status: e.status,
+        exclude_stats: e.exclude_stats
+      }))
+    });
+    
+    return filtered;
   }, [estimates, selectedYear, selectedAccount, selectedDepartment]);
 
   // Get unique departments
@@ -155,7 +183,18 @@ export default function Reports() {
 
   // Get estimates for selected year (for reports)
   const yearEstimates = useMemo(() => {
-    return filterEstimatesByYear(estimates, selectedYear);
+    const filtered = filterEstimatesByYear(estimates, selectedYear);
+    console.log('📊 Reports: yearEstimates from filterEstimatesByYear', {
+      total: estimates.length,
+      filtered: filtered.length,
+      selectedYear,
+      sample: filtered.slice(0, 3).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        status: e.status
+      }))
+    });
+    return filtered;
   }, [estimates, selectedYear]);
   
   // Apply account and department filters to year estimates
