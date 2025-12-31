@@ -234,7 +234,10 @@ export function filterEstimatesByYear(estimates, year) {
     // Exclude estimates marked for exclusion from stats
     if (estimate.exclude_stats) return false;
     
-    const estimateYear = new Date(estimate.estimate_date).getFullYear();
+    // Extract year from date string to avoid timezone conversion issues (LMN dates are UTC)
+    const dateStr = estimate.estimate_date;
+    const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
+    const estimateYear = yearMatch ? parseInt(yearMatch[1]) : new Date(dateStr).getFullYear();
     return estimateYear === year;
   });
 }

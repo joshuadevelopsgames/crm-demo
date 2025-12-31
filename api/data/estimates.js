@@ -292,17 +292,24 @@ export default async function handler(req, res) {
             }
           }
           
-          for (const { id, data: updateData } of toUpdate) {
-            const { error: updateError } = await supabase
-              .from('estimates')
-              .update(updateData)
-              .eq('id', id);
+          // Parallelize updates to speed up the process
+          if (toUpdate.length > 0) {
+            const updatePromises = toUpdate.map(({ id, data: updateData }) =>
+              supabase
+                .from('estimates')
+                .update(updateData)
+                .eq('id', id)
+                .then(({ error }) => {
+                  if (error) {
+                    console.error(`Bulk update error for estimate ${id}:`, error);
+                    return false;
+                  }
+                  return true;
+                })
+            );
             
-            if (updateError) {
-              console.error('Bulk update error:', updateError);
-            } else {
-              updated++;
-            }
+            const updateResults = await Promise.all(updatePromises);
+            updated += updateResults.filter(r => r === true).length;
           }
         }
         

@@ -84,10 +84,14 @@ export default function Reports() {
 
     return uniqueEstimates.filter(estimate => {
       // Filter by year (using estimate_date only to match LMN)
+      // Use string extraction to avoid timezone issues (LMN dates are UTC)
       if (!estimate.estimate_date) {
         return false; // Skip estimates without estimate_date
       }
-      const estimateYear = new Date(estimate.estimate_date).getFullYear();
+      // Extract year from date string to avoid timezone conversion issues
+      const dateStr = estimate.estimate_date;
+      const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
+      const estimateYear = yearMatch ? parseInt(yearMatch[1]) : new Date(dateStr).getFullYear();
       if (estimateYear !== selectedYear) return false;
 
       // Exclude estimates marked for exclusion from stats

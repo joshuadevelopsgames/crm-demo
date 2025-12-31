@@ -103,20 +103,49 @@ export function parseEstimatesList(csvTextOrRows) {
         seenEstimateIds.add(estimateId);
 
         // Parse dates (Excel serial dates or ISO strings)
+        // LMN dates are always in UTC, so we need to parse them as UTC to avoid timezone conversion issues
         const parseDate = (value) => {
           if (!value) return null;
           // If it's an Excel serial date (number)
           if (typeof value === 'number') {
             // Excel epoch is 1900-01-01, but Excel has a bug where 1900 is treated as leap year
-            const excelEpoch = new Date(1899, 11, 30);
-            const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
-            return date.toISOString().split('T')[0];
+            // Excel epoch: December 30, 1899 (day 0 in Excel)
+            // Convert Excel serial number to UTC date components directly
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // UTC: Dec 30, 1899
+            const date = new Date(excelEpoch.getTime() + (value - 1) * 24 * 60 * 60 * 1000);
+            // Use UTC methods to extract date components to avoid timezone shifts
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
           }
           // Try parsing as date string
           if (typeof value === 'string') {
-            const parsed = new Date(value);
-            if (!isNaN(parsed.getTime())) {
-              return parsed.toISOString().split('T')[0];
+            // If it's already in YYYY-MM-DD format, use it directly
+            const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+              return isoMatch[0]; // Return YYYY-MM-DD
+            }
+            // Try parsing as UTC date string
+            // If the string includes timezone info, parse it as UTC
+            if (value.includes('T') || value.includes('Z') || value.includes('+') || value.includes('-')) {
+              const parsed = new Date(value);
+              if (!isNaN(parsed.getTime())) {
+                // Extract UTC date components to avoid timezone conversion
+                const year = parsed.getUTCFullYear();
+                const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(parsed.getUTCDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              }
+            } else {
+              // Try parsing as a simple date string (assume UTC)
+              const parsed = new Date(value + 'T00:00:00Z'); // Force UTC
+              if (!isNaN(parsed.getTime())) {
+                const year = parsed.getUTCFullYear();
+                const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(parsed.getUTCDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              }
             }
           }
           return null;

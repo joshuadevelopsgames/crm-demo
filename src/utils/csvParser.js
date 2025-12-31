@@ -107,6 +107,7 @@ export function parseCurrency(str) {
 /**
  * Parse date string
  * Handles MM/DD/YYYY format from the CSV
+ * LMN dates are always in UTC, so we parse them as UTC to avoid timezone conversion issues
  */
 export function parseDate(dateStr) {
   if (!dateStr) return null;
@@ -117,9 +118,32 @@ export function parseDate(dateStr) {
       const month = parseInt(parts[0]);
       const day = parseInt(parts[1]);
       const year = parseInt(parts[2]);
-      return new Date(year, month - 1, day);
+      // Create date in UTC to avoid timezone shifts
+      return new Date(Date.UTC(year, month - 1, day));
     }
-    return new Date(dateStr);
+    // Try parsing as ISO string or other format
+    // If it's already YYYY-MM-DD, parse as UTC
+    const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const year = parseInt(isoMatch[1]);
+      const month = parseInt(isoMatch[2]);
+      const day = parseInt(isoMatch[3]);
+      return new Date(Date.UTC(year, month - 1, day));
+    }
+    // Try parsing as date string, but treat as UTC
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      // If it doesn't have timezone info, assume UTC
+      if (!dateStr.includes('T') && !dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+        // Extract components and create UTC date
+        const year = parsed.getUTCFullYear();
+        const month = parsed.getUTCMonth();
+        const day = parsed.getUTCDate();
+        return new Date(Date.UTC(year, month, day));
+      }
+      return parsed;
+    }
+    return null;
   } catch (e) {
     return null;
   }
@@ -197,17 +221,26 @@ export function processEstimateData(rawData) {
       return;
     }
     
+    // Extract UTC date components to avoid timezone conversion when converting to string
+    const formatUTCDate = (date) => {
+      if (!date) return null;
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     estimates.push({
       id: row['Estimate ID'] || `est-${index}`,
       account_name: row['Contact Name'].trim(),
       estimate_number: row['Estimate ID'] || '',
-      estimate_date: estimateDate.toISOString().split('T')[0],
-      close_date: closeDate ? closeDate.toISOString().split('T')[0] : null,
+      estimate_date: formatUTCDate(estimateDate),
+      close_date: formatUTCDate(closeDate),
       description: row['Project Name'] || 'No description',
       total_amount: totalPrice,
       status: status,
-      won_date: status === 'won' && closeDate ? closeDate.toISOString().split('T')[0] : null,
-      lost_date: status === 'lost' && closeDate ? closeDate.toISOString().split('T')[0] : null,
+      won_date: status === 'won' && closeDate ? formatUTCDate(closeDate) : null,
+      lost_date: status === 'lost' && closeDate ? formatUTCDate(closeDate) : null,
       salesperson: row['Salesperson'] || '',
       estimator: row['Estimator'] || '',
       division: row['Division'] || '',
