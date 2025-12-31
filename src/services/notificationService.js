@@ -327,8 +327,12 @@ export async function createOverdueTaskNotifications() {
       const readNotificationsToUpdate = [];
       
       for (const notif of allExistingNotifications) {
+        if (!notif.related_task_id) continue; // Skip notifications without task_id
+        
         const notifUserIdStr = String(notif.user_id || '').trim();
-        const key = `${notifUserIdStr}:${notif.related_task_id}`;
+        const taskIdStr = String(notif.related_task_id).trim();
+        const key = `${notifUserIdStr}:${taskIdStr}`;
+        
         if (!notif.is_read) {
           existingKeys.add(key);
         } else {
@@ -336,6 +340,8 @@ export async function createOverdueTaskNotifications() {
           readNotificationsToUpdate.push({ key, notification: notif });
         }
       }
+      
+      console.log(`📋 Found ${existingKeys.size} existing unread overdue notifications, ${readNotificationsToUpdate.length} read notifications to mark as unread`);
       
       // Mark read overdue notifications as unread (task is still overdue)
       for (const { notification } of readNotificationsToUpdate) {
@@ -396,8 +402,16 @@ export async function createOverdueTaskNotifications() {
           existingKeys.add(key);
           console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue, user_id: ${created?.user_id})`);
         } catch (error) {
-          errorCount++;
-          console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, error);
+          // Check if error is due to duplicate key constraint (unique index violation)
+          const errorMessage = error?.message || error?.toString() || '';
+          if (errorMessage.includes('unique constraint') || errorMessage.includes('duplicate key') || errorMessage.includes('unique_user_task_notification')) {
+            // This is expected - notification already exists (unique constraint prevented duplicate)
+            skippedCount++;
+            console.log(`   ⏭️  Skipping duplicate notification for task "${notifData.task_title}" (user_id: ${notifData.user_id}) - already exists`);
+          } else {
+            errorCount++;
+            console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, error);
+          }
         }
       }
     }
