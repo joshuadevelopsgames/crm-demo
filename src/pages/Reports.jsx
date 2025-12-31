@@ -75,6 +75,32 @@ export default function Reports() {
     }
   });
 
+  // Calculate available years from estimates
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    estimates.forEach(e => {
+      if (e.estimate_date) {
+        const dateStr = String(e.estimate_date);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          const year = parseInt(yearStr);
+          if (!isNaN(year) && year >= 2000 && year <= 2100) {
+            years.add(year);
+          }
+        }
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Most recent first
+  }, [estimates]);
+
+  // Auto-select most recent year if current year has no data
+  useEffect(() => {
+    if (!estimatesLoading && availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+      console.log('📊 Reports: Selected year has no data, switching to most recent year:', availableYears[0]);
+      setSelectedYear(availableYears[0]);
+    }
+  }, [estimatesLoading, availableYears, selectedYear]);
+
   // Fetch accounts
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
