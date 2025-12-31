@@ -14,8 +14,22 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS blocked_by_task_id uuid REFERENCES ta
 -- Create index for blocked_by_task_id
 CREATE INDEX IF NOT EXISTS idx_tasks_blocked_by_task_id ON tasks(blocked_by_task_id);
 
--- Add is_recurring to tasks table
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;
+-- Add recurring task columns to tasks table
+ALTER TABLE tasks 
+ADD COLUMN IF NOT EXISTS is_recurring boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS recurrence_pattern text,
+ADD COLUMN IF NOT EXISTS recurrence_interval integer DEFAULT 1,
+ADD COLUMN IF NOT EXISTS recurrence_days_of_week integer[],
+ADD COLUMN IF NOT EXISTS recurrence_day_of_month integer,
+ADD COLUMN IF NOT EXISTS recurrence_end_date date,
+ADD COLUMN IF NOT EXISTS recurrence_count integer,
+ADD COLUMN IF NOT EXISTS parent_task_id uuid REFERENCES tasks(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS next_recurrence_date date;
+
+-- Create indexes for recurring tasks
+CREATE INDEX IF NOT EXISTS idx_tasks_is_recurring ON tasks(is_recurring);
+CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks(parent_task_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_next_recurrence_date ON tasks(next_recurrence_date);
 
 -- Verify columns were added
 SELECT 

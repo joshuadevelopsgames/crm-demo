@@ -176,7 +176,8 @@ async function migrateTable(tableName) {
   }
   
   // Insert data in batches (Supabase has limits)
-  const BATCH_SIZE = 1000;
+  // Use smaller batch size for notifications to avoid hitting limits
+  const BATCH_SIZE = tableName === 'notifications' ? 500 : 1000;
   let totalInserted = 0;
   let totalErrors = 0;
   
