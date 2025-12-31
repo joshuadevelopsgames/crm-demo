@@ -104,12 +104,32 @@ export default function Reports() {
     
     console.log('📊 Reports: After deduplication', { uniqueCount: uniqueEstimates.length });
     
-    // Debug: Check sample dates to see format
+    // Debug: Check sample dates to see format and find 2025 dates
     const sampleDates = uniqueEstimates
       .filter(e => e.estimate_date)
       .slice(0, 10)
       .map(e => ({ id: e.id, estimate_date: e.estimate_date, type: typeof e.estimate_date }));
     console.log('📊 Reports: Sample estimate dates', sampleDates);
+    
+    // Check for 2025 dates specifically
+    const dates2025 = uniqueEstimates.filter(e => {
+      if (!e.estimate_date) return false;
+      const dateStr = String(e.estimate_date);
+      if (dateStr.length >= 4) {
+        const yearStr = dateStr.substring(0, 4);
+        return yearStr === '2025';
+      }
+      return false;
+    });
+    console.log('📊 Reports: Estimates with 2025 dates', {
+      count: dates2025.length,
+      sample: dates2025.slice(0, 5).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        status: e.status,
+        exclude_stats: e.exclude_stats
+      }))
+    });
 
     const filtered = uniqueEstimates.filter(estimate => {
       // Filter by year (using estimate_date only to match LMN)
