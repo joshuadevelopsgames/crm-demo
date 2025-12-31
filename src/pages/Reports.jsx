@@ -22,7 +22,7 @@ import {
   Building2,
   AlertCircle
 } from 'lucide-react';
-import { filterEstimatesByYear, formatCurrency } from '@/utils/reportCalculations';
+import { filterEstimatesByYear, formatCurrency, isWonStatus } from '@/utils/reportCalculations';
 import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
 import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
