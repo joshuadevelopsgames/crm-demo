@@ -539,12 +539,21 @@ export default function Reports() {
     );
   }
 
+  // Calculate estimates missing both dates
+  const estimatesMissingDates = useMemo(() => {
+    return estimates.filter(est => {
+      // Check if estimate has neither estimate_close_date nor estimate_date
+      return !est.estimate_close_date && !est.estimate_date;
+    });
+  }, [estimates]);
+
   // Force log on every render
   console.log('📊 Reports: RENDER - About to return JSX', {
     estimatesCount: estimates.length,
     filteredCount: filteredEstimates.length,
     yearEstimatesCount: yearEstimates.length,
-    stats: stats
+    stats: stats,
+    estimatesMissingDates: estimatesMissingDates.length
   });
 
   return (
