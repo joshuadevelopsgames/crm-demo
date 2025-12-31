@@ -203,7 +203,6 @@ export default function NotificationBell() {
       // Debug logging for task_overdue notifications
       if (notification.type === 'task_overdue') {
         const userMatch = notificationUserId === currentUserIdStr;
-        console.log(`🔔 Processing task_overdue notification:`, {
           id: notification.id,
           title: notification.title,
           message: notification.message,
