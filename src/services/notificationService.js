@@ -16,6 +16,13 @@ function parseAssignedUsers(assignedTo) {
 export async function createTaskAssignmentNotifications(task, previousAssignedTo = null) {
   if (!task || !task.id) return;
 
+  // Skip creating assignment notifications for overdue tasks
+  // (overdue tasks should only show task_overdue notifications, not task_assigned)
+  if (task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed') {
+    console.log(`⏭️  Skipping assignment notification for overdue task: "${task.title}"`);
+    return;
+  }
+
   const currentAssigned = parseAssignedUsers(task.assigned_to || '');
   const previousAssigned = previousAssignedTo ? parseAssignedUsers(previousAssignedTo) : [];
   
@@ -340,6 +347,25 @@ export async function createOverdueTaskNotifications() {
         } catch (error) {
           console.error(`❌ Error updating overdue task notification:`, error);
         }
+      }
+      
+      // Mark task_assigned notifications as read for overdue tasks
+      // (overdue tasks should only show task_overdue, not task_assigned)
+      const overdueTaskIds = new Set(notificationsToCreate.map(n => n.task_id));
+      let taskAssignedMarkedRead = 0;
+      for (const notif of allExistingNotifications) {
+        if (notif.type === 'task_assigned' && overdueTaskIds.has(notif.related_task_id) && !notif.is_read) {
+          try {
+            await base44.entities.Notification.update(notif.id, { is_read: true });
+            taskAssignedMarkedRead++;
+            console.log(`📝 Marked task_assigned notification as read for overdue task ${notif.related_task_id}`);
+          } catch (error) {
+            console.error(`❌ Error marking task_assigned notification as read:`, error);
+          }
+        }
+      }
+      if (taskAssignedMarkedRead > 0) {
+        console.log(`📝 Marked ${taskAssignedMarkedRead} task_assigned notifications as read (tasks are overdue)`);
       }
       
       // Create all missing notifications
