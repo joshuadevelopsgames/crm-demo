@@ -89,9 +89,21 @@ export default function Reports() {
         return false; // Skip estimates without estimate_date
       }
       // Extract year from date string to avoid timezone conversion issues
-      const dateStr = estimate.estimate_date;
-      const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
-      const estimateYear = yearMatch ? parseInt(yearMatch[1]) : new Date(dateStr).getFullYear();
+      // Use substring to extract first 4 characters (year) - more reliable than regex
+      const dateStr = String(estimate.estimate_date);
+      let estimateYear;
+      if (dateStr.length >= 4) {
+        estimateYear = parseInt(dateStr.substring(0, 4));
+      } else {
+        // Fallback to Date parsing if string is too short
+        estimateYear = new Date(dateStr).getFullYear();
+      }
+      
+      // Validate year is reasonable (between 2000 and 2100)
+      if (isNaN(estimateYear) || estimateYear < 2000 || estimateYear > 2100) {
+        return false;
+      }
+      
       if (estimateYear !== selectedYear) return false;
 
       // Exclude estimates marked for exclusion from stats
