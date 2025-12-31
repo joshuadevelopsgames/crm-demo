@@ -1,29 +1,18 @@
--- Fix RLS policy for user_notification_states to allow service role access
--- Service role key should bypass RLS, but let's make the policy more explicit
+-- Fix RLS policy for user_notification_states
+-- Note: Service role key bypasses RLS automatically, but this ensures authenticated users can access their data
 
 -- Drop existing policy
 DROP POLICY IF EXISTS user_notification_states_authenticated_all ON user_notification_states;
 
--- Create policy that allows:
--- 1. Service role (bypasses RLS automatically, but this makes it explicit)
--- 2. Authenticated users to see their own data
+-- Create policy for authenticated users
+-- Service role will bypass this automatically
 CREATE POLICY user_notification_states_authenticated_all ON user_notification_states
   FOR ALL TO authenticated 
-  USING (
-    -- Allow if user_id matches authenticated user
-    auth.uid()::text = user_id OR 
-    user_id = auth.uid()::text OR
-    -- Allow service role (this is redundant since service role bypasses RLS, but explicit is better)
-    current_setting('request.jwt.claims', true)::json->>'role' = 'service_role'
-  )
-  WITH CHECK (
-    auth.uid()::text = user_id OR 
-    user_id = auth.uid()::text OR
-    current_setting('request.jwt.claims', true)::json->>'role' = 'service_role'
-  );
+  USING (auth.uid()::text = user_id)
+  WITH CHECK (auth.uid()::text = user_id);
 
--- Also create a policy specifically for service role (though it should bypass RLS)
--- This is just for clarity
+-- Verify service role can bypass RLS (this is automatic, but we can test)
+-- Service role queries will not be evaluated against RLS policies
 COMMENT ON POLICY user_notification_states_authenticated_all ON user_notification_states IS 
   'Allows authenticated users to access their own notification state. Service role bypasses RLS automatically.';
 

@@ -57,12 +57,20 @@ export default async function handler(req, res) {
       }
       
       // Use service role key which bypasses RLS
+      // Select only needed columns to reduce payload size
       // Add timeout and error handling for large JSONB queries
+      const queryStartTime = Date.now();
       const { data, error } = await supabase
         .from('user_notification_states')
         .select('user_id, notifications, created_at, updated_at')
         .eq('user_id', user_id)
         .single();
+      const queryTime = Date.now() - queryStartTime;
+      
+      // Log slow queries
+      if (queryTime > 1000) {
+        console.warn(`⚠️ Slow query detected: ${queryTime}ms for user ${user_id}`);
+      }
       
       if (error) {
         // If no record found (PGRST116), return empty state - this is normal for new users
