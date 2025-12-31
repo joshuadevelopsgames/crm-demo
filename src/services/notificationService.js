@@ -348,11 +348,13 @@ export async function createOverdueTaskNotifications() {
             related_account_id: notifData.related_account_id,
             scheduled_for: new Date().toISOString()
           };
+          console.log(`   🔔 Creating notification with user_id: ${notificationData.user_id} (currentUserId: ${currentUserIdStr}, match: ${notificationData.user_id === currentUserIdStr})`);
           const created = await base44.entities.Notification.create(notificationData);
+          console.log(`   ✅ Created notification: id=${created?.id}, user_id=${created?.user_id}, requested_user_id=${notificationData.user_id}, match=${String(created?.user_id).trim() === notificationData.user_id}`);
           createdCount++;
           // Add to existing keys to avoid duplicates in same batch
           existingKeys.add(key);
-          console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue)`);
+          console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue, user_id: ${created?.user_id})`);
         } catch (error) {
           errorCount++;
           console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, error);
