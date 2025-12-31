@@ -54,40 +54,30 @@ export default function Dashboard() {
     let lastNotificationCheck = 0;
     const NOTIFICATION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes - don't run full check more often than this
     
-    // Check if renewal notifications already exist for today
-    // This prevents duplicate runs across different browser sessions/devices
+    // Always run renewal notification creation - the function itself handles duplicates
+    // This ensures all at-risk accounts get notifications, even if some were created earlier
     const checkAndRunRenewals = async (force = false) => {
       try {
-        // Get current user to filter notifications
+        // Skip if we just ran recently (unless forced)
+        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
+        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
+          return; // Skip to avoid too frequent checks
+        }
+        
+        // Get current user
         const currentUser = await base44.auth.me();
         if (!currentUser?.id) {
           console.warn('No current user, skipping renewal notification check');
           return;
         }
         
-        // Get today's renewal notifications for current user to see if we've already run today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const notifications = await base44.entities.Notification.filter({
-          user_id: currentUser.id,
-          type: 'renewal_reminder'
-        });
-        
-        // Check if any renewal notifications were created today
-        const hasNotificationsToday = notifications.some(notif => {
-          const notifDate = new Date(notif.created_at);
-          notifDate.setHours(0, 0, 0, 0);
-          return notifDate.getTime() === today.getTime();
-        });
-        
-        // Only run if we haven't created notifications today
-        if (!hasNotificationsToday) {
-          await createRenewalNotifications();
-          // Invalidate queries to refresh both notifications and accounts (for at_risk status)
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          queryClient.invalidateQueries({ queryKey: ['accounts'] });
-          lastNotificationCheck = Date.now();
-        }
+        // Always run - the function will skip notifications that already exist today
+        // This ensures newly at-risk accounts get notifications even if the function ran earlier
+        await createRenewalNotifications();
+        // Invalidate queries to refresh both notifications and accounts (for at_risk status)
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        lastNotificationCheck = Date.now();
       } catch (error) {
         console.error('Error checking/creating renewal notifications:', error);
       }
