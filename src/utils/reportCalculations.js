@@ -177,7 +177,7 @@ export function calculateDepartmentStats(estimates) {
     const value = parseFloat(estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
-    if (estimate.status === 'won') {
+    if (isWonStatus(estimate.status)) {
       stats.won++;
       stats.wonValue += value;
     } else if (estimate.status === 'lost') {
