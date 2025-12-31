@@ -73,36 +73,11 @@ async function backfillEstimateDates() {
     // Process each estimate
     for (const estimate of estimatesWithoutDate) {
       try {
-        let newEstimateDate = null;
-
         // Note: We don't backfill estimate_date from estimate_close_date anymore
         // because the Reports logic now uses close_date directly if available.
-        // Only backfill if we have a reliable source (like from a re-import).
-        // For now, leave it null - the Reports page will use close_date or created_at as fallback.
-
-        // Actually, let's not backfill at all - the Reports logic handles the fallback correctly
-        // This script is now mainly for reference/documentation
+        // The Reports page will use: close_date (if available) -> estimate_date -> created_at
+        // So we don't need to backfill - the logic handles it correctly.
         skippedCount++;
-        continue;
-        
-        if (newEstimateDate) {
-          const { error: updateError } = await supabase
-            .from('estimates')
-            .update({ estimate_date: newEstimateDate })
-            .eq('id', estimate.id);
-
-          if (updateError) {
-            console.error(`❌ Error updating estimate ${estimate.lmn_estimate_id || estimate.id}:`, updateError.message);
-            errorCount++;
-          } else {
-            updatedCount++;
-            if (updatedCount % 100 === 0) {
-              console.log(`  ✅ Updated ${updatedCount} estimates...`);
-            }
-          }
-        } else {
-          skippedCount++;
-        }
       } catch (error) {
         console.error(`❌ Error processing estimate ${estimate.lmn_estimate_id || estimate.id}:`, error.message);
         errorCount++;
