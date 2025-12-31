@@ -853,16 +853,16 @@ export default function NotificationBell() {
         size="sm"
         className="relative"
         onClick={() => setIsOpen(!isOpen)}
-        title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'Notifications'}
+        title={displayUnreadCount > 0 ? `${displayUnreadCount} unread notification${displayUnreadCount !== 1 ? 's' : ''}` : 'Notifications'}
       >
         <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
+        {displayUnreadCount > 0 && (
           <>
             {/* Pulse animation ring */}
             <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full animate-ping opacity-75" />
             {/* Badge */}
             <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] font-semibold z-10">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {displayUnreadCount > 9 ? '9+' : displayUnreadCount}
             </Badge>
           </>
         )}
@@ -891,7 +891,7 @@ export default function NotificationBell() {
                     size="sm"
                     onClick={() => markAllAsReadMutation.mutate()}
                     className="text-xs"
-                    disabled={unreadCount === 0}
+                    disabled={displayUnreadCount === 0}
                   >
                     Mark all read
                   </Button>
