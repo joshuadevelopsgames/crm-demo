@@ -489,28 +489,79 @@ export default function ImportLeadsDialog({ open, onClose }) {
     // Extract valid IDs to ensure we only import data from sheets
     const validIds = extractValidIds(contactsData, leadsData, estimatesData, jobsitesData);
     
-    // Filter estimates to only include those with valid IDs from sheets
+    // Import ALL estimates from Estimates List - no filtering by status, price, or any other criteria
+    // This ensures we match "Estimates List.xlsx" exactly, including Lost estimates with $0 or very low prices
     // Note: We allow estimates even if their referenced accounts/contacts aren't in sheets
     // (we'll set account_id/contact_id to null instead of excluding the estimate)
+    // Track irregularities for reporting - these will be added to results later
+    const estimateIrregularities = [];
     const validEstimates = mergedData.estimates?.filter(est => {
       const estId = est.lmn_estimate_id || est.id;
-      if (!validIds.estimateIds.has(estId)) {
-        console.warn(`Skipping estimate ${estId} - not in import sheets`);
+      // Only filter if estimate ID is missing (shouldn't happen if parsed correctly)
+      if (!estId) {
+        estimateIrregularities.push({
+          type: 'missing_id',
+          estimate: est,
+          message: `Estimate missing Estimate ID - skipped`
+        });
         return false;
       }
-      // Allow estimates even if account/contact not in sheets - we'll set to null during save
-      // This ensures all estimates from the Estimates List are imported
+      
+      // Check for ID irregularities (should be in validIds if parsed from Estimates List)
+      if (!validIds.estimateIds.has(estId)) {
+        // Check if it's a format mismatch (e.g., case sensitivity)
+        const normalizedId = estId.toUpperCase();
+        const hasNormalized = Array.from(validIds.estimateIds).some(id => id.toUpperCase() === normalizedId);
+        
+        if (hasNormalized) {
+          estimateIrregularities.push({
+            type: 'id_format_mismatch',
+            estimate: est,
+            message: `Estimate ID format mismatch: "${estId}" (case sensitivity issue?)`
+          });
+        } else {
+          estimateIrregularities.push({
+            type: 'id_not_in_valid_set',
+            estimate: est,
+            message: `Estimate "${estId}" not found in valid IDs set - may indicate parsing issue`
+          });
+        }
+      }
+      
+      // Include ALL estimates from Estimates List, regardless of:
+      // - Status (Lost, Won, Pending, etc.)
+      // - Price ($0, negative, or any value)
+      // - Archived status
+      // - Exclude stats flag
+      // This ensures 100% match with "Estimates List.xlsx"
       return true;
     }).map(est => {
-      // If account_id references an account not in sheets, set it to null
-      // (the API will handle this, but we can do it here for clarity)
+      // If account_id references an account not in sheets, set it to null and report
       if (est.account_id) {
         const accountId = est.account_id.split('-').pop();
         if (!validIds.accountIds.has(est.account_id) && !validIds.accountIds.has(accountId)) {
-          console.warn(`Estimate ${est.lmn_estimate_id || est.id} references account ${est.account_id} not in sheets - will set to null`);
+          estimateIrregularities.push({
+            type: 'orphaned_account_reference',
+            estimate: est,
+            message: `Estimate "${est.lmn_estimate_id || est.id}" references account "${est.account_id}" not in import sheets - account_id will be set to null`
+          });
           return { ...est, account_id: null };
         }
       }
+      
+      // Check for contact_id references not in sheets
+      if (est.contact_id) {
+        const contactId = est.contact_id.split('-').pop();
+        if (!validIds.contactIds.has(est.contact_id) && !validIds.contactIds.has(contactId)) {
+          estimateIrregularities.push({
+            type: 'orphaned_contact_reference',
+            estimate: est,
+            message: `Estimate "${est.lmn_estimate_id || est.id}" references contact "${est.contact_id}" not in import sheets - contact_id will be set to null`
+          });
+          return { ...est, contact_id: null };
+        }
+      }
+      
       return est;
     }) || [];
 
@@ -2163,6 +2214,67 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       importResults.jobsitesFailed > 0 && `${importResults.jobsitesFailed} jobsites failed`
                     ].filter(Boolean).join(', ')}
                   </p>
+                </Card>
+              )}
+
+              {/* Data Quality Irregularities */}
+              {importResults.irregularities && importResults.irregularities.length > 0 && (
+                <Card className="p-4 bg-amber-50 border-amber-200 w-full max-w-2xl">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-amber-900 mb-1">
+                        🔍 Data Quality Irregularities Found
+                      </p>
+                      <p className="text-sm text-amber-700 mb-3">
+                        Found {importResults.irregularities.length} irregularity(ies) during import. These were handled automatically but should be reviewed to ensure data quality.
+                      </p>
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {importResults.irregularities.slice(0, 10).map((irregularity, idx) => (
+                          <div key={idx} className="text-xs bg-white p-2 rounded border border-amber-200">
+                            <p className="font-medium text-amber-900">
+                              {irregularity.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <p className="text-amber-700 mt-1">{irregularity.message}</p>
+                            {irregularity.estimate && (
+                              <p className="text-amber-600 mt-1 italic">
+                                Estimate: {irregularity.estimate.lmn_estimate_id || irregularity.estimate.id || irregularity.estimate.estimate_number || 'Unknown'}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                        {importResults.irregularities.length > 10 && (
+                          <p className="text-xs text-amber-600 italic">
+                            ... and {importResults.irregularities.length - 10} more irregularities
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Errors and Warnings */}
+              {((importResults.errors && importResults.errors.length > 0) || (importResults.warnings && importResults.warnings.length > 0)) && (
+                <Card className="p-4 bg-red-50 border-red-200 w-full max-w-2xl">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-red-900 mb-2">⚠️ Errors & Warnings</p>
+                      <div className="max-h-60 overflow-y-auto space-y-1">
+                        {importResults.errors && importResults.errors.map((err, idx) => (
+                          <p key={idx} className="text-xs text-red-800">
+                            ❌ {err.message || err}
+                          </p>
+                        ))}
+                        {importResults.warnings && importResults.warnings.map((warn, idx) => (
+                          <p key={idx} className="text-xs text-red-700">
+                            ⚠️ {warn.message || warn}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </Card>
               )}
 
