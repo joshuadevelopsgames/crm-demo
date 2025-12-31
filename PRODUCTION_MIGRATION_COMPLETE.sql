@@ -1043,16 +1043,30 @@ END $$;
 DO $$
 BEGIN
   RAISE NOTICE '=== Migration Verification ===';
-  RAISE NOTICE 'user_notification_states exists: %', 
-    EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_notification_states');
-  RAISE NOTICE 'yearly_official_estimates exists: %', 
-    EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'yearly_official_estimates');
-  RAISE NOTICE 'account_attachments exists: %', 
-    EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'account_attachments');
-  RAISE NOTICE 'accounts.notes column exists: %', 
-    EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'notes');
-  RAISE NOTICE 'estimates.crm_tags column exists: %', 
-    EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'estimates' AND column_name = 'crm_tags');
+  RAISE NOTICE 'Core Tables:';
+  RAISE NOTICE '  accounts: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'accounts');
+  RAISE NOTICE '  contacts: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'contacts');
+  RAISE NOTICE '  estimates: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'estimates');
+  RAISE NOTICE '  jobsites: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'jobsites');
+  RAISE NOTICE '  scorecard_responses: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'scorecard_responses');
+  RAISE NOTICE 'Additional Tables:';
+  RAISE NOTICE '  interactions: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'interactions');
+  RAISE NOTICE '  profiles: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'profiles');
+  RAISE NOTICE '  notifications: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'notifications');
+  RAISE NOTICE '  notification_snoozes: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'notification_snoozes');
+  RAISE NOTICE '  user_notification_states: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_notification_states');
+  RAISE NOTICE '  tasks: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tasks');
+  RAISE NOTICE '  task_attachments: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'task_attachments');
+  RAISE NOTICE '  task_comments: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'task_comments');
+  RAISE NOTICE '  sequences: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sequences');
+  RAISE NOTICE '  sequence_enrollments: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sequence_enrollments');
+  RAISE NOTICE '  scorecard_templates: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'scorecard_templates');
+  RAISE NOTICE '  user_permissions: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_permissions');
+  RAISE NOTICE '  yearly_official_estimates: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'yearly_official_estimates');
+  RAISE NOTICE '  account_attachments: %', EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'account_attachments');
+  RAISE NOTICE 'Columns:';
+  RAISE NOTICE '  accounts.notes: %', EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'notes');
+  RAISE NOTICE '  estimates.crm_tags: %', EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'estimates' AND column_name = 'crm_tags');
   RAISE NOTICE '=== Migration Complete ===';
 END $$;
 
