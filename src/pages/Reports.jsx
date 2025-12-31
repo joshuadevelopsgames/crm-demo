@@ -27,6 +27,7 @@ import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
 import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
+import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
 export default function Reports() {
   console.log('📊 Reports: Component mounted/rendered');
@@ -729,10 +730,14 @@ export default function Reports() {
 
       {/* Reports Tabs */}
       <Tabs defaultValue="winloss" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="winloss" className="flex items-center gap-2">
             <PieChart className="w-4 h-4" />
             Win/Loss Report
+          </TabsTrigger>
+          <TabsTrigger value="pipeline" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Sales Pipeline
           </TabsTrigger>
           <TabsTrigger value="department" className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
@@ -749,6 +754,12 @@ export default function Reports() {
             estimates={filteredYearEstimates} 
             accounts={accounts}
             selectedYear={selectedYear}
+          />
+        </TabsContent>
+        
+        <TabsContent value="pipeline" className="space-y-4">
+          <SalesPipelineReport 
+            estimates={filteredYearEstimates}
           />
         </TabsContent>
         
