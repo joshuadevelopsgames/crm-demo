@@ -1933,11 +1933,11 @@ export default function Tasks() {
                             onOpenChange={setAssignedUsersOpen}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select users">
+                              <span className="flex-1 text-left">
                                 {parseAssignedUsers(newTask.assigned_to).length > 0
                                   ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
                                   : "Select users"}
-                              </SelectValue>
+                              </span>
                             </SelectTrigger>
                             <SelectContent className={isMobile || isPWA || isNativeApp ? "max-h-[60vh] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
                               <div className={isMobile || isPWA || isNativeApp ? "p-2 space-y-1" : "p-2 space-y-2"}>
