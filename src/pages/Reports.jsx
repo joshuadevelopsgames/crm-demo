@@ -519,6 +519,14 @@ export default function Reports() {
     });
   }, [estimates.length, estimatesLoading, estimatesError, selectedYear, filteredEstimates.length, yearEstimates.length, filteredYearEstimates.length]);
 
+  // Calculate estimates missing both dates (must be before early returns to maintain hook order)
+  const estimatesMissingDates = useMemo(() => {
+    return estimates.filter(est => {
+      // Check if estimate has neither estimate_close_date nor estimate_date
+      return !est.estimate_close_date && !est.estimate_date;
+    });
+  }, [estimates]);
+
   if (estimatesLoading) {
     return (
       <div className="space-y-6">
@@ -538,14 +546,6 @@ export default function Reports() {
       </div>
     );
   }
-
-  // Calculate estimates missing both dates
-  const estimatesMissingDates = useMemo(() => {
-    return estimates.filter(est => {
-      // Check if estimate has neither estimate_close_date nor estimate_date
-      return !est.estimate_close_date && !est.estimate_date;
-    });
-  }, [estimates]);
 
   // Force log on every render
   console.log('📊 Reports: RENDER - About to return JSX', {
