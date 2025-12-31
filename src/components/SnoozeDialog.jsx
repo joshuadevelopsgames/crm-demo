@@ -19,7 +19,7 @@ import {
 import { BellOff } from 'lucide-react';
 import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
-export default function SnoozeDialog({ account, open, onOpenChange, onSnooze }) {
+export default function SnoozeDialog({ account, notificationType, open, onOpenChange, onSnooze }) {
   const [duration, setDuration] = useState(1);
   const [unit, setUnit] = useState('weeks');
 
@@ -40,7 +40,18 @@ export default function SnoozeDialog({ account, open, onOpenChange, onSnooze }) 
   };
 
   const handleSnooze = () => {
-    onSnooze(account, duration, unit);
+    onSnooze(account, notificationType, duration, unit);
+  };
+
+  const getNotificationTypeLabel = () => {
+    switch (notificationType) {
+      case 'renewal_reminder':
+        return 'renewal reminder';
+      case 'neglected_account':
+        return 'neglected account';
+      default:
+        return 'notification';
+    }
   };
 
   const snoozeDate = calculateSnoozeDate();
@@ -54,7 +65,7 @@ export default function SnoozeDialog({ account, open, onOpenChange, onSnooze }) 
             Snooze Account
           </DialogTitle>
           <DialogDescription>
-            Temporarily hide "{account?.name}" from neglected accounts. It will reappear after the snooze period ends.
+            Temporarily hide the {getNotificationTypeLabel()} notification for "{account?.name}". It will reappear after the snooze period ends.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications } from '@/services/notificationService';
+import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications, snoozeNotification } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
 import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +33,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
+  const [snoozeNotificationType, setSnoozeNotificationType] = useState(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   // Check for end of year notification on mount
@@ -195,6 +196,22 @@ export default function Dashboard() {
     queryFn: () => base44.entities.SequenceEnrollment.list()
   });
 
+  // Fetch notification snoozes to filter accounts
+  const { data: notificationSnoozes = [] } = useQuery({
+    queryKey: ['notificationSnoozes'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/data/notificationSnoozes');
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
+      } catch (error) {
+        console.error('Error fetching notification snoozes:', error);
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Calculate metrics
   // Active accounts = all non-archived accounts (matches Accounts page logic)
   const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
@@ -223,13 +240,13 @@ export default function Dashboard() {
     // Skip accounts with ICP status = 'na' (permanently excluded)
     if (account.icp_status === 'na') return false;
     
-    // Skip if snoozed
-    if (account.snoozed_until) {
-      const snoozeDate = new Date(account.snoozed_until);
-      if (snoozeDate > new Date()) {
-        return false; // Still snoozed
-      }
-    }
+    // Skip if 'neglected_account' notification is snoozed for this account
+    const isSnoozed = notificationSnoozes.some(snooze => 
+      snooze.notification_type === 'neglected_account' &&
+      snooze.related_account_id === account.id &&
+      new Date(snooze.snoozed_until) > new Date()
+    );
+    if (isSnoozed) return false;
     
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
@@ -252,9 +269,10 @@ export default function Dashboard() {
       const active = accounts.filter(a => a.status !== 'archived' && a.archived !== true);
       const excludedByICP = active.filter(a => a.icp_status === 'na').length;
       const snoozed = active.filter(a => {
-        if (!a.snoozed_until) return false;
-        const snoozeDate = new Date(a.snoozed_until);
-        return snoozeDate > new Date();
+        return notificationSnoozes.some(snooze => 
+          snooze.related_account_id === a.id &&
+          new Date(snooze.snoozed_until) > new Date()
+        );
       }).length;
       const hasRecentInteraction = active.filter(a => {
         if (!a.last_interaction_date) return false;
@@ -284,7 +302,7 @@ export default function Dashboard() {
         difference: active.length - neglectedAccounts.length
       });
     }
-  }, [accounts, neglectedAccounts]);
+  }, [accounts, neglectedAccounts, notificationSnoozes]);
 
   // At-risk accounts (renewals within 6 months / 180 days)
   // Calculate renewal dates from estimates for each account
@@ -292,6 +310,14 @@ export default function Dashboard() {
     .map(account => {
       if (account.archived) return null;
       if (account.status !== 'at_risk') return null;
+      
+      // Skip if 'renewal_reminder' notification is snoozed for this account
+      const isSnoozed = notificationSnoozes.some(snooze => 
+        snooze.notification_type === 'renewal_reminder' &&
+        snooze.related_account_id === account.id &&
+        new Date(snooze.snoozed_until) > new Date()
+      );
+      if (isSnoozed) return null;
       
       // Get estimates for this account
       const accountEstimates = estimates.filter(est => est.account_id === account.id);
@@ -329,15 +355,18 @@ export default function Dashboard() {
     return new Date(task.due_date) < new Date();
   });
 
-  const updateAccountMutation = useMutation({
-    mutationFn: ({ accountId, data }) => base44.entities.Account.update(accountId, data),
+  const snoozeMutation = useMutation({
+    mutationFn: ({ notificationType, accountId, snoozedUntil }) => 
+      snoozeNotification(notificationType, accountId, snoozedUntil),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setSnoozeAccount(null);
+      setSnoozeNotificationType(null);
     }
   });
 
-  const handleSnooze = (account, duration, unit) => {
+  const handleSnooze = (account, notificationType, duration, unit) => {
     const now = new Date();
     let snoozedUntil;
     
@@ -358,9 +387,10 @@ export default function Dashboard() {
         return;
     }
     
-    updateAccountMutation.mutate({
+    snoozeMutation.mutate({
+      notificationType,
       accountId: account.id,
-      data: { snoozed_until: snoozedUntil.toISOString() }
+      snoozedUntil
     });
   };
 
@@ -531,6 +561,7 @@ export default function Dashboard() {
                         onClick={(e) => {
                           e.preventDefault();
                           setSnoozeAccount(account);
+                          setSnoozeNotificationType('renewal_reminder');
                         }}
                         className="text-red-700 hover:text-red-900 hover:bg-red-100 ml-2"
                       >
@@ -630,6 +661,7 @@ export default function Dashboard() {
                         onClick={(e) => {
                           e.preventDefault();
                           setSnoozeAccount(account);
+                          setSnoozeNotificationType('neglected_account');
                         }}
                         className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
                       >
@@ -753,8 +785,14 @@ export default function Dashboard() {
       {snoozeAccount && (
         <SnoozeDialog
           account={snoozeAccount}
+          notificationType={snoozeNotificationType}
           open={!!snoozeAccount}
-          onOpenChange={(open) => !open && setSnoozeAccount(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSnoozeAccount(null);
+              setSnoozeNotificationType(null);
+            }
+          }}
           onSnooze={handleSnooze}
         />
       )}
