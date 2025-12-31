@@ -73,8 +73,10 @@ export default function NotificationBell() {
       }
       try {
         const currentUserIdStr = String(currentUser.id).trim();
+        console.log(`🔔 NotificationBell: Fetching notifications for user_id: ${currentUserIdStr}`);
         const notifications = await base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at');
-        const taskOverdueCount = notifications.filter(n => n.type === 'task_overdue').length;
+        const taskOverdueNotifications = notifications.filter(n => n.type === 'task_overdue');
+        const taskOverdueCount = taskOverdueNotifications.length;
         console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
           renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
           taskOverdue: taskOverdueCount,
@@ -83,6 +85,14 @@ export default function NotificationBell() {
           taskAssigned: notifications.filter(n => n.type === 'task_assigned').length,
           unread: notifications.filter(n => !n.is_read).length
         });
+        if (taskOverdueCount > 0) {
+          console.log(`🔔 Task overdue notifications found:`, taskOverdueNotifications.map(n => ({ id: n.id, user_id: n.user_id, task_id: n.related_task_id, title: n.title })));
+        } else {
+          // Check if there are any task_overdue notifications at all
+          const allTaskOverdue = await base44.entities.Notification.filter({ type: 'task_overdue' }, '-created_at');
+          console.log(`🔔 No task_overdue notifications for current user. Total task_overdue notifications in system: ${allTaskOverdue.length}`, 
+            allTaskOverdue.map(n => ({ id: n.id, user_id: n.user_id, requested_user_id: currentUserIdStr, match: String(n.user_id).trim() === currentUserIdStr })));
+        }
         return notifications;
       } catch (error) {
         console.error('🔔 NotificationBell: Error fetching notifications:', error);

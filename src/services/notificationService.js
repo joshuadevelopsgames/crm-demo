@@ -257,17 +257,21 @@ export async function createOverdueTaskNotifications() {
         let user = null;
         let userIdToUse = null;
         
+        // Always try to get auth user ID for consistency
         // If this is the current user's email, use current user's ID directly (from auth.me())
         if (email === currentUser.email) {
           user = currentUser;
           userIdToUse = currentUserIdStr;
+          console.log(`   ✅ Using current user auth ID: ${userIdToUse} for ${email}`);
         } else {
-          // For other users, find them in the allUsers list and use their profile ID
-          // Note: This assumes profile IDs match auth IDs, which should be the case
+          // For other users, we need to get their auth ID
+          // Try to get their auth session - but we can't do that server-side easily
+          // So we'll use their profile ID and hope it matches their auth ID (which it should in Supabase)
           const profileUser = allUsers.find(u => u.email === email);
           if (profileUser && profileUser.id) {
             user = profileUser;
             userIdToUse = String(profileUser.id).trim();
+            console.log(`   ✅ Using profile ID for other user: ${userIdToUse} for ${email} (profile ID should match auth ID in Supabase)`);
           }
         }
         
@@ -276,7 +280,7 @@ export async function createOverdueTaskNotifications() {
           continue;
         }
         
-        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${userIdToUse}, isCurrentUser: ${email === currentUser.email})`);
+        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${userIdToUse}, isCurrentUser: ${email === currentUser.email}, currentUserId: ${currentUserIdStr})`);
         notificationsToCreate.push({
           user_id: userIdToUse, // Use normalized user ID
           task_id: task.id,
