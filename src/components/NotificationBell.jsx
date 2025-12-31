@@ -72,10 +72,21 @@ export default function NotificationBell() {
         return [];
       }
       try {
-        const notifications = await base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
+        const currentUserIdStr = String(currentUser.id).trim();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:75',message:'Fetching notifications BEFORE',data:{currentUserId:currentUser.id,currentUserIdStr,currentUserIdType:typeof currentUser.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        const notifications = await base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at');
+        const taskOverdueCount = notifications.filter(n => n.type === 'task_overdue').length;
+        const taskOverdueNotifications = notifications.filter(n => n.type === 'task_overdue');
+        // Also fetch ALL task_overdue notifications regardless of user to see if they exist
+        const allTaskOverdue = await base44.entities.Notification.filter({ type: 'task_overdue' }, '-created_at');
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:76',message:'Fetching notifications AFTER',data:{totalCount:notifications.length,taskOverdueCount,taskOverdueIds:taskOverdueNotifications.map(n=>n.id),taskOverdueUserIds:taskOverdueNotifications.map(n=>n.user_id),currentUserId:currentUser.id,allTaskOverdueCount:allTaskOverdue.length,allTaskOverdueUserIds:allTaskOverdue.map(n=>String(n.user_id)),allTaskOverdueIds:allTaskOverdue.map(n=>n.id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
           renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
-          taskOverdue: notifications.filter(n => n.type === 'task_overdue').length,
+          taskOverdue: taskOverdueCount,
           taskDueToday: notifications.filter(n => n.type === 'task_due_today').length,
           taskReminder: notifications.filter(n => n.type === 'task_reminder').length,
           taskAssigned: notifications.filter(n => n.type === 'task_assigned').length,
@@ -201,13 +212,17 @@ export default function NotificationBell() {
       
       // Debug logging for task_overdue notifications
       if (notification.type === 'task_overdue') {
+        const userMatch = notificationUserId === currentUserIdStr;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:201',message:'Processing task_overdue in activeNotifications filter',data:{notificationId:notification.id,notificationUserId,currentUserIdStr,userMatch,relatedTaskId:notification.related_task_id,isRead:notification.is_read},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         console.log(`🔔 Processing task_overdue notification:`, {
           id: notification.id,
           title: notification.title,
           message: notification.message,
           user_id: notification.user_id,
           currentUserId: currentUserIdStr,
-          userMatch: notificationUserId === currentUserIdStr,
+          userMatch: userMatch,
           related_task_id: notification.related_task_id,
           related_account_id: notification.related_account_id,
           is_read: notification.is_read
@@ -354,6 +369,11 @@ export default function NotificationBell() {
   // Note: groupedNotifications already filters by current user, so notifications here are already filtered
   const notificationGroups = useMemo(() => {
     if (!currentUserId) return [];
+    
+    const taskOverdueInGrouped = groupedNotifications['task_overdue'] || [];
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:367',message:'Grouping notifications',data:{taskOverdueCount:taskOverdueInGrouped.length,taskOverdueIds:taskOverdueInGrouped.map(n=>n.id),allTypes:Object.keys(groupedNotifications)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
       // Sort notifications within each group by newest first, then unread status

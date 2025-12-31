@@ -183,6 +183,9 @@ export async function cleanupTaskNotifications(taskId) {
  * Should be called periodically (e.g., daily or on dashboard load)
  */
 export async function createOverdueTaskNotifications() {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:185',message:'createOverdueTaskNotifications ENTRY',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   console.log('🔄 Starting overdue task notification creation...');
   let createdCount = 0;
   let skippedCount = 0;
@@ -211,8 +214,12 @@ export async function createOverdueTaskNotifications() {
       }
       
       // Task is overdue if due date is before now (matches Dashboard logic exactly: new Date(task.due_date) < new Date())
-      const isOverdue = new Date(task.due_date) < new Date();
-      
+      const dueDateObj = new Date(task.due_date);
+      const nowObj = new Date();
+      const isOverdue = dueDateObj < nowObj;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:214',message:'Overdue check',data:{taskId:task.id,taskTitle:task.title,dueDate:task.due_date,dueDateObj:dueDateObj.toISOString(),nowObj:nowObj.toISOString(),isOverdue,status:task.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       // Only process overdue tasks
       if (!isOverdue) {
         continue;
@@ -242,9 +249,12 @@ export async function createOverdueTaskNotifications() {
           continue;
         }
         
-        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${user.id})`);
+        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${user.id}, idType: ${typeof user.id})`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:246',message:'Notification queued for creation',data:{userId:user.id,userIdString:String(user.id),userEmail:user.email,taskId:task.id,taskTitle:task.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         notificationsToCreate.push({
-          user_id: user.id,
+          user_id: String(user.id), // Ensure it's a string to match database format
           task_id: task.id,
           task_title: task.title,
           daysOverdue: Math.abs(daysUntilDue),
@@ -290,7 +300,8 @@ export async function createOverdueTaskNotifications() {
       
       // Create all missing notifications
       for (const notifData of notificationsToCreate) {
-        const key = `${notifData.user_id}:${notifData.task_id}`;
+        const notifUserIdStr = String(notifData.user_id || '').trim();
+        const key = `${notifUserIdStr}:${notifData.task_id}`;
         
         if (existingKeys.has(key)) {
           skippedCount++;
@@ -298,16 +309,22 @@ export async function createOverdueTaskNotifications() {
         }
         
         try {
-          await base44.entities.Notification.create({
-            user_id: notifData.user_id,
+          const notificationData = {
+            user_id: String(notifData.user_id).trim(), // Ensure string format
             type: 'task_overdue',
             title: 'Task Overdue',
             message: `"${notifData.task_title}" is overdue by ${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`,
             related_task_id: notifData.task_id,
             related_account_id: notifData.related_account_id,
             scheduled_for: new Date().toISOString()
-          });
-          
+          };
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:301',message:'Creating notification BEFORE',data:notificationData,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          const created = await base44.entities.Notification.create(notificationData);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:309',message:'Creating notification AFTER',data:{createdId:created?.id,createdUserId:created?.user_id,createdType:created?.type,requestedUserId:notifData.user_id,userIdMatch:created?.user_id===notifData.user_id,taskId:notifData.task_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           createdCount++;
           // Add to existing keys to avoid duplicates in same batch
           existingKeys.add(key);
@@ -320,8 +337,14 @@ export async function createOverdueTaskNotifications() {
     }
     
     console.log(`✅ Overdue task notification creation complete: ${overdueTaskCount} overdue tasks found, ${createdCount} notifications created, ${skippedCount} skipped, ${errorCount} errors`);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:322',message:'createOverdueTaskNotifications EXIT',data:{overdueTaskCount,createdCount,skippedCount,errorCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   } catch (error) {
     console.error('❌ Error creating overdue task notifications:', error);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:324',message:'createOverdueTaskNotifications ERROR',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   }
 }
 

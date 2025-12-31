@@ -124,16 +124,25 @@ export default function Dashboard() {
     
     // Check and create overdue task notifications
     const checkAndRunOverdueTasks = async (force = false) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:126',message:'checkAndRunOverdueTasks ENTRY',data:{force,timeSinceLastCheck:Date.now()-lastNotificationCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       try {
         // Skip if we just ran recently (unless forced)
         const timeSinceLastCheck = Date.now() - lastNotificationCheck;
         if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:130',message:'checkAndRunOverdueTasks SKIPPED (throttled)',data:{timeSinceLastCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           return; // Skip to avoid too frequent checks
         }
         
         // Get current user to filter notifications
         const currentUser = await base44.auth.me();
         if (!currentUser?.id) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:137',message:'checkAndRunOverdueTasks SKIPPED (no user)',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           console.warn('No current user, skipping overdue task notification check');
           return;
         }
