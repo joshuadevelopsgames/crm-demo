@@ -75,12 +75,19 @@ export default function Reports() {
     }
   });
 
-  // Calculate available years from estimates (use estimate_date if available, otherwise created_at)
+  // Calculate available years from estimates (use smart fallback: estimate_date -> estimate_close_date (won) -> created_at)
   const availableYears = useMemo(() => {
     const years = new Set();
     estimates.forEach(e => {
-      // Use estimate_date if available, otherwise created_at (matches filtering logic)
-      const dateToUse = e.estimate_date || e.created_at;
+      // Use same smart fallback as filtering logic
+      let dateToUse = e.estimate_date;
+      if (!dateToUse) {
+        if (e.status === 'won' && e.estimate_close_date) {
+          dateToUse = e.estimate_close_date;
+        } else {
+          dateToUse = e.created_at;
+        }
+      }
       if (dateToUse) {
         const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
@@ -292,12 +299,19 @@ export default function Reports() {
     });
 
     const filtered = uniqueEstimates.filter(estimate => {
-      // Filter by year - use estimate_date if available, otherwise fall back to created_at
-      // This matches LMN's behavior where "This year" uses created_at for estimates without estimate_date
+      // Smart date fallback for year filtering:
+      // 1. Use estimate_date if available (primary field)
+      // 2. For won estimates, use estimate_close_date if estimate_date is missing
+      // 3. Fall back to created_at as last resort (but this is less accurate)
       let dateToUse = estimate.estimate_date;
       if (!dateToUse) {
-        // If no estimate_date, use created_at (LMN uses this for "This year" filtering)
-        dateToUse = estimate.created_at;
+        // For won estimates, use estimate_close_date if available
+        if (estimate.status === 'won' && estimate.estimate_close_date) {
+          dateToUse = estimate.estimate_close_date;
+        } else {
+          // Last resort: use created_at (but this is when we imported, not when estimate was created)
+          dateToUse = estimate.created_at;
+        }
       }
       
       if (!dateToUse) {
@@ -359,9 +373,12 @@ export default function Reports() {
       // Debug: Log first few estimates to see date format
       if (uniqueEstimates.indexOf(estimate) < 3) {
         console.log('📊 Reports: Date parsing example', {
-          original: estimate.estimate_date,
-          type: typeof estimate.estimate_date,
-          isDate: estimate.estimate_date instanceof Date,
+          estimate_id: estimate.id,
+          status: estimate.status,
+          estimate_date: estimate.estimate_date,
+          estimate_close_date: estimate.estimate_close_date,
+          created_at: estimate.created_at,
+          dateUsed: dateToUse,
           estimateYear,
           selectedYear,
           matches: estimateYear === selectedYear

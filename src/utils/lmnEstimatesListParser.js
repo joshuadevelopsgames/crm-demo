@@ -202,13 +202,24 @@ export function parseEstimatesList(csvTextOrRows) {
         }
         // All other cases default to lost (no pattern matching)
 
+        // Parse dates
+        const estimateDate = parseDate(row[colMap.estimateDate]);
+        const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
+        
+        // If estimate_date is missing, use estimate_close_date for won estimates
+        // This ensures we have a date for reporting purposes
+        let finalEstimateDate = estimateDate;
+        if (!finalEstimateDate && estimateCloseDate && estimateStatus === 'won') {
+          finalEstimateDate = estimateCloseDate;
+        }
+        
         const estimate = {
           id: `lmn-estimate-${estimateId}`,
           lmn_estimate_id: estimateId,
           estimate_type: row[colMap.estimateType]?.toString().trim() || '',
           estimate_number: estimateId,
-          estimate_date: parseDate(row[colMap.estimateDate]),
-          estimate_close_date: parseDate(row[colMap.estimateCloseDate]),
+          estimate_date: finalEstimateDate,
+          estimate_close_date: estimateCloseDate,
           contract_start: parseDate(row[colMap.contractStart]),
           contract_end: parseDate(row[colMap.contractEnd]),
           project_name: row[colMap.projectName]?.toString().trim() || '',
