@@ -72,7 +72,7 @@ const prodSupabase = createClient(PROD_SUPABASE_URL, PROD_SUPABASE_SERVICE_ROLE_
 const MIGRATION_ORDER = [
   // Core tables (no dependencies)
   'accounts',
-  'profiles',
+  // 'profiles', // Skip - requires auth.users to exist first, will be created automatically on sign-in
   
   // Depend on accounts
   'contacts',
@@ -111,6 +111,7 @@ const SKIP_TABLES = [
   'auth.refresh_tokens',
   'storage.objects',
   'storage.buckets',
+  'profiles', // Skip - requires auth.users to exist first, will be created automatically on sign-in
 ];
 
 async function getTableCount(supabase, tableName) {
