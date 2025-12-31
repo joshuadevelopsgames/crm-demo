@@ -149,42 +149,20 @@ export default function Dashboard() {
       }
     };
     
-    // Run on mount (force run)
+    // Run on mount (force run) - only check on page load
     checkAndRunRenewals(true);
     checkAndRunNeglected(true);
     checkAndRunOverdueTasks(true);
     
-    // Schedule periodic check every minute (but functions will skip if run too recently)
-    const intervalId = setInterval(async () => {
-      await checkAndRunRenewals();
-      await checkAndRunNeglected();
-      await checkAndRunOverdueTasks();
-    }, 60 * 1000); // Check every minute, but functions throttle themselves
+    // Generate recurring task instances on page load
+    generateRecurringTaskInstances().catch(error => {
+      console.error('Error generating recurring task instances:', error);
+    });
     
-    // Schedule daily check at midnight
-    const scheduleNextRun = () => {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0); // Midnight
-      const msUntilMidnight = tomorrow.getTime() - now.getTime();
-      
-      return setTimeout(async () => {
-        await checkAndRunRenewals();
-        await checkAndRunNeglected();
-        await checkAndRunOverdueTasks();
-        await checkAndRunRecurringTasks();
-        // Schedule next day
-        scheduleNextRun();
-      }, msUntilMidnight);
-    };
+    // Note: Task assignment notifications are already handled automatically when tasks are created/updated
+    // via createTaskAssignmentNotifications() in Tasks.jsx, so no periodic check needed for those
     
-    const timeoutId = scheduleNextRun();
-    
-    return () => {
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-    };
+    // No cleanup needed since we're not using intervals or timeouts
   }, [queryClient]);
   
   const { data: accounts = [] } = useQuery({
