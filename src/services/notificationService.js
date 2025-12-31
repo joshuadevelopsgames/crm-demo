@@ -100,11 +100,10 @@ export async function createTaskNotifications(task) {
       continue;
     }
 
-    // Check if notification already exists
+    // Check if notification already exists (check both read and unread to avoid duplicates)
     const existingNotifications = await base44.entities.Notification.filter({
       user_id: user.id,
-      related_task_id: task.id,
-      is_read: false
+      related_task_id: task.id
     });
 
     // Remove existing notifications for this task (except assignment and overdue notifications)
@@ -118,16 +117,27 @@ export async function createTaskNotifications(task) {
 
     // Create notification based on task status
     if (isOverdue) {
-      // Task is overdue
-      await base44.entities.Notification.create({
-        user_id: user.id,
-        type: 'task_overdue',
-        title: 'Task Overdue',
-        message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
-        related_task_id: task.id,
-        related_account_id: task.related_account_id || null,
-        scheduled_for: new Date().toISOString()
-      });
+      // Task is overdue - check if notification already exists (read or unread) to avoid duplicates
+      // createOverdueTaskNotifications() handles overdue notifications periodically, but we check here
+      // to avoid creating duplicates when tasks are updated
+      const existingOverdueNotif = existingNotifications.find(
+        n => n.type === 'task_overdue'
+      );
+      
+      if (!existingOverdueNotif) {
+        // Only create if it doesn't already exist
+        await base44.entities.Notification.create({
+          user_id: user.id,
+          type: 'task_overdue',
+          title: 'Task Overdue',
+          message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
+          related_task_id: task.id,
+          related_account_id: task.related_account_id || null,
+          scheduled_for: new Date().toISOString()
+        });
+      }
+      // Note: createOverdueTaskNotifications() will handle creating overdue notifications for all users
+      // This is just for immediate notification when a task becomes overdue during create/update
     } else if (isDueToday) {
       // Task is due today
       await base44.entities.Notification.create({
