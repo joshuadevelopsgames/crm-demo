@@ -471,6 +471,105 @@ export default function Dashboard() {
 
       {/* Alerts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Neglected Accounts - Show first for priority */}
+        <TutorialTooltip
+          tip="Accounts that haven't been contacted recently (A/B revenue segments: 30+ days, C/D segments: 90+ days). These relationships may be at risk. Click any account to view details, then log a new interaction (call, email, or meeting) to re-engage. Use the snooze button if you've already reached out. Regular contact prevents accounts from going cold."
+          step={1}
+          position="bottom"
+        >
+          <Card className="border-amber-200 dark:border-border bg-amber-50/50 dark:bg-surface-1">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
+                  onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                >
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  Neglected Accounts
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                    {neglectedAccounts.length}
+                  </Badge>
+                  {neglectedAccounts.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                      className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">
+                {neglectedAccounts.length === 0 
+                  ? 'All accounts have recent interactions 🎉'
+                  : 'No contact in 30+ days (A/B) or 90+ days (C/D)'
+                }
+              </p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {neglectedAccounts.slice(0, 5).map(account => {
+                  const segment = account.revenue_segment || 'C';
+                  const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+                  const daysSince = account.last_interaction_date 
+                    ? differenceInDays(new Date(), new Date(account.last_interaction_date))
+                    : 'No';
+                  
+                  return (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-amber-100 dark:border-border"
+                    >
+                      <Link
+                        to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                        className="flex-1"
+                      >
+                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-text-muted">
+                          {daysSince === 'No' 
+                            ? 'No interaction date' 
+                            : `${daysSince} day${daysSince !== 1 ? 's' : ''} since last contact`
+                          } • {segment} segment
+                        </p>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSnoozeAccount(account);
+                        }}
+                        className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 ml-2"
+                      >
+                        <BellOff className="w-4 h-4 mr-1" />
+                        Snooze
+                      </Button>
+                    </div>
+                  );
+                })}
+                {neglectedAccounts.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No neglected accounts 🎉</p>
+                )}
+                {neglectedAccounts.length > 5 && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 border-amber-200 text-amber-700 hover:bg-amber-50"
+                    onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
+                  >
+                    View All {neglectedAccounts.length} Accounts
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TutorialTooltip>
+
         {/* At Risk Accounts */}
         <TutorialTooltip
           tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
