@@ -93,13 +93,23 @@ export default function Reports() {
     return Array.from(years).sort((a, b) => b - a); // Most recent first
   }, [estimates]);
 
-  // Auto-select most recent year if current year has no data
+  // Auto-select most recent year if current year has no data (only on initial load, not when user manually changes)
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   useEffect(() => {
-    if (!estimatesLoading && availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+    if (!estimatesLoading && availableYears.length > 0 && !availableYears.includes(selectedYear) && !hasAutoSelected) {
       console.log('📊 Reports: Selected year has no data, switching to most recent year:', availableYears[0]);
       setSelectedYear(availableYears[0]);
+      setHasAutoSelected(true);
     }
-  }, [estimatesLoading, availableYears, selectedYear]);
+  }, [estimatesLoading, availableYears, selectedYear, hasAutoSelected]);
+  
+  // Reset auto-selection flag when user manually changes year
+  useEffect(() => {
+    if (hasAutoSelected && availableYears.includes(selectedYear)) {
+      // User has manually selected a valid year, allow them to keep it
+      setHasAutoSelected(false);
+    }
+  }, [selectedYear, availableYears, hasAutoSelected]);
 
   // Fetch accounts
   const { data: accounts = [] } = useQuery({
