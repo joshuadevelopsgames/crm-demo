@@ -81,6 +81,7 @@ export default function Reports() {
   const { data: yearlyOfficialData = [], isLoading: yearlyOfficialLoading, error: yearlyOfficialError } = useQuery({
     queryKey: ['yearlyOfficialData', selectedYear],
     queryFn: async () => {
+      console.log('📊 Reports: useQuery EXECUTING for yearlyOfficialData, selectedYear:', selectedYear);
       try {
         // Ensure year is a number
         const yearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
@@ -113,6 +114,7 @@ export default function Reports() {
   const { data: availableOfficialYears = [], isLoading: availableYearsLoading, error: availableYearsError } = useQuery({
     queryKey: ['availableOfficialYears'],
     queryFn: async () => {
+      console.log('📊 Reports: useQuery EXECUTING for availableOfficialYears');
       try {
         console.log('📊 Reports: Fetching available official years...');
         const years = await base44.entities.Estimate.getAvailableOfficialYears();

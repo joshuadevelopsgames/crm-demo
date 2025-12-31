@@ -24,18 +24,39 @@ function getSupabase() {
 }
 
 export default async function handler(req, res) {
+  console.log('📡 API: yearlyOfficialData endpoint called', {
+    method: req.method,
+    query: req.query,
+    origin: req.headers.origin
+  });
+  
   // CORS headers
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
     'https://lecrm-dev.vercel.app',
     'https://lecrm-stg.vercel.app',
-    'https://lecrm.vercel.app'
+    'https://lecrm.vercel.app',
+    /^https:\/\/lecrm.*\.vercel\.app$/ // Allow all Vercel preview URLs
   ];
 
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin) {
+    // Check if origin matches any allowed origin (string or regex)
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin;
+      } else if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log('📡 API: CORS allowed for origin:', origin);
+    } else {
+      console.log('📡 API: CORS blocked for origin:', origin);
+    }
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -145,19 +166,26 @@ export default async function handler(req, res) {
       } // End of Supabase block (disabled for testing)
 
       // Read from JSON file (primary source when Supabase is disabled)
+      console.log('📡 API: Reading from JSON file, process.cwd():', process.cwd());
       const dataPath = join(process.cwd(), 'yearly_official_data.json');
+      console.log('📡 API: JSON file path:', dataPath);
+      console.log('📡 API: File exists?', existsSync(dataPath));
       
       if (!existsSync(dataPath)) {
+        console.error('📡 API: ❌ JSON file not found at:', dataPath);
         return res.status(200).json({
           success: true,
           data: {},
           availableYears: [],
           source: 'none',
-          message: 'No yearly official data available yet'
+          message: 'No yearly official data available yet',
+          debug: { cwd: process.cwd(), path: dataPath }
         });
       }
 
+      console.log('📡 API: Reading JSON file...');
       yearlyData = JSON.parse(readFileSync(dataPath, 'utf-8'));
+      console.log('📡 API: ✅ JSON file loaded, years:', Object.keys(yearlyData));
       availableYears = Object.keys(yearlyData).map(y => parseInt(y)).sort();
 
       // If year is specified, return only that year's data
