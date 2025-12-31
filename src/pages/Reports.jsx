@@ -625,15 +625,21 @@ export default function Reports() {
   // Get estimates for selected year (for reports)
   // If official data is available for this year, use it as source of truth
   // Otherwise, use regular estimates with filtering
+  // Use defensive checks to ensure all dependencies are initialized
   const yearEstimates = useMemo(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:604',message:'INSIDE yearEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:628',message:'INSIDE yearEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{}); } catch(e) {}
     // #endregion
+    // Defensive checks - ensure all dependencies are arrays before accessing
+    if (!Array.isArray(estimates)) return [];
+    if (!Array.isArray(availableOfficialYears)) return filterEstimatesByYear(estimates, selectedYear, false);
+    if (!Array.isArray(yearlyOfficialData)) return filterEstimatesByYear(estimates, selectedYear, false);
+    
     // Calculate useOfficialData inline to avoid circular dependency
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:608',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:638',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{}); } catch(e) {}
     // #endregion
     const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     
