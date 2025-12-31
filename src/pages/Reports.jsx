@@ -137,23 +137,58 @@ export default function Reports() {
       .map(e => ({ id: e.id, estimate_date: e.estimate_date, type: typeof e.estimate_date }));
     console.log('📊 Reports: Sample estimate dates', sampleDates);
     
-    // Check for 2025 dates specifically
+    // Check for 2025 dates specifically - check ALL date fields
     const dates2025 = uniqueEstimates.filter(e => {
-      if (!e.estimate_date) return false;
-      const dateStr = String(e.estimate_date);
-      if (dateStr.length >= 4) {
-        const yearStr = dateStr.substring(0, 4);
-        return yearStr === '2025';
+      // Check estimate_date
+      if (e.estimate_date) {
+        const dateStr = String(e.estimate_date);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          if (yearStr === '2025') return true;
+        }
+      }
+      // Check estimate_close_date
+      if (e.estimate_close_date) {
+        const dateStr = String(e.estimate_close_date);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          if (yearStr === '2025') return true;
+        }
+      }
+      // Check created_at
+      if (e.created_at) {
+        const dateStr = String(e.created_at);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          if (yearStr === '2025') return true;
+        }
       }
       return false;
     });
-    console.log('📊 Reports: Estimates with 2025 dates', {
+    console.log('📊 Reports: Estimates with 2025 dates (checking all date fields)', {
       count: dates2025.length,
       sample: dates2025.slice(0, 5).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
+        estimate_close_date: e.estimate_close_date,
+        created_at: e.created_at,
         status: e.status,
         exclude_stats: e.exclude_stats
+      }))
+    });
+    
+    // Also check estimates without estimate_date but with other dates
+    const estimatesWithoutEstimateDate = uniqueEstimates
+      .filter(e => !e.estimate_date)
+      .slice(0, 10);
+    console.log('📊 Reports: Estimates WITHOUT estimate_date (sample)', {
+      count: uniqueEstimates.filter(e => !e.estimate_date).length,
+      sample: estimatesWithoutEstimateDate.map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        estimate_close_date: e.estimate_close_date,
+        created_at: e.created_at,
+        status: e.status
       }))
     });
     
