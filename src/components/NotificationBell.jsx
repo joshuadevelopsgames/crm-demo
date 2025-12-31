@@ -75,6 +75,10 @@ export default function NotificationBell() {
         const notifications = await base44.entities.Notification.filter({ user_id: currentUser.id }, '-created_at');
         console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
           renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
+          taskOverdue: notifications.filter(n => n.type === 'task_overdue').length,
+          taskDueToday: notifications.filter(n => n.type === 'task_due_today').length,
+          taskReminder: notifications.filter(n => n.type === 'task_reminder').length,
+          taskAssigned: notifications.filter(n => n.type === 'task_assigned').length,
           unread: notifications.filter(n => !n.is_read).length
         });
         return notifications;

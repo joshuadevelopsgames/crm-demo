@@ -187,6 +187,7 @@ export async function createOverdueTaskNotifications() {
   let createdCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
+  let overdueTaskCount = 0;
   
   try {
     // Get all tasks
@@ -222,11 +223,14 @@ export async function createOverdueTaskNotifications() {
         continue;
       }
       
+      overdueTaskCount++;
       console.log(`📋 Found overdue task: "${task.title}" (due: ${task.due_date}, days overdue: ${Math.abs(daysUntilDue)})`);
       
       // Get assigned users
       const assignedUsers = parseAssignedUsers(task.assigned_to || '');
       const usersToNotify = assignedUsers.length > 0 ? assignedUsers : [currentUser?.email].filter(Boolean);
+      
+      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify current user)'}`);
       
       // Collect notification data for each user
       for (const email of usersToNotify) {
@@ -312,7 +316,7 @@ export async function createOverdueTaskNotifications() {
       }
     }
     
-    console.log(`✅ Overdue task notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
+    console.log(`✅ Overdue task notification creation complete: ${overdueTaskCount} overdue tasks found, ${createdCount} notifications created, ${skippedCount} skipped, ${errorCount} errors`);
   } catch (error) {
     console.error('❌ Error creating overdue task notifications:', error);
   }
