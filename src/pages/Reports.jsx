@@ -75,12 +75,14 @@ export default function Reports() {
     }
   });
 
-  // Calculate available years from estimates
+  // Calculate available years from estimates (use estimate_date if available, otherwise created_at)
   const availableYears = useMemo(() => {
     const years = new Set();
     estimates.forEach(e => {
-      if (e.estimate_date) {
-        const dateStr = String(e.estimate_date);
+      // Use estimate_date if available, otherwise created_at (matches filtering logic)
+      const dateToUse = e.estimate_date || e.created_at;
+      if (dateToUse) {
+        const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
           const yearStr = dateStr.substring(0, 4);
           const year = parseInt(yearStr);
@@ -290,15 +292,21 @@ export default function Reports() {
     });
 
     const filtered = uniqueEstimates.filter(estimate => {
-      // Filter by year (using estimate_date only to match LMN)
-      // Use string extraction to avoid timezone issues (LMN dates are UTC)
-      if (!estimate.estimate_date) {
-        return false; // Skip estimates without estimate_date
+      // Filter by year - use estimate_date if available, otherwise fall back to created_at
+      // This matches LMN's behavior where "This year" uses created_at for estimates without estimate_date
+      let dateToUse = estimate.estimate_date;
+      if (!dateToUse) {
+        // If no estimate_date, use created_at (LMN uses this for "This year" filtering)
+        dateToUse = estimate.created_at;
+      }
+      
+      if (!dateToUse) {
+        return false; // Skip estimates without any date
       }
       
       // Handle different date formats
       let estimateYear;
-      const dateValue = estimate.estimate_date;
+      const dateValue = dateToUse;
       
       // If it's already a Date object
       if (dateValue instanceof Date) {

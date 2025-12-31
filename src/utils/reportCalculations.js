@@ -228,15 +228,19 @@ export function filterEstimatesByYear(estimates, year) {
   });
 
   return uniqueEstimates.filter(estimate => {
-    // Use estimate_date only (not estimate_close_date) to match LMN
-    if (!estimate.estimate_date) return false;
+    // Use estimate_date if available, otherwise fall back to created_at (matches LMN's "This year" behavior)
+    let dateToUse = estimate.estimate_date;
+    if (!dateToUse) {
+      dateToUse = estimate.created_at;
+    }
+    if (!dateToUse) return false;
     
     // Exclude estimates marked for exclusion from stats
     if (estimate.exclude_stats) return false;
     
     // Extract year from date string to avoid timezone conversion issues (LMN dates are UTC)
     // Use substring to extract first 4 characters (year) - more reliable than regex
-    const dateStr = String(estimate.estimate_date);
+    const dateStr = String(dateToUse);
     let estimateYear;
     if (dateStr.length >= 4) {
       estimateYear = parseInt(dateStr.substring(0, 4));
