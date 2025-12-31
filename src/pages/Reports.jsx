@@ -272,11 +272,20 @@ export default function Reports() {
       }))
     });
     
-    // Check what years are available in the data
+    // Check what years are available in the data (using same smart fallback as filtering)
     const yearsInData = new Set();
     uniqueEstimates.forEach(e => {
-      if (e.estimate_date) {
-        const dateStr = String(e.estimate_date);
+      // Use same smart fallback as filtering logic
+      let dateToUse = e.estimate_date;
+      if (!dateToUse) {
+        if (e.status === 'won' && e.estimate_close_date) {
+          dateToUse = e.estimate_close_date;
+        } else {
+          dateToUse = e.created_at;
+        }
+      }
+      if (dateToUse) {
+        const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
           const yearStr = dateStr.substring(0, 4);
           const year = parseInt(yearStr);
