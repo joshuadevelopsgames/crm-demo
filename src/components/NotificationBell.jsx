@@ -80,7 +80,19 @@ export default function NotificationBell() {
         // Fetch from both sources in parallel
         const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
           // Fetch bulk notifications from JSONB table
-          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`).then(r => r.json()),
+          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
+            .then(async r => {
+              const json = await r.json();
+              if (!r.ok) {
+                console.error(`❌ Error fetching userNotificationStates: ${r.status}`, json);
+                return { success: false, error: json.error || 'Unknown error' };
+              }
+              return json;
+            })
+            .catch(error => {
+              console.error('❌ Error fetching userNotificationStates:', error);
+              return { success: false, error: error.message };
+            }),
           // Fetch task notifications from individual rows
           base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
         ]);
@@ -89,6 +101,16 @@ export default function NotificationBell() {
         const bulkNotifications = bulkNotificationsResponse.success 
           ? (bulkNotificationsResponse.data?.notifications || [])
           : [];
+        
+        // Log if bulk notifications fetch failed
+        if (!bulkNotificationsResponse.success) {
+          console.error(`❌ Failed to fetch bulk notifications:`, bulkNotificationsResponse.error);
+        }
+        
+        // Log if no bulk notifications found (might be expected if none exist)
+        if (bulkNotifications.length === 0 && bulkNotificationsResponse.success) {
+          console.log(`⚠️ No bulk notifications found in user_notification_states for user ${currentUserIdStr}. Run updateAllUserNotificationStates() to populate.`);
+        }
         
         // Filter task notifications (only task-related types)
         const taskNotificationsFiltered = taskNotifications.filter(n => 
@@ -269,10 +291,18 @@ export default function NotificationBell() {
     }
     
     return allNotifications.filter(notification => {
-      // First, ensure this notification belongs to the current user
-      const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
-      if (notificationUserId !== currentUserIdStr) {
-        return false; // Not for current user
+      // For JSONB notifications (neglected_account, renewal_reminder), they don't have user_id
+      // because they're already user-specific (fetched from user_notification_states table)
+      // For task notifications (individual rows), check user_id
+      if (notification.type === 'neglected_account' || notification.type === 'renewal_reminder') {
+        // JSONB notifications are already user-specific, no need to check user_id
+        // They were fetched specifically for this user
+      } else {
+        // Task notifications need user_id check
+        const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+        if (notificationUserId !== currentUserIdStr) {
+          return false; // Not for current user
+        }
       }
       
       // Debug logging for task_overdue notifications

@@ -63,8 +63,9 @@ export default async function handler(req, res) {
         .single();
       
       if (error) {
-        // If table doesn't exist or no record found, return default state
-        if (error.code === 'PGRST116' || error.message?.includes('relation')) {
+        // If no record found (PGRST116), return empty state - this is normal for new users
+        if (error.code === 'PGRST116') {
+          console.log(`ℹ️ No notification state found for user ${user_id} (this is normal - will be created on first update)`);
           return res.status(200).json({
             success: true,
             data: {
@@ -75,11 +76,30 @@ export default async function handler(req, res) {
             }
           });
         }
-        console.error('Supabase error:', error);
+        // If table doesn't exist
+        if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.error(`❌ user_notification_states table does not exist. Run create_user_notification_states_table.sql`);
+          return res.status(200).json({
+            success: true,
+            data: {
+              user_id: user_id,
+              notifications: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          });
+        }
+        console.error('Supabase error fetching user_notification_states:', error);
         return res.status(500).json({
           success: false,
           error: error.message
         });
+      }
+      
+      // Log what we found
+      const notificationCount = data?.notifications ? (Array.isArray(data.notifications) ? data.notifications.length : 0) : 0;
+      if (notificationCount > 0) {
+        console.log(`✅ Found ${notificationCount} bulk notifications for user ${user_id}`);
       }
       
       return res.status(200).json({
