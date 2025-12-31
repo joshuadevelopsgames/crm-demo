@@ -701,14 +701,6 @@ export default function NotificationBell() {
                 // Skip accounts with ICP status = 'na' (permanently excluded)
                 if (account.icp_status === 'na') return false;
                 
-                // Skip if snoozed
-                if (account.snoozed_until) {
-                  const snoozeDate = new Date(account.snoozed_until);
-                  if (snoozeDate > new Date()) {
-                    return false; // Still snoozed
-                  }
-                }
-                
                 // Determine threshold based on revenue segment
                 const segment = account.revenue_segment || 'C';
                 const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
@@ -752,10 +744,7 @@ export default function NotificationBell() {
               .filter(account => {
                 if (account.archived) return false;
                 if (account.icp_status === 'na') return false;
-                if (account.snoozed_until) {
-                  const snoozeDate = new Date(account.snoozed_until);
-                  if (snoozeDate > new Date()) return false;
-                }
+                // Note: Snooze check is done via notification_snoozes table, not account.snoozed_until
                 const segment = account.revenue_segment || 'C';
                 const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
                 if (!account.last_interaction_date) return true;

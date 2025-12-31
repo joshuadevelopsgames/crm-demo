@@ -639,12 +639,6 @@ export async function updateAllUserNotificationStates() {
         // Skip archived or excluded accounts
         if (account.archived || account.icp_status === 'na') continue;
         
-        // Check if account is snoozed
-        if (account.snoozed_until) {
-          const snoozeDate = new Date(account.snoozed_until);
-          if (snoozeDate > new Date()) continue;
-        }
-        
         // Check for neglected account notification
         const isNeglected = await shouldHaveNeglectedNotification(account, today);
         if (isNeglected) {
@@ -723,11 +717,6 @@ export async function updateAllUserNotificationStates() {
  */
 async function shouldHaveNeglectedNotification(account, today) {
   if (account.archived || account.icp_status === 'na') return false;
-  
-  if (account.snoozed_until) {
-    const snoozeDate = new Date(account.snoozed_until);
-    if (snoozeDate > new Date()) return false;
-  }
   
   const segment = account.revenue_segment || 'C';
   const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;

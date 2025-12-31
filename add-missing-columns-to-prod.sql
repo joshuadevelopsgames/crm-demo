@@ -5,6 +5,13 @@
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS icp_required BOOLEAN DEFAULT true;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS icp_status TEXT DEFAULT 'required';
 
+-- Add snoozed_until to accounts table (required by trigger)
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS snoozed_until timestamptz;
+
+-- Create index for snoozed_until
+CREATE INDEX IF NOT EXISTS idx_accounts_snoozed_until ON accounts(snoozed_until) 
+WHERE snoozed_until IS NOT NULL;
+
 -- Add phone_number to profiles table
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS phone_number text;
 
@@ -44,7 +51,7 @@ SELECT
   data_type
 FROM information_schema.columns
 WHERE table_name = 'accounts'
-  AND column_name IN ('icp_required', 'icp_status')
+  AND column_name IN ('icp_required', 'icp_status', 'snoozed_until')
 UNION ALL
 SELECT 
   'profiles' as table_name,

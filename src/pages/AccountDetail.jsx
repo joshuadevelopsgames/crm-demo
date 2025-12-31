@@ -48,6 +48,7 @@ import EditAccountDialog from '../components/account/EditAccountDialog';
 import TutorialTooltip from '../components/TutorialTooltip';
 import GmailConnection from '../components/GmailConnection';
 import SnoozeDialog from '../components/SnoozeDialog';
+import { snoozeNotification } from '@/services/notificationService';
 
 export default function AccountDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -340,11 +341,6 @@ export default function AccountDetail() {
           </div>
         </div>
         <div className="flex gap-3">
-          {account.snoozed_until && new Date(account.snoozed_until) > new Date() && (
-            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-              Snoozed until {format(new Date(account.snoozed_until), 'MMM d, yyyy')}
-            </Badge>
-          )}
           <Button 
             variant="outline" 
             onClick={() => setShowSnoozeDialog(true)}
@@ -667,9 +663,10 @@ export default function AccountDetail() {
       {showSnoozeDialog && (
         <SnoozeDialog
           account={account}
+          notificationType="neglected_account"
           open={showSnoozeDialog}
           onOpenChange={setShowSnoozeDialog}
-          onSnooze={(account, duration, unit) => {
+          onSnooze={async (account, duration, unit) => {
             const now = new Date();
             let snoozedUntil;
             
@@ -690,11 +687,15 @@ export default function AccountDetail() {
                 return;
             }
             
-            updateAccountMutation.mutate({
-              id: account.id,
-              snoozed_until: snoozedUntil.toISOString()
-            });
-            setShowSnoozeDialog(false);
+            try {
+              await snoozeNotification('neglected_account', account.id, snoozedUntil);
+              // Also snooze renewal reminders for this account
+              await snoozeNotification('renewal_reminder', account.id, snoozedUntil);
+              queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
+              setShowSnoozeDialog(false);
+            } catch (error) {
+              console.error('Error snoozing notifications:', error);
+            }
           }}
         />
       )}

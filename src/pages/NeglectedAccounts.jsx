@@ -9,6 +9,7 @@ import { ArrowLeft, Clock, BellOff, List, LayoutGrid, Building2, AlertCircle } f
 import { format, differenceInDays } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import SnoozeDialog from '@/components/SnoozeDialog';
+import { snoozeNotification } from '@/services/notificationService';
 
 export default function NeglectedAccounts() {
   const navigate = useNavigate();
@@ -26,6 +27,17 @@ export default function NeglectedAccounts() {
     queryKey: ['scorecards'],
     queryFn: async () => {
       const response = await fetch('/api/data/scorecards');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
+
+  // Fetch notification snoozes
+  const { data: notificationSnoozes = [] } = useQuery({
+    queryKey: ['notificationSnoozes'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/notificationSnoozes');
       if (!response.ok) return [];
       const result = await response.json();
       return result.success ? (result.data || []) : [];
@@ -51,13 +63,13 @@ export default function NeglectedAccounts() {
     // Skip accounts with ICP status = 'na' (permanently excluded)
     if (account.icp_status === 'na') return false;
     
-    // Skip if snoozed
-    if (account.snoozed_until) {
-      const snoozeDate = new Date(account.snoozed_until);
-      if (snoozeDate > new Date()) {
-        return false; // Still snoozed
-      }
-    }
+    // Skip if 'neglected_account' notification is snoozed for this account
+    const isSnoozed = notificationSnoozes.some(snooze => 
+      snooze.notification_type === 'neglected_account' &&
+      snooze.related_account_id === account.id &&
+      new Date(snooze.snoozed_until) > new Date()
+    );
+    if (isSnoozed) return false;
     
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
@@ -71,15 +83,7 @@ export default function NeglectedAccounts() {
     return daysSince > thresholdDays;
   });
 
-  const updateAccountMutation = useMutation({
-    mutationFn: ({ accountId, data }) => base44.entities.Account.update(accountId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      setSnoozeAccount(null);
-    }
-  });
-
-  const handleSnooze = (account, duration, unit) => {
+  const handleSnooze = async (account, duration, unit) => {
     const now = new Date();
     let snoozedUntil;
     
@@ -100,10 +104,13 @@ export default function NeglectedAccounts() {
         return;
     }
     
-    updateAccountMutation.mutate({
-      accountId: account.id,
-      data: { snoozed_until: snoozedUntil.toISOString() }
-    });
+    try {
+      await snoozeNotification('neglected_account', account.id, snoozedUntil);
+      queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
+      setSnoozeAccount(null);
+    } catch (error) {
+      console.error('Error snoozing notification:', error);
+    }
   };
 
   return (
@@ -334,6 +341,7 @@ export default function NeglectedAccounts() {
       {snoozeAccount && (
         <SnoozeDialog
           account={snoozeAccount}
+          notificationType="neglected_account"
           open={!!snoozeAccount}
           onOpenChange={(open) => !open && setSnoozeAccount(null)}
           onSnooze={handleSnooze}
