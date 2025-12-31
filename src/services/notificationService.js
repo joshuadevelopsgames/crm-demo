@@ -192,11 +192,20 @@ export async function createOverdueTaskNotifications() {
   let overdueTaskCount = 0;
   
   try {
+    // Get current user from auth (same source as NotificationBell uses for fetching)
+    const currentUser = await base44.auth.me();
+    if (!currentUser?.id) {
+      console.warn('⚠️ No current user found, cannot create overdue task notifications');
+      return;
+    }
+    const currentUserIdStr = String(currentUser.id).trim();
+    console.log(`👤 Current user: ${currentUser.email} (id: ${currentUserIdStr})`);
+    
     // Get all tasks
     const tasks = await base44.entities.Task.list();
     console.log(`📊 Found ${tasks.length} tasks`);
     
-    // Get all users
+    // Get all users for matching assigned users by email
     const allUsers = await base44.entities.User.list();
     console.log(`👥 Found ${allUsers.length} users:`, allUsers.map(u => u.email || u.id).join(', '));
     
@@ -229,23 +238,47 @@ export async function createOverdueTaskNotifications() {
       // Get assigned users
       const assignedUsers = parseAssignedUsers(task.assigned_to || '');
       
-      // If task has assigned users, notify them. Otherwise, notify all users (unassigned tasks are everyone's responsibility)
-      const usersToNotify = assignedUsers.length > 0 ? assignedUsers : allUsers.map(u => u.email).filter(Boolean);
+      // Determine which users should receive notifications
+      // If task is assigned, notify assigned users. Otherwise, notify current user only (matches dashboard - shows all overdue tasks to current user)
+      let usersToNotify = [];
+      if (assignedUsers.length > 0) {
+        // Task is assigned - notify assigned users
+        usersToNotify = assignedUsers;
+      } else {
+        // Task is unassigned - notify current user (dashboard shows all overdue tasks to current user)
+        usersToNotify = [currentUser.email].filter(Boolean);
+      }
       
-      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify all users)'}`);
+      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify current user)'}`);
       console.log(`   - Users to notify: ${usersToNotify.length} user(s)`);
       
       // Collect notification data for each user
       for (const email of usersToNotify) {
-        const user = allUsers.find(u => u.email === email);
-        if (!user || !user.id) {
+        let user = null;
+        let userIdToUse = null;
+        
+        // If this is the current user's email, use current user's ID directly (from auth.me())
+        if (email === currentUser.email) {
+          user = currentUser;
+          userIdToUse = currentUserIdStr;
+        } else {
+          // For other users, find them in the allUsers list and use their profile ID
+          // Note: This assumes profile IDs match auth IDs, which should be the case
+          const profileUser = allUsers.find(u => u.email === email);
+          if (profileUser && profileUser.id) {
+            user = profileUser;
+            userIdToUse = String(profileUser.id).trim();
+          }
+        }
+        
+        if (!user || !userIdToUse) {
           console.warn(`   ⚠️ Could not find user for overdue task notification: ${email}`);
           continue;
         }
         
-        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${user.id}, idType: ${typeof user.id})`);
+        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${userIdToUse}, isCurrentUser: ${email === currentUser.email})`);
         notificationsToCreate.push({
-          user_id: String(user.id), // Ensure it's a string to match database format
+          user_id: userIdToUse, // Use normalized user ID
           task_id: task.id,
           task_title: task.title,
           daysOverdue: Math.abs(daysUntilDue),
