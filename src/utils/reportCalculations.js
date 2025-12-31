@@ -32,11 +32,12 @@ export function formatCurrency(value) {
  */
 export function calculateOverallStats(estimates) {
   // Filter out pending (treat as lost per user requirement)
-  const decidedEstimates = estimates.filter(e => e.status === 'won' || e.status === 'lost');
+  // Use isWonStatus to match LMN's won status logic
+  const decidedEstimates = estimates.filter(e => isWonStatus(e.status) || e.status === 'lost');
   const total = estimates.length;
-  const won = estimates.filter(e => e.status === 'won').length;
+  const won = estimates.filter(e => isWonStatus(e.status)).length;
   const lost = estimates.filter(e => e.status === 'lost').length;
-  const pending = estimates.filter(e => e.status !== 'won' && e.status !== 'lost').length;
+  const pending = estimates.filter(e => !isWonStatus(e.status) && e.status !== 'lost').length;
   
   // Calculate win rate (won / (won + lost)) - only count decided estimates
   const decidedCount = won + lost;
@@ -115,7 +116,7 @@ export function calculateAccountStats(estimates, accounts) {
     const value = parseFloat(estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
-    if (estimate.status === 'won') {
+    if (isWonStatus(estimate.status)) {
       stats.won++;
       stats.wonValue += value;
     } else if (estimate.status === 'lost') {
