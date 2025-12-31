@@ -204,14 +204,15 @@ export function calculateDepartmentStats(estimates) {
 }
 
 /**
- * Filter estimates by year
- * Uses estimate_date only (not estimate_close_date) to match LMN's counting logic
- * Also excludes estimates with exclude_stats=true and removes duplicates by lmn_estimate_id
+ * Filter estimates by year for Salesperson Performance reports
+ * Uses estimate_close_date only (not estimate_date) to match LMN's "All sales figures based on estimates sold" logic
+ * Also excludes estimates with exclude_stats=true, archived estimates, removes duplicates, and zero/negative prices
  * @param {Array} estimates - Array of estimate objects
  * @param {number} year - Year to filter by
+ * @param {boolean} salesPerformanceMode - If true, only use estimate_close_date (for sales performance). If false, use close_date OR estimate_date (for general reports)
  * @returns {Array} Filtered estimates
  */
-export function filterEstimatesByYear(estimates, year) {
+export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false) {
   // First, remove duplicates by lmn_estimate_id (keep first occurrence)
   const uniqueEstimates = [];
   const seenLmnIds = new Set();
@@ -228,27 +229,40 @@ export function filterEstimatesByYear(estimates, year) {
   });
 
   return uniqueEstimates.filter(estimate => {
-    // Business logic for year filtering:
-    // 1. If estimate has a close date → use that year (counts in year it closed)
-    // 2. Otherwise, use estimate_date → use that year (counts in year it was made, even if for future year)
-    // If neither exists, exclude from reports (don't use created_at - that's just when we imported it)
-    let dateToUse = null;
-    
-    // Priority 1: If estimate closed, count it in the year it closed
-    if (estimate.estimate_close_date) {
-      dateToUse = estimate.estimate_close_date;
-    }
-    // Priority 2: Otherwise, use the date the estimate was made (even if for future year)
-    else if (estimate.estimate_date) {
-      dateToUse = estimate.estimate_date;
-    }
-    // If neither exists, exclude from year-based reports
-    // (created_at is when we imported, not when estimate was created, so it's not useful for reporting)
-    
-    if (!dateToUse) return false;
-    
     // Exclude estimates marked for exclusion from stats
     if (estimate.exclude_stats) return false;
+    
+    // Exclude archived estimates
+    if (estimate.archived) return false;
+    
+    // Exclude estimates with zero or negative prices
+    const price = parseFloat(estimate.total_price_with_tax || estimate.total_price || 0);
+    if (price <= 0) return false;
+    
+    // Business logic for year filtering:
+    let dateToUse = null;
+    
+    if (salesPerformanceMode) {
+      // For Salesperson Performance: Only use estimate_close_date (when estimate was closed/sold)
+      // This matches LMN's "All sales figures based on estimates sold" description
+      if (estimate.estimate_close_date) {
+        dateToUse = estimate.estimate_close_date;
+      } else {
+        return false; // Must have close_date for sales performance reports
+      }
+    } else {
+      // For general reports: Use close_date if available, otherwise estimate_date
+      // 1. If estimate has a close date → use that year (counts in year it closed)
+      // 2. Otherwise, use estimate_date → use that year (counts in year it was made)
+      if (estimate.estimate_close_date) {
+        dateToUse = estimate.estimate_close_date;
+      } else if (estimate.estimate_date) {
+        dateToUse = estimate.estimate_date;
+      }
+      // If neither exists, exclude from year-based reports
+    }
+    
+    if (!dateToUse) return false;
     
     // Extract year from date string to avoid timezone conversion issues (LMN dates are UTC)
     // Use substring to extract first 4 characters (year) - more reliable than regex

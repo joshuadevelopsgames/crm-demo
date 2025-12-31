@@ -129,8 +129,9 @@ export default function Reports() {
   });
 
   // Filter estimates by year, account, and department
-  // Use estimate_date only (not estimate_close_date) to match LMN's counting logic
-  // Also exclude estimates with exclude_stats=true and remove duplicates by lmn_estimate_id
+  // For Salesperson Performance: Use estimate_close_date only (matches LMN's "All sales figures based on estimates sold")
+  // For general reports: Use close_date OR estimate_date (shows all estimates for the year)
+  // Also exclude estimates with exclude_stats=true, archived, duplicates, and zero/negative prices
   const filteredEstimates = useMemo(() => {
     console.log('📊 Reports: Starting filter', { totalEstimates: estimates.length, selectedYear });
     
@@ -467,8 +468,10 @@ export default function Reports() {
   }, [filteredEstimates]);
 
   // Get estimates for selected year (for reports)
+  // Use salesPerformanceMode=false for general reports (close_date OR estimate_date)
+  // Individual report components can use salesPerformanceMode=true if needed
   const yearEstimates = useMemo(() => {
-    const filtered = filterEstimatesByYear(estimates, selectedYear);
+    const filtered = filterEstimatesByYear(estimates, selectedYear, false);
     console.log('📊 Reports: yearEstimates from filterEstimatesByYear', {
       total: estimates.length,
       filtered: filtered.length,
@@ -476,6 +479,7 @@ export default function Reports() {
       sample: filtered.slice(0, 3).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
+        estimate_close_date: e.estimate_close_date,
         status: e.status
       }))
     });
