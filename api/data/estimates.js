@@ -110,7 +110,7 @@ export default async function handler(req, res) {
         
         // Use the imported ID directly (e.g., from import)
         // Also remove internal tracking fields and fields that don't exist in the schema
-        const { id, account_id, contact_id, _is_orphaned, _link_method, crm_tags, ...estimateWithoutId } = estimate;
+        const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutId } = estimate;
         const estimateData = {
           ...estimateWithoutId,
           updated_at: new Date().toISOString()
@@ -193,6 +193,15 @@ export default async function handler(req, res) {
             }
           });
           
+          // Get all account IDs that exist in the database to validate references
+          const accountIdsInBatch = batch.map(e => e.account_id).filter(Boolean);
+          const { data: existingAccounts } = await supabase
+            .from('accounts')
+            .select('id')
+            .in('id', accountIdsInBatch);
+          
+          const validAccountIds = new Set(existingAccounts?.map(a => a.id) || []);
+          
           // Get all contact IDs that exist in the database to validate references
           const contactIdsInBatch = batch.map(e => e.contact_id).filter(Boolean);
           const { data: existingContacts } = await supabase
@@ -224,7 +233,7 @@ export default async function handler(req, res) {
             
             // Remove id if it's not a valid UUID - let Supabase generate it
             // Also remove internal tracking fields and fields that don't exist in the schema
-            const { id, account_id, contact_id, _is_orphaned, _link_method, crm_tags, ...estimateWithoutIds } = estimate;
+            const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutIds } = estimate;
             const estimateData = {
               ...estimateWithoutIds,
               updated_at: new Date().toISOString()
@@ -235,10 +244,14 @@ export default async function handler(req, res) {
               estimateData.id = id;
             }
             
-            // Include account_id if provided (should be text like "lmn-account-XXXXX")
-            if (account_id) {
+            // Include account_id if provided AND the account exists in the database
+            // If account doesn't exist, set to null to avoid foreign key constraint violation
+            if (account_id && validAccountIds.has(account_id)) {
               estimateData.account_id = account_id;
             } else {
+              if (account_id && !validAccountIds.has(account_id)) {
+                console.warn(`Estimate ${estimate.lmn_estimate_id || estimate.id} references non-existent account ${account_id}, setting to null`);
+              }
               estimateData.account_id = null;
             }
             

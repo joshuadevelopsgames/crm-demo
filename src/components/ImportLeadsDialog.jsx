@@ -490,22 +490,28 @@ export default function ImportLeadsDialog({ open, onClose }) {
     const validIds = extractValidIds(contactsData, leadsData, estimatesData, jobsitesData);
     
     // Filter estimates to only include those with valid IDs from sheets
-    // This prevents importing orphaned estimates that reference accounts/contacts not in sheets
+    // Note: We allow estimates even if their referenced accounts/contacts aren't in sheets
+    // (we'll set account_id/contact_id to null instead of excluding the estimate)
     const validEstimates = mergedData.estimates?.filter(est => {
       const estId = est.lmn_estimate_id || est.id;
       if (!validIds.estimateIds.has(estId)) {
         console.warn(`Skipping estimate ${estId} - not in import sheets`);
         return false;
       }
-      // Also validate that referenced accounts/contacts are in sheets
+      // Allow estimates even if account/contact not in sheets - we'll set to null during save
+      // This ensures all estimates from the Estimates List are imported
+      return true;
+    }).map(est => {
+      // If account_id references an account not in sheets, set it to null
+      // (the API will handle this, but we can do it here for clarity)
       if (est.account_id) {
         const accountId = est.account_id.split('-').pop();
         if (!validIds.accountIds.has(est.account_id) && !validIds.accountIds.has(accountId)) {
-          console.warn(`Skipping estimate ${estId} - references account ${est.account_id} not in sheets`);
-          return false;
+          console.warn(`Estimate ${est.lmn_estimate_id || est.id} references account ${est.account_id} not in sheets - will set to null`);
+          return { ...est, account_id: null };
         }
       }
-      return true;
+      return est;
     }) || [];
 
     // Filter jobsites similarly
