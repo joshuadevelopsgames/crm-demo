@@ -591,6 +591,11 @@ export default function Reports() {
   // If official data is available for this year, use it as source of truth
   // Otherwise, use regular estimates with filtering
   const yearEstimates = useMemo(() => {
+    // Calculate useOfficialData inline to avoid circular dependency
+    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
+    const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+    
     console.log('📊 Reports: yearEstimates calculation', {
       selectedYear,
       useOfficialData,
