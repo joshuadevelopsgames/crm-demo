@@ -1,463 +1,299 @@
 #!/usr/bin/env node
 
-import { createClient } from '@supabase/supabase-js';
+/**
+ * Investigate what additional filters LMN applies in their report vs the export
+ * The export has 631 for 2024 but report shows 591 (40 fewer)
+ * The export has 1359 for 2025 but report shows 1086 (273 fewer)
+ */
+
 import XLSX from 'xlsx';
-import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
-// Try to load .env file if it exists (for local development)
-try {
-  const envPath = join(process.cwd(), '.env');
-  if (existsSync(envPath)) {
-    const envContent = readFileSync(envPath, 'utf-8');
-    envContent.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const [key, ...valueParts] = trimmed.split('=');
-        if (key && valueParts.length > 0) {
-          const value = valueParts.join('=').replace(/^[\"']|[\"']$/g, '');
-          if (!process.env[key]) process.env[key] = value;
-        }
-      }
-    });
+function getYearFromDate(dateValue) {
+  if (!dateValue) return null;
+  if (typeof dateValue === 'number') {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(excelEpoch.getTime() + (dateValue - 1) * 24 * 60 * 60 * 1000);
+    return date.getUTCFullYear();
   }
-} catch (e) {
-  console.error('Error loading .env file:', e);
-}
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables or .env file.');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
-
-function extractYearFromDateString(dateStr) {
-  if (!dateStr) return null;
-  const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
-  if (yearMatch) {
-    return parseInt(yearMatch[1]);
+  if (dateValue instanceof Date) {
+    return dateValue.getFullYear();
   }
-  const parsed = new Date(dateStr);
-  if (isNaN(parsed.getTime())) return null;
-  return parsed.getFullYear();
+  const dateStr = String(dateValue);
+  if (dateStr.length >= 4) {
+    return parseInt(dateStr.substring(0, 4));
+  }
+  return null;
 }
 
-function convertExcelDate(excelSerial) {
-  if (typeof excelSerial !== 'number') return null;
-  const excelEpoch = new Date(1899, 11, 30);
-  const jsDate = new Date(excelEpoch.getTime() + (excelSerial - 1) * 24 * 60 * 60 * 1000);
-  return jsDate.toISOString().split('T')[0];
-}
-
-async function investigateLMNReportFilters() {
-  console.log('🔍 Investigating what filters LMN report applies to get 1,839 from 1,970...\n');
+async function investigateReportFilters() {
+  console.log('🔍 Investigating LMN Report Filters\n');
+  console.log('═══════════════════════════════════════════════════════════════\n');
 
   try {
-    // Read LMN export
-    const excelPath = join(process.env.HOME || '/Users/joshua', 'Downloads', 'Estimates List (3).xlsx');
+    const excelPath = join(process.env.HOME || '/Users/joshua', 'Downloads', 'Estimates List.xlsx');
     const workbook = XLSX.readFile(excelPath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const lmnData = XLSX.utils.sheet_to_json(worksheet);
 
-    const dateColumn = 'Estimate Date';
-    const estimateIdColumn = 'Estimate ID';
-    const excludeStatsColumn = 'Exclude Stats';
-    const statusColumn = 'Status';
-    const archivedColumn = 'Archived';
-    const salesPipelineStatusColumn = 'Sales Pipeline Status';
+    console.log(`✅ Loaded ${lmnData.length} rows from LMN export\n`);
 
-    // Filter LMN data for 2025
-    const year2025 = 2025;
+    const columns = Object.keys(lmnData[0]);
+    const estimateIdCol = 'Estimate ID';
+    const closeDateCol = 'Estimate Close Date';
+    const statusCol = 'Status';
+    const pipelineStatusCol = 'Sales Pipeline Status';
+    const excludeStatsCol = 'Exclude Stats';
+    const archivedCol = 'Archived';
+    const totalPriceCol = 'Total Price';
+    const totalPriceWithTaxCol = 'Total Price With Tax';
+
+    // Filter 2024 and 2025 by close_date
+    const lmn2024 = lmnData.filter(row => {
+      if (!row[closeDateCol]) return false;
+      const closeYear = getYearFromDate(row[closeDateCol]);
+      return closeYear === 2024;
+    });
+
     const lmn2025 = lmnData.filter(row => {
-      if (!row[dateColumn] || row[dateColumn] === null || row[dateColumn] === undefined) return false;
-      const dateValue = row[dateColumn];
-      let year = null;
-      if (dateValue instanceof Date) {
-        year = dateValue.getFullYear();
-      } else if (typeof dateValue === 'string') {
-        year = extractYearFromDateString(dateValue);
-      } else if (typeof dateValue === 'number') {
-        const excelEpoch = new Date(1899, 11, 30);
-        const jsDate = new Date(excelEpoch.getTime() + (dateValue - 1) * 24 * 60 * 60 * 1000);
-        year = jsDate.getFullYear();
-      }
-      return year === year2025;
+      if (!row[closeDateCol]) return false;
+      const closeYear = getYearFromDate(row[closeDateCol]);
+      return closeYear === 2025;
     });
 
-    // Apply exclude_stats filter (what we currently do)
-    const lmn2025Filtered = lmn2025.filter(row => {
-      const excludeValue = row[excludeStatsColumn];
-      if (excludeValue === true || excludeValue === 'True' || excludeValue === 'true') {
-        return false;
-      }
+    // Apply base filters
+    const base2024 = lmn2024.filter(row => {
+      const exclude = row[excludeStatsCol];
+      if (exclude === true || exclude === 'True' || exclude === 'true' || exclude === 1) return false;
+      const archived = row[archivedCol];
+      if (archived === true || archived === 'True' || archived === 'true' || archived === 1) return false;
+      const price = parseFloat(row[totalPriceCol] || row[totalPriceWithTaxCol] || 0);
+      if (price <= 0) return false;
       return true;
     });
 
-    console.log(`📊 LMN export 2025 estimates (after exclude_stats): ${lmn2025Filtered.length}`);
-    console.log(`📊 LMN report shows: 1,839`);
-    console.log(`📊 Difference: ${lmn2025Filtered.length - 1839} estimates\n`);
-
-    // Get unique IDs
-    const lmn2025Ids = new Set();
-    lmn2025Filtered.forEach(row => {
-      if (row[estimateIdColumn]) {
-        const id = String(row[estimateIdColumn]).trim();
-        if (id) {
-          lmn2025Ids.add(id);
-        }
-      }
-    });
-
-    console.log(`📊 Unique estimate IDs: ${lmn2025Ids.size}\n`);
-
-    // Test various filter combinations to find what gets us to 1,839
-    console.log('🔍 Testing filter combinations:\n');
-
-    // Test 1: Exclude "Lost" pipeline status
-    const test1 = lmn2025Filtered.filter(r => {
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      return pipelineStatus !== 'Lost';
-    });
-    const test1Ids = new Set();
-    test1.forEach(r => {
-      if (r[estimateIdColumn]) test1Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`1. Excluding "Lost" pipeline status: ${test1Ids.size} (diff: ${test1Ids.size - 1839})`);
-
-    // Test 2: Exclude "Pending" pipeline status
-    const test2 = lmn2025Filtered.filter(r => {
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      return pipelineStatus !== 'Pending';
-    });
-    const test2Ids = new Set();
-    test2.forEach(r => {
-      if (r[estimateIdColumn]) test2Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`2. Excluding "Pending" pipeline status: ${test2Ids.size} (diff: ${test2Ids.size - 1839})`);
-
-    // Test 3: Exclude both "Lost" and "Pending" pipeline status
-    const test3 = lmn2025Filtered.filter(r => {
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      return pipelineStatus !== 'Lost' && pipelineStatus !== 'Pending';
-    });
-    const test3Ids = new Set();
-    test3.forEach(r => {
-      if (r[estimateIdColumn]) test3Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`3. Excluding "Lost" + "Pending" pipeline: ${test3Ids.size} (diff: ${test3Ids.size - 1839})`);
-
-    // Test 4: Only "Sold" pipeline status
-    const test4 = lmn2025Filtered.filter(r => {
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      return pipelineStatus === 'Sold';
-    });
-    const test4Ids = new Set();
-    test4.forEach(r => {
-      if (r[estimateIdColumn]) test4Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`4. Only "Sold" pipeline status: ${test4Ids.size} (diff: ${test4Ids.size - 1839})`);
-
-    // Test 5: Exclude certain statuses
-    const test5 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return !status.includes('Lost') && status !== 'Work Complete' && status !== 'Billing Complete';
-    });
-    const test5Ids = new Set();
-    test5.forEach(r => {
-      if (r[estimateIdColumn]) test5Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`5. Excluding Lost/Complete statuses: ${test5Ids.size} (diff: ${test5Ids.size - 1839})`);
-
-    // Test 6: Exclude "Estimate In Progress" status
-    const test6 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status !== 'Estimate In Progress';
-    });
-    const test6Ids = new Set();
-    test6.forEach(r => {
-      if (r[estimateIdColumn]) test6Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`6. Excluding "Estimate In Progress": ${test6Ids.size} (diff: ${test6Ids.size - 1839})`);
-
-    // Test 7: Exclude "Client Proposal Phase" status
-    const test7 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status !== 'Client Proposal Phase';
-    });
-    const test7Ids = new Set();
-    test7.forEach(r => {
-      if (r[estimateIdColumn]) test7Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`7. Excluding "Client Proposal Phase": ${test7Ids.size} (diff: ${test7Ids.size - 1839})`);
-
-    // Test 8: Only include "decided" estimates (Contract Signed, Work Complete, Estimate Lost, etc.)
-    const test8 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const decidedStatuses = [
-        'Contract Signed',
-        'Work Complete',
-        'Billing Complete',
-        'Email Contract Award',
-        'Verbal Contract Award',
-        'Estimate Lost',
-        'Estimate Lost - Price too high',
-        'Estimate Lost - No Reply'
-      ];
-      return decidedStatuses.includes(status);
-    });
-    const test8Ids = new Set();
-    test8.forEach(r => {
-      if (r[estimateIdColumn]) test8Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`8. Only "decided" statuses: ${test8Ids.size} (diff: ${test8Ids.size - 1839})`);
-
-    // Test 9: Exclude "Estimate In Progress" and "Client Proposal Phase"
-    const test9 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status !== 'Estimate In Progress' && status !== 'Client Proposal Phase';
-    });
-    const test9Ids = new Set();
-    test9.forEach(r => {
-      if (r[estimateIdColumn]) test9Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`9. Excluding "Estimate In Progress" + "Client Proposal Phase": ${test9Ids.size} (diff: ${test9Ids.size - 1839})`);
-
-    // Test 10: Exclude "Pending" pipeline + "Estimate In Progress" + "Client Proposal Phase"
-    const test10 = lmn2025Filtered.filter(r => {
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      const status = r[statusColumn] || '';
-      return pipelineStatus !== 'Pending' && 
-             status !== 'Estimate In Progress' && 
-             status !== 'Client Proposal Phase';
-    });
-    const test10Ids = new Set();
-    test10.forEach(r => {
-      if (r[estimateIdColumn]) test10Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`10. Excluding Pending pipeline + In Progress + Proposal Phase: ${test10Ids.size} (diff: ${test10Ids.size - 1839})`);
-
-    // Test 11: Exclude "Client Proposal Phase" + some "Estimate In Progress" (partial)
-    // Maybe LMN excludes some but not all "Estimate In Progress"
-    const test11 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status !== 'Client Proposal Phase';
-    });
-    const test11Ids = new Set();
-    test11.forEach(r => {
-      if (r[estimateIdColumn]) test11Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    // We have 1,752, need 1,839, so we need 87 more
-    // Maybe exclude some "Estimate In Progress" but not all?
-    const inProgress = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status === 'Estimate In Progress';
-    });
-    console.log(`11. Excluding Client Proposal Phase only: ${test11Ids.size} (diff: ${test11Ids.size - 1839})`);
-    console.log(`    We need ${1839 - test11Ids.size} more estimates`);
-    console.log(`    Estimate In Progress count: ${inProgress.length}`);
-
-    // Test 12: Exclude "Client Proposal Phase" + exclude some "Estimate In Progress" based on pipeline status
-    const test12 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      // Exclude Client Proposal Phase
-      if (status === 'Client Proposal Phase') return false;
-      // Exclude Estimate In Progress that are Lost in pipeline
-      if (status === 'Estimate In Progress' && pipelineStatus === 'Lost') return false;
+    const base2025 = lmn2025.filter(row => {
+      const exclude = row[excludeStatsCol];
+      if (exclude === true || exclude === 'True' || exclude === 'true' || exclude === 1) return false;
+      const archived = row[archivedCol];
+      if (archived === true || archived === 'True' || archived === 'true' || archived === 1) return false;
+      const price = parseFloat(row[totalPriceCol] || row[totalPriceWithTaxCol] || 0);
+      if (price <= 0) return false;
       return true;
     });
-    const test12Ids = new Set();
-    test12.forEach(r => {
-      if (r[estimateIdColumn]) test12Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`12. Excluding Client Proposal Phase + In Progress (Lost pipeline): ${test12Ids.size} (diff: ${test12Ids.size - 1839})`);
 
-    // Test 13: Exclude "Client Proposal Phase" + exclude "Estimate In Progress" with certain conditions
-    // Try excluding Estimate In Progress that don't have a close date
-    const test13 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const closeDate = r['Estimate Close Date'];
-      // Exclude Client Proposal Phase
-      if (status === 'Client Proposal Phase') return false;
-      // Exclude Estimate In Progress without close date
-      if (status === 'Estimate In Progress' && !closeDate) return false;
-      return true;
-    });
-    const test13Ids = new Set();
-    test13.forEach(r => {
-      if (r[estimateIdColumn]) test13Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`13. Excluding Client Proposal Phase + In Progress (no close date): ${test13Ids.size} (diff: ${test13Ids.size - 1839})`);
+    console.log('📊 Base Filtered Data:');
+    console.log(`  2024: ${base2024.length} (LMN Report: 591, need to remove ${base2024.length - 591})`);
+    console.log(`  2025: ${base2025.length} (LMN Report: 1086, need to remove ${base2025.length - 1086})\n`);
 
-    // Test 14: Try excluding exactly 131 estimates - what are they?
-    // We need to find which 131 estimates LMN excludes
-    // Let's check if there's a pattern in the ones we'd exclude with test7 (Client Proposal Phase)
-    const proposalPhase = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status === 'Client Proposal Phase';
-    });
-    console.log(`\n📊 Client Proposal Phase count: ${proposalPhase.length}`);
-    console.log(`   If we exclude these, we get: ${test7Ids.size}`);
-    console.log(`   We need: ${1839 - test7Ids.size} more to exclude\n`);
+    // ============================================
+    // TEST 1: Filter by Status
+    // ============================================
 
-    // Test 15: Exclude Client Proposal Phase + exclude some Estimate In Progress
-    // We need 87 more, and there are 432 Estimate In Progress
-    // Maybe exclude Estimate In Progress that are Pending in pipeline?
-    const test15 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      // Exclude Client Proposal Phase
-      if (status === 'Client Proposal Phase') return false;
-      // Exclude Estimate In Progress that are Pending
-      if (status === 'Estimate In Progress' && pipelineStatus === 'Pending') return false;
-      return true;
-    });
-    const test15Ids = new Set();
-    test15.forEach(r => {
-      if (r[estimateIdColumn]) test15Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`15. Excluding Client Proposal Phase + In Progress (Pending): ${test15Ids.size} (diff: ${test15Ids.size - 1839})`);
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('1️⃣  TESTING STATUS FILTERS:\n');
+    console.log('═══════════════════════════════════════════════════════════════\n');
 
-    // Test 16: Exclude Client Proposal Phase + exclude some Estimate In Progress based on close date
-    // Maybe exclude Estimate In Progress without close date that are older?
-    const test16 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const closeDate = r['Estimate Close Date'];
-      const dateValue = r[dateColumn];
-      // Exclude Client Proposal Phase
-      if (status === 'Client Proposal Phase') return false;
-      // Exclude Estimate In Progress without close date
-      if (status === 'Estimate In Progress' && !closeDate) {
-        // Maybe exclude if date is before a certain point?
-        // Let's try excluding all without close date first
-        return false;
-      }
-      return true;
+    // Status breakdown
+    const statusBreakdown2024 = {};
+    base2024.forEach(row => {
+      const status = (row[statusCol] || 'unknown').toString().trim();
+      statusBreakdown2024[status] = (statusBreakdown2024[status] || 0) + 1;
     });
-    const test16Ids = new Set();
-    test16.forEach(r => {
-      if (r[estimateIdColumn]) test16Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`16. Excluding Client Proposal Phase + In Progress (no close date): ${test16Ids.size} (diff: ${test16Ids.size - 1839})`);
 
-    // Test 17: Maybe LMN only counts estimates that have been "decided" (won or lost)
-    // But that would be too few (1,302). Let me check what "decided" means in LMN context
-    // Maybe it means estimates with a close date OR a final status?
-    const test17 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const closeDate = r['Estimate Close Date'];
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      // Include if it has a close date OR is in a final status
-      const hasCloseDate = closeDate && closeDate !== null && closeDate !== '';
-      const isFinalStatus = ['Contract Signed', 'Work Complete', 'Billing Complete', 
-                            'Email Contract Award', 'Verbal Contract Award',
-                            'Estimate Lost', 'Estimate Lost - Price too high', 
-                            'Estimate Lost - No Reply'].includes(status);
-      const isSold = pipelineStatus === 'Sold';
-      return hasCloseDate || isFinalStatus || isSold;
+    const statusBreakdown2025 = {};
+    base2025.forEach(row => {
+      const status = (row[statusCol] || 'unknown').toString().trim();
+      statusBreakdown2025[status] = (statusBreakdown2025[status] || 0) + 1;
     });
-    const test17Ids = new Set();
-    test17.forEach(r => {
-      if (r[estimateIdColumn]) test17Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`17. Only estimates with close date OR final status OR Sold: ${test17Ids.size} (diff: ${test17Ids.size - 1839})`);
 
-    // Test 18: Maybe LMN excludes estimates based on when they were created vs when they're dated
-    // Or maybe it's a combination: Exclude Client Proposal Phase + exclude some Estimate In Progress
-    // Let's try excluding exactly 87 Estimate In Progress (the difference)
-    // We need to find which 87 to exclude
-    const inProgressList = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      return status === 'Estimate In Progress';
+    console.log('2024 Status Breakdown:');
+    Object.entries(statusBreakdown2024).sort((a, b) => b[1] - a[1]).forEach(([status, count]) => {
+      console.log(`  ${status}: ${count}`);
     });
-    // Try excluding Estimate In Progress that are Pending and don't have close date
-    const test18 = lmn2025Filtered.filter(r => {
-      const status = r[statusColumn] || '';
-      const pipelineStatus = r[salesPipelineStatusColumn] || '';
-      const closeDate = r['Estimate Close Date'];
-      // Exclude Client Proposal Phase
-      if (status === 'Client Proposal Phase') return false;
-      // Exclude Estimate In Progress that are Pending AND don't have close date
-      if (status === 'Estimate In Progress' && pipelineStatus === 'Pending' && !closeDate) return false;
-      return true;
-    });
-    const test18Ids = new Set();
-    test18.forEach(r => {
-      if (r[estimateIdColumn]) test18Ids.add(String(r[estimateIdColumn]).trim());
-    });
-    console.log(`18. Excluding Client Proposal Phase + In Progress (Pending, no close date): ${test18Ids.size} (diff: ${test18Ids.size - 1839})`);
+    console.log('');
 
-    // Find the exact match
-    const tests = [
-      { name: 'Excluding Lost pipeline', count: test1Ids.size },
-      { name: 'Excluding Pending pipeline', count: test2Ids.size },
-      { name: 'Excluding Lost + Pending pipeline', count: test3Ids.size },
-      { name: 'Only Sold pipeline', count: test4Ids.size },
-      { name: 'Excluding Lost/Complete statuses', count: test5Ids.size },
-      { name: 'Excluding Estimate In Progress', count: test6Ids.size },
-      { name: 'Excluding Client Proposal Phase', count: test7Ids.size },
-      { name: 'Only decided statuses', count: test8Ids.size },
-      { name: 'Excluding In Progress + Proposal Phase', count: test9Ids.size },
-      { name: 'Excluding Pending + In Progress + Proposal', count: test10Ids.size },
-      { name: 'Excluding Client Proposal Phase + In Progress (Lost)', count: test12Ids.size },
-      { name: 'Excluding Client Proposal Phase + In Progress (no close date)', count: test13Ids.size },
-      { name: 'Excluding Client Proposal Phase + In Progress (Pending)', count: test15Ids.size },
-      { name: 'Only estimates with close date OR final status OR Sold', count: test17Ids.size },
-      { name: 'Excluding Client Proposal Phase + In Progress (Pending, no close date)', count: test18Ids.size }
+    console.log('2025 Status Breakdown:');
+    Object.entries(statusBreakdown2025).sort((a, b) => b[1] - a[1]).forEach(([status, count]) => {
+      console.log(`  ${status}: ${count}`);
+    });
+    console.log('');
+
+    // Test: Only include "won" statuses (contract signed, work complete, billing complete, etc.)
+    const wonStatuses = [
+      'contract signed',
+      'work complete',
+      'billing complete',
+      'email contract award',
+      'verbal contract award'
     ];
 
-    const exactMatch = tests.find(t => t.count === 1839);
-    const closest = tests.reduce((best, current) => {
-      const currentDiff = Math.abs(current.count - 1839);
-      const bestDiff = Math.abs(best.count - 1839);
-      return currentDiff < bestDiff ? current : best;
+    const won2024 = base2024.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return wonStatuses.includes(status);
     });
 
-    console.log(`\n✅ Closest match: ${closest.name} with ${closest.count} (diff: ${closest.count - 1839})\n`);
+    const won2025 = base2025.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return wonStatuses.includes(status);
+    });
 
-    if (exactMatch) {
-      console.log(`🎉 EXACT MATCH! LMN report uses: ${exactMatch.name}`);
-    } else {
-      console.log(`⚠️  No exact match found. The closest is ${closest.name}.`);
-      console.log(`\n   This suggests LMN may use a combination of filters or a different logic.`);
-    }
+    console.log(`If we only include "won" statuses (${wonStatuses.join(', ')}):`);
+    console.log(`  2024: ${won2024.length} (need ${591}, diff: ${won2024.length - 591})`);
+    console.log(`  2025: ${won2025.length} (need ${1086}, diff: ${won2025.length - 1086})\n`);
 
-    // Show breakdown of what would be excluded
-    if (closest.count === test10Ids.size) {
-      const pendingCount = lmn2025Filtered.filter(r => {
-        const pipelineStatus = r[salesPipelineStatusColumn] || '';
-        return pipelineStatus === 'Pending';
-      }).length;
-      const inProgressCount = lmn2025Filtered.filter(r => {
-        const status = r[statusColumn] || '';
-        return status === 'Estimate In Progress';
-      }).length;
-      const proposalCount = lmn2025Filtered.filter(r => {
-        const status = r[statusColumn] || '';
-        return status === 'Client Proposal Phase';
-      }).length;
-      console.log(`\n   Breakdown of excluded estimates:`);
-      console.log(`   - Pending pipeline: ${pendingCount}`);
-      console.log(`   - Estimate In Progress: ${inProgressCount}`);
-      console.log(`   - Client Proposal Phase: ${proposalCount}`);
-      console.log(`   - Total excluded: ${pendingCount + inProgressCount + proposalCount} (may overlap)`);
-    }
+    // Test: Exclude "in progress" or "on hold" statuses
+    const excludeStatuses = [
+      'work in progress',
+      'estimate in progress',
+      'estimate on hold',
+      'client proposal phase'
+    ];
+
+    const withoutInProgress2024 = base2024.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return !excludeStatuses.includes(status);
+    });
+
+    const withoutInProgress2025 = base2025.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return !excludeStatuses.includes(status);
+    });
+
+    console.log(`If we exclude "in progress" statuses (${excludeStatuses.join(', ')}):`);
+    console.log(`  2024: ${withoutInProgress2024.length} (need ${591}, diff: ${withoutInProgress2024.length - 591})`);
+    console.log(`  2025: ${withoutInProgress2025.length} (need ${1086}, diff: ${withoutInProgress2025.length - 1086})\n`);
+
+    // ============================================
+    // TEST 2: Filter by Pipeline Status
+    // ============================================
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('2️⃣  TESTING PIPELINE STATUS FILTERS:\n');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    const pipelineBreakdown2024 = {};
+    base2024.forEach(row => {
+      const pipeline = (row[pipelineStatusCol] || 'unknown').toString().trim();
+      pipelineBreakdown2024[pipeline] = (pipelineBreakdown2024[pipeline] || 0) + 1;
+    });
+
+    const pipelineBreakdown2025 = {};
+    base2025.forEach(row => {
+      const pipeline = (row[pipelineStatusCol] || 'unknown').toString().trim();
+      pipelineBreakdown2025[pipeline] = (pipelineBreakdown2025[pipeline] || 0) + 1;
+    });
+
+    console.log('2024 Pipeline Status Breakdown:');
+    Object.entries(pipelineBreakdown2024).sort((a, b) => b[1] - a[1]).forEach(([pipeline, count]) => {
+      console.log(`  ${pipeline}: ${count}`);
+    });
+    console.log('');
+
+    console.log('2025 Pipeline Status Breakdown:');
+    Object.entries(pipelineBreakdown2025).sort((a, b) => b[1] - a[1]).forEach(([pipeline, count]) => {
+      console.log(`  ${pipeline}: ${count}`);
+    });
+    console.log('');
+
+    // Test: Only include "Sold" pipeline status
+    const sold2024 = base2024.filter(row => {
+      const pipeline = (row[pipelineStatusCol] || '').toString().trim().toLowerCase();
+      return pipeline === 'sold';
+    });
+
+    const sold2025 = base2025.filter(row => {
+      const pipeline = (row[pipelineStatusCol] || '').toString().trim().toLowerCase();
+      return pipeline === 'sold';
+    });
+
+    console.log(`If we only include pipeline_status='Sold':`);
+    console.log(`  2024: ${sold2024.length} (need ${591}, diff: ${sold2024.length - 591})`);
+    console.log(`  2025: ${sold2025.length} (need ${1086}, diff: ${sold2025.length - 1086})\n`);
+
+    // ============================================
+    // TEST 3: Combination Filters
+    // ============================================
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('3️⃣  TESTING COMBINATION FILTERS:\n');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    // Test: Pipeline Status = 'Sold' AND exclude in-progress statuses
+    const soldAndExcludeInProgress2024 = base2024.filter(row => {
+      const pipeline = (row[pipelineStatusCol] || '').toString().trim().toLowerCase();
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return pipeline === 'sold' && !excludeStatuses.includes(status);
+    });
+
+    const soldAndExcludeInProgress2025 = base2025.filter(row => {
+      const pipeline = (row[pipelineStatusCol] || '').toString().trim().toLowerCase();
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return pipeline === 'sold' && !excludeStatuses.includes(status);
+    });
+
+    console.log(`Pipeline='Sold' AND exclude in-progress statuses:`);
+    console.log(`  2024: ${soldAndExcludeInProgress2024.length} (need ${591}, diff: ${soldAndExcludeInProgress2024.length - 591})`);
+    console.log(`  2025: ${soldAndExcludeInProgress2025.length} (need ${1086}, diff: ${soldAndExcludeInProgress2025.length - 1086})\n`);
+
+    // Test: Only won statuses AND exclude in-progress
+    const wonAndExcludeInProgress2024 = base2024.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return wonStatuses.includes(status) && !excludeStatuses.includes(status);
+    });
+
+    const wonAndExcludeInProgress2025 = base2025.filter(row => {
+      const status = (row[statusCol] || '').toString().toLowerCase().trim();
+      return wonStatuses.includes(status) && !excludeStatuses.includes(status);
+    });
+
+    console.log(`Won statuses AND exclude in-progress:`);
+    console.log(`  2024: ${wonAndExcludeInProgress2024.length} (need ${591}, diff: ${wonAndExcludeInProgress2024.length - 591})`);
+    console.log(`  2025: ${wonAndExcludeInProgress2025.length} (need ${1086}, diff: ${wonAndExcludeInProgress2025.length - 1086})\n`);
+
+    // ============================================
+    // SUMMARY
+    // ============================================
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📊 SUMMARY - Closest Matches:\n');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    const tests = [
+      { name: 'Base (exclude_stats, archived, price>0)', 2024: base2024.length, 2025: base2025.length },
+      { name: 'Only won statuses', 2024: won2024.length, 2025: won2025.length },
+      { name: 'Exclude in-progress statuses', 2024: withoutInProgress2024.length, 2025: withoutInProgress2025.length },
+      { name: 'Pipeline=Sold only', 2024: sold2024.length, 2025: sold2025.length },
+      { name: 'Pipeline=Sold AND exclude in-progress', 2024: soldAndExcludeInProgress2024.length, 2025: soldAndExcludeInProgress2025.length },
+      { name: 'Won statuses AND exclude in-progress', 2024: wonAndExcludeInProgress2024.length, 2025: wonAndExcludeInProgress2025.length }
+    ];
+
+    tests.forEach(test => {
+      const diff2024 = Math.abs(test[2024] - 591);
+      const diff2025 = Math.abs(test[2025] - 1086);
+      const totalDiff = diff2024 + diff2025;
+      console.log(`${test.name}:`);
+      console.log(`  2024: ${test[2024]} (diff: ${diff2024})`);
+      console.log(`  2025: ${test[2025]} (diff: ${diff2025})`);
+      console.log(`  Total difference: ${totalDiff}\n`);
+    });
+
+    // Find closest match
+    const closest = tests.reduce((best, current) => {
+      const currentScore = Math.abs(current[2024] - 591) + Math.abs(current[2025] - 1086);
+      const bestScore = Math.abs(best[2024] - 591) + Math.abs(best[2025] - 1086);
+      return currentScore < bestScore ? current : best;
+    });
+
+    console.log(`✅ Closest match: ${closest.name}`);
+    console.log(`  This is ${Math.abs(closest[2024] - 591) + Math.abs(closest[2025] - 1086)} estimates different from LMN's report\n`);
 
   } catch (error) {
     console.error('❌ An unexpected error occurred:', error);
-    console.error(error.stack);
+    process.exit(1);
   }
 }
 
-investigateLMNReportFilters();
-
+investigateReportFilters();
