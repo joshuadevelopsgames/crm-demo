@@ -123,6 +123,33 @@ export default function NotificationBell() {
     }
   }, [currentUser?.id, refetchNotifications]);
 
+  // Fetch tasks to check if they're overdue (needed to filter task_assigned notifications)
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Task.list();
+      } catch (error) {
+        console.error('🔔 NotificationBell: Error fetching tasks:', error);
+        return [];
+      }
+    },
+    enabled: !!currentUser?.id, // Only fetch if user is available
+  });
+
+  // Create a set of overdue task IDs for quick lookup
+  const overdueTaskIds = useMemo(() => {
+    const now = new Date();
+    return new Set(
+      tasks
+        .filter(task => {
+          if (!task.due_date || task.status === 'completed') return false;
+          return new Date(task.due_date) < now;
+        })
+        .map(task => task.id)
+    );
+  }, [tasks]);
+
   // Fetch universal snoozes (applies to all users)
   const { data: snoozes = [] } = useQuery({
     queryKey: ['notificationSnoozes'],
@@ -244,11 +271,19 @@ export default function NotificationBell() {
       // But we still need to check if it's snoozed
     }
     
+    // For task_assigned notifications, hide them if the task is overdue
+    // (overdue tasks should only show task_overdue notifications, not task_assigned)
+    if (notification.type === 'task_assigned' && notification.related_task_id) {
+      if (overdueTaskIds.has(notification.related_task_id)) {
+        return false; // Hide task_assigned notification for overdue tasks
+      }
+    }
+    
     // Check if this notification is snoozed (universal)
     // Note: Task notifications (task_overdue, task_due_today, task_reminder, task_assigned) 
     // are not snoozeable via the notification_snoozes table, so skip snooze check for them
     if (notification.type.startsWith('task_')) {
-      return true; // Task notifications are not snoozeable, always show them
+      return true; // Task notifications are not snoozeable, always show them (unless filtered above)
     }
     
     const now = new Date();
@@ -266,7 +301,7 @@ export default function NotificationBell() {
     
     return !isSnoozed;
     });
-  }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes]);
+  }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes, overdueTaskIds]);
 
   // Debug logging
   useEffect(() => {
