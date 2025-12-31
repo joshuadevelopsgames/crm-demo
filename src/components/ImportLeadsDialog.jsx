@@ -690,6 +690,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
             const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
             const totalChunks = Math.ceil(validEstimates.length / CHUNK_SIZE);
             
+            setImportProgress(prev => ({
+              ...prev,
+              currentStep: `Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`,
+              completedSteps: prev.completedSteps
+            }));
+            
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
             
             const response = await fetch('/api/data/estimates', {
@@ -711,6 +717,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
               totalCreated += result.created;
               totalUpdated += result.updated;
               console.log(`✅ Chunk ${chunkNum}: ${result.created} created, ${result.updated} updated`);
+              
+              // Update progress after each chunk
+              setImportProgress(prev => ({
+                ...prev,
+                completedSteps: prev.completedSteps + 1
+              }));
             } else {
               throw new Error(result.error || 'Bulk import failed');
             }
