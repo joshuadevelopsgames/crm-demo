@@ -536,11 +536,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
     }) || [];
 
     // Calculate total steps for progress tracking
+    // Only estimates are chunked (500 per chunk), others are single bulk operations
+    const CHUNK_SIZE = 500;
     const totalSteps = 
       (validAccounts.length > 0 ? 1 : 0) +
-      (validContacts.length > 0 ? Math.ceil(validContacts.length / 500) : 0) +
-      (validEstimates.length > 0 ? Math.ceil(validEstimates.length / 500) : 0) +
-      (validJobsites.length > 0 ? Math.ceil(validJobsites.length / 500) : 0);
+      (validContacts.length > 0 ? 1 : 0) + // Contacts are not chunked, single bulk operation
+      (validEstimates.length > 0 ? Math.ceil(validEstimates.length / CHUNK_SIZE) : 0) + // Only estimates are chunked
+      (validJobsites.length > 0 ? 1 : 0); // Jobsites are not chunked, single bulk operation
     
     setImportProgress({
       currentStep: 'Starting import...',
@@ -661,6 +663,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
             results.contactsCreated = result.created;
             results.contactsUpdated = result.updated;
             console.log(`✅ Bulk imported ${result.total} contacts (${result.created} created, ${result.updated} updated)`);
+            
+            // Update progress after contacts are done (single step, not chunked)
+            setImportProgress(prev => ({
+              ...prev,
+              completedSteps: prev.completedSteps + 1
+            }));
           } else {
             throw new Error(result.error || 'Bulk import failed');
           }
@@ -767,6 +775,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
             results.jobsitesCreated = result.created;
             results.jobsitesUpdated = result.updated;
             console.log(`✅ Bulk imported ${result.total} jobsites (${result.created} created, ${result.updated} updated)`);
+            
+            // Update progress after jobsites are done (single step, not chunked)
+            setImportProgress(prev => ({
+              ...prev,
+              completedSteps: prev.completedSteps + 1
+            }));
           } else {
             throw new Error(result.error || 'Bulk import failed');
           }
