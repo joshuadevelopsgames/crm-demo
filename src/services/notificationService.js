@@ -212,12 +212,17 @@ export async function createOverdueTaskNotifications() {
       const dueDate = new Date(task.due_date);
       const taskDate = startOfDay(dueDate);
       const daysUntilDue = differenceInDays(taskDate, today);
-      const isOverdue = isPast(taskDate) && !isToday(taskDate);
+      // Task is overdue if due date is before today (matches Dashboard logic: new Date(task.due_date) < new Date())
+      // Since task.due_date is a date string, new Date(task.due_date) becomes midnight of that day
+      // So it's overdue if that midnight is before now
+      const isOverdue = new Date(task.due_date) < new Date();
       
       // Only process overdue tasks
       if (!isOverdue) {
         continue;
       }
+      
+      console.log(`📋 Found overdue task: "${task.title}" (due: ${task.due_date}, days overdue: ${Math.abs(daysUntilDue)})`);
       
       // Get assigned users
       const assignedUsers = parseAssignedUsers(task.assigned_to || '');
@@ -251,10 +256,28 @@ export async function createOverdueTaskNotifications() {
       });
       
       // Create a set of existing notification keys (user_id + task_id)
+      // Track both read and unread to avoid duplicates, but mark read ones as unread
       const existingKeys = new Set();
+      const readNotificationsToUpdate = [];
+      
       for (const notif of allExistingNotifications) {
+        const key = `${notif.user_id}:${notif.related_task_id}`;
         if (!notif.is_read) {
-          existingKeys.add(`${notif.user_id}:${notif.related_task_id}`);
+          existingKeys.add(key);
+        } else {
+          // If notification exists but is read, we'll mark it as unread
+          readNotificationsToUpdate.push({ key, notification: notif });
+        }
+      }
+      
+      // Mark read overdue notifications as unread (task is still overdue)
+      for (const { notification } of readNotificationsToUpdate) {
+        try {
+          await base44.entities.Notification.update(notification.id, { is_read: false });
+          existingKeys.add(`${notification.user_id}:${notification.related_task_id}`);
+          console.log(`🔄 Marked overdue task notification as unread for task ${notification.related_task_id}`);
+        } catch (error) {
+          console.error(`❌ Error updating overdue task notification:`, error);
         }
       }
       
@@ -264,7 +287,7 @@ export async function createOverdueTaskNotifications() {
         
         if (existingKeys.has(key)) {
           skippedCount++;
-          continue; // Already exists
+          continue; // Already exists (and is now unread)
         }
         
         try {
