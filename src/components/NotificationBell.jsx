@@ -203,9 +203,6 @@ export default function NotificationBell() {
       // Debug logging for task_overdue notifications
       if (notification.type === 'task_overdue') {
         const userMatch = notificationUserId === currentUserIdStr;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:201',message:'Processing task_overdue in activeNotifications filter',data:{notificationId:notification.id,notificationUserId,currentUserIdStr,userMatch,relatedTaskId:notification.related_task_id,isRead:notification.is_read},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         console.log(`🔔 Processing task_overdue notification:`, {
           id: notification.id,
           title: notification.title,
@@ -361,9 +358,6 @@ export default function NotificationBell() {
     if (!currentUserId) return [];
     
     const taskOverdueInGrouped = groupedNotifications['task_overdue'] || [];
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:367',message:'Grouping notifications',data:{taskOverdueCount:taskOverdueInGrouped.length,taskOverdueIds:taskOverdueInGrouped.map(n=>n.id),allTypes:Object.keys(groupedNotifications)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
       // Sort notifications within each group by newest first, then unread status

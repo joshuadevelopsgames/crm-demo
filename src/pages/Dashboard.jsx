@@ -408,13 +408,6 @@ export default function Dashboard() {
     }
   ];
 
-  // #region agent log
-  useEffect(() => {
-    const logData5 = {location:'Dashboard.jsx:render',message:'Dashboard component rendering',data:{activeAccounts,contactsCount:contacts.length,myTasks,atRiskAccounts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-    console.log('🔍 DEBUG:', logData5);
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(()=>{});
-  }, [activeAccounts, contacts.length, myTasks, atRiskAccounts]);
-  // #endregion
 
   return (
     <div 
