@@ -28,12 +28,16 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 
 export default function Reports() {
+  console.log('📊 Reports: Component mounted/rendered');
+  
   const [searchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
   const yearFromUrl = searchParams.get('year');
   const [selectedYear, setSelectedYear] = useState(yearFromUrl ? parseInt(yearFromUrl) : currentYear);
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+  
+  console.log('📊 Reports: Initial state', { currentYear, selectedYear, yearFromUrl });
 
   // Update selected year if URL parameter changes
   useEffect(() => {
