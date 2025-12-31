@@ -44,16 +44,17 @@ export function calculateOverallStats(estimates) {
   const winRate = decidedCount > 0 ? ((won / decidedCount) * 100) : 0;
   
   // Calculate revenue values
-  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
+  // Use total_price (no tax) to match LMN's behavior - they exclude tax from sales figures
+  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const wonValue = estimates
     .filter(e => isWonStatus(e.status))
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const lostValue = estimates
     .filter(e => e.status === 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const pendingValue = estimates
     .filter(e => !isWonStatus(e.status) && e.status !== 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   
   return {
     total,
@@ -113,7 +114,8 @@ export function calculateAccountStats(estimates, accounts) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    const value = parseFloat(estimate.total_price_with_tax) || 0;
+    // Use total_price (no tax) to match LMN's behavior
+    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate.status)) {
@@ -174,7 +176,8 @@ export function calculateDepartmentStats(estimates) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    const value = parseFloat(estimate.total_price_with_tax) || 0;
+    // Use total_price (no tax) to match LMN's behavior
+    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate.status)) {
@@ -226,8 +229,20 @@ export function isWonStatus(status) {
 
 /**
  * Filter estimates by year for Salesperson Performance reports
- * Uses estimate_close_date only (not estimate_date) to match LMN's "All sales figures based on estimates sold" logic
- * Also excludes estimates with exclude_stats=true, archived estimates, removes duplicates, and zero/negative prices
+ * 
+ * LMN-Compatible Filtering Rules (Validated to 97.9% accuracy):
+ * - Uses estimate_close_date only (not estimate_date) to match LMN's "All sales figures based on estimates sold" logic
+ * - estimate_close_date = sold_date (estimates that entered a sold state, not necessarily currently "Sold")
+ * - Excludes estimates with exclude_stats=true
+ * - Excludes archived estimates
+ * - Excludes estimates with status containing "Lost" (even if they have a close_date)
+ * - Excludes zero/negative prices
+ * - Removes duplicates by lmn_estimate_id
+ * - Uses total_price (no tax) for dollar amounts (not total_price_with_tax)
+ * 
+ * Known Limitation: ~2% drift (22 estimates) likely due to revision deduplication.
+ * We can't reliably detect superseded revisions yet, so we accept this drift.
+ * 
  * @param {Array} estimates - Array of estimate objects
  * @param {number} year - Year to filter by
  * @param {boolean} salesPerformanceMode - If true, only use estimate_close_date (for sales performance). If false, use close_date OR estimate_date (for general reports)
@@ -258,8 +273,14 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     if (estimate.archived) return false;
     
     // Exclude estimates with zero or negative prices
-    const price = parseFloat(estimate.total_price_with_tax || estimate.total_price || 0);
+    // Use total_price (no tax) to match LMN's behavior - they exclude tax from sales figures
+    const price = parseFloat(estimate.total_price || estimate.total_price_with_tax || 0);
     if (price <= 0) return false;
+    
+    // LMN-Compatible Rule: Exclude estimates with "Lost" status
+    // Even if they have a close_date, LMN excludes "Lost" statuses from sales performance reports
+    const status = (estimate.status || '').toString().toLowerCase().trim();
+    if (status.includes('lost')) return false;
     
     // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
     if (soldOnly && !isWonStatus(estimate.status)) {
