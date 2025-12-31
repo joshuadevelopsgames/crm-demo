@@ -399,14 +399,35 @@ export default function NotificationBell() {
       return true; // Task notifications are not snoozeable, always show them (unless filtered above)
     }
     
+    // Safety check: if snoozes haven't loaded yet, show the notification (don't filter it out)
+    if (!snoozes || !Array.isArray(snoozes) || snoozes.length === 0) {
+      return true; // No snoozes loaded, show all notifications
+    }
+    
     const now = new Date();
-    const isSnoozed = snoozes.some(snooze => 
-      snooze.notification_type === notification.type &&
-      (notification.related_account_id 
-        ? snooze.related_account_id === notification.related_account_id
-        : (snooze.related_account_id === null || snooze.related_account_id === 'null')) &&
-      new Date(snooze.snoozed_until) > now
-    );
+    const isSnoozed = snoozes.some(snooze => {
+      // Type must match exactly
+      if (snooze.notification_type !== notification.type) return false;
+      
+      // Check account ID match (handle null/undefined/'null' string)
+      const notificationAccountId = notification.related_account_id 
+        ? String(notification.related_account_id).trim() 
+        : null;
+      const snoozeAccountId = snooze.related_account_id 
+        ? String(snooze.related_account_id).trim() 
+        : null;
+      
+      // Match if both are null/empty, or if both have the same non-null value
+      const accountMatches = (notificationAccountId === null || notificationAccountId === 'null') 
+        ? (snoozeAccountId === null || snoozeAccountId === 'null')
+        : (notificationAccountId === snoozeAccountId);
+      
+      if (!accountMatches) return false;
+      
+      // Check if snooze is still active (not expired)
+      const snoozedUntil = new Date(snooze.snoozed_until);
+      return snoozedUntil > now;
+    });
     
     if (notification.type === 'task_overdue' && isSnoozed) {
       console.log(`⚠️ task_overdue notification ${notification.id} is snoozed (shouldn't happen, but logging anyway)`);
@@ -414,14 +435,21 @@ export default function NotificationBell() {
     
     const shouldShow = !isSnoozed;
     
-    // Track filtering
+    // Track filtering with detailed logging
     if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account' || notification.type.startsWith('task_')) {
       if (shouldShow) {
         filteredCount[notification.type === 'renewal_reminder' ? 'renewal_reminder' : notification.type === 'neglected_account' ? 'neglected_account' : 'task']++;
       } else {
         filteredOutCount[notification.type === 'renewal_reminder' ? 'renewal_reminder' : notification.type === 'neglected_account' ? 'neglected_account' : 'task']++;
         if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account') {
-          console.log(`🚫 Filtered out ${notification.type} notification for account ${notification.related_account_id} (snoozed: ${isSnoozed})`);
+          console.log(`🚫 Filtered out ${notification.type} notification for account ${notification.related_account_id}`, {
+            isSnoozed,
+            snoozesCount: snoozes?.length || 0,
+            matchingSnoozes: snoozes?.filter(s => 
+              s.notification_type === notification.type && 
+              String(s.related_account_id || '').trim() === String(notification.related_account_id || '').trim()
+            ).length || 0
+          });
         }
       }
     }
