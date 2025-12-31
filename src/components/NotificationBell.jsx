@@ -294,12 +294,14 @@ export default function NotificationBell() {
       // For JSONB notifications (neglected_account, renewal_reminder), they don't have user_id
       // because they're already user-specific (fetched from user_notification_states table)
       // For task notifications (individual rows), check user_id
+      let notificationUserId = null;
+      
       if (notification.type === 'neglected_account' || notification.type === 'renewal_reminder') {
         // JSONB notifications are already user-specific, no need to check user_id
         // They were fetched specifically for this user
       } else {
         // Task notifications need user_id check
-        const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
+        notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
         if (notificationUserId !== currentUserIdStr) {
           return false; // Not for current user
         }
