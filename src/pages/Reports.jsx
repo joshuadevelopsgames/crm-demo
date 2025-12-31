@@ -662,7 +662,7 @@ export default function Reports() {
       selectedYear,
       hasOfficialDataForYear,
       availableOfficialYears,
-      yearlyOfficialDataLength: yearlyOfficialData.length
+      yearlyOfficialDataLength: yearlyOfficialData?.length || 0
     });
     
     const filtered = filterEstimatesByYear(estimates, selectedYear, false);
@@ -672,7 +672,7 @@ export default function Reports() {
       selectedYear
     });
     return filtered;
-  }, [estimates, selectedYear, yearlyOfficialData, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
+  }, [estimates, selectedYear, yearlyOfficialData, availableOfficialYears]);
   
   // Apply account and department filters to year estimates
   // Note: Official data may not have account_id, so we filter by division only
