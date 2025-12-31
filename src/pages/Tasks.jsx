@@ -270,6 +270,7 @@ export default function Tasks() {
     recurrence_end_date: "",
     recurrence_count: null,
   });
+  const [selectedTaskType, setSelectedTaskType] = useState(""); // 'sales', 'operations', or '' for no selection
   const [assignedUsersOpen, setAssignedUsersOpen] = useState(false);
   const [newLabelInput, setNewLabelInput] = useState("");
 
@@ -338,6 +339,7 @@ export default function Tasks() {
       recurrence_end_date: "",
       recurrence_count: null,
     });
+    setSelectedTaskType("");
     setNewLabelInput("");
   };
 
@@ -1093,6 +1095,11 @@ export default function Tasks() {
     setEditingTask(task);
     setViewingTask(null);
     setIsViewMode(false);
+    const category = task.category || "other";
+    // Determine task type from category
+    const salesCategories = ['follow_up', 'demo', 'proposal', 'estimate'];
+    const taskType = salesCategories.includes(category) ? 'sales' : 'operations';
+    
     setNewTask({
       title: task.title || "",
       description: task.description || "",
@@ -1101,7 +1108,7 @@ export default function Tasks() {
       due_time: task.due_time || "",
       priority: task.priority || "normal",
       status: task.status || "todo",
-      category: task.category || "other",
+      category: category,
       related_account_id: task.related_account_id || "",
       related_contact_id: task.related_contact_id || "",
       estimated_time: task.estimated_time || 30,
@@ -1115,6 +1122,7 @@ export default function Tasks() {
       recurrence_end_date: task.recurrence_end_date || "",
       recurrence_count: task.recurrence_count || null,
     });
+    setSelectedTaskType(taskType);
     setNewLabelInput("");
     setIsDialogOpen(true);
   };
@@ -1124,6 +1132,8 @@ export default function Tasks() {
     setEditingTask(null);
     setViewingTask(null);
     setIsViewMode(false);
+    setSelectedTaskType("");
+    resetTaskForm();
     setPendingAttachments([]);
     resetTaskForm();
     setTaskDialogTab("details");
@@ -1518,6 +1528,8 @@ export default function Tasks() {
                   setIsViewMode(false);
                   setPendingAttachments([]);
                   setTaskDialogTab("details");
+                  setSelectedTaskType("");
+                  resetTaskForm();
                 }}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -1802,33 +1814,77 @@ export default function Tasks() {
                           </Select>
                         </div>
                         <div>
+                          <Label>Task Type</Label>
+                          <Select
+                            value={selectedTaskType}
+                            onValueChange={(value) => {
+                              setSelectedTaskType(value);
+                              // Auto-select a default category based on task type
+                              if (value === 'sales') {
+                                setNewTask({ ...newTask, category: 'follow_up' });
+                              } else if (value === 'operations') {
+                                setNewTask({ ...newTask, category: 'other' });
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select task type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sales">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="w-4 h-4" />
+                                  Sales
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="operations">
+                                <div className="flex items-center gap-2">
+                                  <Users className="w-4 h-4" />
+                                  Operations
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Choose which tab this task will appear in
+                          </p>
+                        </div>
+                        <div>
                           <Label>Category</Label>
                           <Select
                             value={newTask.category}
                             onValueChange={(value) =>
                               setNewTask({ ...newTask, category: value })
                             }
+                            disabled={!selectedTaskType}
                           >
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder={selectedTaskType ? "Select category..." : "Select task type first"} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="follow_up">
-                                Follow Up
-                              </SelectItem>
-                              <SelectItem value="demo">Demo</SelectItem>
-                              <SelectItem value="proposal">Proposal</SelectItem>
-                              <SelectItem value="estimate">Estimate</SelectItem>
-                              <SelectItem value="scheduling">Scheduling</SelectItem>
-                              <SelectItem value="field_work">Field Work</SelectItem>
-                              <SelectItem value="maintenance">Maintenance</SelectItem>
-                              <SelectItem value="quality_check">Quality Check</SelectItem>
-                              <SelectItem value="support">Support</SelectItem>
-                              <SelectItem value="internal">Internal</SelectItem>
-                              <SelectItem value="onboarding">
-                                Onboarding
-                              </SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              {selectedTaskType === 'sales' && (
+                                <>
+                                  <SelectItem value="follow_up">Follow Up</SelectItem>
+                                  <SelectItem value="demo">Demo</SelectItem>
+                                  <SelectItem value="proposal">Proposal</SelectItem>
+                                  <SelectItem value="estimate">Estimate</SelectItem>
+                                </>
+                              )}
+                              {selectedTaskType === 'operations' && (
+                                <>
+                                  <SelectItem value="scheduling">Scheduling</SelectItem>
+                                  <SelectItem value="field_work">Field Work</SelectItem>
+                                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                                  <SelectItem value="quality_check">Quality Check</SelectItem>
+                                  <SelectItem value="support">Support</SelectItem>
+                                  <SelectItem value="internal">Internal</SelectItem>
+                                  <SelectItem value="onboarding">Onboarding</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </>
+                              )}
+                              {!selectedTaskType && (
+                                <SelectItem value="" disabled>Select task type first</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
