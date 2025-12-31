@@ -117,35 +117,56 @@ export default function Reports() {
       if (!estimate.estimate_date) {
         return false; // Skip estimates without estimate_date
       }
-      // Extract year from date string to avoid timezone conversion issues
-      // Use substring to extract first 4 characters (year) - more reliable than regex
-      const dateStr = String(estimate.estimate_date);
-      let estimateYear;
       
-      // Try to extract year from ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
-      if (dateStr.length >= 4) {
-        const yearStr = dateStr.substring(0, 4);
-        estimateYear = parseInt(yearStr);
+      // Handle different date formats
+      let estimateYear;
+      const dateValue = estimate.estimate_date;
+      
+      // If it's already a Date object
+      if (dateValue instanceof Date) {
+        estimateYear = dateValue.getFullYear();
+      } else {
+        // It's a string - try multiple extraction methods
+        const dateStr = String(dateValue);
         
-        // Validate the extracted year
-        if (isNaN(estimateYear) || estimateYear < 2000 || estimateYear > 2100) {
-          // If substring extraction failed, try Date parsing as fallback
+        // Method 1: Extract year from ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          const parsedYear = parseInt(yearStr);
+          
+          // Check if it's a valid year
+          if (!isNaN(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100) {
+            estimateYear = parsedYear;
+          } else {
+            // Method 2: Try Date parsing
+            const dateObj = new Date(dateStr);
+            if (!isNaN(dateObj.getTime())) {
+              estimateYear = dateObj.getFullYear();
+            } else {
+              // Method 3: Try to find year pattern in string (e.g., "2025" anywhere)
+              const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
+              if (yearMatch) {
+                estimateYear = parseInt(yearMatch[1]);
+              } else {
+                // All methods failed
+                if (uniqueEstimates.indexOf(estimate) < 5) {
+                  console.warn('📊 Reports: Could not extract year from date:', dateStr, 'for estimate:', estimate.id);
+                }
+                return false;
+              }
+            }
+          }
+        } else {
+          // Date string is too short, try Date parsing
           const dateObj = new Date(dateStr);
           if (!isNaN(dateObj.getTime())) {
             estimateYear = dateObj.getFullYear();
           } else {
-            console.warn('📊 Reports: Could not parse date:', dateStr, 'for estimate:', estimate.id);
+            if (uniqueEstimates.indexOf(estimate) < 5) {
+              console.warn('📊 Reports: Date string too short:', dateStr, 'for estimate:', estimate.id);
+            }
             return false;
           }
-        }
-      } else {
-        // Date string is too short, try Date parsing
-        const dateObj = new Date(dateStr);
-        if (!isNaN(dateObj.getTime())) {
-          estimateYear = dateObj.getFullYear();
-        } else {
-          console.warn('📊 Reports: Date string too short:', dateStr, 'for estimate:', estimate.id);
-          return false;
         }
       }
       
@@ -153,7 +174,8 @@ export default function Reports() {
       if (uniqueEstimates.indexOf(estimate) < 3) {
         console.log('📊 Reports: Date parsing example', {
           original: estimate.estimate_date,
-          dateStr,
+          type: typeof estimate.estimate_date,
+          isDate: estimate.estimate_date instanceof Date,
           estimateYear,
           selectedYear,
           matches: estimateYear === selectedYear
