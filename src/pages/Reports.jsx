@@ -52,17 +52,22 @@ export default function Reports() {
   }, [currentYear]);
 
   // Fetch estimates
-  const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
+  const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
-      const data = await base44.entities.Estimate.list();
-      console.log('📊 Reports: Fetched estimates', {
-        total: data.length,
-        withEstimateDate: data.filter(e => e.estimate_date).length,
-        sampleDates: data.filter(e => e.estimate_date).slice(0, 5).map(e => e.estimate_date),
-        selectedYear
-      });
-      return data;
+      try {
+        const data = await base44.entities.Estimate.list();
+        console.log('📊 Reports: Fetched estimates', {
+          total: data.length,
+          withEstimateDate: data.filter(e => e.estimate_date).length,
+          sampleDates: data.filter(e => e.estimate_date).slice(0, 5).map(e => e.estimate_date),
+          selectedYear
+        });
+        return data;
+      } catch (error) {
+        console.error('📊 Reports: Error fetching estimates', error);
+        return [];
+      }
     }
   });
 
@@ -221,6 +226,39 @@ export default function Reports() {
   const handleExportPDF = () => {
     exportToPDF({ estimates: filteredYearEstimates, accounts }, selectedYear);
   };
+
+  // Debug: Log when component renders
+  useEffect(() => {
+    console.log('📊 Reports: Component rendered', {
+      estimatesCount: estimates.length,
+      estimatesLoading,
+      estimatesError: estimatesError?.message,
+      selectedYear,
+      filteredEstimatesCount: filteredEstimates.length,
+      yearEstimatesCount: yearEstimates.length,
+      filteredYearEstimatesCount: filteredYearEstimates.length
+    });
+  }, [estimates.length, estimatesLoading, estimatesError, selectedYear, filteredEstimates.length, yearEstimates.length, filteredYearEstimates.length]);
+
+  if (estimatesLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <p className="text-slate-500">Loading estimates...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (estimatesError) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <p className="text-red-500">Error loading estimates: {estimatesError.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
