@@ -205,23 +205,22 @@ export async function createOverdueTaskNotifications() {
     
     // Process each task
     for (const task of tasks) {
-      // Skip tasks without due dates or completed tasks
+      // Skip tasks without due dates or completed tasks (matches Dashboard logic)
       if (!task.due_date || task.status === 'completed') {
         continue;
       }
       
-      const dueDate = new Date(task.due_date);
-      const taskDate = startOfDay(dueDate);
-      const daysUntilDue = differenceInDays(taskDate, today);
-      // Task is overdue if due date is before today (matches Dashboard logic: new Date(task.due_date) < new Date())
-      // Since task.due_date is a date string, new Date(task.due_date) becomes midnight of that day
-      // So it's overdue if that midnight is before now
+      // Task is overdue if due date is before now (matches Dashboard logic exactly: new Date(task.due_date) < new Date())
       const isOverdue = new Date(task.due_date) < new Date();
       
       // Only process overdue tasks
       if (!isOverdue) {
         continue;
       }
+      
+      const dueDate = new Date(task.due_date);
+      const taskDate = startOfDay(dueDate);
+      const daysUntilDue = differenceInDays(taskDate, today);
       
       overdueTaskCount++;
       console.log(`📋 Found overdue task: "${task.title}" (due: ${task.due_date}, days overdue: ${Math.abs(daysUntilDue)})`);

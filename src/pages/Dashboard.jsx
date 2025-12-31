@@ -343,9 +343,11 @@ export default function Dashboard() {
       return daysA - daysB;
     });
 
-  // Overdue tasks
+  // Overdue tasks (matches notification service logic)
   const overdueTasks = tasks.filter(task => {
-    if (task.status === 'completed' || !task.due_date) return false;
+    // Skip tasks without due dates or completed tasks
+    if (!task.due_date || task.status === 'completed') return false;
+    // Task is overdue if due date is before now (matches notification service: new Date(task.due_date) < new Date())
     return new Date(task.due_date) < new Date();
   });
 
