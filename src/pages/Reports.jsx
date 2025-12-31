@@ -82,9 +82,11 @@ export default function Reports() {
     queryKey: ['yearlyOfficialData', selectedYear],
     queryFn: async () => {
       try {
-        const data = await base44.entities.Estimate.getYearlyOfficial(selectedYear);
+        // Ensure year is a number
+        const yearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+        const data = await base44.entities.Estimate.getYearlyOfficial(yearNum);
         console.log('📊 Reports: Fetched yearly official data', {
-          year: selectedYear,
+          year: yearNum,
           total: data.length,
           source: 'LMN Detailed Export'
         });
@@ -113,7 +115,9 @@ export default function Reports() {
   });
 
   // Determine which data source to use
-  const hasOfficialDataForYear = availableOfficialYears.includes(selectedYear);
+  // Convert selectedYear to number for comparison (availableOfficialYears are numbers)
+  const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+  const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
   const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
   
   // Use official data if available, otherwise use regular estimates
@@ -488,17 +492,49 @@ export default function Reports() {
     return Array.from(depts).sort();
   }, [sourceEstimates]);
 
-  // Calculate basic stats
+  // Calculate basic stats (use filteredYearEstimates - already filtered by year and account/department)
   const stats = useMemo(() => {
-    const total = filteredEstimates.length;
-    const won = filteredEstimates.filter(e => isWonStatus(e.status)).length;
-    const lost = filteredEstimates.filter(e => !isWonStatus(e.status)).length;
+    // Use filteredYearEstimates which already has the correct data source (official or database)
+    const total = filteredYearEstimates.length;
+    
+    // For official data, status might be "Sold" instead of "won"
+    const won = filteredYearEstimates.filter(e => {
+      const status = (e.status || '').toLowerCase();
+      return status.includes('sold') || 
+             status === 'contract signed' ||
+             status === 'work complete' ||
+             status === 'billing complete' ||
+             isWonStatus(e.status);
+    }).length;
+    
+    const lost = filteredYearEstimates.filter(e => {
+      const status = (e.status || '').toLowerCase();
+      return !status.includes('sold') && 
+             status !== 'contract signed' &&
+             status !== 'work complete' &&
+             status !== 'billing complete' &&
+             !isWonStatus(e.status);
+    }).length;
+    
     const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
     
-    const totalValue = filteredEstimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
-    const wonValue = filteredEstimates
-      .filter(e => isWonStatus(e.status))
-      .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
+    // Official data uses total_price, database uses total_price_with_tax
+    const totalValue = filteredYearEstimates.reduce((sum, e) => {
+      return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
+    }, 0);
+    
+    const wonValue = filteredYearEstimates
+      .filter(e => {
+        const status = (e.status || '').toLowerCase();
+        return status.includes('sold') || 
+               status === 'contract signed' ||
+               status === 'work complete' ||
+               status === 'billing complete' ||
+               isWonStatus(e.status);
+      })
+      .reduce((sum, e) => {
+        return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
+      }, 0);
 
     return {
       total,
@@ -508,15 +544,25 @@ export default function Reports() {
       totalValue,
       wonValue
     };
-  }, [filteredEstimates]);
+  }, [filteredYearEstimates]);
 
   // Get estimates for selected year (for reports)
   // If official data is available for this year, use it as source of truth
   // Otherwise, use regular estimates with filtering
   const yearEstimates = useMemo(() => {
+    console.log('📊 Reports: yearEstimates calculation', {
+      selectedYear,
+      useOfficialData,
+      hasOfficialDataForYear,
+      availableOfficialYears,
+      yearlyOfficialDataLength: yearlyOfficialData.length,
+      yearlyOfficialLoading,
+      yearlyOfficialError: yearlyOfficialError?.message
+    });
+    
     // Use official data if available for this year
     if (useOfficialData && yearlyOfficialData.length > 0) {
-      console.log('📊 Reports: Using official LMN data for year', {
+      console.log('✅ Using official LMN data for year', {
         year: selectedYear,
         count: yearlyOfficialData.length,
         source: 'LMN Detailed Export'
@@ -525,20 +571,21 @@ export default function Reports() {
     }
     
     // Otherwise, use regular estimates with filtering
+    console.log('⚠️ Using database estimates (official data not available)', {
+      selectedYear,
+      hasOfficialDataForYear,
+      availableOfficialYears,
+      yearlyOfficialDataLength: yearlyOfficialData.length
+    });
+    
     const filtered = filterEstimatesByYear(estimates, selectedYear, false);
     console.log('📊 Reports: yearEstimates from filterEstimatesByYear', {
       total: estimates.length,
       filtered: filtered.length,
-      selectedYear,
-      sample: filtered.slice(0, 3).map(e => ({
-        id: e.id,
-        estimate_date: e.estimate_date,
-        estimate_close_date: e.estimate_close_date,
-        status: e.status
-      }))
+      selectedYear
     });
     return filtered;
-  }, [estimates, selectedYear, useOfficialData, yearlyOfficialData]);
+  }, [estimates, selectedYear, useOfficialData, yearlyOfficialData, hasOfficialDataForYear, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
   
   // Apply account and department filters to year estimates
   // Note: Official data may not have account_id, so we filter by division only
@@ -566,18 +613,21 @@ export default function Reports() {
     exportToPDF({ estimates: filteredYearEstimates, accounts }, selectedYear);
   };
 
-  // Debug: Log when component renders
+  // Debug: Log data source status
   useEffect(() => {
-    console.log('📊 Reports: Component rendered', {
-      estimatesCount: estimates.length,
-      estimatesLoading,
-      estimatesError: estimatesError?.message,
+    console.log('📊 Reports: Data Source Status', {
       selectedYear,
-      filteredEstimatesCount: filteredEstimates.length,
+      useOfficialData,
+      hasOfficialDataForYear,
+      availableOfficialYears,
+      yearlyOfficialDataCount: yearlyOfficialData.length,
+      yearlyOfficialLoading,
+      yearlyOfficialError: yearlyOfficialError?.message,
       yearEstimatesCount: yearEstimates.length,
-      filteredYearEstimatesCount: filteredYearEstimates.length
+      filteredYearEstimatesCount: filteredYearEstimates.length,
+      stats
     });
-  }, [estimates.length, estimatesLoading, estimatesError, selectedYear, filteredEstimates.length, yearEstimates.length, filteredYearEstimates.length]);
+  }, [selectedYear, useOfficialData, hasOfficialDataForYear, availableOfficialYears, yearlyOfficialData.length, yearEstimates.length, filteredYearEstimates.length, stats]);
 
   // Calculate estimates missing both dates (must be before early returns to maintain hook order)
   const estimatesMissingDates = useMemo(() => {
@@ -607,14 +657,7 @@ export default function Reports() {
     );
   }
 
-  // Force log on every render
-  console.log('📊 Reports: RENDER - About to return JSX', {
-    estimatesCount: estimates.length,
-    filteredCount: filteredEstimates.length,
-    yearEstimatesCount: yearEstimates.length,
-    stats: stats,
-    estimatesMissingDates: estimatesMissingDates.length
-  });
+  // Debug log removed - check browser console for data source status
 
   return (
     <div className="space-y-6">
@@ -648,7 +691,7 @@ export default function Reports() {
           <Button
             variant="outline"
             onClick={handleExportXLSX}
-            disabled={filteredEstimates.length === 0}
+            disabled={filteredYearEstimates.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Export XLSX
@@ -656,7 +699,7 @@ export default function Reports() {
           <Button
             variant="outline"
             onClick={handleExportPDF}
-            disabled={filteredEstimates.length === 0}
+            disabled={filteredYearEstimates.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Export PDF
