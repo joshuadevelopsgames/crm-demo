@@ -58,12 +58,14 @@ export default function Reports() {
   }, [currentYear]);
 
   // Fetch estimates (regular database estimates)
+  console.log('📊 Reports: Setting up estimates query');
   const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
+      console.log('📊 Reports: useQuery EXECUTING for estimates');
       try {
         const data = await base44.entities.Estimate.list();
-        console.log('📊 Reports: Fetched estimates', {
+        console.log('📊 Reports: ✅ Fetched estimates', {
           total: data.length,
           withEstimateDate: data.filter(e => e.estimate_date).length,
           sampleDates: data.filter(e => e.estimate_date).slice(0, 5).map(e => e.estimate_date),
@@ -71,13 +73,21 @@ export default function Reports() {
         });
         return data;
       } catch (error) {
-        console.error('📊 Reports: Error fetching estimates', error);
+        console.error('📊 Reports: ❌ Error fetching estimates', error);
         return [];
       }
-    }
+    },
+    enabled: true
+  });
+  
+  console.log('📊 Reports: Estimates query state', {
+    isLoading: estimatesLoading,
+    hasError: !!estimatesError,
+    dataLength: estimates.length
   });
 
   // Fetch yearly official LMN data (from detailed exports) - source of truth
+  console.log('📊 Reports: Setting up yearlyOfficialData query, selectedYear:', selectedYear);
   const { data: yearlyOfficialData = [], isLoading: yearlyOfficialLoading, error: yearlyOfficialError } = useQuery({
     queryKey: ['yearlyOfficialData', selectedYear],
     queryFn: async () => {
@@ -111,6 +121,7 @@ export default function Reports() {
   });
 
   // Get available years with official data
+  console.log('📊 Reports: Setting up availableOfficialYears query');
   const { data: availableOfficialYears = [], isLoading: availableYearsLoading, error: availableYearsError } = useQuery({
     queryKey: ['availableOfficialYears'],
     queryFn: async () => {
