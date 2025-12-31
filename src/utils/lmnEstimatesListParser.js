@@ -235,7 +235,8 @@ export function parseEstimatesList(csvTextOrRows) {
           salesperson: row[colMap.salesperson]?.toString().trim() || '',
           estimator: row[colMap.estimator]?.toString().trim() || '',
           status: estimateStatus,
-          // Note: Sales Pipeline Status is no longer used for win/loss determination
+          pipeline_status: row[colMap.salesPipelineStatus]?.toString().trim() || null, // Save Sales Pipeline Status for reporting
+          // Note: Sales Pipeline Status is separate from status - used for pipeline reporting, not win/loss determination
           proposal_first_shared: parseDate(row[colMap.proposalFirstShared]),
           proposal_last_shared: parseDate(row[colMap.proposalLastShared]),
           proposal_last_updated: parseDate(row[colMap.proposalLastUpdated]),
