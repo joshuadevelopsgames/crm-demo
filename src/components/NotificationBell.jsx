@@ -110,6 +110,12 @@ export default function NotificationBell() {
         // Log if no bulk notifications found (might be expected if none exist)
         if (bulkNotifications.length === 0 && bulkNotificationsResponse.success) {
           console.log(`⚠️ No bulk notifications found in user_notification_states for user ${currentUserIdStr}. Run updateAllUserNotificationStates() to populate.`);
+        } else if (bulkNotifications.length > 0) {
+          console.log(`✅ Found ${bulkNotifications.length} bulk notifications:`, {
+            neglected: bulkNotifications.filter(n => n.type === 'neglected_account').length,
+            renewal: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
+            sample: bulkNotifications.slice(0, 3).map(n => ({ type: n.type, account: n.related_account_id, title: n.title }))
+          });
         }
         
         // Filter task notifications (only task-related types)
