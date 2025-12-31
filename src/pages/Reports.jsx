@@ -145,16 +145,16 @@ export default function Reports() {
   const sourceEstimates = useMemo(() => {
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     return useOfficialData ? yearlyOfficialData : estimates;
   }, [selectedYear, availableOfficialYears, yearlyOfficialData, estimates]);
   
   const dataSource = useMemo(() => {
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     return useOfficialData ? 'LMN Official (Detailed Export)' : 'Database (General Export)';
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData.length]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData]);
   
   // Debug log data source decision
   useEffect(() => {
@@ -174,7 +174,7 @@ export default function Reports() {
       availableYearsError: availableYearsError?.message,
       useOfficialData
     });
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData.length, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError]);
 
   // Calculate available years from estimates (use same logic: close_date -> estimate_date, exclude if neither exists)
   const availableYears = useMemo(() => {
