@@ -652,9 +652,10 @@ export const base44 = {
       filter: async (filters, sort) => {
         // If filtering by user_id, fetch from API with user_id query param for server-side filtering
         // This ensures users only see their own notifications
+        // Limit to 100 notifications to reduce Supabase egress
         if (filters && filters.user_id) {
           try {
-            const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(filters.user_id)}`);
+            const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(filters.user_id)}&limit=100`);
             if (!response.ok) {
               throw new Error(`Failed to fetch notifications: ${response.statusText}`);
             }

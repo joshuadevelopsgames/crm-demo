@@ -149,12 +149,12 @@ export default function Dashboard() {
       console.error('Error generating recurring task instances:', error);
     });
     
-    // Schedule periodic check every 15 minutes
+    // Schedule periodic check every 30 minutes (increased from 15 to reduce Supabase egress)
     const intervalId = setInterval(async () => {
       await checkAndRunRenewals();
       await checkAndRunNeglected();
       await checkAndRunOverdueTasks();
-    }, 15 * 60 * 1000); // Check every 15 minutes
+    }, 30 * 60 * 1000); // Check every 30 minutes
     
     // Note: Task assignment notifications are already handled automatically when tasks are created/updated
     // via createTaskAssignmentNotifications() in Tasks.jsx, so no periodic check needed for those

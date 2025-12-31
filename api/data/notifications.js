@@ -59,51 +59,47 @@ export default async function handler(req, res) {
         });
       }
       
-      let allNotifications = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        let query = supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user_id) // Always filter by user_id for security
-          .order('created_at', { ascending: false });
-        
-        const { data, error } = await query
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-        
-        if (error) {
-          // If table doesn't exist, return empty array
-          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
-            console.warn('notifications table not found, returning empty array');
-            return res.status(200).json({
-              success: true,
-              data: [],
-              count: 0
-            });
-          }
-          console.error('Supabase error:', error);
-          return res.status(500).json({
-            success: false,
-            error: error.message
+      // Optimize: Limit to recent notifications to reduce egress
+      // Default: last 100 notifications (covers most use cases)
+      // Optionally filter by unread only if limit is very low
+      const limit = parseInt(req.query.limit) || 100;
+      const unreadOnly = req.query.unread_only === 'true';
+      
+      let query = supabase
+        .from('notifications')
+        .select('id, user_id, type, title, message, is_read, created_at, scheduled_for, related_task_id, related_account_id') // Only essential fields
+        .eq('user_id', user_id) // Always filter by user_id for security
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      // Optionally filter to unread only
+      if (unreadOnly) {
+        query = query.eq('is_read', false);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        // If table doesn't exist, return empty array
+        if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
+          console.warn('notifications table not found, returning empty array');
+          return res.status(200).json({
+            success: true,
+            data: [],
+            count: 0
           });
         }
-        
-        if (data && data.length > 0) {
-          allNotifications = allNotifications.concat(data);
-          hasMore = data.length === pageSize;
-          page++;
-        } else {
-          hasMore = false;
-        }
+        console.error('Supabase error:', error);
+        return res.status(500).json({
+          success: false,
+          error: error.message
+        });
       }
       
       return res.status(200).json({
         success: true,
-        data: allNotifications,
-        count: allNotifications.length
+        data: data || [],
+        count: data?.length || 0
       });
     }
     

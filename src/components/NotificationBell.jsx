@@ -158,8 +158,13 @@ export default function NotificationBell() {
       }
     },
     enabled: !!currentUser?.id && !userLoading, // Wait for user to load before fetching
-    refetchInterval: 30000, // Refetch every 30 seconds to catch new notifications
-    refetchOnMount: true, // Always refetch on mount (not cached)
+    // Optimize caching to reduce Supabase egress:
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes (prevents unnecessary refetches)
+    cacheTime: 10 * 60 * 1000, // Keep cached data for 10 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes (reduced from 30s to save egress)
+    refetchOnMount: false, // Use cached data on mount (respects staleTime)
+    refetchOnWindowFocus: false, // Don't refetch on window focus (saves egress)
+    refetchOnReconnect: true, // Only refetch on reconnect (network recovery)
   });
 
   // Safety check: Filter out any notifications that don't match current user (defensive programming)
@@ -173,15 +178,10 @@ export default function NotificationBell() {
     });
   }, [allNotificationsRaw, currentUserId]);
 
-  // Force fresh notification fetch on component mount
-  useEffect(() => {
-    if (currentUser?.id) {
-      console.log('🔔 NotificationBell: Forcing fresh notification fetch on mount');
-      refetchNotifications();
-    }
-  }, [currentUser?.id, refetchNotifications]);
+  // Removed forced refetch on mount - now uses cached data to reduce egress
 
   // Fetch tasks to check if they're overdue (needed to filter task_assigned notifications)
+  // Add caching to reduce egress
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
@@ -193,6 +193,9 @@ export default function NotificationBell() {
       }
     },
     enabled: !!currentUser?.id, // Only fetch if user is available
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus
   });
 
   // Create a set of overdue task IDs for quick lookup
@@ -209,6 +212,7 @@ export default function NotificationBell() {
   }, [tasks]);
 
   // Fetch universal snoozes (applies to all users)
+  // Add caching to reduce egress
   const { data: snoozes = [] } = useQuery({
     queryKey: ['notificationSnoozes'],
     queryFn: async () => {
@@ -220,14 +224,21 @@ export default function NotificationBell() {
         console.error('Error fetching snoozes:', error);
         return [];
       }
-    }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus
   });
 
   // Fetch accounts and estimates to calculate renewal dates (source of truth)
+  // Add caching to reduce egress
   const { data: accounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
-    enabled: !!currentUser?.id && !userLoading // Wait for user to load
+    enabled: !!currentUser?.id && !userLoading, // Wait for user to load
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus
   });
   
   const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
@@ -238,7 +249,10 @@ export default function NotificationBell() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     },
-    enabled: !!currentUser?.id && !userLoading // Wait for user to load
+    enabled: !!currentUser?.id && !userLoading, // Wait for user to load
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus
   });
   
   // Calculate which accounts SHOULD be at_risk based on renewal dates (source of truth)
