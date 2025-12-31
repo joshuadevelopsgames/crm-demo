@@ -242,6 +242,12 @@ export default function NotificationBell() {
     }
     
     // Check if this notification is snoozed (universal)
+    // Note: Task notifications (task_overdue, task_due_today, task_reminder, task_assigned) 
+    // are not snoozeable via the notification_snoozes table, so skip snooze check for them
+    if (notification.type.startsWith('task_')) {
+      return true; // Task notifications are not snoozeable, always show them
+    }
+    
     const now = new Date();
     const isSnoozed = snoozes.some(snooze => 
       snooze.notification_type === notification.type &&
@@ -250,6 +256,11 @@ export default function NotificationBell() {
         : (snooze.related_account_id === null || snooze.related_account_id === 'null')) &&
       new Date(snooze.snoozed_until) > now
     );
+    
+    if (notification.type === 'task_overdue' && isSnoozed) {
+      console.log(`⚠️ task_overdue notification ${notification.id} is snoozed (shouldn't happen, but logging anyway)`);
+    }
+    
     return !isSnoozed;
     });
   }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes]);
