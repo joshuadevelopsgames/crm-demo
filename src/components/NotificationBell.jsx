@@ -231,6 +231,13 @@ export default function NotificationBell() {
     if (!currentUserId) return [];
     const currentUserIdStr = String(currentUserId).trim();
     
+    // Debug: Log renewal reminder notifications before filtering
+    const renewalReminders = allNotifications.filter(n => n.type === 'renewal_reminder');
+    if (renewalReminders.length > 0) {
+      console.log(`🔔 Found ${renewalReminders.length} renewal_reminder notifications before filtering`);
+      console.log(`🔔 Account IDs:`, renewalReminders.map(n => n.related_account_id).slice(0, 10));
+    }
+    
     return allNotifications.filter(notification => {
       // First, ensure this notification belongs to the current user
       const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
@@ -246,26 +253,39 @@ export default function NotificationBell() {
       
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder') {
-      // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
-      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
-        return false;
-      }
-      
       // Handle null, undefined, or 'null' string values
       const accountId = notification.related_account_id;
       if (!accountId || accountId === 'null' || accountId === null || accountId === undefined) {
         return false; // No account ID means we can't verify if it should be at-risk
       }
       
-      // Once calculation is complete, only show notifications for accounts that SHOULD be at_risk (based on renewal date)
+      // If accounts/estimates haven't loaded yet, or calculation hasn't completed, 
+      // still show the notification (don't filter it out) - it was created by the server
+      // which is the source of truth. The client-side calculation is just for verification.
+      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
+        // Still show the notification - server created it, so it's valid
+        // We'll just skip the verification step
+        return true;
+      }
+      
+      // Once calculation is complete, verify the notification matches an account that SHOULD be at_risk
       // Use string comparison to handle type mismatches (UUID vs text)
       const accountIdStr = String(accountId).trim();
       const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
       const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
       
+      // If the account is not in the at-risk set, it might have been filtered out incorrectly
+      // or the calculation is slightly off. Log a warning but still show the notification
+      // (the server created it, so it's likely valid)
       if (!isInAtRiskSet) {
-        return false; // Account should not be at_risk based on renewal date, don't show notification
+        console.warn(`⚠️ Renewal reminder notification for account ${accountIdStr} doesn't match calculated at-risk accounts. Showing anyway (server created it).`);
+        console.warn(`⚠️ Calculated at-risk accounts (${atRiskAccountIds.length}):`, atRiskAccountIds.slice(0, 5));
+        // Still show it - server is source of truth
+        return true;
       }
+      
+      // Debug: Log when notification matches
+      console.log(`✅ Renewal reminder notification for account ${accountIdStr} matches calculated at-risk accounts`);
       
       // If we get here, the notification should be shown (account is at-risk)
       // But we still need to check if it's snoozed
