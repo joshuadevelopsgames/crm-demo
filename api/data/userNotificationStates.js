@@ -1,0 +1,215 @@
+/**
+ * API endpoint for storing and retrieving user notification states (JSONB)
+ * Data is stored in Supabase database
+ */
+
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase environment variables not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+export default async function handler(req, res) {
+  // CORS headers
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://lecrm-dev.vercel.app',
+    'https://lecrm-stg.vercel.app',
+    'https://lecrm.vercel.app'
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  try {
+    const supabase = getSupabase();
+    
+    if (req.method === 'GET') {
+      const { user_id } = req.query;
+      
+      if (!user_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'user_id query parameter is required for security'
+        });
+      }
+      
+      const { data, error } = await supabase
+        .from('user_notification_states')
+        .select('*')
+        .eq('user_id', user_id)
+        .single();
+      
+      if (error) {
+        // If table doesn't exist or no record found, return default state
+        if (error.code === 'PGRST116' || error.message?.includes('relation')) {
+          return res.status(200).json({
+            success: true,
+            data: {
+              user_id: user_id,
+              notifications: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          });
+        }
+        console.error('Supabase error:', error);
+        return res.status(500).json({
+          success: false,
+          error: error.message
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        data: data || {
+          user_id: user_id,
+          notifications: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      });
+    }
+    
+    if (req.method === 'POST') {
+      const { action, data: requestData } = req.body;
+      
+      if (action === 'upsert') {
+        const { user_id, notifications } = requestData;
+        
+        if (!user_id) {
+          return res.status(400).json({
+            success: false,
+            error: 'user_id is required'
+          });
+        }
+        
+        // Ensure notifications is an array
+        const notificationsArray = Array.isArray(notifications) ? notifications : [];
+        
+        const { data, error } = await supabase
+          .from('user_notification_states')
+          .upsert({
+            user_id: user_id,
+            notifications: notificationsArray,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          return res.status(500).json({
+            success: false,
+            error: error.message
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: data
+        });
+      }
+      
+      if (action === 'update_read') {
+        const { user_id, notification_id, is_read } = requestData;
+        
+        if (!user_id || !notification_id) {
+          return res.status(400).json({
+            success: false,
+            error: 'user_id and notification_id are required'
+          });
+        }
+        
+        // Get current state
+        const { data: currentState, error: fetchError } = await supabase
+          .from('user_notification_states')
+          .select('notifications')
+          .eq('user_id', user_id)
+          .single();
+        
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Supabase error:', fetchError);
+          return res.status(500).json({
+            success: false,
+            error: fetchError.message
+          });
+        }
+        
+        const notifications = currentState?.notifications || [];
+        const updatedNotifications = notifications.map(notif => {
+          if (notif.id === notification_id) {
+            return { ...notif, is_read: is_read };
+          }
+          return notif;
+        });
+        
+        const { data, error } = await supabase
+          .from('user_notification_states')
+          .upsert({
+            user_id: user_id,
+            notifications: updatedNotifications,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          return res.status(500).json({
+            success: false,
+            error: error.message
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: data
+        });
+      }
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid action. Use "upsert" or "update_read"'
+      });
+    }
+    
+    return res.status(405).json({
+      success: false,
+      error: 'Method not allowed'
+    });
+  } catch (error) {
+    console.error('Error in userNotificationStates handler:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error'
+    });
+  }
+}
+

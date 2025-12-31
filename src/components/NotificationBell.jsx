@@ -63,7 +63,9 @@ export default function NotificationBell() {
   const currentUser = contextUser || profile || fallbackUser;
   const currentUserId = currentUser?.id;
 
-  // Fetch notifications for current user (all notifications, sorted by newest first)
+  // Fetch notifications for current user from both sources:
+  // 1. JSONB user_notification_states (bulk notifications: neglected_account, renewal_reminder)
+  // 2. Individual notifications table (task notifications: task_assigned, task_overdue, etc.)
   const { data: allNotificationsRaw = [], refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
@@ -74,26 +76,54 @@ export default function NotificationBell() {
       try {
         const currentUserIdStr = String(currentUser.id).trim();
         console.log(`🔔 NotificationBell: Fetching notifications for user_id: ${currentUserIdStr}`);
-        const notifications = await base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at');
-        const taskOverdueNotifications = notifications.filter(n => n.type === 'task_overdue');
-        const taskOverdueCount = taskOverdueNotifications.length;
-        console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
-          renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
-          taskOverdue: taskOverdueCount,
-          taskDueToday: notifications.filter(n => n.type === 'task_due_today').length,
-          taskReminder: notifications.filter(n => n.type === 'task_reminder').length,
-          taskAssigned: notifications.filter(n => n.type === 'task_assigned').length,
-          unread: notifications.filter(n => !n.is_read).length
+        
+        // Fetch from both sources in parallel
+        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
+          // Fetch bulk notifications from JSONB table
+          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`).then(r => r.json()),
+          // Fetch task notifications from individual rows
+          base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
+        ]);
+        
+        // Extract bulk notifications from JSONB
+        const bulkNotifications = bulkNotificationsResponse.success 
+          ? (bulkNotificationsResponse.data?.notifications || [])
+          : [];
+        
+        // Filter task notifications (only task-related types)
+        const taskNotificationsFiltered = taskNotifications.filter(n => 
+          ['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder'].includes(n.type)
+        );
+        
+        // Combine both sources
+        const allNotifications = [...bulkNotifications, ...taskNotificationsFiltered];
+        
+        // Sort by created_at descending (newest first)
+        allNotifications.sort((a, b) => {
+          const dateA = new Date(a.created_at || a.scheduled_for || 0);
+          const dateB = new Date(b.created_at || b.scheduled_for || 0);
+          return dateB - dateA;
         });
+        
+        const taskOverdueCount = taskNotificationsFiltered.filter(n => n.type === 'task_overdue').length;
+        console.log(`🔔 NotificationBell: Fetched ${allNotifications.length} total notifications for user ${currentUser.id}`, {
+          bulkNotifications: bulkNotifications.length,
+          taskNotifications: taskNotificationsFiltered.length,
+          renewalReminders: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
+          neglectedAccounts: bulkNotifications.filter(n => n.type === 'neglected_account').length,
+          taskOverdue: taskOverdueCount,
+          taskDueToday: taskNotificationsFiltered.filter(n => n.type === 'task_due_today').length,
+          taskReminder: taskNotificationsFiltered.filter(n => n.type === 'task_reminder').length,
+          taskAssigned: taskNotificationsFiltered.filter(n => n.type === 'task_assigned').length,
+          unread: allNotifications.filter(n => !n.is_read).length
+        });
+        
         if (taskOverdueCount > 0) {
+          const taskOverdueNotifications = taskNotificationsFiltered.filter(n => n.type === 'task_overdue');
           console.log(`🔔 Task overdue notifications found:`, taskOverdueNotifications.map(n => ({ id: n.id, user_id: n.user_id, task_id: n.related_task_id, title: n.title })));
-        } else {
-          // Check if there are any task_overdue notifications at all
-          const allTaskOverdue = await base44.entities.Notification.filter({ type: 'task_overdue' }, '-created_at');
-          console.log(`🔔 No task_overdue notifications for current user. Total task_overdue notifications in system: ${allTaskOverdue.length}`, 
-            allTaskOverdue.map(n => ({ id: n.id, user_id: n.user_id, requested_user_id: currentUserIdStr, match: String(n.user_id).trim() === currentUserIdStr })));
         }
-        return notifications;
+        
+        return allNotifications;
       } catch (error) {
         console.error('🔔 NotificationBell: Error fetching notifications:', error);
         return [];
@@ -811,7 +841,37 @@ export default function NotificationBell() {
       );
       
       // Mark notification as read for current user when snoozed
-      await base44.entities.Notification.markAsRead(notification.id);
+      // Handle both JSONB notifications (from user_notification_states) and individual row notifications
+      if (notification.type === 'neglected_account' || notification.type === 'renewal_reminder') {
+        // JSONB notification - update via userNotificationStates API
+        try {
+          const response = await fetch('/api/data/userNotificationStates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_read',
+              data: {
+                user_id: currentUserId,
+                notification_id: notification.id,
+                is_read: true
+              }
+            })
+          });
+          const result = await response.json();
+          if (!result.success) {
+            console.error('Error marking JSONB notification as read:', result.error);
+          }
+        } catch (error) {
+          console.error('Error marking JSONB notification as read:', error);
+        }
+      } else {
+        // Individual row notification - use standard API
+        try {
+          await base44.entities.Notification.markAsRead(notification.id);
+        } catch (error) {
+          console.error('Error marking notification as read:', error);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

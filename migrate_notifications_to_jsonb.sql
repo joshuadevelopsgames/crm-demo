@@ -11,7 +11,34 @@ DECLARE
   notification_record RECORD;
   notification_array jsonb := '[]'::jsonb;
   notification_obj jsonb;
+  notifications_table_exists boolean;
+  user_states_table_exists boolean;
+  migrated_count int := 0;
+  deleted_count int := 0;
 BEGIN
+  -- Check if required tables exist
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'notifications'
+  ) INTO notifications_table_exists;
+  
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'user_notification_states'
+  ) INTO user_states_table_exists;
+  
+  IF NOT notifications_table_exists THEN
+    RAISE NOTICE 'Notifications table does not exist. Skipping migration. Run create_notifications_table.sql first.';
+    RETURN;
+  END IF;
+  
+  IF NOT user_states_table_exists THEN
+    RAISE NOTICE 'user_notification_states table does not exist. Skipping migration. Run create_user_notification_states_table.sql first.';
+    RETURN;
+  END IF;
+  
   -- Loop through all users
   FOR user_record IN SELECT DISTINCT user_id FROM notifications LOOP
     notification_array := '[]'::jsonb;
@@ -38,6 +65,7 @@ BEGIN
       
       -- Add to array
       notification_array := notification_array || notification_obj;
+      migrated_count := migrated_count + 1;
     END LOOP;
     
     -- Insert or update user_notification_states
@@ -52,18 +80,18 @@ BEGIN
       user_record.user_id, jsonb_array_length(notification_array);
   END LOOP;
   
+  -- Step 3: Delete migrated notifications from notifications table
+  -- (Keep task notifications - they stay in notifications table)
+  DELETE FROM notifications 
+  WHERE type IN ('neglected_account', 'renewal_reminder');
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  
+  RAISE NOTICE '=== Migration Summary ===';
+  RAISE NOTICE 'Migrated % bulk notifications to JSONB format', migrated_count;
+  RAISE NOTICE 'Deleted % bulk notifications from notifications table', deleted_count;
+  RAISE NOTICE 'Users with notification states: %', (SELECT COUNT(*) FROM user_notification_states);
+  RAISE NOTICE 'Remaining task notifications: %', 
+    (SELECT COUNT(*) FROM notifications WHERE type NOT IN ('neglected_account', 'renewal_reminder'));
   RAISE NOTICE 'Migration complete!';
 END $$;
-
--- Step 3: Delete migrated notifications from notifications table
--- (Keep task notifications - they stay in notifications table)
-DELETE FROM notifications 
-WHERE type IN ('neglected_account', 'renewal_reminder');
-
--- Step 4: Show summary
-SELECT 
-  'Migration Summary' as summary,
-  (SELECT COUNT(*) FROM user_notification_states) as users_with_notifications,
-  (SELECT COUNT(*) FROM notifications WHERE type IN ('neglected_account', 'renewal_reminder')) as remaining_bulk_notifications,
-  (SELECT COUNT(*) FROM notifications WHERE type NOT IN ('neglected_account', 'renewal_reminder')) as task_notifications_remaining;
 

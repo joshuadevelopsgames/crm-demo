@@ -471,291 +471,58 @@ export async function createEndOfYearNotification() {
 
 /**
  * Create renewal notifications for accounts with renewals coming up in 6 months
- * This creates universal notifications that all users see, but can be snoozed individually
+ * NEW APPROACH: Uses JSONB user_notification_states table instead of individual rows
+ * This prevents duplicates and is more efficient
  */
 export async function createRenewalNotifications() {
-  console.log('🔄 Starting renewal notification creation...');
-  let createdCount = 0;
-  let skippedCount = 0;
-  let errorCount = 0;
-  let atRiskUpdatedCount = 0;
-  let atRiskAlreadyCount = 0;
+  console.log('🔄 Starting renewal notification creation (JSONB approach)...');
   
   try {
-    // Get all accounts
+    // First, update account statuses based on renewal dates
     const accounts = await base44.entities.Account.list();
-    console.log(`📊 Found ${accounts.length} accounts`);
-    
-    // Get all estimates
     const estimates = await base44.entities.Estimate.list();
-    console.log(`📋 Found ${estimates.length} estimates`);
-    
-    // Get all users - handle errors gracefully
-    let users = [];
-    let currentUser = null;
-    try {
-      users = await base44.entities.User.list();
-      console.log(`👥 Found ${users.length} users`);
-    } catch (error) {
-      console.warn('Error fetching users list:', error);
-    }
-    
-    try {
-      currentUser = await base44.auth.me();
-    } catch (error) {
-      console.warn('Error fetching current user:', error);
-    }
-    
-    const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
-    
-    if (usersToNotify.length === 0) {
-      console.warn('⚠️ No users found for renewal notifications - skipping');
-      return;
-    }
-
     const today = startOfDay(new Date());
     
-    // Phase 1: Collect all notifications to create (without creating them yet)
-    const notificationsToCreate = [];
+    let atRiskUpdatedCount = 0;
+    let atRiskAlreadyCount = 0;
     
-    let accountsProcessed = 0;
-    let accountsWithRenewalDate = 0;
-    let accountsAtRisk = 0;
-    
-    // Process each account
+    // Update account statuses based on renewal dates
     for (const account of accounts) {
       if (account.archived) continue;
-      accountsProcessed++;
       
-      // Get estimates for this account
       const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      
-      // Calculate renewal date from estimates
       const renewalDate = calculateRenewalDate(accountEstimates);
       
-      if (!renewalDate) {
-        // No renewal date - if account is at_risk only because of renewal, consider removing it
-        // But we'll be conservative and only remove if it was explicitly set to at_risk
-        // (we don't want to remove manually set at_risk statuses)
-        continue;
-      }
+      if (!renewalDate) continue;
       
-      accountsWithRenewalDate++;
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-      
-      // Determine if account SHOULD be at_risk based on renewal date (source of truth)
-      // This is independent of the status field - renewal date is the authoritative source
       const shouldBeAtRisk = daysUntilRenewal >= 0 && daysUntilRenewal <= 180;
       const isCurrentlyAtRisk = account.status === 'at_risk';
       
-      if (shouldBeAtRisk) {
-        accountsAtRisk++;
-      }
-      
-      // Update status field to match reality (renewal date is source of truth)
-      if (shouldBeAtRisk) {
-        // Account SHOULD be at_risk - update status if it's not already
-        if (isCurrentlyAtRisk) {
-          atRiskAlreadyCount++;
-          // Already at_risk, no update needed
-        } else if (account.status === 'churned') {
-          // Don't update churned accounts
-        } else {
-          // Update to at_risk - retry on failure, but don't fail if update doesn't work
-          let updateSuccess = false;
-          let retries = 0;
-          const maxRetries = 3;
-          
-          while (!updateSuccess && retries < maxRetries) {
-            try {
-              await base44.entities.Account.update(account.id, { status: 'at_risk' });
-              atRiskUpdatedCount++;
-              updateSuccess = true;
-              console.log(`⚠️ Marked ${account.name} as at_risk (renewal in ${daysUntilRenewal} days, was: ${account.status})`);
-            } catch (error) {
-              retries++;
-              const errorDetails = {
-                accountId: account.id,
-                accountName: account.name,
-                currentStatus: account.status,
-                errorMessage: error.message,
-                errorStack: error.stack,
-                errorResponse: error.response || error.body || null
-              };
-              
-              if (retries >= maxRetries) {
-                errorCount++;
-                console.error(`❌ Error updating account status for ${account.name} after ${maxRetries} retries:`, errorDetails);
-                console.error(`   Full error object:`, error);
-                // Status update failed, but account SHOULD still be at_risk based on renewal date
-                // We'll continue to create notifications because renewal date is the source of truth
-              } else {
-                console.warn(`⚠️ Retry ${retries}/${maxRetries} for ${account.name} status update...`, errorDetails);
-                await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
-              }
-            }
-          }
+      if (shouldBeAtRisk && !isCurrentlyAtRisk && account.status !== 'churned') {
+        try {
+          await base44.entities.Account.update(account.id, { status: 'at_risk' });
+          atRiskUpdatedCount++;
+        } catch (error) {
+          console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
+      } else if (shouldBeAtRisk && isCurrentlyAtRisk) {
+        atRiskAlreadyCount++;
       } else if (isCurrentlyAtRisk && (daysUntilRenewal < 0 || daysUntilRenewal > 180)) {
-        // Renewal is past or more than 6 months away - remove at_risk status (set back to active)
-        // Only if it was at_risk (might have been set for renewal reasons)
         try {
           await base44.entities.Account.update(account.id, { status: 'active' });
-          console.log(`✅ Removed at_risk status from ${account.name} (renewal ${daysUntilRenewal < 0 ? 'passed' : 'more than 6 months away'})`);
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
       }
-      
-      // Create notification if renewal is within 6 months (180 days) and in the future
-      // Use renewal date as source of truth, not status field
-      if (!shouldBeAtRisk) continue;
-      
-      // Check if this notification is snoozed (universal - any user can snooze for everyone)
-      const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
-      if (isSnoozed) {
-        skippedCount++;
-        continue; // Notification is snoozed for all users
-      }
-      
-      // Collect notification data for all users (don't create yet)
-      for (const user of usersToNotify) {
-        if (!user?.id) continue;
-        notificationsToCreate.push({
-          user_id: user.id,
-          type: 'renewal_reminder',
-          title: `Renewal Coming Up: ${account.name}`,
-          message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
-          related_account_id: account.id,
-          related_task_id: null,
-          scheduled_for: renewalDateStart.toISOString(),
-          accountName: account.name,
-          daysUntilRenewal: daysUntilRenewal
-        });
-      }
     }
     
-    console.log(`📊 Account processing summary: ${accountsProcessed} processed, ${accountsWithRenewalDate} with renewal dates, ${accountsAtRisk} at-risk`);
+    // Now update all user notification states (this will include renewal reminders)
+    await updateAllUserNotificationStates();
     
-    // Phase 2: Batch check existing notifications and create missing ones
-    console.log(`📋 Collected ${notificationsToCreate.length} notifications to create`);
-    console.log(`📋 Unique accounts: ${new Set(notificationsToCreate.map(n => n.related_account_id)).size}`);
-    console.log(`📋 Users to notify: ${usersToNotify.length}`);
-    
-    if (notificationsToCreate.length > 0) {
-      // Get all existing renewal notifications for all users in one batch
-      const allExistingNotifications = await base44.entities.Notification.filter({
-        type: 'renewal_reminder'
-      });
-      
-      console.log(`📋 Found ${allExistingNotifications.length} existing renewal_reminder notifications`);
-      
-      // Create a set of existing notification keys (user_id + account_id + today)
-      const today = startOfDay(new Date());
-      const existingKeys = new Set();
-      let todayNotificationsCount = 0;
-      for (const notif of allExistingNotifications) {
-        const notifDate = startOfDay(new Date(notif.created_at));
-        if (notifDate.getTime() === today.getTime()) {
-          const key = `${notif.user_id}:${notif.related_account_id}`;
-          existingKeys.add(key);
-          todayNotificationsCount++;
-        }
-      }
-      
-      console.log(`📋 Found ${todayNotificationsCount} renewal_reminder notifications created today`);
-      console.log(`📋 Existing keys (user:account):`, Array.from(existingKeys).slice(0, 10));
-      
-      // Create all missing notifications
-      for (const notifData of notificationsToCreate) {
-        const key = `${notifData.user_id}:${notifData.related_account_id}`;
-        
-        if (existingKeys.has(key)) {
-          skippedCount++;
-          console.log(`⏭️  Skipping notification for account ${notifData.related_account_id} (user ${notifData.user_id}) - already exists today`);
-          continue; // Already created today
-        }
-        
-        try {
-          const created = await base44.entities.Notification.create({
-            user_id: notifData.user_id,
-            type: notifData.type,
-            title: notifData.title,
-            message: notifData.message,
-            related_account_id: notifData.related_account_id,
-            related_task_id: notifData.related_task_id,
-            scheduled_for: notifData.scheduled_for
-          });
-          
-          createdCount++;
-          console.log(`✅ Created renewal notification for account ${notifData.accountName} (${notifData.related_account_id}) for user ${notifData.user_id}`);
-          // Add to existing keys to avoid duplicates in same batch
-          existingKeys.add(key);
-        } catch (error) {
-          errorCount++;
-          console.error(`❌ Error creating notification for ${notifData.accountName}:`, error);
-        }
-      }
-    }
-    
-    // Clean up notifications for accounts that are no longer at_risk
-    // This handles cases where accounts were previously at_risk but no longer meet criteria
-    // NOTE: This is a system-wide cleanup that needs to see all notifications
-    // We'll fetch all users and clean up notifications for each user separately
-    let cleanupCount = 0;
-    try {
-      // Get all accounts that are currently at_risk (calculate once, use for all users)
-      const atRiskAccountIds = new Set(
-        accounts
-          .filter(acc => acc.status === 'at_risk' && !acc.archived)
-          .map(acc => acc.id)
-      );
-      
-      // Get all users to clean up notifications per user
-      const users = await base44.entities.User.list();
-      
-      for (const user of users) {
-        if (!user?.id) continue;
-        
-        // Get renewal reminder notifications for this user
-        const userRenewalNotifications = await base44.entities.Notification.filter({
-          user_id: user.id,
-          type: 'renewal_reminder'
-        });
-        
-        // Delete notifications for accounts that are no longer at_risk
-        for (const notification of userRenewalNotifications) {
-          if (notification.related_account_id && !atRiskAccountIds.has(notification.related_account_id)) {
-            try {
-              const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-              });
-              const result = await response.json();
-              if (result.success) {
-                cleanupCount++;
-              } else {
-                console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
-              }
-            } catch (error) {
-              console.error(`❌ Error deleting notification ${notification.id}:`, error);
-            }
-          }
-        }
-      }
-      
-      if (cleanupCount > 0) {
-        console.log(`🧹 Cleaned up ${cleanupCount} renewal notifications for accounts no longer at_risk`);
-      }
-    } catch (cleanupError) {
-      console.error('❌ Error cleaning up renewal notifications:', cleanupError);
-    }
-    
-    console.log(`✅ Renewal notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
+    console.log(`✅ Renewal notification creation complete`);
     console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
-    console.log(`📊 Total accounts with renewals within 6 months: ${atRiskUpdatedCount + atRiskAlreadyCount}`);
-    console.log(`🧹 Cleaned up ${cleanupCount} stale notifications`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }
@@ -763,270 +530,193 @@ export async function createRenewalNotifications() {
 
 /**
  * Create notifications for neglected accounts (no interaction in 30+ days)
- * This creates universal notifications that all users see, but can be snoozed individually
+ * NEW APPROACH: Uses JSONB user_notification_states table instead of individual rows
+ * This prevents duplicates and is more efficient
  */
 export async function createNeglectedAccountNotifications() {
-  console.log('🔄 Starting neglected account notification creation...');
-  let createdCount = 0;
-  let skippedCount = 0;
-  let errorCount = 0;
-  let neglectedAccountCount = 0;
-  let skippedBySnooze = 0;
-  let skippedByExisting = 0;
-  let skippedByArchived = 0;
-  let skippedByICP = 0;
-  let skippedBySnoozedAccount = 0;
-  let skippedByRecentInteraction = 0;
+  console.log('🔄 Starting neglected account notification creation (JSONB approach)...');
   
   try {
-    // Get all accounts
-    const accounts = await base44.entities.Account.list();
-    console.log(`📊 Found ${accounts.length} accounts`);
+    // Update all user notification states (this will include neglected accounts)
+    await updateAllUserNotificationStates();
     
-    // Get all users - handle errors gracefully
-    let users = [];
-    let currentUser = null;
-    try {
-      users = await base44.entities.User.list();
-      console.log(`👥 Found ${users.length} users`);
-    } catch (error) {
-      console.warn('Error fetching users list:', error);
-    }
-    
-    try {
-      currentUser = await base44.auth.me();
-    } catch (error) {
-      console.warn('Error fetching current user:', error);
-    }
-    
-    const usersToNotify = users.length > 0 ? users : (currentUser?.id ? [currentUser] : []);
-    
-    if (usersToNotify.length === 0) {
-      console.warn('⚠️ No users found for neglected account notifications - skipping');
-      return;
-    }
+    console.log(`✅ Neglected account notification creation complete`);
+  } catch (error) {
+    console.error('❌ Error creating neglected account notifications:', error);
+  }
+}
 
+/**
+ * Get user notification state (JSONB notifications)
+ * @param {string} userId - User ID
+ * @returns {Promise<Object|null>} - User notification state or null
+ */
+async function getUserNotificationState(userId) {
+  try {
+    const response = await fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(userId)}`);
+    if (!response.ok) return null;
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('Error fetching user notification state:', error);
+    return null;
+  }
+}
+
+/**
+ * Update user notification state (JSONB notifications)
+ * @param {string} userId - User ID
+ * @param {Array} notifications - Array of notification objects
+ * @returns {Promise<Object>} - Updated state
+ */
+async function updateUserNotificationState(userId, notifications) {
+  try {
+    const response = await fetch('/api/data/userNotificationStates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsert',
+        data: {
+          user_id: userId,
+          notifications: notifications
+        }
+      })
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update notification state');
+    }
+    return result.data;
+  } catch (error) {
+    console.error('Error updating user notification state:', error);
+    throw error;
+  }
+}
+
+/**
+ * Recalculate and update notification states for all users
+ * This is the new JSONB-based approach for bulk notifications
+ */
+export async function updateAllUserNotificationStates() {
+  console.log('🔄 Starting notification state recalculation (JSONB approach)...');
+  
+  try {
+    const accounts = await base44.entities.Account.list();
+    const users = await base44.entities.User.list();
+    const estimates = await base44.entities.Estimate.list();
     const today = startOfDay(new Date());
     
-    // Phase 1: Collect all notifications to create (without creating them yet)
-    const notificationsToCreate = [];
+    console.log(`📊 Processing ${accounts.length} accounts for ${users.length} users`);
     
-    // Process each account
-    for (const account of accounts) {
-      // Skip archived accounts
-      if (account.archived) {
-        skippedByArchived++;
-        continue;
-      }
+    // Process each user
+    for (const user of users) {
+      if (!user?.id) continue;
       
-      // Skip accounts with ICP status = 'na' (permanently excluded)
-      if (account.icp_status === 'na') {
-        skippedByICP++;
-        continue;
-      }
+      const bulkNotifications = [];
       
-      // Skip if snoozed
-      if (account.snoozed_until) {
-        const snoozeDate = new Date(account.snoozed_until);
-        if (snoozeDate > new Date()) {
-          skippedBySnoozedAccount++;
-          continue; // Still snoozed
-        }
-      }
-      
-      // Determine threshold based on revenue segment
-      // A and B segments: 30+ days, others: 90+ days
-      // Default to 'C' (90 days) if segment is missing
-      const segment = account.revenue_segment || 'C';
-      const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
-      
-      // Check if no interaction beyond threshold
-      let daysSinceInteraction = null;
-      if (!account.last_interaction_date) {
-        // No interaction date means it's neglected
-        daysSinceInteraction = null; // Will be treated as "no interaction logged"
-      } else {
-        const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
-        daysSinceInteraction = differenceInDays(today, lastInteractionDate);
-        if (daysSinceInteraction <= thresholdDays) {
-          skippedByRecentInteraction++;
-          continue; // Recent interaction, not neglected
-        }
-      }
-      
-      // Account is neglected
-      neglectedAccountCount++;
-      
-      // Check if this notification is snoozed (universal - any user can snooze for everyone)
-      const isSnoozed = await checkNotificationSnoozed('neglected_account', account.id);
-      if (isSnoozed) {
-        skippedBySnooze++;
-        continue; // Notification is snoozed for all users
-      }
-      
-      // Collect notification data for all users (don't create yet)
-      const message = daysSinceInteraction === null
-        ? `No interactions logged - account needs attention (${segment || 'C/D'} segment)`
-        : `No contact in ${daysSinceInteraction} day${daysSinceInteraction !== 1 ? 's' : ''} - account needs attention (${segment || 'C/D'} segment, ${thresholdDays}+ day threshold)`;
-      
-      for (const user of usersToNotify) {
-        if (!user?.id) continue;
-        notificationsToCreate.push({
-          user_id: user.id,
-          type: 'neglected_account',
-          title: `Neglected Account: ${account.name}`,
-          message: message,
-          related_account_id: account.id,
-          related_task_id: null,
-          scheduled_for: today.toISOString(),
-          accountName: account.name,
-          accountId: account.id,
-          daysSinceInteraction: daysSinceInteraction,
-          isSnoozed: isSnoozed
-        });
-      }
-    }
-    
-    // Phase 2: Batch check existing notifications and create missing ones
-    console.log(`📋 Collected ${notificationsToCreate.length} notifications to create`);
-    
-    if (notificationsToCreate.length > 0) {
-      // Get all existing neglected account notifications for all users in one batch
-      const allExistingNotifications = await base44.entities.Notification.filter({
-        type: 'neglected_account'
-      });
-      
-      // Create a set of existing notification keys (user_id + account_id)
-      // For neglected accounts, we check if ANY notification exists (not just today's)
-      const existingKeys = new Set();
-      for (const notif of allExistingNotifications) {
-        existingKeys.add(`${notif.user_id}:${notif.related_account_id}`);
-      }
-      
-      // Track which accounts had at least one notification created
-      const accountsWithNotifications = new Set();
-      
-      // Create all missing notifications
-      for (const notifData of notificationsToCreate) {
-        const key = `${notifData.user_id}:${notifData.related_account_id}`;
+      // Process each account
+      for (const account of accounts) {
+        // Skip archived or excluded accounts
+        if (account.archived || account.icp_status === 'na') continue;
         
-        if (existingKeys.has(key)) {
-          skippedByExisting++;
-          accountsWithNotifications.add(notifData.accountId);
-          continue; // Already exists
+        // Check if account is snoozed
+        if (account.snoozed_until) {
+          const snoozeDate = new Date(account.snoozed_until);
+          if (snoozeDate > new Date()) continue;
         }
         
-        try {
-          await base44.entities.Notification.create({
-            user_id: notifData.user_id,
-            type: notifData.type,
-            title: notifData.title,
-            message: notifData.message,
-            related_account_id: notifData.related_account_id,
-            related_task_id: notifData.related_task_id,
-            scheduled_for: notifData.scheduled_for
-          });
-          
-          createdCount++;
-          accountsWithNotifications.add(notifData.accountId);
-          // Add to existing keys to avoid duplicates in same batch
-          existingKeys.add(key);
-          console.log(`✅ Created neglected account notification for ${notifData.accountName} (${notifData.daysSinceInteraction === null ? 'no interaction date' : `${notifData.daysSinceInteraction} days`})`);
-        } catch (error) {
-          errorCount++;
-          console.error(`❌ Error creating neglected account notification for ${notifData.accountName}:`, error);
-        }
-      }
-      
-      // Track accounts that should have notifications but don't
-      const accountIdsInNotifications = new Set(notificationsToCreate.map(n => n.accountId));
-      for (const accountId of accountIdsInNotifications) {
-        const accountNotif = notificationsToCreate.find(n => n.accountId === accountId);
-        if (accountNotif && !accountsWithNotifications.has(accountId) && !accountNotif.isSnoozed) {
-          console.warn(`⚠️ Account ${accountNotif.accountName} (${accountId}) is neglected but no notification was created (may have errors for all users)`);
-        }
-      }
-    }
-    
-    // Clean up notifications for accounts that are no longer neglected
-    let cleanupCount = 0;
-    try {
-      // Get all accounts that are currently neglected (calculate once, use for all users)
-      const neglectedAccountIds = new Set(
-        accounts
-          .filter(acc => {
-            if (acc.archived) return false;
-            if (acc.icp_status === 'na') return false;
-            if (acc.snoozed_until) {
-              const snoozeDate = new Date(acc.snoozed_until);
-              if (snoozeDate > new Date()) return false;
+        // Check for neglected account notification
+        const isNeglected = await shouldHaveNeglectedNotification(account, today);
+        if (isNeglected) {
+          const isSnoozed = await checkNotificationSnoozed('neglected_account', account.id);
+          if (!isSnoozed) {
+            const segment = account.revenue_segment || 'C';
+            const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+            let daysSinceInteraction = null;
+            let message = '';
+            
+            if (!account.last_interaction_date) {
+              message = `No interactions logged - account needs attention (${segment} segment)`;
+            } else {
+              const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+              daysSinceInteraction = differenceInDays(today, lastInteractionDate);
+              message = `No contact in ${daysSinceInteraction} day${daysSinceInteraction !== 1 ? 's' : ''} - account needs attention (${segment} segment, ${thresholdDays}+ day threshold)`;
             }
-            if (!acc.last_interaction_date) return true; // No interaction date = neglected
-            const accSegment = acc.revenue_segment || 'C'; // Default to 'C' if missing
-            const accThresholdDays = (accSegment === 'A' || accSegment === 'B') ? 30 : 90;
-            const daysSince = differenceInDays(today, startOfDay(new Date(acc.last_interaction_date)));
-            return daysSince > accThresholdDays;
-          })
-          .map(acc => acc.id)
-      );
-      
-      // Get all users to clean up notifications per user
-      const users = await base44.entities.User.list();
-      
-      for (const user of users) {
-        if (!user?.id) continue;
+            
+            bulkNotifications.push({
+              id: `neglected_${account.id}_${user.id}`,
+              type: 'neglected_account',
+              title: `Neglected Account: ${account.name}`,
+              message: message,
+              related_account_id: account.id,
+              related_task_id: null,
+              is_read: false,
+              created_at: new Date().toISOString(),
+              scheduled_for: today.toISOString()
+            });
+          }
+        }
         
-        // Get neglected account notifications for this user
-        const userNeglectedNotifications = await base44.entities.Notification.filter({
-          user_id: user.id,
-          type: 'neglected_account'
-        });
-        
-        // Delete notifications for accounts that are no longer neglected
-        for (const notification of userNeglectedNotifications) {
-          if (notification.related_account_id && !neglectedAccountIds.has(notification.related_account_id)) {
-            try {
-              const response = await fetch(`/api/data/notifications?id=${notification.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-              });
-              const result = await response.json();
-              if (result.success) {
-                cleanupCount++;
-              } else {
-                console.error(`❌ Error deleting notification ${notification.id}:`, result.error);
+        // Check for renewal reminder notification
+        if (account.status === 'at_risk') {
+          const isSnoozed = await checkNotificationSnoozed('renewal_reminder', account.id);
+          if (!isSnoozed) {
+            // Get renewal date from estimates (already loaded)
+            const accountEstimates = estimates.filter(est => est.account_id === account.id);
+            const renewalDate = calculateRenewalDate(accountEstimates);
+            
+            if (renewalDate) {
+              const renewalDateStart = startOfDay(renewalDate);
+              const daysUntilRenewal = differenceInDays(renewalDateStart, today);
+              
+              if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
+                bulkNotifications.push({
+                  id: `renewal_${account.id}_${user.id}`,
+                  type: 'renewal_reminder',
+                  title: `Renewal Coming Up: ${account.name}`,
+                  message: `Contract renewal is in ${daysUntilRenewal} day${daysUntilRenewal !== 1 ? 's' : ''} (${format(renewalDate, 'MMM d, yyyy')})`,
+                  related_account_id: account.id,
+                  related_task_id: null,
+                  is_read: false,
+                  created_at: new Date().toISOString(),
+                  scheduled_for: renewalDateStart.toISOString()
+                });
               }
-            } catch (error) {
-              console.error(`❌ Error deleting notification ${notification.id}:`, error);
             }
           }
         }
       }
       
-      if (cleanupCount > 0) {
-        console.log(`🧹 Cleaned up ${cleanupCount} neglected account notifications for accounts no longer neglected`);
-      }
-    } catch (cleanupError) {
-      console.error('❌ Error cleaning up neglected account notifications:', cleanupError);
+      // Update user's notification state
+      await updateUserNotificationState(user.id, bulkNotifications);
+      console.log(`✅ Updated notification state for user ${user.id}: ${bulkNotifications.length} notifications`);
     }
     
-    console.log(`✅ Neglected account notification creation complete:`);
-    console.log(`   📊 Total neglected accounts identified: ${neglectedAccountCount}`);
-    console.log(`   ✅ Notifications created: ${createdCount}`);
-    console.log(`   ⏭️  Skipped breakdown:`);
-    console.log(`      - By notification snooze: ${skippedBySnooze}`);
-    console.log(`      - By existing notification today: ${skippedByExisting}`);
-    console.log(`      - By archived account: ${skippedByArchived}`);
-    console.log(`      - By ICP status 'na': ${skippedByICP}`);
-    console.log(`      - By snoozed account: ${skippedBySnoozedAccount}`);
-    console.log(`      - By recent interaction: ${skippedByRecentInteraction}`);
-    console.log(`   ❌ Errors: ${errorCount}`);
-    console.log(`   🧹 Cleaned up ${cleanupCount} stale notifications`);
-    console.log(`   📈 Expected notifications: ${neglectedAccountCount * usersToNotify.length} (${neglectedAccountCount} accounts × ${usersToNotify.length} users)`);
-    console.log(`   📉 Actual notifications created: ${createdCount}`);
+    console.log('✅ Notification state recalculation complete');
   } catch (error) {
-    console.error('❌ Error creating neglected account notifications:', error);
+    console.error('❌ Error recalculating notification states:', error);
   }
+}
+
+/**
+ * Helper: Check if account should have neglected notification
+ */
+async function shouldHaveNeglectedNotification(account, today) {
+  if (account.archived || account.icp_status === 'na') return false;
+  
+  if (account.snoozed_until) {
+    const snoozeDate = new Date(account.snoozed_until);
+    if (snoozeDate > new Date()) return false;
+  }
+  
+  const segment = account.revenue_segment || 'C';
+  const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
+  
+  if (!account.last_interaction_date) return true;
+  
+  const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+  const daysSince = differenceInDays(today, lastInteractionDate);
+  return daysSince > thresholdDays;
 }
 
 /**

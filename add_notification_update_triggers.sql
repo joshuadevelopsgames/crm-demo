@@ -16,6 +16,16 @@ DECLARE
   days_since_interaction int;
   today_date date := CURRENT_DATE;
 BEGIN
+  -- Check if required tables exist
+  IF NOT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'user_notification_states'
+  ) THEN
+    RAISE NOTICE 'user_notification_states table does not exist. Skipping notification update.';
+    RETURN;
+  END IF;
+  
   -- Get the account
   SELECT * INTO account_record FROM accounts WHERE id = account_id_param;
   IF NOT FOUND THEN RETURN; END IF;
@@ -75,8 +85,12 @@ BEGIN
     
     -- Add neglected_account notification if needed
     IF should_have_neglected_notif THEN
-      -- Check if notification is snoozed
+      -- Check if notification is snoozed (only if table exists)
       IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'notification_snoozes'
+      ) OR NOT EXISTS (
         SELECT 1 FROM notification_snoozes 
         WHERE notification_type = 'neglected_account' 
         AND related_account_id = account_id_param
@@ -102,8 +116,12 @@ BEGIN
     
     -- Add renewal_reminder notification if needed
     IF should_have_renewal_notif THEN
-      -- Check if notification is snoozed
+      -- Check if notification is snoozed (only if table exists)
       IF NOT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'notification_snoozes'
+      ) OR NOT EXISTS (
         SELECT 1 FROM notification_snoozes 
         WHERE notification_type = 'renewal_reminder' 
         AND related_account_id = account_id_param
@@ -152,11 +170,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS trg_accounts_update_notifications ON accounts;
-CREATE TRIGGER trg_accounts_update_notifications
-  AFTER UPDATE ON accounts
-  FOR EACH ROW
-  EXECUTE FUNCTION trigger_update_notifications_on_account_change();
+-- Create trigger on accounts table (if it exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'accounts'
+  ) THEN
+    DROP TRIGGER IF EXISTS trg_accounts_update_notifications ON accounts;
+    CREATE TRIGGER trg_accounts_update_notifications
+      AFTER UPDATE ON accounts
+      FOR EACH ROW
+      EXECUTE FUNCTION trigger_update_notifications_on_account_change();
+    
+    RAISE NOTICE 'Created trigger on accounts table';
+  ELSE
+    RAISE NOTICE 'Accounts table does not exist yet. Skipping trigger creation.';
+  END IF;
+END $$;
 
 -- Trigger on interactions table (updates account's last_interaction_date)
 CREATE OR REPLACE FUNCTION trigger_update_notifications_on_interaction()
@@ -173,11 +205,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS trg_interactions_update_notifications ON interactions;
-CREATE TRIGGER trg_interactions_update_notifications
-  AFTER INSERT ON interactions
-  FOR EACH ROW
-  EXECUTE FUNCTION trigger_update_notifications_on_interaction();
+-- Create trigger on interactions table (if it exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'interactions'
+  ) THEN
+    DROP TRIGGER IF EXISTS trg_interactions_update_notifications ON interactions;
+    CREATE TRIGGER trg_interactions_update_notifications
+      AFTER INSERT ON interactions
+      FOR EACH ROW
+      EXECUTE FUNCTION trigger_update_notifications_on_interaction();
+    
+    RAISE NOTICE 'Created trigger on interactions table';
+  ELSE
+    RAISE NOTICE 'Interactions table does not exist yet. Skipping trigger creation.';
+  END IF;
+END $$;
 
 -- Add comments
 COMMENT ON FUNCTION update_notification_state_for_account IS 
