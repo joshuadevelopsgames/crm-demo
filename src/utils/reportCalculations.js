@@ -228,20 +228,25 @@ export function filterEstimatesByYear(estimates, year) {
   });
 
   return uniqueEstimates.filter(estimate => {
-    // Smart date fallback for year filtering:
-    // 1. Use estimate_date if available (primary field)
-    // 2. For won estimates, use estimate_close_date if estimate_date is missing
-    // 3. Fall back to created_at as last resort (but this is less accurate)
-    let dateToUse = estimate.estimate_date;
-    if (!dateToUse) {
-      // For won estimates, use estimate_close_date if available
-      if (estimate.status === 'won' && estimate.estimate_close_date) {
-        dateToUse = estimate.estimate_close_date;
-      } else {
-        // Last resort: use created_at (but this is when we imported, not when estimate was created)
-        dateToUse = estimate.created_at;
-      }
+    // Business logic for year filtering:
+    // 1. If estimate has a close date → use that year (counts in year it closed)
+    // 2. Otherwise, use estimate_date → use that year (counts in year it was made, even if for future year)
+    // 3. Fall back to created_at as last resort
+    let dateToUse = null;
+    
+    // Priority 1: If estimate closed, count it in the year it closed
+    if (estimate.estimate_close_date) {
+      dateToUse = estimate.estimate_close_date;
     }
+    // Priority 2: Otherwise, use the date the estimate was made (even if for future year)
+    else if (estimate.estimate_date) {
+      dateToUse = estimate.estimate_date;
+    }
+    // Priority 3: Last resort - use created_at (when we imported it)
+    else {
+      dateToUse = estimate.created_at;
+    }
+    
     if (!dateToUse) return false;
     
     // Exclude estimates marked for exclusion from stats

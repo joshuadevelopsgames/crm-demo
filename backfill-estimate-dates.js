@@ -75,12 +75,16 @@ async function backfillEstimateDates() {
       try {
         let newEstimateDate = null;
 
-        // For won estimates, use estimate_close_date if available
-        if (estimate.status === 'won' && estimate.estimate_close_date) {
-          newEstimateDate = estimate.estimate_close_date;
-        }
-        // Otherwise, leave it null (don't use created_at as that's when we imported, not when estimate was created)
+        // Note: We don't backfill estimate_date from estimate_close_date anymore
+        // because the Reports logic now uses close_date directly if available.
+        // Only backfill if we have a reliable source (like from a re-import).
+        // For now, leave it null - the Reports page will use close_date or created_at as fallback.
 
+        // Actually, let's not backfill at all - the Reports logic handles the fallback correctly
+        // This script is now mainly for reference/documentation
+        skippedCount++;
+        continue;
+        
         if (newEstimateDate) {
           const { error: updateError } = await supabase
             .from('estimates')
