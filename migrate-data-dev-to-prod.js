@@ -40,13 +40,13 @@ try {
   }
 } catch (e) {}
 
-// Dev Supabase connection
-const DEV_SUPABASE_URL = process.env.DEV_SUPABASE_URL;
-const DEV_SUPABASE_SERVICE_ROLE_KEY = process.env.DEV_SUPABASE_SERVICE_ROLE_KEY;
+// Dev Supabase connection (fallback to regular SUPABASE_ vars if DEV_ not set)
+const DEV_SUPABASE_URL = process.env.DEV_SUPABASE_URL || process.env.SUPABASE_URL;
+const DEV_SUPABASE_SERVICE_ROLE_KEY = process.env.DEV_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Prod Supabase connection
-const PROD_SUPABASE_URL = process.env.PROD_SUPABASE_URL;
-const PROD_SUPABASE_SERVICE_ROLE_KEY = process.env.PROD_SUPABASE_SERVICE_ROLE_KEY;
+// Prod Supabase connection (fallback to regular SUPABASE_ vars if PROD_ not set)
+const PROD_SUPABASE_URL = process.env.PROD_SUPABASE_URL || process.env.SUPABASE_URL;
+const PROD_SUPABASE_SERVICE_ROLE_KEY = process.env.PROD_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!DEV_SUPABASE_URL || !DEV_SUPABASE_SERVICE_ROLE_KEY) {
   console.error('❌ Missing dev Supabase credentials');
