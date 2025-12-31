@@ -14,6 +14,9 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS blocked_by_task_id uuid REFERENCES ta
 -- Create index for blocked_by_task_id
 CREATE INDEX IF NOT EXISTS idx_tasks_blocked_by_task_id ON tasks(blocked_by_task_id);
 
+-- Add is_recurring to tasks table
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;
+
 -- Verify columns were added
 SELECT 
   'accounts' as table_name,
