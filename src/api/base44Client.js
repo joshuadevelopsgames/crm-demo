@@ -800,6 +800,41 @@ export const base44 = {
         const data = await getData('estimates', forceRefresh);
         return Array.isArray(data) ? data : [];
       },
+      // Get yearly official LMN data (from detailed exports)
+      getYearlyOfficial: async (year) => {
+        try {
+          const response = await fetch(`/api/data/yearlyOfficialData?year=${year}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch yearly official data: ${response.statusText}`);
+          }
+          const result = await response.json();
+          if (result.success) {
+            console.log(`📡 Loaded ${result.count} official estimates for year ${year}`);
+            return result.data || [];
+          }
+          return [];
+        } catch (error) {
+          console.warn(`Error loading yearly official data for ${year}:`, error);
+          return [];
+        }
+      },
+      // Get all available years with official data
+      getAvailableOfficialYears: async () => {
+        try {
+          const response = await fetch('/api/data/yearlyOfficialData');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch yearly official data: ${response.statusText}`);
+          }
+          const result = await response.json();
+          if (result.success) {
+            return result.availableYears || [];
+          }
+          return [];
+        } catch (error) {
+          console.warn('Error loading available official years:', error);
+          return [];
+        }
+      },
       create: async (data) => {
         const response = await fetch('/api/data/estimates', {
           method: 'POST',

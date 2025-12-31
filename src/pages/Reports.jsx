@@ -57,7 +57,7 @@ export default function Reports() {
     return years;
   }, [currentYear]);
 
-  // Fetch estimates
+  // Fetch estimates (regular database estimates)
   const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
@@ -76,6 +76,49 @@ export default function Reports() {
       }
     }
   });
+
+  // Fetch yearly official LMN data (from detailed exports) - source of truth
+  const { data: yearlyOfficialData = [], isLoading: yearlyOfficialLoading, error: yearlyOfficialError } = useQuery({
+    queryKey: ['yearlyOfficialData', selectedYear],
+    queryFn: async () => {
+      try {
+        const data = await base44.entities.Estimate.getYearlyOfficial(selectedYear);
+        console.log('📊 Reports: Fetched yearly official data', {
+          year: selectedYear,
+          total: data.length,
+          source: 'LMN Detailed Export'
+        });
+        return data;
+      } catch (error) {
+        console.error('📊 Reports: Error fetching yearly official data', error);
+        return [];
+      }
+    },
+    enabled: true, // Always try to fetch, but gracefully handle if not available
+  });
+
+  // Get available years with official data
+  const { data: availableOfficialYears = [] } = useQuery({
+    queryKey: ['availableOfficialYears'],
+    queryFn: async () => {
+      try {
+        const years = await base44.entities.Estimate.getAvailableOfficialYears();
+        console.log('📊 Reports: Available official years', years);
+        return years;
+      } catch (error) {
+        console.warn('📊 Reports: Error fetching available official years', error);
+        return [];
+      }
+    },
+  });
+
+  // Determine which data source to use
+  const hasOfficialDataForYear = availableOfficialYears.includes(selectedYear);
+  const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+  
+  // Use official data if available, otherwise use regular estimates
+  const sourceEstimates = useOfficialData ? yearlyOfficialData : estimates;
+  const dataSource = useOfficialData ? 'LMN Official (Detailed Export)' : 'Database (General Export)';
 
   // Calculate available years from estimates (use same logic: close_date -> estimate_date, exclude if neither exists)
   const availableYears = useMemo(() => {
@@ -439,11 +482,11 @@ export default function Reports() {
     return filtered;
   }, [estimates, selectedYear, selectedAccount, selectedDepartment]);
 
-  // Get unique departments
+  // Get unique departments (from source estimates - either official or regular)
   const departments = useMemo(() => {
-    const depts = new Set(estimates.map(e => e.division).filter(Boolean));
+    const depts = new Set(sourceEstimates.map(e => e.division).filter(Boolean));
     return Array.from(depts).sort();
-  }, [estimates]);
+  }, [sourceEstimates]);
 
   // Calculate basic stats
   const stats = useMemo(() => {
@@ -468,9 +511,20 @@ export default function Reports() {
   }, [filteredEstimates]);
 
   // Get estimates for selected year (for reports)
-  // Use salesPerformanceMode=false for general reports (close_date OR estimate_date)
-  // Individual report components can use salesPerformanceMode=true if needed
+  // If official data is available for this year, use it as source of truth
+  // Otherwise, use regular estimates with filtering
   const yearEstimates = useMemo(() => {
+    // Use official data if available for this year
+    if (useOfficialData && yearlyOfficialData.length > 0) {
+      console.log('📊 Reports: Using official LMN data for year', {
+        year: selectedYear,
+        count: yearlyOfficialData.length,
+        source: 'LMN Detailed Export'
+      });
+      return yearlyOfficialData;
+    }
+    
+    // Otherwise, use regular estimates with filtering
     const filtered = filterEstimatesByYear(estimates, selectedYear, false);
     console.log('📊 Reports: yearEstimates from filterEstimatesByYear', {
       total: estimates.length,
@@ -484,17 +538,18 @@ export default function Reports() {
       }))
     });
     return filtered;
-  }, [estimates, selectedYear]);
+  }, [estimates, selectedYear, useOfficialData, yearlyOfficialData]);
   
   // Apply account and department filters to year estimates
+  // Note: Official data may not have account_id, so we filter by division only
   const filteredYearEstimates = useMemo(() => {
     return yearEstimates.filter(estimate => {
-      // Filter by account
-      if (selectedAccount !== 'all' && estimate.account_id !== selectedAccount) {
+      // Filter by account (if estimate has account_id)
+      if (selectedAccount !== 'all' && estimate.account_id && estimate.account_id !== selectedAccount) {
         return false;
       }
 
-      // Filter by department
+      // Filter by department/division
       if (selectedDepartment !== 'all' && estimate.division !== selectedDepartment) {
         return false;
       }
@@ -567,10 +622,27 @@ export default function Reports() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
           <p className="text-slate-600 mt-1">End of year analysis and performance metrics</p>
-          {/* Debug info - remove after fixing */}
-          <p className="text-xs text-red-500 mt-1">
-            DEBUG: Estimates: {estimates.length}, Filtered: {filteredEstimates.length}, Year: {selectedYear}
-          </p>
+          
+          {/* Data Source Indicator */}
+          {useOfficialData ? (
+            <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <p className="text-sm text-emerald-800">
+                ✅ <strong>Using LMN Official Data</strong> - Reports match LMN's "Sales Pipeline Detail" exactly
+              </p>
+              <p className="text-xs text-emerald-700 mt-1">
+                Source: Estimate List - Detailed Export.xlsx ({yearlyOfficialData.length} estimates)
+              </p>
+            </div>
+          ) : hasOfficialDataForYear === false && availableOfficialYears.length > 0 ? (
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                ⚠️ <strong>Using Database Data</strong> - Official LMN data available for: {availableOfficialYears.join(', ')}
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                For exact LMN alignment, use a year with official data
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Button
