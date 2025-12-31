@@ -264,12 +264,24 @@ export default function Reports() {
     );
   }
 
+  // Force log on every render
+  console.log('📊 Reports: RENDER - About to return JSX', {
+    estimatesCount: estimates.length,
+    filteredCount: filteredEstimates.length,
+    yearEstimatesCount: yearEstimates.length,
+    stats: stats
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
           <p className="text-slate-600 mt-1">End of year analysis and performance metrics</p>
+          {/* Debug info - remove after fixing */}
+          <p className="text-xs text-red-500 mt-1">
+            DEBUG: Estimates: {estimates.length}, Filtered: {filteredEstimates.length}, Year: {selectedYear}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
