@@ -91,11 +91,28 @@ async function fixEstimateDates() {
   console.log('🔧 Fixing estimate dates from Excel file...\n');
 
   const downloadsPath = join(homedir(), 'Downloads');
-  const filePath = join(downloadsPath, 'Estimates List (3).xlsx');
-
-  if (!existsSync(filePath)) {
-    console.error('❌ File not found:', filePath);
-    console.error('   Please make sure "Estimates List (3).xlsx" is in your Downloads folder.');
+  // Try multiple possible filenames
+  const possibleFiles = [
+    'Estimates List (3).xlsx',
+    'Estimates List.xlsx',
+    'Estimates List (2).xlsx',
+    'Estimates List (1).xlsx'
+  ];
+  
+  let filePath = null;
+  for (const filename of possibleFiles) {
+    const path = join(downloadsPath, filename);
+    if (existsSync(path)) {
+      filePath = path;
+      console.log(`✅ Found file: ${filename}`);
+      break;
+    }
+  }
+  
+  if (!filePath) {
+    console.error('❌ File not found. Tried:');
+    possibleFiles.forEach(f => console.error(`   - ${f}`));
+    console.error(`\n   Please make sure one of these files is in your Downloads folder.`);
     process.exit(1);
   }
 
