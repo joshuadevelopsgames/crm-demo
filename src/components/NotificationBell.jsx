@@ -647,22 +647,29 @@ export default function NotificationBell() {
   }, [groupedNotifications, currentUserId, snoozes]);
 
   // Define notification type priority (lower number = higher priority)
+  // Order: At Risk (1) -> Neglected Accounts (2) -> Overdue Tasks (3) -> Others
   const getTypePriority = (type) => {
     const priorities = {
-      'renewal_reminder': 1,
-      'neglected_account': 2,
-      'task_assigned': 2.5,
-      'task_overdue': 3,
-      'task_due_today': 4,
-      'task_reminder': 5,
-      'end_of_year_analysis': 6
+      'renewal_reminder': 1,        // At Risk - highest priority
+      'neglected_account': 2,       // Neglected Accounts - second priority
+      'task_overdue': 3,            // Overdue Tasks - third priority (after neglected accounts)
+      'task_assigned': 4,
+      'task_due_today': 5,
+      'task_reminder': 6,
+      'end_of_year_analysis': 7
     };
     return priorities[type] || 99; // Unknown types go last
   };
 
-  // Sort groups by newest notification first, then priority, then unread count
+  // Sort groups by priority first, then by newest notification, then unread count
   notificationGroups.sort((a, b) => {
-    // First, sort by newest notification in each group (newest groups first)
+    // First, sort by type priority (priority takes precedence over date)
+    const priorityA = getTypePriority(a.type);
+    const priorityB = getTypePriority(b.type);
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB; // Lower priority number = higher priority
+    }
+    // Then by newest notification in each group (newest groups first)
     const newestA = a.notifications.length > 0 
       ? new Date(a.notifications[0].created_at || a.notifications[0].scheduled_for || 0).getTime()
       : 0;
@@ -671,12 +678,6 @@ export default function NotificationBell() {
       : 0;
     if (newestA !== newestB) {
       return newestB - newestA; // Newest first
-    }
-    // Then by type priority
-    const priorityA = getTypePriority(a.type);
-    const priorityB = getTypePriority(b.type);
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB; // Lower priority number = higher priority
     }
     // Then by unread count (groups with unread first)
     if (a.unreadCount !== b.unreadCount) {
