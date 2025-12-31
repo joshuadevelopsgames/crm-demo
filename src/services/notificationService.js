@@ -206,19 +206,17 @@ export async function createOverdueTaskNotifications() {
     // Phase 1: Collect all overdue task notifications to create
     const notificationsToCreate = [];
     
-    // Process each task
+    // Process each task - use EXACT same logic as Dashboard
     for (const task of tasks) {
-      // Skip tasks without due dates or completed tasks (matches Dashboard logic)
+      // Skip tasks without due dates or completed tasks (matches Dashboard logic exactly)
       if (!task.due_date || task.status === 'completed') {
         continue;
       }
       
-      // Task is overdue if due date is before now (matches Dashboard logic exactly: new Date(task.due_date) < new Date())
-      const dueDateObj = new Date(task.due_date);
-      const nowObj = new Date();
-      const isOverdue = dueDateObj < nowObj;
+      // Task is overdue if due date is before now (matches Dashboard logic EXACTLY: new Date(task.due_date) < new Date())
+      const isOverdue = new Date(task.due_date) < new Date();
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:214',message:'Overdue check',data:{taskId:task.id,taskTitle:task.title,dueDate:task.due_date,dueDateObj:dueDateObj.toISOString(),nowObj:nowObj.toISOString(),isOverdue,status:task.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:214',message:'Overdue check',data:{taskId:task.id,taskTitle:task.title,dueDate:task.due_date,isOverdue,status:task.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       // Only process overdue tasks
       if (!isOverdue) {
