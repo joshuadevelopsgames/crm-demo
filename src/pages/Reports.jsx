@@ -152,7 +152,7 @@ export default function Reports() {
       availableYearsError: availableYearsError?.message,
       useOfficialData
     });
-  }, [selectedYear, selectedYearNum, availableOfficialYears, hasOfficialDataForYear, yearlyOfficialData.length, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError, useOfficialData]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData.length, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError]);
   
   // Use official data if available, otherwise use regular estimates
   const sourceEstimates = useOfficialData ? yearlyOfficialData : estimates;
@@ -619,7 +619,7 @@ export default function Reports() {
       selectedYear
     });
     return filtered;
-  }, [estimates, selectedYear, useOfficialData, yearlyOfficialData, hasOfficialDataForYear, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
+  }, [estimates, selectedYear, yearlyOfficialData, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
   
   // Apply account and department filters to year estimates
   // Note: Official data may not have account_id, so we filter by division only
@@ -661,7 +661,7 @@ export default function Reports() {
       filteredYearEstimatesCount: filteredYearEstimates.length,
       stats
     });
-  }, [selectedYear, useOfficialData, hasOfficialDataForYear, availableOfficialYears, yearlyOfficialData.length, yearEstimates.length, filteredYearEstimates.length, stats]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData.length, yearEstimates.length, filteredYearEstimates.length]);
 
   // Calculate estimates missing both dates (must be before early returns to maintain hook order)
   const estimatesMissingDates = useMemo(() => {
