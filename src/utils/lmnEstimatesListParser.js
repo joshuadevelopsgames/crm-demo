@@ -113,29 +113,30 @@ export function parseEstimatesList(csvTextOrRows) {
             // Convert Excel serial number to UTC date components directly
             const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // UTC: Dec 30, 1899
             const date = new Date(excelEpoch.getTime() + (value - 1) * 24 * 60 * 60 * 1000);
-            // Use UTC methods to extract date components to avoid timezone shifts
+            // Return as ISO timestamp with timezone (timestamptz format for database)
+            // Use UTC midnight to avoid timezone issues
             const year = date.getUTCFullYear();
             const month = String(date.getUTCMonth() + 1).padStart(2, '0');
             const day = String(date.getUTCDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp for timestamptz
           }
           // Try parsing as date string
           if (typeof value === 'string') {
-            // If it's already in YYYY-MM-DD format, use it directly
+            // If it's already in YYYY-MM-DD format, convert to ISO timestamp
             const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (isoMatch) {
-              return isoMatch[0]; // Return YYYY-MM-DD
+              return `${isoMatch[0]}T00:00:00Z`; // Convert to ISO timestamp
             }
             // Try parsing as UTC date string
             // If the string includes timezone info, parse it as UTC
             if (value.includes('T') || value.includes('Z') || value.includes('+') || value.includes('-')) {
               const parsed = new Date(value);
               if (!isNaN(parsed.getTime())) {
-                // Extract UTC date components to avoid timezone conversion
+                // Extract UTC date components and return as ISO timestamp
                 const year = parsed.getUTCFullYear();
                 const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
                 const day = String(parsed.getUTCDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
+                return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp
               }
             } else {
               // Try parsing as a simple date string (assume UTC)
@@ -144,7 +145,7 @@ export function parseEstimatesList(csvTextOrRows) {
                 const year = parsed.getUTCFullYear();
                 const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
                 const day = String(parsed.getUTCDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
+                return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp
               }
             }
           }

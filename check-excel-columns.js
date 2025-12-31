@@ -1,162 +1,107 @@
 #!/usr/bin/env node
 
+/**
+ * Check exact column names in Excel import files
+ * This helps identify column name mismatches
+ */
+
 import XLSX from 'xlsx';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-// Check for Estimates List file in Downloads
 const downloadsPath = join(homedir(), 'Downloads');
-const possibleFiles = [
-  'Estimates List.xlsx',
-  'Estimates List (1).xlsx',
-  'Estimates List (2).xlsx',
+
+const files = [
   'Estimates List (3).xlsx',
-  'Estimates List (4).xlsx',
+  'Leads (5).xlsx',
+  'Contacts Export (4).xlsx',
+  'Jobsite Export (3).xlsx'
 ];
 
-let filePath = null;
-for (const fileName of possibleFiles) {
-  const fullPath = join(downloadsPath, fileName);
-  if (existsSync(fullPath)) {
-    filePath = fullPath;
-    console.log(`📄 Found file: ${fileName}\n`);
-    break;
+console.log('📋 Checking column names in Excel import files...\n');
+
+files.forEach(fileName => {
+  const filePath = join(downloadsPath, fileName);
+  
+  if (!existsSync(filePath)) {
+    console.log(`❌ ${fileName}: File not found`);
+    return;
   }
-}
-
-if (!filePath) {
-  console.log('❌ Could not find "Estimates List.xlsx" in Downloads folder');
-  console.log('   Please provide the path to your Estimates List file:');
-  console.log('   node check-excel-columns.js /path/to/Estimates\ List.xlsx');
-  process.exit(1);
-}
-
-// If path provided as argument, use it
-if (process.argv[2]) {
-  filePath = process.argv[2];
-}
-
-console.log(`📖 Reading Excel file: ${filePath}\n`);
-
-try {
-  const workbook = XLSX.readFile(filePath);
   
-  console.log(`📋 Found ${workbook.SheetNames.length} sheet(s):\n`);
-  
-  for (const sheetName of workbook.SheetNames) {
-    console.log(`══════════════════════════════════════════════════`);
-    console.log(`📄 Sheet: "${sheetName}"`);
-    console.log(`══════════════════════════════════════════════════\n`);
+  try {
+    console.log(`\n📄 ${fileName}:`);
+    console.log('═'.repeat(60));
     
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
-    // Try to read as JSON to get headers
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null, header: 1 });
+    // Read first row as headers
+    const rows = XLSX.utils.sheet_to_json(worksheet, { 
+      header: 1, 
+      defval: '',
+      raw: false 
+    });
     
-    if (jsonData.length === 0) {
-      console.log('   ⚠️  Sheet is empty\n');
-      continue;
+    if (rows.length === 0) {
+      console.log('  ⚠️  File is empty');
+      return;
     }
     
-    // Find header row (usually first row, but might be later)
-    let headerRow = null;
-    let headerRowIndex = -1;
+    const headers = rows[0];
+    console.log(`  Total columns: ${headers.length}`);
+    console.log(`  Sheet name: ${sheetName}\n`);
     
-    // Check first few rows for potential headers
-    for (let i = 0; i < Math.min(5, jsonData.length); i++) {
-      const row = jsonData[i];
-      if (Array.isArray(row) && row.length > 0) {
-        // Check if this looks like a header row (has text values, not all empty)
-        const textCount = row.filter(cell => cell && typeof cell === 'string' && cell.trim().length > 0).length;
-        if (textCount > 5) {
-          headerRow = row;
-          headerRowIndex = i;
-          break;
-        }
-      }
-    }
-    
-    if (!headerRow) {
-      console.log('   ⚠️  Could not find header row\n');
-      continue;
-    }
-    
-    console.log(`   Header row found at index ${headerRowIndex}\n`);
-    console.log(`   Total columns: ${headerRow.length}\n`);
-    
-    // Check for contract-related columns
-    const contractColumns = [];
-    const allColumns = [];
-    
-    headerRow.forEach((header, index) => {
+    // Show all column names
+    console.log('  Column names:');
+    headers.forEach((header, index) => {
       if (header) {
-        const headerStr = String(header).trim();
-        allColumns.push({ index, name: headerStr });
-        
-        // Check for contract-related keywords
-        const lowerHeader = headerStr.toLowerCase();
-        if (lowerHeader.includes('contract')) {
-          contractColumns.push({ index, name: headerStr });
-        }
+        console.log(`    [${index}] "${header}"`);
+      } else {
+        console.log(`    [${index}] (empty)`);
       }
     });
     
-    console.log(`   📋 All columns (${allColumns.length}):`);
-    allColumns.forEach(({ index, name }) => {
-      console.log(`      ${index}: "${name}"`);
-    });
+    // Check for date-related columns
+    console.log('\n  Date-related columns:');
+    const dateKeywords = ['date', 'Date', 'DATE', 'created', 'Created', 'close', 'Close', 'start', 'Start', 'end', 'End'];
+    const dateColumns = headers
+      .map((h, i) => ({ name: h, index: i }))
+      .filter(({ name }) => dateKeywords.some(keyword => name && name.includes(keyword)));
     
-    if (contractColumns.length > 0) {
-      console.log(`\n   ✅ Contract-related columns found:`);
-      contractColumns.forEach(({ index, name }) => {
-        console.log(`      ${index}: "${name}"`);
+    if (dateColumns.length > 0) {
+      dateColumns.forEach(({ name, index }) => {
+        console.log(`    [${index}] "${name}"`);
       });
     } else {
-      console.log(`\n   ❌ No contract-related columns found!`);
-      console.log(`      Looking for columns containing "contract"`);
-      console.log(`      Expected: "Contract End" or "Contract Start"`);
+      console.log('    (none found)');
     }
     
-    // Check specifically for "Contract End"
-    const contractEndIndex = headerRow.findIndex(h => 
-      h && String(h).trim().toLowerCase() === 'contract end'
-    );
+    // Check for estimate date specifically
+    console.log('\n  Looking for estimate date columns:');
+    const estimateDateVariations = [
+      'Estimate Date',
+      'EstimateDate',
+      'Estimate Created Date',
+      'Date Created',
+      'Created Date',
+      'Estimate Close Date',
+      'EstimateCloseDate',
+      'Close Date',
+      'Closed Date'
+    ];
     
-    if (contractEndIndex >= 0) {
-      console.log(`\n   ✅ Found "Contract End" at column index ${contractEndIndex}`);
-      
-      // Check if there's any data in this column
-      let dataCount = 0;
-      for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (row && row[contractEndIndex] && String(row[contractEndIndex]).trim()) {
-          dataCount++;
-        }
+    estimateDateVariations.forEach(variation => {
+      const index = headers.findIndex(h => h === variation);
+      if (index !== -1) {
+        console.log(`    ✅ Found "${variation}" at index ${index}`);
       }
-      console.log(`      Found ${dataCount} rows with data in "Contract End" column`);
-    } else {
-      console.log(`\n   ❌ "Contract End" column NOT FOUND!`);
-      console.log(`      The parser expects exactly: "Contract End"`);
-      console.log(`      Check if the column name is slightly different`);
-    }
+    });
     
-    // Check for "Contract Start" too
-    const contractStartIndex = headerRow.findIndex(h => 
-      h && String(h).trim().toLowerCase() === 'contract start'
-    );
-    
-    if (contractStartIndex >= 0) {
-      console.log(`\n   ✅ Found "Contract Start" at column index ${contractStartIndex}`);
-    } else {
-      console.log(`\n   ⚠️  "Contract Start" column NOT FOUND`);
-    }
-    
-    console.log('\n');
+  } catch (error) {
+    console.error(`  ❌ Error reading ${fileName}:`, error.message);
   }
-  
-} catch (error) {
-  console.error('❌ Error reading Excel file:', error.message);
-  process.exit(1);
-}
+});
 
+console.log('\n✅ Column check complete!\n');
