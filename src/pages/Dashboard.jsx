@@ -303,8 +303,9 @@ export default function Dashboard() {
       
       const daysUntil = differenceInDays(new Date(renewalDate), new Date());
       
-      // Only include if renewal is within 6 months (180 days) and in the future
-      if (daysUntil <= 0 || daysUntil > 180) return null;
+      // Include if renewal is within 6 months (180 days) OR has passed (negative days = urgent)
+      // Only exclude if renewal is more than 6 months away (not urgent yet)
+      if (daysUntil > 180) return null;
       
       return {
         ...account,

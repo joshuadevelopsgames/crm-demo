@@ -511,7 +511,11 @@ export async function createRenewalNotifications() {
       
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-      const shouldBeAtRisk = daysUntilRenewal >= 0 && daysUntilRenewal <= 180;
+      // Account should be at_risk if:
+      // 1. Renewal is coming up (0-180 days in future) - proactive renewal
+      // 2. Renewal has passed (daysUntilRenewal < 0) - URGENT: contract expired, needs immediate attention
+      // Account should NOT be at_risk only if renewal is > 180 days away
+      const shouldBeAtRisk = daysUntilRenewal <= 180; // Include past renewals (negative days)
       const isCurrentlyAtRisk = account.status === 'at_risk';
       
       if (shouldBeAtRisk && !isCurrentlyAtRisk && account.status !== 'churned') {
@@ -523,7 +527,9 @@ export async function createRenewalNotifications() {
         }
       } else if (shouldBeAtRisk && isCurrentlyAtRisk) {
         atRiskAlreadyCount++;
-      } else if (isCurrentlyAtRisk && (daysUntilRenewal < 0 || daysUntilRenewal > 180)) {
+      } else if (isCurrentlyAtRisk && daysUntilRenewal > 180) {
+        // Only remove from at_risk if renewal is more than 6 months away (not urgent yet)
+        // Keep at_risk if renewal passed (daysUntilRenewal < 0) - those are URGENT
         try {
           await base44.entities.Account.update(account.id, { status: 'active' });
         } catch (error) {
