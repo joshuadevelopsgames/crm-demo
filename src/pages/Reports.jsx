@@ -103,6 +103,13 @@ export default function Reports() {
     });
     
     console.log('📊 Reports: After deduplication', { uniqueCount: uniqueEstimates.length });
+    
+    // Debug: Check sample dates to see format
+    const sampleDates = uniqueEstimates
+      .filter(e => e.estimate_date)
+      .slice(0, 10)
+      .map(e => ({ id: e.id, estimate_date: e.estimate_date, type: typeof e.estimate_date }));
+    console.log('📊 Reports: Sample estimate dates', sampleDates);
 
     const filtered = uniqueEstimates.filter(estimate => {
       // Filter by year (using estimate_date only to match LMN)
@@ -114,16 +121,43 @@ export default function Reports() {
       // Use substring to extract first 4 characters (year) - more reliable than regex
       const dateStr = String(estimate.estimate_date);
       let estimateYear;
+      
+      // Try to extract year from ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
       if (dateStr.length >= 4) {
-        estimateYear = parseInt(dateStr.substring(0, 4));
+        const yearStr = dateStr.substring(0, 4);
+        estimateYear = parseInt(yearStr);
+        
+        // Validate the extracted year
+        if (isNaN(estimateYear) || estimateYear < 2000 || estimateYear > 2100) {
+          // If substring extraction failed, try Date parsing as fallback
+          const dateObj = new Date(dateStr);
+          if (!isNaN(dateObj.getTime())) {
+            estimateYear = dateObj.getFullYear();
+          } else {
+            console.warn('📊 Reports: Could not parse date:', dateStr, 'for estimate:', estimate.id);
+            return false;
+          }
+        }
       } else {
-        // Fallback to Date parsing if string is too short
-        estimateYear = new Date(dateStr).getFullYear();
+        // Date string is too short, try Date parsing
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+          estimateYear = dateObj.getFullYear();
+        } else {
+          console.warn('📊 Reports: Date string too short:', dateStr, 'for estimate:', estimate.id);
+          return false;
+        }
       }
       
-      // Validate year is reasonable (between 2000 and 2100)
-      if (isNaN(estimateYear) || estimateYear < 2000 || estimateYear > 2100) {
-        return false;
+      // Debug: Log first few estimates to see date format
+      if (uniqueEstimates.indexOf(estimate) < 3) {
+        console.log('📊 Reports: Date parsing example', {
+          original: estimate.estimate_date,
+          dateStr,
+          estimateYear,
+          selectedYear,
+          matches: estimateYear === selectedYear
+        });
       }
       
       if (estimateYear !== selectedYear) return false;
