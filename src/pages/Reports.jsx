@@ -84,34 +84,50 @@ export default function Reports() {
       try {
         // Ensure year is a number
         const yearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+        console.log('📊 Reports: Fetching yearly official data for year', yearNum);
+        
         const data = await base44.entities.Estimate.getYearlyOfficial(yearNum);
-        console.log('📊 Reports: Fetched yearly official data', {
+        
+        console.log('📊 Reports: ✅ Fetched yearly official data', {
           year: yearNum,
           total: data.length,
-          source: 'LMN Detailed Export'
+          source: 'LMN Detailed Export',
+          sample: data.slice(0, 2).map(e => ({ id: e.estimate_id || e.id, status: e.status }))
         });
         return data;
       } catch (error) {
-        console.error('📊 Reports: Error fetching yearly official data', error);
+        console.error('📊 Reports: ❌ Error fetching yearly official data', {
+          error: error.message,
+          stack: error.stack,
+          year: selectedYear
+        });
         return [];
       }
     },
     enabled: true, // Always try to fetch, but gracefully handle if not available
+    retry: 1, // Retry once on failure
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   // Get available years with official data
-  const { data: availableOfficialYears = [] } = useQuery({
+  const { data: availableOfficialYears = [], isLoading: availableYearsLoading, error: availableYearsError } = useQuery({
     queryKey: ['availableOfficialYears'],
     queryFn: async () => {
       try {
+        console.log('📊 Reports: Fetching available official years...');
         const years = await base44.entities.Estimate.getAvailableOfficialYears();
-        console.log('📊 Reports: Available official years', years);
+        console.log('📊 Reports: ✅ Available official years', years);
         return years;
       } catch (error) {
-        console.warn('📊 Reports: Error fetching available official years', error);
+        console.error('📊 Reports: ❌ Error fetching available official years', {
+          error: error.message,
+          stack: error.stack
+        });
         return [];
       }
     },
+    retry: 1,
+    staleTime: 10 * 60 * 1000, // Available years change rarely, cache for 10 minutes
   });
 
   // Determine which data source to use
@@ -119,6 +135,22 @@ export default function Reports() {
   const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
   const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
   const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+  
+  // Debug log data source decision
+  useEffect(() => {
+    console.log('📊 Reports: Data Source Decision', {
+      selectedYear,
+      selectedYearNum,
+      availableOfficialYears,
+      hasOfficialDataForYear,
+      yearlyOfficialDataLength: yearlyOfficialData.length,
+      yearlyOfficialLoading,
+      yearlyOfficialError: yearlyOfficialError?.message,
+      availableYearsLoading,
+      availableYearsError: availableYearsError?.message,
+      useOfficialData
+    });
+  }, [selectedYear, selectedYearNum, availableOfficialYears, hasOfficialDataForYear, yearlyOfficialData.length, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError, useOfficialData]);
   
   // Use official data if available, otherwise use regular estimates
   const sourceEstimates = useOfficialData ? yearlyOfficialData : estimates;

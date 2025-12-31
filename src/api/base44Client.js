@@ -803,35 +803,73 @@ export const base44 = {
       // Get yearly official LMN data (from detailed exports)
       getYearlyOfficial: async (year) => {
         try {
-          const response = await fetch(`/api/data/yearlyOfficialData?year=${year}`);
+          const url = `/api/data/yearlyOfficialData?year=${year}`;
+          console.log(`📡 Fetching yearly official data from: ${url}`);
+          
+          const response = await fetch(url);
+          
           if (!response.ok) {
-            throw new Error(`Failed to fetch yearly official data: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error(`📡 API Error (${response.status}):`, errorText);
+            throw new Error(`Failed to fetch yearly official data: ${response.status} ${response.statusText}`);
           }
+          
           const result = await response.json();
+          console.log(`📡 API Response for year ${year}:`, {
+            success: result.success,
+            count: result.count,
+            source: result.source,
+            availableYears: result.availableYears
+          });
+          
           if (result.success) {
-            console.log(`📡 Loaded ${result.count} official estimates for year ${year}`);
+            console.log(`📡 ✅ Loaded ${result.count} official estimates for year ${year} from ${result.source}`);
             return result.data || [];
           }
+          
+          console.warn(`📡 ⚠️ API returned success=false for year ${year}`);
           return [];
         } catch (error) {
-          console.warn(`Error loading yearly official data for ${year}:`, error);
+          console.error(`📡 ❌ Error loading yearly official data for ${year}:`, {
+            message: error.message,
+            stack: error.stack
+          });
           return [];
         }
       },
       // Get all available years with official data
       getAvailableOfficialYears: async () => {
         try {
-          const response = await fetch('/api/data/yearlyOfficialData');
+          const url = '/api/data/yearlyOfficialData';
+          console.log(`📡 Fetching available official years from: ${url}`);
+          
+          const response = await fetch(url);
+          
           if (!response.ok) {
-            throw new Error(`Failed to fetch yearly official data: ${response.statusText}`);
+            const errorText = await response.text();
+            console.error(`📡 API Error (${response.status}):`, errorText);
+            throw new Error(`Failed to fetch available years: ${response.status} ${response.statusText}`);
           }
+          
           const result = await response.json();
+          console.log(`📡 API Response for available years:`, {
+            success: result.success,
+            availableYears: result.availableYears,
+            source: result.source
+          });
+          
           if (result.success) {
+            console.log(`📡 ✅ Available official years:`, result.availableYears);
             return result.availableYears || [];
           }
+          
+          console.warn(`📡 ⚠️ API returned success=false for available years`);
           return [];
         } catch (error) {
-          console.warn('Error loading available official years:', error);
+          console.error(`📡 ❌ Error loading available official years:`, {
+            message: error.message,
+            stack: error.stack
+          });
           return [];
         }
       },

@@ -49,97 +49,102 @@ export default async function handler(req, res) {
       const { year } = req.query;
 
       // Try to get data from Supabase first
+      // TEMPORARILY DISABLED FOR TESTING - Use JSON file directly
       let useSupabase = false;
       let yearlyData = {};
       let availableYears = [];
 
-      try {
-        const supabase = getSupabase();
-        
-        // Check if table exists by trying to query it
-        const { data: testData, error: testError } = await supabase
-          .from('yearly_official_estimates')
-          .select('source_year')
-          .limit(1);
+      // Skip Supabase for now - use JSON file directly
+      // Set to false to skip Supabase and use JSON file
+      if (false) { // Changed to false to skip Supabase
+        try {
+          const supabase = getSupabase();
+          
+          // Check if table exists by trying to query it
+          const { data: testData, error: testError } = await supabase
+            .from('yearly_official_estimates')
+            .select('source_year')
+            .limit(1);
 
-        if (!testError && testData !== null) {
-          // Table exists, use Supabase
-          useSupabase = true;
+          if (!testError && testData !== null) {
+            // Table exists, use Supabase
+            useSupabase = true;
 
-          if (year) {
-            // Get data for specific year
-            const yearInt = parseInt(year);
-            const { data, error } = await supabase
-              .from('yearly_official_estimates')
-              .select('*')
-              .eq('source_year', yearInt)
-              .order('estimate_close_date', { ascending: false });
+            if (year) {
+              // Get data for specific year
+              const yearInt = parseInt(year);
+              const { data, error } = await supabase
+                .from('yearly_official_estimates')
+                .select('*')
+                .eq('source_year', yearInt)
+                .order('estimate_close_date', { ascending: false });
 
-            if (error) throw error;
+              if (error) throw error;
 
-            return res.status(200).json({
-              success: true,
-              data: data || [],
-              year: yearInt,
-              count: data?.length || 0,
-              source: 'supabase',
-              availableYears: await getAvailableYears(supabase)
-            });
-          } else {
-            // Get all years
-            const { data: allData, error } = await supabase
-              .from('yearly_official_estimates')
-              .select('*')
-              .order('source_year', { ascending: false })
-              .order('estimate_close_date', { ascending: false });
-
-            if (error) throw error;
-
-            // Group by year
-            const grouped = {};
-            allData.forEach(est => {
-              const year = est.source_year;
-              if (!grouped[year]) grouped[year] = [];
-              grouped[year].push(est);
-            });
-
-            availableYears = Object.keys(grouped).map(y => parseInt(y)).sort();
-            const summary = {};
-            
-            Object.keys(grouped).forEach(year => {
-              const yearData = grouped[year];
-              const sold = yearData.filter(e => {
-                const status = (e.status || '').toLowerCase();
-                return status.includes('sold') || 
-                       status === 'contract signed' ||
-                       status === 'work complete' ||
-                       status === 'billing complete';
+              return res.status(200).json({
+                success: true,
+                data: data || [],
+                year: yearInt,
+                count: data?.length || 0,
+                source: 'supabase',
+                availableYears: await getAvailableYears(supabase)
               });
-              const soldDollar = sold.reduce((sum, e) => sum + (parseFloat(e.total_price) || 0), 0);
+            } else {
+              // Get all years
+              const { data: allData, error } = await supabase
+                .from('yearly_official_estimates')
+                .select('*')
+                .order('source_year', { ascending: false })
+                .order('estimate_close_date', { ascending: false });
+
+              if (error) throw error;
+
+              // Group by year
+              const grouped = {};
+              allData.forEach(est => {
+                const year = est.source_year;
+                if (!grouped[year]) grouped[year] = [];
+                grouped[year].push(est);
+              });
+
+              availableYears = Object.keys(grouped).map(y => parseInt(y)).sort();
+              const summary = {};
               
-              summary[year] = {
-                total: yearData.length,
-                sold: sold.length,
-                soldDollar: soldDollar
-              };
-            });
+              Object.keys(grouped).forEach(year => {
+                const yearData = grouped[year];
+                const sold = yearData.filter(e => {
+                  const status = (e.status || '').toLowerCase();
+                  return status.includes('sold') || 
+                         status === 'contract signed' ||
+                         status === 'work complete' ||
+                         status === 'billing complete';
+                });
+                const soldDollar = sold.reduce((sum, e) => sum + (parseFloat(e.total_price) || 0), 0);
+                
+                summary[year] = {
+                  total: yearData.length,
+                  sold: sold.length,
+                  soldDollar: soldDollar
+                };
+              });
 
-            return res.status(200).json({
-              success: true,
-              data: grouped,
-              summary,
-              availableYears,
-              source: 'supabase',
-              message: 'Yearly official data loaded from Supabase'
-            });
+              return res.status(200).json({
+                success: true,
+                data: grouped,
+                summary,
+                availableYears,
+                source: 'supabase',
+                message: 'Yearly official data loaded from Supabase'
+              });
+            }
           }
+        } catch (supabaseError) {
+          // Table doesn't exist or error, fall back to JSON file
+          console.log('Supabase table not available, using JSON file:', supabaseError.message);
         }
-      } catch (supabaseError) {
-        // Table doesn't exist or error, fall back to JSON file
-        console.log('Supabase table not available, using JSON file:', supabaseError.message);
-      }
+      } // End of Supabase block (disabled for testing)
 
-      // Fallback: Read from JSON file
+      // Read from JSON file (primary source when Supabase is disabled)
       const dataPath = join(process.cwd(), 'yearly_official_data.json');
       
       if (!existsSync(dataPath)) {
