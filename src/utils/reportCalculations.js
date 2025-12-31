@@ -45,13 +45,13 @@ export function calculateOverallStats(estimates) {
   // Calculate revenue values
   const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
   const wonValue = estimates
-    .filter(e => e.status === 'won')
+    .filter(e => isWonStatus(e.status))
     .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
   const lostValue = estimates
     .filter(e => e.status === 'lost')
     .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
   const pendingValue = estimates
-    .filter(e => e.status !== 'won' && e.status !== 'lost')
+    .filter(e => !isWonStatus(e.status) && e.status !== 'lost')
     .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
   
   return {
@@ -204,15 +204,36 @@ export function calculateDepartmentStats(estimates) {
 }
 
 /**
+ * Check if an estimate status is considered "won" (sold) based on LMN's logic
+ * Won statuses: Contract Signed, Work Complete, Billing Complete, Email Contract Award, Verbal Contract Award
+ * @param {string} status - Estimate status
+ * @returns {boolean} True if status is considered "won"
+ */
+export function isWonStatus(status) {
+  if (!status) return false;
+  const statusLower = status.toString().toLowerCase().trim();
+  const wonStatuses = [
+    'contract signed',
+    'work complete',
+    'billing complete',
+    'email contract award',
+    'verbal contract award',
+    'won' // Also support our simplified 'won' status
+  ];
+  return wonStatuses.includes(statusLower);
+}
+
+/**
  * Filter estimates by year for Salesperson Performance reports
  * Uses estimate_close_date only (not estimate_date) to match LMN's "All sales figures based on estimates sold" logic
  * Also excludes estimates with exclude_stats=true, archived estimates, removes duplicates, and zero/negative prices
  * @param {Array} estimates - Array of estimate objects
  * @param {number} year - Year to filter by
  * @param {boolean} salesPerformanceMode - If true, only use estimate_close_date (for sales performance). If false, use close_date OR estimate_date (for general reports)
+ * @param {boolean} soldOnly - If true, only include estimates with won statuses (for "Estimates Sold" calculations)
  * @returns {Array} Filtered estimates
  */
-export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false) {
+export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false, soldOnly = false) {
   // First, remove duplicates by lmn_estimate_id (keep first occurrence)
   const uniqueEstimates = [];
   const seenLmnIds = new Set();
@@ -238,6 +259,11 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     // Exclude estimates with zero or negative prices
     const price = parseFloat(estimate.total_price_with_tax || estimate.total_price || 0);
     if (price <= 0) return false;
+    
+    // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
+    if (soldOnly && !isWonStatus(estimate.status)) {
+      return false;
+    }
     
     // Business logic for year filtering:
     let dateToUse = null;

@@ -448,13 +448,13 @@ export default function Reports() {
   // Calculate basic stats
   const stats = useMemo(() => {
     const total = filteredEstimates.length;
-    const won = filteredEstimates.filter(e => e.status === 'won').length;
-    const lost = filteredEstimates.filter(e => e.status !== 'won').length;
+    const won = filteredEstimates.filter(e => isWonStatus(e.status)).length;
+    const lost = filteredEstimates.filter(e => !isWonStatus(e.status)).length;
     const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
     
     const totalValue = filteredEstimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
     const wonValue = filteredEstimates
-      .filter(e => e.status === 'won')
+      .filter(e => isWonStatus(e.status))
       .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax) || 0), 0);
 
     return {
