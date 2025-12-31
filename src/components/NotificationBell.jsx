@@ -203,16 +203,7 @@ export default function NotificationBell() {
       // Debug logging for task_overdue notifications
       if (notification.type === 'task_overdue') {
         const userMatch = notificationUserId === currentUserIdStr;
-          id: notification.id,
-          title: notification.title,
-          message: notification.message,
-          user_id: notification.user_id,
-          currentUserId: currentUserIdStr,
-          userMatch: userMatch,
-          related_task_id: notification.related_task_id,
-          related_account_id: notification.related_account_id,
-          is_read: notification.is_read
-        });
+        // Task overdue notifications are always shown if they match the current user
       }
       
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
