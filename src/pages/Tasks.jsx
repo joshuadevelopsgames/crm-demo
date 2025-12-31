@@ -1933,7 +1933,7 @@ export default function Tasks() {
                             onOpenChange={setAssignedUsersOpen}
                           >
                             <SelectTrigger>
-                              <span className="flex-1 text-left">
+                              <span className={`flex-1 text-left ${parseAssignedUsers(newTask.assigned_to).length > 0 ? 'text-slate-900 dark:text-white' : ''}`}>
                                 {parseAssignedUsers(newTask.assigned_to).length > 0
                                   ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
                                   : "Select users"}
