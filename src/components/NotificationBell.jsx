@@ -454,6 +454,12 @@ export default function NotificationBell() {
     const currentUserIdStr = currentUserId ? String(currentUserId).trim() : null;
     const userFilteredNotifications = currentUserIdStr 
       ? sortedNotifications.filter(n => {
+          // JSONB notifications (neglected_account, renewal_reminder) don't have user_id
+          // They're already user-specific (fetched from user_notification_states)
+          if (n.type === 'neglected_account' || n.type === 'renewal_reminder') {
+            return true; // Already user-specific
+          }
+          // Task notifications need user_id check
           const notificationUserId = n.user_id ? String(n.user_id).trim() : null;
           return notificationUserId === currentUserIdStr;
         })
