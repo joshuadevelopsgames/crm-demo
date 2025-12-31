@@ -471,7 +471,93 @@ export default function Dashboard() {
 
       {/* Alerts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Neglected Accounts - Show first for priority */}
+        {/* At Risk Accounts - Show first for priority */}
+        <TutorialTooltip
+          tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
+          step={1}
+          position="bottom"
+        >
+          <Card className="border-red-200 dark:border-border bg-red-50/50 dark:bg-surface-1">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                  onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                >
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  At Risk Accounts
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
+                    {atRiskRenewals.length}
+                  </Badge>
+                  {atRiskRenewals.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                      className="text-red-700 hover:text-red-900 hover:bg-red-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {atRiskRenewals.slice(0, 5).map(account => {
+                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
+                  return (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-border"
+                    >
+                      <Link
+                        to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                        className="flex-1"
+                      >
+                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-text-muted">
+                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
+                        </p>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSnoozeAccount(account);
+                        }}
+                        className="text-red-700 hover:text-red-900 hover:bg-red-100 ml-2"
+                      >
+                        <BellOff className="w-4 h-4 mr-1" />
+                        Snooze
+                      </Button>
+                    </div>
+                  );
+                })}
+                {atRiskRenewals.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No at-risk renewals 🎉</p>
+                )}
+                {atRiskRenewals.length > 5 && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
+                  >
+                    View All {atRiskRenewals.length} Accounts
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TutorialTooltip>
+
+        {/* Neglected Accounts */}
         <TutorialTooltip
           tip="Accounts that haven't been contacted recently (A/B revenue segments: 30+ days, C/D segments: 90+ days). These relationships may be at risk. Click any account to view details, then log a new interaction (call, email, or meeting) to re-engage. Use the snooze button if you've already reached out. Regular contact prevents accounts from going cold."
           step={1}
@@ -562,92 +648,6 @@ export default function Dashboard() {
                     onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
                   >
                     View All {neglectedAccounts.length} Accounts
-                    <ExternalLink className="w-4 h-4 ml-2" />
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TutorialTooltip>
-
-        {/* At Risk Accounts */}
-        <TutorialTooltip
-          tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
-          step={1}
-          position="bottom"
-        >
-          <Card className="border-red-200 dark:border-border bg-red-50/50 dark:bg-surface-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle 
-                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-red-700 dark:hover:text-red-400 transition-colors"
-                  onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
-                >
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  At Risk Accounts
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
-                    {atRiskRenewals.length}
-                  </Badge>
-                  {atRiskRenewals.length > 5 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
-                      className="text-red-700 hover:text-red-900 hover:bg-red-100"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View All
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {atRiskRenewals.slice(0, 5).map(account => {
-                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
-                  return (
-                    <div
-                      key={account.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-border"
-                    >
-                      <Link
-                        to={createPageUrl(`AccountDetail?id=${account.id}`)}
-                        className="flex-1"
-                      >
-                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-text-muted">
-                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
-                        </p>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setSnoozeAccount(account);
-                        }}
-                        className="text-red-700 hover:text-red-900 hover:bg-red-100 ml-2"
-                      >
-                        <BellOff className="w-4 h-4 mr-1" />
-                        Snooze
-                      </Button>
-                    </div>
-                  );
-                })}
-                {atRiskRenewals.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No at-risk renewals 🎉</p>
-                )}
-                {atRiskRenewals.length > 5 && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-50"
-                    onClick={() => navigate(`${createPageUrl('Accounts')}?status=at_risk`)}
-                  >
-                    View All {atRiskRenewals.length} Accounts
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
                 )}
