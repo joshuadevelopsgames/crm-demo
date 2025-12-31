@@ -148,9 +148,13 @@ export default function Reports() {
     const sortedYears = Array.from(yearsInData).sort((a, b) => b - a);
     console.log('📊 Reports: Available years in data', {
       years: sortedYears,
+      yearsList: sortedYears.join(', '),
       count: sortedYears.length,
       selectedYear,
-      hasSelectedYear: sortedYears.includes(selectedYear)
+      hasSelectedYear: sortedYears.includes(selectedYear),
+      message: sortedYears.includes(selectedYear) 
+        ? `✅ Selected year ${selectedYear} is available` 
+        : `❌ Selected year ${selectedYear} is NOT available. Available years: ${sortedYears.join(', ')}`
     });
 
     const filtered = uniqueEstimates.filter(estimate => {
