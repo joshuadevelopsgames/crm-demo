@@ -64,15 +64,35 @@ export default function Reports() {
   });
 
   // Filter estimates by year, account, and department
+  // Use estimate_date only (not estimate_close_date) to match LMN's counting logic
+  // Also exclude estimates with exclude_stats=true and remove duplicates by lmn_estimate_id
   const filteredEstimates = useMemo(() => {
-    return estimates.filter(estimate => {
-      // Filter by year (using estimate_date or estimate_close_date)
-      const estimateDate = estimate.estimate_close_date || estimate.estimate_date;
-      if (estimateDate) {
-        const estimateYear = new Date(estimateDate).getFullYear();
-        if (estimateYear !== selectedYear) return false;
+    // First, remove duplicates by lmn_estimate_id (keep first occurrence)
+    const uniqueEstimates = [];
+    const seenLmnIds = new Set();
+    estimates.forEach(est => {
+      if (est.lmn_estimate_id) {
+        if (!seenLmnIds.has(est.lmn_estimate_id)) {
+          seenLmnIds.add(est.lmn_estimate_id);
+          uniqueEstimates.push(est);
+        }
       } else {
-        return false; // Skip estimates without dates
+        // Estimates without lmn_estimate_id are included
+        uniqueEstimates.push(est);
+      }
+    });
+
+    return uniqueEstimates.filter(estimate => {
+      // Filter by year (using estimate_date only to match LMN)
+      if (!estimate.estimate_date) {
+        return false; // Skip estimates without estimate_date
+      }
+      const estimateYear = new Date(estimate.estimate_date).getFullYear();
+      if (estimateYear !== selectedYear) return false;
+
+      // Exclude estimates marked for exclusion from stats
+      if (estimate.exclude_stats) {
+        return false;
       }
 
       // Filter by account

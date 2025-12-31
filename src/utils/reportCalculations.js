@@ -205,15 +205,36 @@ export function calculateDepartmentStats(estimates) {
 
 /**
  * Filter estimates by year
+ * Uses estimate_date only (not estimate_close_date) to match LMN's counting logic
+ * Also excludes estimates with exclude_stats=true and removes duplicates by lmn_estimate_id
  * @param {Array} estimates - Array of estimate objects
  * @param {number} year - Year to filter by
  * @returns {Array} Filtered estimates
  */
 export function filterEstimatesByYear(estimates, year) {
-  return estimates.filter(estimate => {
-    const estimateDate = estimate.estimate_close_date || estimate.estimate_date;
-    if (!estimateDate) return false;
-    const estimateYear = new Date(estimateDate).getFullYear();
+  // First, remove duplicates by lmn_estimate_id (keep first occurrence)
+  const uniqueEstimates = [];
+  const seenLmnIds = new Set();
+  estimates.forEach(est => {
+    if (est.lmn_estimate_id) {
+      if (!seenLmnIds.has(est.lmn_estimate_id)) {
+        seenLmnIds.add(est.lmn_estimate_id);
+        uniqueEstimates.push(est);
+      }
+    } else {
+      // Estimates without lmn_estimate_id are included
+      uniqueEstimates.push(est);
+    }
+  });
+
+  return uniqueEstimates.filter(estimate => {
+    // Use estimate_date only (not estimate_close_date) to match LMN
+    if (!estimate.estimate_date) return false;
+    
+    // Exclude estimates marked for exclusion from stats
+    if (estimate.exclude_stats) return false;
+    
+    const estimateYear = new Date(estimate.estimate_date).getFullYear();
     return estimateYear === year;
   });
 }
