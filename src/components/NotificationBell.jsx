@@ -291,12 +291,15 @@ export default function NotificationBell() {
     
     // Debug: Log renewal reminder notifications before filtering
     const renewalReminders = allNotifications.filter(n => n.type === 'renewal_reminder');
-    if (renewalReminders.length > 0) {
-      console.log(`🔔 Found ${renewalReminders.length} renewal_reminder notifications before filtering`);
-      console.log(`🔔 Account IDs:`, renewalReminders.map(n => n.related_account_id).slice(0, 10));
+    const neglectedAccounts = allNotifications.filter(n => n.type === 'neglected_account');
+    if (renewalReminders.length > 0 || neglectedAccounts.length > 0) {
+      console.log(`🔔 Before filtering: ${renewalReminders.length} renewal_reminder, ${neglectedAccounts.length} neglected_account notifications`);
     }
     
-    return allNotifications.filter(notification => {
+    let filteredCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
+    let filteredOutCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
+    
+    const filtered = allNotifications.filter(notification => {
       // For JSONB notifications (neglected_account, renewal_reminder), they don't have user_id
       // because they're already user-specific (fetched from user_notification_states table)
       // For task notifications (individual rows), check user_id
@@ -324,6 +327,7 @@ export default function NotificationBell() {
       // Handle null, undefined, or 'null' string values
       const accountId = notification.related_account_id;
       if (!accountId || accountId === 'null' || accountId === null || accountId === undefined) {
+        console.log(`🚫 Filtering out renewal_reminder: no account ID`);
         return false; // No account ID means we can't verify if it should be at-risk
       }
       
@@ -333,30 +337,37 @@ export default function NotificationBell() {
       if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
         // Still show the notification - server created it, so it's valid
         // We'll just skip the verification step
-        return true;
+        console.log(`✅ Showing renewal_reminder (data not loaded yet): account ${accountId}`);
+        // Continue to snooze check below
+      } else {
+        // Once calculation is complete, verify the notification matches an account that SHOULD be at_risk
+        // Use string comparison to handle type mismatches (UUID vs text)
+        const accountIdStr = String(accountId).trim();
+        const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
+        const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
+        
+        // If the account is not in the at-risk set, it might have been filtered out incorrectly
+        // or the calculation is slightly off. Log a warning but still show the notification
+        // (the server created it, so it's likely valid)
+        if (!isInAtRiskSet) {
+          console.warn(`⚠️ Renewal reminder notification for account ${accountIdStr} doesn't match calculated at-risk accounts. Showing anyway (server created it).`);
+          console.warn(`⚠️ Calculated at-risk accounts (${atRiskAccountIds.length}):`, atRiskAccountIds.slice(0, 5));
+          // Still show it - server is source of truth
+          // Continue to snooze check below
+        } else {
+          // Debug: Log when notification matches
+          console.log(`✅ Renewal reminder notification for account ${accountIdStr} matches calculated at-risk accounts`);
+        }
       }
       
-      // Once calculation is complete, verify the notification matches an account that SHOULD be at_risk
-      // Use string comparison to handle type mismatches (UUID vs text)
-      const accountIdStr = String(accountId).trim();
-      const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
-      const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
-      
-      // If the account is not in the at-risk set, it might have been filtered out incorrectly
-      // or the calculation is slightly off. Log a warning but still show the notification
-      // (the server created it, so it's likely valid)
-      if (!isInAtRiskSet) {
-        console.warn(`⚠️ Renewal reminder notification for account ${accountIdStr} doesn't match calculated at-risk accounts. Showing anyway (server created it).`);
-        console.warn(`⚠️ Calculated at-risk accounts (${atRiskAccountIds.length}):`, atRiskAccountIds.slice(0, 5));
-        // Still show it - server is source of truth
-        return true;
-      }
-      
-      // Debug: Log when notification matches
-      console.log(`✅ Renewal reminder notification for account ${accountIdStr} matches calculated at-risk accounts`);
-      
-      // If we get here, the notification should be shown (account is at-risk)
-      // But we still need to check if it's snoozed
+      // If we get here, the notification should be shown (account is at-risk or server says so)
+      // But we still need to check if it's snoozed (check happens below)
+    }
+    
+    // For neglected_account notifications, they should always be shown (server created them)
+    // Just need to check if snoozed (check happens below)
+    if (notification.type === 'neglected_account') {
+      // Continue to snooze check below - don't filter out
     }
     
     // For task_assigned notifications, hide them if the task is overdue
@@ -387,8 +398,30 @@ export default function NotificationBell() {
       console.log(`⚠️ task_overdue notification ${notification.id} is snoozed (shouldn't happen, but logging anyway)`);
     }
     
-    return !isSnoozed;
+    const shouldShow = !isSnoozed;
+    
+    // Track filtering
+    if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account' || notification.type.startsWith('task_')) {
+      if (shouldShow) {
+        filteredCount[notification.type === 'renewal_reminder' ? 'renewal_reminder' : notification.type === 'neglected_account' ? 'neglected_account' : 'task']++;
+      } else {
+        filteredOutCount[notification.type === 'renewal_reminder' ? 'renewal_reminder' : notification.type === 'neglected_account' ? 'neglected_account' : 'task']++;
+        if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account') {
+          console.log(`🚫 Filtered out ${notification.type} notification for account ${notification.related_account_id} (snoozed: ${isSnoozed})`);
+        }
+      }
+    }
+    
+    return shouldShow;
     });
+    
+    // Log filtering results
+    console.log(`🔔 After filtering: ${filteredCount.renewal_reminder} renewal_reminder, ${filteredCount.neglected_account} neglected_account, ${filteredCount.task} task notifications shown`);
+    if (filteredOutCount.renewal_reminder > 0 || filteredOutCount.neglected_account > 0) {
+      console.log(`🚫 Filtered out: ${filteredOutCount.renewal_reminder} renewal_reminder, ${filteredOutCount.neglected_account} neglected_account notifications`);
+    }
+    
+    return filtered;
   }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes, overdueTaskIds]);
 
   // Debug logging
