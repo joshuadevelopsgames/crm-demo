@@ -712,10 +712,15 @@ export default function NotificationBell() {
     }
   });
 
-  const unreadCount = activeNotifications.filter(n => !n.is_read).length;
+  // Calculate total unread count from grouped notifications (respects unique account logic)
+  const totalUnreadCount = notificationGroups.reduce((sum, group) => {
+    // For renewal_reminder and neglected_account, use unreadCount (unique accounts)
+    // For other types, use unreadCount (which equals count for non-account types)
+    return sum + (group.unreadCount || 0);
+  }, 0);
   
-  // For badge count, show total unread (not grouped)
-  const displayUnreadCount = unreadCount;
+  // For badge count, show total unread from groups (respects unique account logic)
+  const displayUnreadCount = totalUnreadCount;
 
   // Snooze notification mutation (universal - affects all users)
   const snoozeNotificationMutation = useMutation({
