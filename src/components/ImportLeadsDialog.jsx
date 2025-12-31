@@ -290,7 +290,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
       
       // Fetch existing data and run validation
       setImportStatus('validating');
+      console.log('🔄 Starting validation - fetching existing data...');
       const existing = await fetchExistingData();
+      console.log('✅ Finished fetching existing data');
       
       // Compare imported data with existing data
       const comparison = compareWithExisting(merged, existing.accounts, existing.contacts, existing.estimates, existing.jobsites, validIds);
