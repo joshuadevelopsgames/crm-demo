@@ -1882,9 +1882,6 @@ export default function Tasks() {
                                   <SelectItem value="other">Other</SelectItem>
                                 </>
                               )}
-                              {!selectedTaskType && (
-                                <SelectItem value="" disabled>Select task type first</SelectItem>
-                              )}
                             </SelectContent>
                           </Select>
                         </div>
