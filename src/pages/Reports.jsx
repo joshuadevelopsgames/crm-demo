@@ -19,7 +19,8 @@ import {
   TrendingUp,
   BarChart3,
   PieChart,
-  Building2
+  Building2,
+  AlertCircle
 } from 'lucide-react';
 import { filterEstimatesByYear, formatCurrency } from '@/utils/reportCalculations';
 import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
@@ -576,6 +577,38 @@ export default function Reports() {
           </Button>
         </div>
       </div>
+
+      {/* Data Quality Warning - Estimates Missing Dates */}
+      {estimatesMissingDates.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                  Data Quality Issue: {estimatesMissingDates.length} estimate{estimatesMissingDates.length !== 1 ? 's' : ''} missing dates
+                </h3>
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  These estimates are missing both <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">estimate_date</code> and <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">estimate_close_date</code>, 
+                  so they are excluded from year-based reports. Please update these estimates with the correct dates to include them in reports.
+                </p>
+                {estimatesMissingDates.length <= 10 && (
+                  <div className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                    <p className="font-medium mb-1">Affected estimates:</p>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      {estimatesMissingDates.slice(0, 10).map(est => (
+                        <li key={est.id}>
+                          {est.lmn_estimate_id || est.estimate_number || est.id} - {est.project_name || est.contact_name || 'Unnamed'}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
