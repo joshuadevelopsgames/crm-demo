@@ -198,6 +198,22 @@ export default function NotificationBell() {
       if (notificationUserId !== currentUserIdStr) {
         return false; // Not for current user
       }
+      
+      // Debug logging for task_overdue notifications
+      if (notification.type === 'task_overdue') {
+        console.log(`🔔 Processing task_overdue notification:`, {
+          id: notification.id,
+          title: notification.title,
+          message: notification.message,
+          user_id: notification.user_id,
+          currentUserId: currentUserIdStr,
+          userMatch: notificationUserId === currentUserIdStr,
+          related_task_id: notification.related_task_id,
+          related_account_id: notification.related_account_id,
+          is_read: notification.is_read
+        });
+      }
+      
     // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
     if (notification.type === 'renewal_reminder') {
       // If accounts/estimates haven't loaded yet, or calculation hasn't completed, don't show renewal notifications
