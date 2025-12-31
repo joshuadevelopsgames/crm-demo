@@ -54,6 +54,9 @@ export default function Reports() {
   }, [currentYear]);
 
   // Fetch estimates (regular database estimates)
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:57',message:'BEFORE useQuery estimates',data:{selectedYear},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
@@ -74,6 +77,9 @@ export default function Reports() {
     },
     enabled: true
   });
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:76',message:'AFTER useQuery estimates',data:{estimatesType:typeof estimates,estimatesIsArray:Array.isArray(estimates),estimatesLength:estimates?.length,isLoading:estimatesLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   // Log estimates query state
   useEffect(() => {
@@ -85,6 +91,9 @@ export default function Reports() {
   }, [estimatesLoading, estimatesError, estimates.length]);
 
   // Fetch yearly official LMN data (from detailed exports) - source of truth
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:88',message:'BEFORE useQuery yearlyOfficialData',data:{selectedYear,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const { data: yearlyOfficialData = [], isLoading: yearlyOfficialLoading, error: yearlyOfficialError } = useQuery({
     queryKey: ['yearlyOfficialData', selectedYear],
     queryFn: async () => {
@@ -116,8 +125,14 @@ export default function Reports() {
     retry: 1, // Retry once on failure
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:118',message:'AFTER useQuery yearlyOfficialData',data:{yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData),yearlyOfficialDataLength:yearlyOfficialData?.length,isLoading:yearlyOfficialLoading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   // Get available years with official data
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:121',message:'BEFORE useQuery availableOfficialYears',data:{yearlyOfficialDataLength:yearlyOfficialData?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   const { data: availableOfficialYears = [], isLoading: availableYearsLoading, error: availableYearsError } = useQuery({
     queryKey: ['availableOfficialYears'],
     queryFn: async () => {
@@ -138,14 +153,23 @@ export default function Reports() {
     retry: 1,
     staleTime: 10 * 60 * 1000, // Available years change rarely, cache for 10 minutes
   });
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:140',message:'AFTER useQuery availableOfficialYears',data:{availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsIsArray:Array.isArray(availableOfficialYears),availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataLength:yearlyOfficialData?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
 
   // Determine which data source to use
   // Convert selectedYear to number for comparison (availableOfficialYears are numbers)
   // Calculate this inside useMemo to avoid circular dependencies
   const sourceEstimates = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:145',message:'INSIDE sourceEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
     const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:149',message:'INSIDE sourceEstimates useMemo BEFORE RETURN',data:{selectedYearNum,hasOfficialDataForYear,useOfficialData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     return useOfficialData ? yearlyOfficialData : estimates;
   }, [selectedYear, availableOfficialYears, yearlyOfficialData, estimates]);
   
@@ -160,14 +184,14 @@ export default function Reports() {
   useEffect(() => {
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     
     console.log('📊 Reports: Data Source Decision', {
       selectedYear,
       selectedYearNum,
       availableOfficialYears,
       hasOfficialDataForYear,
-      yearlyOfficialDataLength: yearlyOfficialData.length,
+      yearlyOfficialDataLength: yearlyOfficialData?.length || 0,
       yearlyOfficialLoading,
       yearlyOfficialError: yearlyOfficialError?.message,
       availableYearsLoading,
@@ -602,26 +626,32 @@ export default function Reports() {
   // If official data is available for this year, use it as source of truth
   // Otherwise, use regular estimates with filtering
   const yearEstimates = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:604',message:'INSIDE yearEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     // Calculate useOfficialData inline to avoid circular dependency
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && yearlyOfficialData.length > 0;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:608',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     
     console.log('📊 Reports: yearEstimates calculation', {
       selectedYear,
       useOfficialData,
       hasOfficialDataForYear,
       availableOfficialYears,
-      yearlyOfficialDataLength: yearlyOfficialData.length,
+      yearlyOfficialDataLength: yearlyOfficialData?.length || 0,
       yearlyOfficialLoading,
       yearlyOfficialError: yearlyOfficialError?.message
     });
     
     // Use official data if available for this year
-    if (useOfficialData && yearlyOfficialData.length > 0) {
+    if (useOfficialData && (yearlyOfficialData?.length || 0) > 0) {
       console.log('✅ Using official LMN data for year', {
         year: selectedYear,
-        count: yearlyOfficialData.length,
+        count: yearlyOfficialData?.length || 0,
         source: 'LMN Detailed Export'
       });
       return yearlyOfficialData;
@@ -684,7 +714,7 @@ export default function Reports() {
       filteredYearEstimatesCount: filteredYearEstimates.length,
       stats
     });
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData.length, yearEstimates.length, filteredYearEstimates.length]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData, yearEstimates.length, filteredYearEstimates.length]);
 
   // Calculate estimates missing both dates (must be before early returns to maintain hook order)
   const estimatesMissingDates = useMemo(() => {
@@ -730,7 +760,7 @@ export default function Reports() {
                 ✅ <strong>Using LMN Official Data</strong> - Reports match LMN's "Sales Pipeline Detail" exactly
               </p>
               <p className="text-xs text-emerald-700 mt-1">
-                Source: Estimate List - Detailed Export.xlsx ({yearlyOfficialData.length} estimates)
+                Source: Estimate List - Detailed Export.xlsx ({(yearlyOfficialData?.length || 0)} estimates)
               </p>
             </div>
           ) : hasOfficialDataForYear === false && availableOfficialYears.length > 0 ? (
