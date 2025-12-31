@@ -1,8 +1,9 @@
 -- Add missing columns to production database
 -- Run this in production Supabase SQL Editor before re-running migration
 
--- Add icp_required to accounts table
+-- Add icp_required and icp_status to accounts table
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS icp_required BOOLEAN DEFAULT true;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS icp_status TEXT DEFAULT 'required';
 
 -- Add phone_number to profiles table
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS phone_number text;
@@ -20,7 +21,7 @@ SELECT
   data_type
 FROM information_schema.columns
 WHERE table_name = 'accounts'
-  AND column_name = 'icp_required'
+  AND column_name IN ('icp_required', 'icp_status')
 UNION ALL
 SELECT 
   'profiles' as table_name,
