@@ -14,6 +14,12 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS blocked_by_task_id uuid REFERENCES ta
 -- Create index for blocked_by_task_id
 CREATE INDEX IF NOT EXISTS idx_tasks_blocked_by_task_id ON tasks(blocked_by_task_id);
 
+-- Add sequence_enrollment_id to tasks table
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sequence_enrollment_id text;
+
+-- Create index for sequence_enrollment_id
+CREATE INDEX IF NOT EXISTS idx_tasks_sequence_enrollment_id ON tasks(sequence_enrollment_id);
+
 -- Add recurring task columns to tasks table
 ALTER TABLE tasks 
 ADD COLUMN IF NOT EXISTS is_recurring boolean DEFAULT false,

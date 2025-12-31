@@ -130,9 +130,11 @@ async function migrateTable(tableName) {
   console.log(`\n📦 Migrating ${tableName}...`);
   
   // Check if table exists in dev
+  // Use range() to get all rows (Supabase defaults to 1000 row limit)
   const { data: devData, error: devError } = await devSupabase
     .from(tableName)
-    .select('*');
+    .select('*', { count: 'exact' })
+    .range(0, 999999); // Get all rows
   
   if (devError) {
     console.error(`   ❌ Error reading from dev: ${devError.message}`);
