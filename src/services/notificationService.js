@@ -107,9 +107,11 @@ export async function createTaskNotifications(task) {
       is_read: false
     });
 
-    // Remove existing notifications for this task (except assignment notifications)
+    // Remove existing notifications for this task (except assignment and overdue notifications)
+    // Overdue notifications are managed by createOverdueTaskNotifications() and should persist
+    // until the task is completed or no longer overdue
     for (const notif of existingNotifications) {
-      if (notif.type !== 'task_assigned') {
+      if (notif.type !== 'task_assigned' && notif.type !== 'task_overdue') {
         await base44.entities.Notification.update(notif.id, { is_read: true });
       }
     }
