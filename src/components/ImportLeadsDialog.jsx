@@ -239,22 +239,39 @@ export default function ImportLeadsDialog({ open, onClose }) {
   // Fetch existing data from database for comparison
   const fetchExistingData = async () => {
     try {
-      const [accountsRes, contactsRes, estimatesRes, jobsitesRes] = await Promise.all([
-        fetch('/api/data/accounts'),
-        fetch('/api/data/contacts'),
-        fetch('/api/data/estimates'),
-        fetch('/api/data/jobsites')
-      ]);
+      // Add timeout to prevent hanging
+      const timeout = 30000; // 30 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      const accounts = accountsRes.ok ? (await accountsRes.json()).data || [] : [];
-      const contacts = contactsRes.ok ? (await contactsRes.json()).data || [] : [];
-      const estimates = estimatesRes.ok ? (await estimatesRes.json()).data || [] : [];
-      const jobsites = jobsitesRes.ok ? (await jobsitesRes.json()).data || [] : [];
+      try {
+        const [accountsRes, contactsRes, estimatesRes, jobsitesRes] = await Promise.all([
+          fetch('/api/data/accounts', { signal: controller.signal }),
+          fetch('/api/data/contacts', { signal: controller.signal }),
+          fetch('/api/data/estimates', { signal: controller.signal }),
+          fetch('/api/data/jobsites', { signal: controller.signal })
+        ]);
 
-      setExistingData({ accounts, contacts, estimates, jobsites });
-      return { accounts, contacts, estimates, jobsites };
+        clearTimeout(timeoutId);
+
+        const accounts = accountsRes.ok ? (await accountsRes.json()).data || [] : [];
+        const contacts = contactsRes.ok ? (await contactsRes.json()).data || [] : [];
+        const estimates = estimatesRes.ok ? (await estimatesRes.json()).data || [] : [];
+        const jobsites = jobsitesRes.ok ? (await jobsitesRes.json()).data || [] : [];
+
+        setExistingData({ accounts, contacts, estimates, jobsites });
+        return { accounts, contacts, estimates, jobsites };
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('Request timed out. The database may be slow or unreachable. Please try again.');
+        }
+        throw fetchErr;
+      }
     } catch (err) {
       console.error('Error fetching existing data:', err);
+      setError(`Failed to fetch existing data: ${err.message}. You can still proceed with the import, but validation will be limited.`);
+      // Return empty arrays so import can still proceed
       return { accounts: [], contacts: [], estimates: [], jobsites: [] };
     }
   };
