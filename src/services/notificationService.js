@@ -196,7 +196,7 @@ export async function createOverdueTaskNotifications() {
     
     // Get all users
     const allUsers = await base44.entities.User.list();
-    const currentUser = await base44.auth.me();
+    console.log(`👥 Found ${allUsers.length} users:`, allUsers.map(u => u.email || u.id).join(', '));
     
     const today = startOfDay(new Date());
     
@@ -223,22 +223,26 @@ export async function createOverdueTaskNotifications() {
       const daysUntilDue = differenceInDays(taskDate, today);
       
       overdueTaskCount++;
-      console.log(`📋 Found overdue task: "${task.title}" (due: ${task.due_date}, days overdue: ${Math.abs(daysUntilDue)})`);
+      console.log(`📋 Found overdue task: "${task.title}" (due: ${task.due_date}, days overdue: ${Math.abs(daysUntilDue)}, status: ${task.status})`);
       
       // Get assigned users
       const assignedUsers = parseAssignedUsers(task.assigned_to || '');
-      const usersToNotify = assignedUsers.length > 0 ? assignedUsers : [currentUser?.email].filter(Boolean);
       
-      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify current user)'}`);
+      // If task has assigned users, notify them. Otherwise, notify all users (unassigned tasks are everyone's responsibility)
+      const usersToNotify = assignedUsers.length > 0 ? assignedUsers : allUsers.map(u => u.email).filter(Boolean);
+      
+      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify all users)'}`);
+      console.log(`   - Users to notify: ${usersToNotify.length} user(s)`);
       
       // Collect notification data for each user
       for (const email of usersToNotify) {
         const user = allUsers.find(u => u.email === email);
         if (!user || !user.id) {
-          console.warn('Could not find user for overdue task notification:', email);
+          console.warn(`   ⚠️ Could not find user for overdue task notification: ${email}`);
           continue;
         }
         
+        console.log(`   ✅ Will create notification for user: ${user.email} (id: ${user.id})`);
         notificationsToCreate.push({
           user_id: user.id,
           task_id: task.id,
