@@ -73,17 +73,7 @@ export default function NotificationBell() {
       }
       try {
         const currentUserIdStr = String(currentUser.id).trim();
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:75',message:'Fetching notifications BEFORE',data:{currentUserId:currentUser.id,currentUserIdStr,currentUserIdType:typeof currentUser.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         const notifications = await base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at');
-        const taskOverdueCount = notifications.filter(n => n.type === 'task_overdue').length;
-        const taskOverdueNotifications = notifications.filter(n => n.type === 'task_overdue');
-        // Also fetch ALL task_overdue notifications regardless of user to see if they exist
-        const allTaskOverdue = await base44.entities.Notification.filter({ type: 'task_overdue' }, '-created_at');
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:76',message:'Fetching notifications AFTER',data:{totalCount:notifications.length,taskOverdueCount,taskOverdueIds:taskOverdueNotifications.map(n=>n.id),taskOverdueUserIds:taskOverdueNotifications.map(n=>n.user_id),currentUserId:currentUser.id,allTaskOverdueCount:allTaskOverdue.length,allTaskOverdueUserIds:allTaskOverdue.map(n=>String(n.user_id)),allTaskOverdueIds:allTaskOverdue.map(n=>n.id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         console.log(`🔔 NotificationBell: Fetched ${notifications.length} notifications for user ${currentUser.id}`, {
           renewalReminders: notifications.filter(n => n.type === 'renewal_reminder').length,
           taskOverdue: taskOverdueCount,

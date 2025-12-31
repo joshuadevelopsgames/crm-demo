@@ -47,12 +47,6 @@ export default function Layout({ children, currentPageName }) {
 
   // Ensure white background when in tutorial mode (but not on tutorial page)
   useEffect(() => {
-    // #region agent log
-    const logData = {location:'Layout.jsx:useEffect',message:'Layout useEffect - isTutorialMode state',data:{isTutorialMode,currentPageName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-    console.log('🔍 DEBUG Layout useEffect:', logData);
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    // #endregion
-    
     // Check for Tutorial page fixed div that might still be in DOM
     const tutorialFixedDivs = Array.from(document.querySelectorAll('div')).filter(div => {
       const style = div.getAttribute('style') || '';
@@ -84,15 +78,6 @@ export default function Layout({ children, currentPageName }) {
     if (root) {
       root.style.backgroundColor = '#ffffff';
     }
-    
-    // #region agent log
-    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
-    const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
-    const rootBg = root ? window.getComputedStyle(root).backgroundColor : 'no root';
-    const logData2 = {location:'Layout.jsx:useEffect',message:'Computed background colors after setting white',data:{bodyBg,htmlBg,rootBg,tutorialFixedDivsRemoved:tutorialFixedDivs.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:['B','E']};
-    console.log('🔍 DEBUG Layout backgrounds:', JSON.stringify(logData2, null, 2));
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
-    // #endregion
   }, [isTutorialMode]);
 
   const regularNavigation = [
