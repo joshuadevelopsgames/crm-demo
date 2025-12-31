@@ -1,6 +1,18 @@
 # Production Supabase Migration Scripts - Execution Order
 
-Run these scripts in Supabase SQL Editor in the exact order listed below.
+## 🚀 Quick Start (Recommended)
+
+**Run the complete migration script:**
+- **File:** `PRODUCTION_MIGRATION_COMPLETE.sql`
+- Copy the entire file and paste into Supabase SQL Editor
+- Run it - all migrations are included in the correct order
+- All scripts are idempotent (safe to run multiple times)
+
+---
+
+## 📋 Manual Step-by-Step (Alternative)
+
+If you prefer to run scripts individually, use the order below.
 
 ## 1. Notification System Migration (if not already done)
 
@@ -90,7 +102,14 @@ Before running, check if these tables already exist:
 
 ## After Migration
 
-1. Import yearly official data using: `import-yearly-data-to-supabase.js`
-2. Verify the Reports page works correctly
-3. Check that notifications are working properly
+1. **Import yearly official data** using: `import-yearly-data-to-supabase.js`
+   ```bash
+   node import-yearly-data-to-supabase.js
+   ```
+2. **Create storage bucket** (if using account attachments):
+   - Go to Supabase Dashboard → Storage
+   - Create bucket: `account-attachments` (private)
+   - Run: `create_account_attachments_bucket.sql` for RLS policies
+3. **Verify the Reports page** works correctly
+4. **Check that notifications** are working properly
 
