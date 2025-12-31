@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications } from '@/services/notificationService';
+import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
 import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,14 +122,43 @@ export default function Dashboard() {
       }
     };
     
+    // Check and create overdue task notifications
+    const checkAndRunOverdueTasks = async (force = false) => {
+      try {
+        // Skip if we just ran recently (unless forced)
+        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
+        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
+          return; // Skip to avoid too frequent checks
+        }
+        
+        // Get current user to filter notifications
+        const currentUser = await base44.auth.me();
+        if (!currentUser?.id) {
+          console.warn('No current user, skipping overdue task notification check');
+          return;
+        }
+        
+        // Run notification creation - it will skip tasks that already have notifications
+        await createOverdueTaskNotifications();
+        // Invalidate queries to refresh notifications
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        lastNotificationCheck = Date.now();
+      } catch (error) {
+        console.error('Error checking/creating overdue task notifications:', error);
+      }
+    };
+    
     // Run on mount (force run)
     checkAndRunRenewals(true);
     checkAndRunNeglected(true);
+    checkAndRunOverdueTasks(true);
     
     // Schedule periodic check every minute (but functions will skip if run too recently)
     const intervalId = setInterval(async () => {
       await checkAndRunRenewals();
       await checkAndRunNeglected();
+      await checkAndRunOverdueTasks();
     }, 60 * 1000); // Check every minute, but functions throttle themselves
     
     // Schedule daily check at midnight
@@ -143,6 +172,7 @@ export default function Dashboard() {
       return setTimeout(async () => {
         await checkAndRunRenewals();
         await checkAndRunNeglected();
+        await checkAndRunOverdueTasks();
         await checkAndRunRecurringTasks();
         // Schedule next day
         scheduleNextRun();

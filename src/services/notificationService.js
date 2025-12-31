@@ -178,6 +178,124 @@ export async function cleanupTaskNotifications(taskId) {
 }
 
 /**
+ * Create notifications for all overdue tasks
+ * This function checks all tasks and creates overdue notifications for tasks that are past their due date
+ * Should be called periodically (e.g., daily or on dashboard load)
+ */
+export async function createOverdueTaskNotifications() {
+  console.log('🔄 Starting overdue task notification creation...');
+  let createdCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+  
+  try {
+    // Get all tasks
+    const tasks = await base44.entities.Task.list();
+    console.log(`📊 Found ${tasks.length} tasks`);
+    
+    // Get all users
+    const allUsers = await base44.entities.User.list();
+    const currentUser = await base44.auth.me();
+    
+    const today = startOfDay(new Date());
+    
+    // Phase 1: Collect all overdue task notifications to create
+    const notificationsToCreate = [];
+    
+    // Process each task
+    for (const task of tasks) {
+      // Skip tasks without due dates or completed tasks
+      if (!task.due_date || task.status === 'completed') {
+        continue;
+      }
+      
+      const dueDate = new Date(task.due_date);
+      const taskDate = startOfDay(dueDate);
+      const daysUntilDue = differenceInDays(taskDate, today);
+      const isOverdue = isPast(taskDate) && !isToday(taskDate);
+      
+      // Only process overdue tasks
+      if (!isOverdue) {
+        continue;
+      }
+      
+      // Get assigned users
+      const assignedUsers = parseAssignedUsers(task.assigned_to || '');
+      const usersToNotify = assignedUsers.length > 0 ? assignedUsers : [currentUser?.email].filter(Boolean);
+      
+      // Collect notification data for each user
+      for (const email of usersToNotify) {
+        const user = allUsers.find(u => u.email === email);
+        if (!user || !user.id) {
+          console.warn('Could not find user for overdue task notification:', email);
+          continue;
+        }
+        
+        notificationsToCreate.push({
+          user_id: user.id,
+          task_id: task.id,
+          task_title: task.title,
+          daysOverdue: Math.abs(daysUntilDue),
+          related_account_id: task.related_account_id || null
+        });
+      }
+    }
+    
+    // Phase 2: Batch check existing notifications and create missing ones
+    console.log(`📋 Collected ${notificationsToCreate.length} overdue task notifications to create`);
+    
+    if (notificationsToCreate.length > 0) {
+      // Get all existing overdue task notifications for all users in one batch
+      const allExistingNotifications = await base44.entities.Notification.filter({
+        type: 'task_overdue'
+      });
+      
+      // Create a set of existing notification keys (user_id + task_id)
+      const existingKeys = new Set();
+      for (const notif of allExistingNotifications) {
+        if (!notif.is_read) {
+          existingKeys.add(`${notif.user_id}:${notif.related_task_id}`);
+        }
+      }
+      
+      // Create all missing notifications
+      for (const notifData of notificationsToCreate) {
+        const key = `${notifData.user_id}:${notifData.task_id}`;
+        
+        if (existingKeys.has(key)) {
+          skippedCount++;
+          continue; // Already exists
+        }
+        
+        try {
+          await base44.entities.Notification.create({
+            user_id: notifData.user_id,
+            type: 'task_overdue',
+            title: 'Task Overdue',
+            message: `"${notifData.task_title}" is overdue by ${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`,
+            related_task_id: notifData.task_id,
+            related_account_id: notifData.related_account_id,
+            scheduled_for: new Date().toISOString()
+          });
+          
+          createdCount++;
+          // Add to existing keys to avoid duplicates in same batch
+          existingKeys.add(key);
+          console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue)`);
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, error);
+        }
+      }
+    }
+    
+    console.log(`✅ Overdue task notification creation complete: ${createdCount} created, ${skippedCount} skipped, ${errorCount} errors`);
+  } catch (error) {
+    console.error('❌ Error creating overdue task notifications:', error);
+  }
+}
+
+/**
  * Create End of Year Data Analysis notification on December 15th every year
  * This notification appears once per year and is dismissible
  */
