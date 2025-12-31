@@ -1,4 +1,10 @@
-# Data Migration Guide: Dev → Production
+# Data Migration Guide
+
+## Quick Start
+
+1. **Set environment variables** (see below)
+2. **Run main migration**: `node migrate-data-dev-to-prod.js`
+3. **Run profiles migration**: `node migrate-profiles-dev-to-prod.js` (after users have signed in to prod): Dev → Production
 
 This guide explains how to migrate all data from your dev Supabase instance to production.
 
