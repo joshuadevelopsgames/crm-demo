@@ -130,6 +130,28 @@ export default function Reports() {
         exclude_stats: e.exclude_stats
       }))
     });
+    
+    // Check what years are available in the data
+    const yearsInData = new Set();
+    uniqueEstimates.forEach(e => {
+      if (e.estimate_date) {
+        const dateStr = String(e.estimate_date);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          const year = parseInt(yearStr);
+          if (!isNaN(year) && year >= 2000 && year <= 2100) {
+            yearsInData.add(year);
+          }
+        }
+      }
+    });
+    const sortedYears = Array.from(yearsInData).sort((a, b) => b - a);
+    console.log('📊 Reports: Available years in data', {
+      years: sortedYears,
+      count: sortedYears.length,
+      selectedYear,
+      hasSelectedYear: sortedYears.includes(selectedYear)
+    });
 
     const filtered = uniqueEstimates.filter(estimate => {
       // Filter by year (using estimate_date only to match LMN)
