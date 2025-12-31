@@ -288,16 +288,33 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Extract valid IDs from the sheets
       const validIds = extractValidIds(contacts, leads, estimates, jobsites);
       
-      // Fetch existing data and run validation
+      // Fetch existing data and run validation (with timeout and graceful failure)
       setImportStatus('validating');
       console.log('🔄 Starting validation - fetching existing data...');
-      const existing = await fetchExistingData();
-      console.log('✅ Finished fetching existing data');
       
-      // Compare imported data with existing data
-      const comparison = compareWithExisting(merged, existing.accounts, existing.contacts, existing.estimates, existing.jobsites, validIds);
+      let existing = { accounts: [], contacts: [], estimates: [], jobsites: [] };
+      let comparison = {
+        errors: [],
+        warnings: [],
+        newAccounts: merged.accounts || [],
+        newContacts: merged.contacts || [],
+        newEstimates: merged.estimates || [],
+        newJobsites: merged.jobsites || []
+      };
       
-      // Validate references
+      try {
+        existing = await fetchExistingData();
+        console.log('✅ Finished fetching existing data');
+        
+        // Compare imported data with existing data
+        comparison = compareWithExisting(merged, existing.accounts, existing.contacts, existing.estimates, existing.jobsites, validIds);
+      } catch (validationError) {
+        console.warn('⚠️ Validation failed, but continuing with import:', validationError);
+        // Continue without validation - user can still import
+        setError(`Validation warning: ${validationError.message}. You can still proceed with the import.`);
+      }
+      
+      // Validate references (this doesn't require database access)
       const referenceValidation = validateReferences(merged, validIds);
       comparison.errors.push(...referenceValidation.errors);
       comparison.warnings.push(...referenceValidation.warnings);
@@ -305,10 +322,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
       setValidationResults(comparison);
       setMergedData(merged);
       setImportStatus('ready');
-      setError(null);
       // Reset orphaned jobsite links when new data is merged
       setOrphanedJobsiteLinks({});
     } catch (err) {
+      console.error('Error merging data:', err);
       setError(`Error merging data: ${err.message}`);
       setImportStatus('idle');
     }
