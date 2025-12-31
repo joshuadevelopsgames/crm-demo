@@ -130,18 +130,33 @@ async function migrateTable(tableName) {
   console.log(`\n📦 Migrating ${tableName}...`);
   
   // Check if table exists in dev
-  // Use range() to get all rows (Supabase defaults to 1000 row limit)
-  const { data: devData, error: devError } = await devSupabase
-    .from(tableName)
-    .select('*', { count: 'exact' })
-    .range(0, 999999); // Get all rows
+  // Fetch all rows (Supabase defaults to 1000 row limit, so we need to paginate)
+  let devData = [];
+  let offset = 0;
+  const pageSize = 1000;
+  let hasMore = true;
   
-  if (devError) {
-    console.error(`   ❌ Error reading from dev: ${devError.message}`);
-    return { success: false, count: 0 };
+  while (hasMore) {
+    const { data: pageData, error: devError } = await devSupabase
+      .from(tableName)
+      .select('*')
+      .range(offset, offset + pageSize - 1);
+    
+    if (devError) {
+      console.error(`   ❌ Error reading from dev: ${devError.message}`);
+      return { success: false, count: 0 };
+    }
+    
+    if (pageData && pageData.length > 0) {
+      devData = devData.concat(pageData);
+      offset += pageSize;
+      hasMore = pageData.length === pageSize;
+    } else {
+      hasMore = false;
+    }
   }
   
-  if (!devData || devData.length === 0) {
+  if (devData.length === 0) {
     console.log(`   ⏭️  No data to migrate (table is empty)`);
     return { success: true, count: 0 };
   }
