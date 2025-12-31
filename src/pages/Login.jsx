@@ -229,7 +229,9 @@ export default function Login() {
                     width: '100%',
                     boxSizing: 'border-box',
                     WebkitAppearance: 'none',
-                    appearance: 'none'
+                    appearance: 'none',
+                    color: '#0f172a',
+                    backgroundColor: 'white'
                   }}
                 />
               </div>
