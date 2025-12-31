@@ -93,23 +93,23 @@ export default function Reports() {
     return Array.from(years).sort((a, b) => b - a); // Most recent first
   }, [estimates]);
 
-  // Auto-select most recent year if current year has no data (only on initial load, not when user manually changes)
-  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+  // Track if user has manually changed the year
+  const [userHasChangedYear, setUserHasChangedYear] = useState(false);
+  
+  // Auto-select most recent year if current year has no data (only on initial load, before user makes any changes)
   useEffect(() => {
-    if (!estimatesLoading && availableYears.length > 0 && !availableYears.includes(selectedYear) && !hasAutoSelected) {
+    if (!estimatesLoading && availableYears.length > 0 && !availableYears.includes(selectedYear) && !userHasChangedYear) {
       console.log('📊 Reports: Selected year has no data, switching to most recent year:', availableYears[0]);
       setSelectedYear(availableYears[0]);
-      setHasAutoSelected(true);
     }
-  }, [estimatesLoading, availableYears, selectedYear, hasAutoSelected]);
+  }, [estimatesLoading, availableYears, selectedYear, userHasChangedYear]);
   
-  // Reset auto-selection flag when user manually changes year
-  useEffect(() => {
-    if (hasAutoSelected && availableYears.includes(selectedYear)) {
-      // User has manually selected a valid year, allow them to keep it
-      setHasAutoSelected(false);
-    }
-  }, [selectedYear, availableYears, hasAutoSelected]);
+  // Handler for manual year changes
+  const handleYearChange = (value) => {
+    setUserHasChangedYear(true);
+    setSelectedYear(parseInt(value));
+    console.log('📊 Reports: User manually changed year to:', parseInt(value));
+  };
 
   // Fetch accounts
   const { data: accounts = [] } = useQuery({
@@ -485,7 +485,7 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Year</Label>
-              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+              <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
