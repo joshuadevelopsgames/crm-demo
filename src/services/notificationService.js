@@ -518,9 +518,14 @@ export async function createRenewalNotifications() {
     // Phase 1: Collect all notifications to create (without creating them yet)
     const notificationsToCreate = [];
     
+    let accountsProcessed = 0;
+    let accountsWithRenewalDate = 0;
+    let accountsAtRisk = 0;
+    
     // Process each account
     for (const account of accounts) {
       if (account.archived) continue;
+      accountsProcessed++;
       
       // Get estimates for this account
       const accountEstimates = estimates.filter(est => est.account_id === account.id);
@@ -535,6 +540,7 @@ export async function createRenewalNotifications() {
         continue;
       }
       
+      accountsWithRenewalDate++;
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
       
@@ -542,6 +548,10 @@ export async function createRenewalNotifications() {
       // This is independent of the status field - renewal date is the authoritative source
       const shouldBeAtRisk = daysUntilRenewal >= 0 && daysUntilRenewal <= 180;
       const isCurrentlyAtRisk = account.status === 'at_risk';
+      
+      if (shouldBeAtRisk) {
+        accountsAtRisk++;
+      }
       
       // Update status field to match reality (renewal date is source of truth)
       if (shouldBeAtRisk) {
@@ -626,8 +636,12 @@ export async function createRenewalNotifications() {
       }
     }
     
+    console.log(`📊 Account processing summary: ${accountsProcessed} processed, ${accountsWithRenewalDate} with renewal dates, ${accountsAtRisk} at-risk`);
+    
     // Phase 2: Batch check existing notifications and create missing ones
     console.log(`📋 Collected ${notificationsToCreate.length} notifications to create`);
+    console.log(`📋 Unique accounts: ${new Set(notificationsToCreate.map(n => n.related_account_id)).size}`);
+    console.log(`📋 Users to notify: ${usersToNotify.length}`);
     
     if (notificationsToCreate.length > 0) {
       // Get all existing renewal notifications for all users in one batch
@@ -635,15 +649,23 @@ export async function createRenewalNotifications() {
         type: 'renewal_reminder'
       });
       
+      console.log(`📋 Found ${allExistingNotifications.length} existing renewal_reminder notifications`);
+      
       // Create a set of existing notification keys (user_id + account_id + today)
       const today = startOfDay(new Date());
       const existingKeys = new Set();
+      let todayNotificationsCount = 0;
       for (const notif of allExistingNotifications) {
         const notifDate = startOfDay(new Date(notif.created_at));
         if (notifDate.getTime() === today.getTime()) {
-          existingKeys.add(`${notif.user_id}:${notif.related_account_id}`);
+          const key = `${notif.user_id}:${notif.related_account_id}`;
+          existingKeys.add(key);
+          todayNotificationsCount++;
         }
       }
+      
+      console.log(`📋 Found ${todayNotificationsCount} renewal_reminder notifications created today`);
+      console.log(`📋 Existing keys (user:account):`, Array.from(existingKeys).slice(0, 10));
       
       // Create all missing notifications
       for (const notifData of notificationsToCreate) {
@@ -651,11 +673,12 @@ export async function createRenewalNotifications() {
         
         if (existingKeys.has(key)) {
           skippedCount++;
+          console.log(`⏭️  Skipping notification for account ${notifData.related_account_id} (user ${notifData.user_id}) - already exists today`);
           continue; // Already created today
         }
         
         try {
-          await base44.entities.Notification.create({
+          const created = await base44.entities.Notification.create({
             user_id: notifData.user_id,
             type: notifData.type,
             title: notifData.title,
@@ -666,6 +689,7 @@ export async function createRenewalNotifications() {
           });
           
           createdCount++;
+          console.log(`✅ Created renewal notification for account ${notifData.accountName} (${notifData.related_account_id}) for user ${notifData.user_id}`);
           // Add to existing keys to avoid duplicates in same batch
           existingKeys.add(key);
         } catch (error) {
