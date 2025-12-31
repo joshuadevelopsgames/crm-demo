@@ -187,6 +187,34 @@ export default function Reports() {
       }))
     });
     
+    // Check if 2025 estimates are being filtered out by exclude_stats
+    const dates2025WithExclude = dates2025.filter(e => e.exclude_stats);
+    console.log('📊 Reports: 2025 estimates filtered by exclude_stats', {
+      total2025: dates2025.length,
+      excluded: dates2025WithExclude.length,
+      wouldShow: dates2025.length - dates2025WithExclude.length
+    });
+    
+    // Check all estimates that would match 2025 if we used estimate_close_date
+    const dates2025ByCloseDate = uniqueEstimates.filter(e => {
+      if (!e.estimate_close_date) return false;
+      const dateStr = String(e.estimate_close_date);
+      if (dateStr.length >= 4) {
+        return dateStr.substring(0, 4) === '2025';
+      }
+      return false;
+    });
+    console.log('📊 Reports: Estimates with 2025 in estimate_close_date', {
+      count: dates2025ByCloseDate.length,
+      sample: dates2025ByCloseDate.slice(0, 5).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        estimate_close_date: e.estimate_close_date,
+        status: e.status,
+        exclude_stats: e.exclude_stats
+      }))
+    });
+    
     // Also check estimates without estimate_date but with other dates
     const estimatesWithoutEstimateDate = uniqueEstimates
       .filter(e => !e.estimate_date)
@@ -197,6 +225,39 @@ export default function Reports() {
         id: e.id,
         estimate_date: e.estimate_date,
         estimate_close_date: e.estimate_close_date,
+        created_at: e.created_at,
+        status: e.status
+      }))
+    });
+    
+    // Check for 2025 in estimate_close_date or created_at
+    const dates2025CloseDate = uniqueEstimates.filter(e => {
+      if (e.estimate_close_date) {
+        const dateStr = String(e.estimate_close_date);
+        if (dateStr.length >= 4 && dateStr.substring(0, 4) === '2025') return true;
+      }
+      return false;
+    });
+    const dates2025Created = uniqueEstimates.filter(e => {
+      if (e.created_at) {
+        const dateStr = String(e.created_at);
+        if (dateStr.length >= 4 && dateStr.substring(0, 4) === '2025') return true;
+      }
+      return false;
+    });
+    console.log('📊 Reports: 2025 data in other date fields', {
+      estimate_close_date_2025: dates2025CloseDate.length,
+      created_at_2025: dates2025Created.length,
+      sample_close_date: dates2025CloseDate.slice(0, 3).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
+        estimate_close_date: e.estimate_close_date,
+        status: e.status,
+        exclude_stats: e.exclude_stats
+      })),
+      sample_created: dates2025Created.slice(0, 3).map(e => ({
+        id: e.id,
+        estimate_date: e.estimate_date,
         created_at: e.created_at,
         status: e.status
       }))
