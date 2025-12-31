@@ -239,39 +239,43 @@ export async function createOverdueTaskNotifications() {
       const assignedUsers = parseAssignedUsers(task.assigned_to || '');
       
       // Determine which users should receive notifications
-      // If task is assigned, notify assigned users. Otherwise, notify current user only (matches dashboard - shows all overdue tasks to current user)
-      let usersToNotify = [];
-      if (assignedUsers.length > 0) {
-        // Task is assigned - notify assigned users
-        usersToNotify = assignedUsers;
-      } else {
-        // Task is unassigned - notify current user (dashboard shows all overdue tasks to current user)
-        usersToNotify = [currentUser.email].filter(Boolean);
+      // CRITICAL: Always include current user for overdue tasks (dashboard shows all overdue tasks to current user)
+      // Also include assigned users if task is assigned
+      const usersToNotifySet = new Set();
+      
+      // Always add current user (they see all overdue tasks on dashboard)
+      if (currentUser.email) {
+        usersToNotifySet.add(currentUser.email);
       }
       
-      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none (will notify current user)'}`);
-      console.log(`   - Users to notify: ${usersToNotify.length} user(s)`);
+      // Also add assigned users if task is assigned
+      if (assignedUsers.length > 0) {
+        assignedUsers.forEach(email => usersToNotifySet.add(email));
+      }
+      
+      const usersToNotify = Array.from(usersToNotifySet);
+      
+      console.log(`   - Assigned users: ${assignedUsers.length > 0 ? assignedUsers.join(', ') : 'none'}`);
+      console.log(`   - Users to notify: ${usersToNotify.length} user(s) - ${usersToNotify.join(', ')}`);
       
       // Collect notification data for each user
       for (const email of usersToNotify) {
         let user = null;
         let userIdToUse = null;
         
-        // Always try to get auth user ID for consistency
-        // If this is the current user's email, use current user's ID directly (from auth.me())
+        // If this is the current user's email, ALWAYS use current user's auth ID (from auth.me())
         if (email === currentUser.email) {
           user = currentUser;
           userIdToUse = currentUserIdStr;
           console.log(`   ✅ Using current user auth ID: ${userIdToUse} for ${email}`);
         } else {
-          // For other users, we need to get their auth ID
-          // Try to get their auth session - but we can't do that server-side easily
-          // So we'll use their profile ID and hope it matches their auth ID (which it should in Supabase)
+          // For other users, find them in the allUsers list
+          // In Supabase, profile.id should match auth.users.id, but we'll use profile ID
           const profileUser = allUsers.find(u => u.email === email);
           if (profileUser && profileUser.id) {
             user = profileUser;
             userIdToUse = String(profileUser.id).trim();
-            console.log(`   ✅ Using profile ID for other user: ${userIdToUse} for ${email} (profile ID should match auth ID in Supabase)`);
+            console.log(`   ✅ Using profile ID for other user: ${userIdToUse} for ${email}`);
           }
         }
         
