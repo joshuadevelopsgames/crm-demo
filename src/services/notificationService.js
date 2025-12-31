@@ -278,7 +278,8 @@ export async function createOverdueTaskNotifications() {
       const readNotificationsToUpdate = [];
       
       for (const notif of allExistingNotifications) {
-        const key = `${notif.user_id}:${notif.related_task_id}`;
+        const notifUserIdStr = String(notif.user_id || '').trim();
+        const key = `${notifUserIdStr}:${notif.related_task_id}`;
         if (!notif.is_read) {
           existingKeys.add(key);
         } else {
@@ -291,7 +292,8 @@ export async function createOverdueTaskNotifications() {
       for (const { notification } of readNotificationsToUpdate) {
         try {
           await base44.entities.Notification.update(notification.id, { is_read: false });
-          existingKeys.add(`${notification.user_id}:${notification.related_task_id}`);
+          const notifUserIdStr = String(notification.user_id || '').trim();
+          existingKeys.add(`${notifUserIdStr}:${notification.related_task_id}`);
           console.log(`🔄 Marked overdue task notification as unread for task ${notification.related_task_id}`);
         } catch (error) {
           console.error(`❌ Error updating overdue task notification:`, error);
