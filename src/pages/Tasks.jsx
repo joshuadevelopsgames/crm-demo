@@ -21,7 +21,9 @@ import {
   Search,
   Calendar,
   User,
+  Users,
   Building2,
+  TrendingUp,
   CheckCircle2,
   Circle,
   Clock,
@@ -148,6 +150,7 @@ const SortableTaskItem = ({
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [taskType, setTaskType] = useState("all"); // 'all', 'sales', 'operations'
   const [activeFilter, setActiveFilter] = useState("today"); // 'inbox', 'today', 'upcoming', 'completed'
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterLabel, setFilterLabel] = useState("all");
@@ -1181,8 +1184,24 @@ export default function Tasks() {
     return taskDate > today && !isTaskToday(task) && !isTaskOverdue(task);
   };
 
-  // Filter tasks based on active filter
+  // Helper functions to determine task type (Sales vs Operations for landscaping)
+  const isSalesTask = (task) => {
+    const salesCategories = ['follow_up', 'demo', 'proposal', 'estimate'];
+    return salesCategories.includes(task.category);
+  };
+
+  const isOperationsTask = (task) => {
+    const operationsCategories = ['scheduling', 'field_work', 'maintenance', 'quality_check', 'support', 'internal', 'other', 'onboarding'];
+    return operationsCategories.includes(task.category) || !task.category;
+  };
+
+  // Filter tasks based on task type and active filter
   let filteredTasks = tasks.filter((task) => {
+    // First filter by task type (sales/operations)
+    if (taskType === 'sales' && !isSalesTask(task)) return false;
+    if (taskType === 'operations' && !isOperationsTask(task)) return false;
+    // taskType === 'all' shows all tasks
+
     const matchesSearch = task.title
       ?.toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -1413,26 +1432,33 @@ export default function Tasks() {
   // Get task counts for tabs
   // Note: Counts should match what would be displayed (excluding search/priority/label filters)
   const getTaskCounts = () => {
-    const inbox = tasks.filter(
+    // Filter by task type first
+    const typeFilteredTasks = tasks.filter((task) => {
+      if (taskType === 'sales' && !isSalesTask(task)) return false;
+      if (taskType === 'operations' && !isOperationsTask(task)) return false;
+      return true;
+    });
+
+    const inbox = typeFilteredTasks.filter(
       (task) =>
         task.status !== "completed" &&
         task.status !== "blocked" &&
         parseAssignedUsers(task.assigned_to || "").includes(currentUser?.email),
     ).length;
-    const today = tasks.filter(
+    const today = typeFilteredTasks.filter(
       (task) =>
         task.status !== "completed" &&
         task.status !== "blocked" &&
         (isTaskToday(task) || isTaskOverdue(task)),
     ).length;
-    const upcoming = tasks.filter(
+    const upcoming = typeFilteredTasks.filter(
       (task) => {
         // Must have a due_date to be upcoming
         if (!task.due_date) return false;
         return task.status !== "completed" && isTaskUpcoming(task);
       }
     ).length; // Includes blocked tasks
-    const completed = tasks.filter(
+    const completed = typeFilteredTasks.filter(
       (task) => task.status === "completed",
     ).length;
 
@@ -1792,11 +1818,16 @@ export default function Tasks() {
                               </SelectItem>
                               <SelectItem value="demo">Demo</SelectItem>
                               <SelectItem value="proposal">Proposal</SelectItem>
+                              <SelectItem value="estimate">Estimate</SelectItem>
+                              <SelectItem value="scheduling">Scheduling</SelectItem>
+                              <SelectItem value="field_work">Field Work</SelectItem>
+                              <SelectItem value="maintenance">Maintenance</SelectItem>
+                              <SelectItem value="quality_check">Quality Check</SelectItem>
+                              <SelectItem value="support">Support</SelectItem>
+                              <SelectItem value="internal">Internal</SelectItem>
                               <SelectItem value="onboarding">
                                 Onboarding
                               </SelectItem>
-                              <SelectItem value="support">Support</SelectItem>
-                              <SelectItem value="internal">Internal</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -2526,6 +2557,40 @@ export default function Tasks() {
         position="bottom"
       >
         <div className="space-y-4">
+          {/* Task Type Tabs (Sales/Organizational) */}
+          <Tabs value={taskType} onValueChange={setTaskType}>
+            <div
+              className="overflow-x-auto -mx-4 px-4"
+              style={
+                isPWA || isMobile || isNativeApp
+                  ? {
+                      overflowY: "hidden",
+                      WebkitOverflowScrolling: "touch",
+                      touchAction: "pan-x",
+                      overscrollBehaviorX: "contain",
+                      overscrollBehaviorY: "none",
+                    }
+                  : {}
+              }
+            >
+              <TabsList className="bg-white dark:bg-surface-1 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start border-b border-slate-200 dark:border-slate-700">
+                <TabsTrigger value="all" className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  All Tasks
+                </TabsTrigger>
+                <TabsTrigger value="sales" className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  Sales
+                </TabsTrigger>
+                <TabsTrigger value="operations" className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Operations
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </Tabs>
+
+          {/* Status Tabs (Inbox/Today/Upcoming/Completed) */}
           <Tabs value={activeFilter} onValueChange={setActiveFilter}>
             <div
               className="overflow-x-auto -mx-4 px-4"
