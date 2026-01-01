@@ -158,37 +158,34 @@ export default function Reports() {
   // #endregion
 
   // Determine which data source to use
-  // Convert selectedYear to number for comparison (availableOfficialYears are numbers)
-  // Calculate this inside useMemo to avoid circular dependencies
+  // Note: useOfficialData is calculated above at component level
   const sourceEstimates = useMemo(() => {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:145',message:'INSIDE sourceEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
-    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
-    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:149',message:'INSIDE sourceEstimates useMemo BEFORE RETURN',data:{selectedYearNum,hasOfficialDataForYear,useOfficialData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:149',message:'INSIDE sourceEstimates useMemo BEFORE RETURN',data:{selectedYearNum:typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear,hasOfficialDataForYear,useOfficialData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     return useOfficialData ? yearlyOfficialData : estimates;
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData, estimates]);
+  }, [useOfficialData, yearlyOfficialData, estimates]);
   
-  const dataSource = useMemo(() => {
+  // Calculate useOfficialData and hasOfficialDataForYear at component level for use throughout
+  const { useOfficialData, hasOfficialDataForYear } = useMemo(() => {
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
     const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
-    return useOfficialData ? 'LMN Official (Detailed Export)' : 'Database (General Export)';
+    return { useOfficialData, hasOfficialDataForYear };
   }, [selectedYear, availableOfficialYears, yearlyOfficialData]);
+
+  const dataSource = useMemo(() => {
+    return useOfficialData ? 'LMN Official (Detailed Export)' : 'Database (General Export)';
+  }, [useOfficialData]);
   
   // Debug log data source decision
   useEffect(() => {
-    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
-    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
-    
     console.log('📊 Reports: Data Source Decision', {
       selectedYear,
-      selectedYearNum,
+      selectedYearNum: typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear,
       availableOfficialYears,
       hasOfficialDataForYear,
       yearlyOfficialDataLength: yearlyOfficialData?.length || 0,
@@ -198,7 +195,7 @@ export default function Reports() {
       availableYearsError: availableYearsError?.message,
       useOfficialData
     });
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError]);
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData, yearlyOfficialLoading, yearlyOfficialError, availableYearsLoading, availableYearsError, useOfficialData, hasOfficialDataForYear]);
 
   // Calculate available years from estimates (use same logic: close_date -> estimate_date, exclude if neither exists)
   const availableYears = useMemo(() => {
@@ -706,7 +703,7 @@ export default function Reports() {
       filteredYearEstimatesCount: filteredYearEstimates.length,
       stats
     });
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData, yearEstimates.length, filteredYearEstimates.length]);
+  }, [selectedYear, useOfficialData, hasOfficialDataForYear, availableOfficialYears, yearlyOfficialData, yearlyOfficialLoading, yearlyOfficialError, yearEstimates.length, filteredYearEstimates.length, stats]);
 
   // Calculate estimates missing both dates (must be before early returns to maintain hook order)
   const estimatesMissingDates = useMemo(() => {
