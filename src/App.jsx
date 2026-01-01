@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -18,6 +19,7 @@ import Scoring from './pages/Scoring';
 import TakeScorecard from './pages/TakeScorecard';
 import BuildScorecard from './pages/BuildScorecard';
 import Permissions from './pages/Permissions';
+import Announcements from './pages/Announcements';
 import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
@@ -29,6 +31,7 @@ import Reports from './pages/Reports';
 import TestRenewalNotifications from './pages/TestRenewalNotifications';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
+import BugReportButton from './components/BugReportButton';
 import { createPageUrl } from './utils';
 import { getSupabaseAuth } from './services/supabaseClient';
 
@@ -155,6 +158,7 @@ function AppContent() {
     if (path === '/take-scorecard') return 'TakeScorecard';
     if (path === '/build-scorecard') return 'BuildScorecard';
     if (path === '/permissions') return 'Permissions';
+    if (path === '/announcements') return 'Announcements';
     if (path === '/tutorial') return null; // Tutorial doesn't use Layout
     if (path === '/login') return null; // Login doesn't use Layout
     if (path === '/gmail-callback') return null; // Gmail callback doesn't use Layout
@@ -218,6 +222,11 @@ function AppContent() {
                   <Permissions />
                 </AdminRoute>
               } />
+              <Route path={createPageUrl('Announcements')} element={
+                <AdminRoute>
+                  <Announcements />
+                </AdminRoute>
+              } />
               <Route path={createPageUrl('Settings')} element={<Settings />} />
               <Route path={createPageUrl('Reports')} element={<Reports />} />
               <Route path="/test-renewal-notifications" element={<TestRenewalNotifications />} />
@@ -239,9 +248,11 @@ function App() {
           <UserProvider>
             <TutorialProvider>
               <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
+                <Toaster position="top-center" />
                 <TutorialBar />
                 <AppContent />
                 <InstallPrompt />
+                <BugReportButton />
               </div>
             </TutorialProvider>
           </UserProvider>
