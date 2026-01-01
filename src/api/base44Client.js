@@ -1194,5 +1194,10 @@ const base44Instance = {
 };
 
 // Export after object is fully constructed
-export const base44 = base44Instance;
+// Wrap in a getter function to ensure proper initialization order
+function getBase44() {
+  return base44Instance;
+}
+
+export const base44 = getBase44();
 
