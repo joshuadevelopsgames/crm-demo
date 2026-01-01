@@ -15,15 +15,6 @@ export default defineConfig({
         // Prevent circular dependency issues by preserving module boundaries
         manualChunks: undefined,
       },
-      // Disable tree-shaking for base44Client to avoid static analysis issues
-      treeshake: {
-        moduleSideEffects: (id) => {
-          if (id.includes('base44Client')) {
-            return true; // Mark as having side effects to prevent tree-shaking
-          }
-          return false;
-        },
-      },
     },
     minify: 'esbuild',
     commonjsOptions: {
