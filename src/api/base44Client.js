@@ -12,6 +12,9 @@
  */
 
 
+// Module initialization logging
+console.log('[base44Client] Module loading started');
+
 // Helper to get data from API
 async function getData(entityType, forceRefresh = false) {
   try {
@@ -64,6 +67,7 @@ const mockResearchNotes = [];
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
 
 // Create the base44 object directly - all helper functions are defined above
+console.log('[base44Client] Creating base44Instance object...');
 const base44Instance = {
   entities: {
     Account: {
@@ -1193,7 +1197,17 @@ const base44Instance = {
   },
 };
 
-// Export directly - the object is fully constructed
-// Using Object.freeze to prevent any modifications that might confuse the bundler
-export const base44 = Object.freeze(base44Instance);
+// Wrap export in IIFE to ensure object is fully constructed before export
+// This prevents bundler from accessing the export before initialization
+export const base44 = (function() {
+  console.log('[base44Client] Freezing base44Instance...');
+  try {
+    const frozen = Object.freeze(base44Instance);
+    console.log('[base44Client] ✅ base44Instance frozen successfully');
+    return frozen;
+  } catch (error) {
+    console.error('[base44Client] ❌ Error freezing base44Instance:', error);
+    throw error;
+  }
+})();
 

@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: true, // Enable source maps for debugging
     rollupOptions: {
       output: {
         // Prevent circular dependency issues by preserving module boundaries
