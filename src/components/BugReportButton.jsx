@@ -100,7 +100,8 @@ export default function BugReportButton() {
     const handleMouseOver = (e) => {
       e.stopPropagation();
       const element = e.target;
-      if (element && element !== document.body && element !== document.documentElement) {
+      // Don't highlight the inspection indicator itself
+      if (element && element !== document.body && element !== document.documentElement && !element.closest('.inspection-indicator')) {
         element.style.outline = '2px solid #3b82f6';
         element.style.outlineOffset = '2px';
       }
@@ -114,6 +115,11 @@ export default function BugReportButton() {
     };
 
     const handleClick = (e) => {
+      // Don't capture clicks on the inspection indicator
+      if (e.target.closest('.inspection-indicator')) {
+        return;
+      }
+      
       e.preventDefault();
       e.stopPropagation();
       
@@ -142,8 +148,19 @@ export default function BugReportButton() {
 
         setSelectedElement(elementInfo);
         setIsInspecting(false);
+        setIsOpen(true); // Reopen dialog after selection
         
         // Remove all outlines
+        document.querySelectorAll('*').forEach(el => {
+          el.style.outline = '';
+        });
+      }
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setIsInspecting(false);
+        setIsOpen(true); // Reopen dialog
         document.querySelectorAll('*').forEach(el => {
           el.style.outline = '';
         });
@@ -153,11 +170,13 @@ export default function BugReportButton() {
     document.addEventListener('mouseover', handleMouseOver);
     document.addEventListener('mouseout', handleMouseOut);
     document.addEventListener('click', handleClick, true);
+    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mouseout', handleMouseOut);
       document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('keydown', handleEscape);
       
       // Remove all outlines
       document.querySelectorAll('*').forEach(el => {
@@ -208,10 +227,12 @@ export default function BugReportButton() {
   const handleStartInspection = () => {
     setIsInspecting(true);
     setSelectedElement(null);
+    setIsOpen(false); // Close dialog to allow clicking on the page
   };
 
   const handleCancelInspection = () => {
     setIsInspecting(false);
+    setIsOpen(true); // Reopen dialog
     document.querySelectorAll('*').forEach(el => {
       el.style.outline = '';
     });
@@ -283,11 +304,39 @@ export default function BugReportButton() {
         className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
         aria-label="Report a bug"
       >
-        <Bug className="h-6 w-6 text-white" />
+        <Bug className="h-8 w-8 text-white" />
       </Button>
 
+      {/* Inspection Mode Indicator */}
+      {isInspecting && (
+        <div className="inspection-indicator fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-pulse">
+          <MousePointer2 className="h-5 w-5" />
+          <div>
+            <p className="font-semibold text-sm">Inspection Mode Active</p>
+            <p className="text-xs opacity-90">Click on the problematic feature, or press ESC to cancel</p>
+          </div>
+          <Button
+            onClick={handleCancelInspection}
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-blue-700 h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Bug Report Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open && isInspecting) {
+          // Cancel inspection if dialog is closed while inspecting
+          setIsInspecting(false);
+          document.querySelectorAll('*').forEach(el => {
+            el.style.outline = '';
+          });
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report a Bug</DialogTitle>
@@ -316,7 +365,7 @@ export default function BugReportButton() {
               <label className="text-sm font-medium mb-2 block">
                 Select Problematic Feature
               </label>
-              {!selectedElement && !isInspecting && (
+              {!selectedElement && (
                 <Button
                   onClick={handleStartInspection}
                   variant="outline"
@@ -325,28 +374,6 @@ export default function BugReportButton() {
                   <MousePointer2 className="h-4 w-4 mr-2" />
                   Click to Select Feature
                 </Button>
-              )}
-              
-              {isInspecting && (
-                <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MousePointer2 className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          Click on the feature that's having problems
-                        </span>
-                      </div>
-                      <Button
-                        onClick={handleCancelInspection}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
               )}
 
               {selectedElement && (
