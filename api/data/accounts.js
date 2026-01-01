@@ -52,16 +52,24 @@ export default async function handler(req, res) {
       let page = 0;
       const pageSize = 1000;
       let hasMore = true;
+      const maxPages = 100; // Safety limit to prevent infinite loops (supports up to 100k accounts, minimum 5 pages = 5k accounts guaranteed)
 
-      while (hasMore) {
+      console.log(`📥 Starting to fetch all accounts with pagination (max ${maxPages} pages = ${maxPages * pageSize} accounts)...`);
+      
+      while (hasMore && page < maxPages) {
+        const from = page * pageSize;
+        const to = (page + 1) * pageSize - 1;
+        
+        console.log(`📄 Fetching page ${page + 1} (rows ${from} to ${to})...`);
+        
         const { data, error } = await supabase
           .from('accounts')
           .select('*')
           .order('created_at', { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+          .range(from, to);
         
         if (error) {
-          console.error('Supabase error:', error);
+          console.error('❌ Supabase error on page', page + 1, ':', error);
           return res.status(500).json({
             success: false,
             error: error.message
@@ -70,11 +78,30 @@ export default async function handler(req, res) {
         
         if (data && data.length > 0) {
           allAccounts = allAccounts.concat(data);
+          console.log(`✅ Page ${page + 1}: Fetched ${data.length} accounts (total so far: ${allAccounts.length})`);
+          // Continue if we got a full page (might be more)
           hasMore = data.length === pageSize;
           page++;
         } else {
+          console.log(`✅ Page ${page + 1}: No more accounts (total: ${allAccounts.length})`);
           hasMore = false;
         }
+      }
+      
+      if (page >= maxPages) {
+        console.warn(`⚠️ Reached max pages limit (${maxPages}). There may be more accounts.`);
+      }
+      
+      console.log(`✅ Finished fetching accounts. Total: ${allAccounts.length}`);
+      
+      // Log response size estimate
+      const responseSize = JSON.stringify(allAccounts).length;
+      const responseSizeMB = (responseSize / 1024 / 1024).toFixed(2);
+      console.log(`📊 Response size: ${responseSizeMB} MB (${responseSize} bytes)`);
+      
+      // Vercel has a 4.5MB response limit, warn if approaching
+      if (responseSize > 4 * 1024 * 1024) {
+        console.warn(`⚠️ Response size (${responseSizeMB} MB) is approaching Vercel's 4.5MB limit`);
       }
       
       return res.status(200).json({

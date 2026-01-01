@@ -84,6 +84,23 @@ export default function Accounts() {
     queryFn: () => base44.entities.Account.list()
   });
 
+  // Fetch contacts to check which accounts have contacts
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: () => base44.entities.Contact.list()
+  });
+
+  // Create a map of account IDs that have contacts
+  const accountsWithContacts = useMemo(() => {
+    const accountIds = new Set();
+    contacts.forEach(contact => {
+      if (contact.account_id) {
+        accountIds.add(contact.account_id);
+      }
+    });
+    return accountIds;
+  }, [contacts]);
+
   // Fetch all estimates to calculate actual revenue from won estimates
   const { data: allEstimates = [] } = useQuery({
     queryKey: ['estimates'],
@@ -331,8 +348,25 @@ export default function Accounts() {
       return bRevenue - aRevenue;
     }
     if (sortBy === 'last_interaction') {
-      if (!a.last_interaction_date) return 1;
-      if (!b.last_interaction_date) return -1;
+      // When sorting by "last contact", prioritize accounts with contacts
+      const aHasContacts = accountsWithContacts.has(a.id);
+      const bHasContacts = accountsWithContacts.has(b.id);
+      
+      // Accounts without contacts go to the end
+      if (!aHasContacts && !bHasContacts) {
+        // Both have no contacts - sort by date if available, otherwise equal
+        if (!a.last_interaction_date && !b.last_interaction_date) return 0;
+        if (!a.last_interaction_date) return 1;
+        if (!b.last_interaction_date) return -1;
+        return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
+      }
+      if (!aHasContacts) return 1; // a has no contacts, goes to end
+      if (!bHasContacts) return -1; // b has no contacts, goes to end
+      
+      // Both have contacts - sort by last_interaction_date
+      if (!a.last_interaction_date && !b.last_interaction_date) return 0;
+      if (!a.last_interaction_date) return 1; // a has no date, goes to end
+      if (!b.last_interaction_date) return -1; // b has no date, goes to end
       return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
     }
     return 0;

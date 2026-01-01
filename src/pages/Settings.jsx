@@ -36,7 +36,6 @@ export default function Settings() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
-  const [systemAnnouncements, setSystemAnnouncements] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
 
@@ -49,7 +48,7 @@ export default function Settings() {
     const prefs = profile?.notification_preferences || {};
     setEmailNotifications(prefs.email_notifications !== false); // Default to true
     setTaskReminders(prefs.task_reminders !== false); // Default to true
-    setSystemAnnouncements(prefs.system_announcements !== false); // Default to true
+    // System announcements are always enabled (no toggle)
   }, [profile, user]);
 
   const updateProfileMutation = useMutation({
@@ -74,6 +73,9 @@ export default function Settings() {
         updateData.notification_preferences = data.notification_preferences;
       }
 
+      console.log('Attempting to update profile directly via Supabase...', { updateData, userId: user.id });
+      
+      // Try direct Supabase update first
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
         .upsert(updateData, {
@@ -83,48 +85,59 @@ export default function Settings() {
         .single();
 
       if (error) {
-        console.error('Error updating profile:', {
+        console.error('❌ Direct Supabase update failed:', {
           error,
           code: error.code,
           message: error.message,
           details: error.details,
-          hint: error.hint
+          hint: error.hint,
+          userId: user.id,
+          updateData
         });
         
-        // If RLS error, try API endpoint as fallback
-        if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('row-level security')) {
-          console.log('RLS error detected, trying API endpoint as fallback...');
-          
-          // Get session token for API fallback
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.access_token) {
-            console.error('Session error:', sessionError);
-            throw new Error('No session token available. Please log out and log back in.');
-          }
-
-          console.log('Calling API endpoint with token...');
-          const response = await fetch('/api/data/profile', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify(data)
-          });
-
-          const result = await response.json();
-          console.log('API response:', { status: response.status, result });
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Failed to update profile');
-          }
-
-          return result.data;
-        }
+        // Always use API endpoint as fallback (more reliable)
+        console.log('🔄 Trying API endpoint as fallback...');
         
-        throw new Error(error.message || 'Failed to update profile');
-      }
+        // Get session token for API fallback
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.access_token) {
+          console.error('❌ Session error:', sessionError);
+          throw new Error('No session token available. Please log out and log back in.');
+        }
 
+        console.log('📡 Calling API endpoint with token...', { 
+          tokenLength: session.access_token.length,
+          tokenPreview: session.access_token.substring(0, 20) + '...'
+        });
+        
+        const response = await fetch('/api/data/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        console.log('📥 API response:', { 
+          status: response.status, 
+          statusText: response.statusText,
+          result,
+          error: result.error
+        });
+
+        if (!response.ok || !result.success) {
+          const errorMsg = result.error || 'Failed to update profile';
+          console.error('❌ API update failed:', errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        console.log('✅ Profile updated successfully via API endpoint');
+        return result.data;
+      }
+      
+      console.log('✅ Profile updated successfully via direct Supabase update');
       return updatedProfile;
     },
     onSuccess: () => {
@@ -149,7 +162,7 @@ export default function Settings() {
       notification_preferences: {
         email_notifications: emailNotifications,
         task_reminders: taskReminders,
-        system_announcements: systemAnnouncements
+        system_announcements: true // Always true - announcements are required
       }
     });
   };
@@ -272,16 +285,6 @@ export default function Settings() {
             <Switch
               checked={taskReminders}
               onCheckedChange={setTaskReminders}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>System Announcements</Label>
-              <p className="text-sm text-slate-500">Receive notifications for system-wide announcements</p>
-            </div>
-            <Switch
-              checked={systemAnnouncements}
-              onCheckedChange={setSystemAnnouncements}
             />
           </div>
           <Button 

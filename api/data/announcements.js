@@ -6,8 +6,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-function getSupabase() {
+// Initialize Supabase client with service role key (for database operations)
+function getSupabaseService() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
@@ -23,10 +23,29 @@ function getSupabase() {
   });
 }
 
-// Check if user is admin
-async function isAdmin(supabase, userId) {
+// Initialize Supabase client with anon key (for token verification)
+function getSupabaseAnon() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 
+                          process.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY to Vercel environment variables.');
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+// Check if user is admin (uses service role key for database access)
+async function isAdmin(userId) {
   if (!userId) return false;
   
+  const supabase = getSupabaseService();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
@@ -60,8 +79,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const supabase = getSupabase();
-    
     // Get the user from the Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -73,15 +90,20 @@ export default async function handler(req, res) {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Verify the token using anon key (service role key cannot verify user tokens)
+    const supabaseAnon = getSupabaseAnon();
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('Token verification error:', authError);
       return res.status(401).json({
         success: false,
         error: 'Unauthorized - Invalid token'
       });
     }
+
+    // Use service role key for database operations
+    const supabase = getSupabaseService();
 
     if (req.method === 'GET') {
       // Get all active announcements (all authenticated users can read)
@@ -110,7 +132,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Only admins can create announcements
-      const userIsAdmin = await isAdmin(supabase, user.id);
+      const userIsAdmin = await isAdmin(user.id);
       if (!userIsAdmin) {
         return res.status(403).json({
           success: false,
@@ -180,7 +202,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Only admins can update announcements
-      const userIsAdmin = await isAdmin(supabase, user.id);
+      const userIsAdmin = await isAdmin(user.id);
       if (!userIsAdmin) {
         return res.status(403).json({
           success: false,
@@ -223,7 +245,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       // Only admins can delete announcements
-      const userIsAdmin = await isAdmin(supabase, user.id);
+      const userIsAdmin = await isAdmin(user.id);
       if (!userIsAdmin) {
         return res.status(403).json({
           success: false,

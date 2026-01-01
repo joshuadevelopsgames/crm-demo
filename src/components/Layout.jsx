@@ -94,7 +94,7 @@ export default function Layout({ children, currentPageName }) {
 
   const adminNavigation = [
     { name: 'Scoring', path: 'Scoring', icon: Award, permission: 'access_scoring' },
-    { name: 'Permissions', path: 'Permissions', icon: Shield, permission: 'manage_permissions' },
+    { name: 'Users', path: 'Permissions', icon: Shield, permission: 'manage_permissions' },
     { name: 'Announcements', path: 'Announcements', icon: Megaphone, permission: null }, // Always visible for admins
   ];
 
@@ -310,7 +310,8 @@ export default function Layout({ children, currentPageName }) {
                   </div>
                 </SimpleDropdown>
               )}
-              {!isAdmin && (
+              {/* Only show Tutorial link separately if there's NO admin dropdown */}
+              {visibleAdminNav.length === 0 && (
                 <Link
                   to="/tutorial"
                   className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -326,7 +327,8 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Mobile menu button - Better touch targets for PWA/mobile */}
             <div className="md:hidden flex items-center gap-1" style={(isPWA || isNativeApp) ? { gap: '4px' } : {}}>
-              {!isAdmin && (
+              {/* Only show Tutorial link separately if there's NO admin dropdown */}
+              {visibleAdminNav.length === 0 && (
                 <Link
                   to="/tutorial"
                   className="text-slate-600 hover:text-slate-900"
@@ -451,7 +453,8 @@ export default function Layout({ children, currentPageName }) {
                   </Link>
                 </>
               )}
-              {!isAdmin && (
+              {/* Only show Tutorial link separately if there's NO admin dropdown */}
+              {visibleAdminNav.length === 0 && (
                 <Link
                   to="/tutorial"
                   onClick={() => setMobileMenuOpen(false)}

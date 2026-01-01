@@ -42,10 +42,7 @@ export default function AnnouncementBanner() {
   });
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
-  // Check if user has announcements enabled
-  const announcementsEnabled = profile?.notification_preferences?.system_announcements !== false;
-
-  // Fetch active announcements
+  // Fetch active announcements (always enabled - announcements are required)
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ['announcements'],
     queryFn: async () => {
@@ -73,7 +70,7 @@ export default function AnnouncementBanner() {
         return true;
       });
     },
-    enabled: !!user && !userLoading && announcementsEnabled,
+    enabled: !!user && !userLoading, // Always enabled - announcements are required
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
@@ -93,8 +90,8 @@ export default function AnnouncementBanner() {
     a => !dismissedAnnouncements.includes(a.id)
   );
 
-  // Don't show banner if no announcements or user has disabled them
-  if (userLoading || isLoading || !announcementsEnabled || visibleAnnouncements.length === 0) {
+  // Don't show banner if no announcements (announcements are always required)
+  if (userLoading || isLoading || visibleAnnouncements.length === 0) {
     return null;
   }
 
