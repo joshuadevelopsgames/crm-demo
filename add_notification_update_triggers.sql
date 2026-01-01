@@ -158,9 +158,9 @@ CREATE OR REPLACE FUNCTION trigger_update_notifications_on_account_change()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Only update if relevant fields changed
+  -- NOTE: snoozed_until check removed - we use notification_snoozes table instead
   IF (OLD.last_interaction_date IS DISTINCT FROM NEW.last_interaction_date)
      OR (OLD.archived IS DISTINCT FROM NEW.archived)
-     OR (OLD.snoozed_until IS DISTINCT FROM NEW.snoozed_until)
      OR (OLD.revenue_segment IS DISTINCT FROM NEW.revenue_segment)
      OR (OLD.status IS DISTINCT FROM NEW.status)
      OR (OLD.icp_status IS DISTINCT FROM NEW.icp_status) THEN
