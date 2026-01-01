@@ -63,7 +63,8 @@ const mockResearchNotes = [];
 // Currently using Google Sheets data (with mock fallback)
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
 
-export const base44 = {
+// Build the object first, then export to avoid any bundler hoisting issues
+const base44Instance = {
   entities: {
     Account: {
       list: async (forceRefresh = false) => {
@@ -1191,4 +1192,7 @@ export const base44 = {
     logout: () => {},
   },
 };
+
+// Export after object is fully constructed
+export const base44 = base44Instance;
 
