@@ -683,6 +683,7 @@ export default function Reports() {
     };
   }, [filteredYearEstimates]);
 
+  // Export handlers
   const handleExportXLSX = () => {
     exportToXLSX({ estimates: filteredYearEstimates, accounts }, selectedYear);
   };
