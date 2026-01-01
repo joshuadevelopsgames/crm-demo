@@ -83,17 +83,26 @@ export default function Settings() {
         .single();
 
       if (error) {
-        console.error('Error updating profile:', error);
+        console.error('Error updating profile:', {
+          error,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
         // If RLS error, try API endpoint as fallback
-        if (error.code === '42501' || error.message?.includes('permission')) {
-          console.log('RLS error, trying API endpoint as fallback...');
+        if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('row-level security')) {
+          console.log('RLS error detected, trying API endpoint as fallback...');
           
           // Get session token for API fallback
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.access_token) {
+            console.error('Session error:', sessionError);
             throw new Error('No session token available. Please log out and log back in.');
           }
 
+          console.log('Calling API endpoint with token...');
           const response = await fetch('/api/data/profile', {
             method: 'PUT',
             headers: {
@@ -104,6 +113,7 @@ export default function Settings() {
           });
 
           const result = await response.json();
+          console.log('API response:', { status: response.status, result });
 
           if (!response.ok || !result.success) {
             throw new Error(result.error || 'Failed to update profile');

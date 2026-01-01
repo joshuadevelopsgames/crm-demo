@@ -18,19 +18,26 @@ function getSupabaseService() {
 
 function getSupabaseAnon() {
   const supabaseUrl = process.env.SUPABASE_URL;
-  // Try multiple possible env var names for anon key
+  // Try multiple possible env var names for anon key (case-insensitive check)
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 
+                          process.env.supabase_anon_key ||
                           process.env.VITE_SUPABASE_ANON_KEY ||
                           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    // Log all environment variables that might be relevant (for debugging)
+    const envKeys = Object.keys(process.env).filter(key => 
+      key.toLowerCase().includes('supabase') && key.toLowerCase().includes('anon')
+    );
     console.error('Missing Supabase anon key. Available env vars:', {
       hasUrl: !!process.env.SUPABASE_URL,
       hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+      hasLowerAnonKey: !!process.env.supabase_anon_key,
       hasViteAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
-      hasNextAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      hasNextAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      relevantKeys: envKeys
     });
-    throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY to Vercel environment variables.');
+    throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY (uppercase) to Vercel environment variables.');
   }
 
   return createClient(supabaseUrl, supabaseAnonKey, {
