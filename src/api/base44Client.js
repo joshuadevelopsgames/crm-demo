@@ -646,14 +646,32 @@ export const base44 = {
             ...profile
           }));
           let results = [...users];
-        if (filters && Object.keys(filters).length > 0) {
-          results = results.filter(user => {
-            return Object.entries(filters).every(([key, value]) => {
-              return user[key] === value;
+          if (filters && Object.keys(filters).length > 0) {
+            results = results.filter(user => {
+              return Object.entries(filters).every(([key, value]) => {
+                return user[key] === value;
+              });
             });
-          });
+          }
+          return results;
+        } catch (error) {
+          console.warn('Error loading users from API:', error);
+          // Fallback: try to get current user
+          try {
+            const currentUser = await getCurrentUser();
+            const results = currentUser ? [currentUser] : [];
+            if (filters && Object.keys(filters).length > 0) {
+              return results.filter(user => {
+                return Object.entries(filters).every(([key, value]) => {
+                  return user[key] === value;
+                });
+              });
+            }
+            return results;
+          } catch (e) {
+            return [];
+          }
         }
-        return results;
       },
       get: async (id) => {
         // Avoid circular dependency by calling getData directly
