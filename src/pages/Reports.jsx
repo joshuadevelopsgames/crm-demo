@@ -568,6 +568,67 @@ export default function Reports() {
     return Array.from(depts).sort();
   }, [sourceEstimates]);
 
+  // Get estimates for selected year (for reports)
+  // If official data is available for this year, use it as source of truth
+  // Otherwise, use regular estimates with filtering
+  // Use useState + useEffect pattern to avoid dependency array initialization issues
+  const [yearEstimates, setYearEstimates] = useState([]);
+  
+  useEffect(() => {
+    // #region agent log
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:629',message:'INSIDE yearEstimates useEffect START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{}); } catch(e) {}
+    // #endregion
+    
+    // Defensive checks - ensure all dependencies are arrays before accessing
+    if (!Array.isArray(estimates)) {
+      setYearEstimates([]);
+      return;
+    }
+    if (!Array.isArray(availableOfficialYears) || !Array.isArray(yearlyOfficialData)) {
+      const filtered = filterEstimatesByYear(estimates, selectedYear, false);
+      setYearEstimates(filtered);
+      return;
+    }
+    
+    // Calculate useOfficialData inline to avoid circular dependency
+    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
+    // #region agent log
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:645',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{}); } catch(e) {}
+    // #endregion
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
+    
+    let filtered;
+    if (useOfficialData) {
+      // Filter official data by year
+      filtered = filterEstimatesByYear(yearlyOfficialData, selectedYearNum, false);
+    } else {
+      // Filter regular estimates by year
+      filtered = filterEstimatesByYear(estimates, selectedYear, false);
+    }
+    
+    setYearEstimates(filtered);
+  }, [estimates, selectedYear, yearlyOfficialData, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
+  
+  // Apply account and department filters to year estimates
+  // Note: Official data may not have account_id, so we filter by division only
+  // MOVED BEFORE stats to avoid TDZ (Temporal Dead Zone) issue
+  const filteredYearEstimates = useMemo(() => {
+    return yearEstimates.filter(estimate => {
+      // Filter by account (if estimate has account_id)
+      if (selectedAccount !== 'all' && estimate.account_id && estimate.account_id !== selectedAccount) {
+        return false;
+      }
+
+      // Filter by department/division
+      if (selectedDepartment !== 'all' && estimate.division !== selectedDepartment) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [yearEstimates, selectedAccount, selectedDepartment]);
+
   // Calculate basic stats (use filteredYearEstimates - already filtered by year and account/department)
   const stats = useMemo(() => {
     // Use filteredYearEstimates which already has the correct data source (official or database)
@@ -621,14 +682,6 @@ export default function Reports() {
       wonValue
     };
   }, [filteredYearEstimates]);
-
-  // Get estimates for selected year (for reports)
-  // If official data is available for this year, use it as source of truth
-  // Otherwise, use regular estimates with filtering
-  // Use useState + useEffect pattern to avoid dependency array initialization issues
-  const [yearEstimates, setYearEstimates] = useState([]);
-  
-  useEffect(() => {
     // #region agent log
     try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:629',message:'INSIDE yearEstimates useEffect START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{}); } catch(e) {}
     // #endregion
@@ -689,24 +742,6 @@ export default function Reports() {
     });
     setYearEstimates(filtered);
   }, [estimates, selectedYear, yearlyOfficialData, availableOfficialYears, yearlyOfficialLoading, yearlyOfficialError]);
-  
-  // Apply account and department filters to year estimates
-  // Note: Official data may not have account_id, so we filter by division only
-  const filteredYearEstimates = useMemo(() => {
-    return yearEstimates.filter(estimate => {
-      // Filter by account (if estimate has account_id)
-      if (selectedAccount !== 'all' && estimate.account_id && estimate.account_id !== selectedAccount) {
-        return false;
-      }
-
-      // Filter by department/division
-      if (selectedDepartment !== 'all' && estimate.division !== selectedDepartment) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [yearEstimates, selectedAccount, selectedDepartment]);
 
   const handleExportXLSX = () => {
     exportToXLSX({ estimates: filteredYearEstimates, accounts }, selectedYear);

@@ -15,7 +15,10 @@
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",
     "cap:build": "npm run build && npx cap sync",
-    "compare:estimates": "node compare_estimates_with_excel.js"
+    "compare:estimates": "node compare_estimates_with_excel.js",
+    "test:build": "node test-build.js",
+    "test:runtime": "node test-runtime.js",
+    "test:all": "npm run build && npm run test:build && npm run test:runtime"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
@@ -64,6 +67,7 @@
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "vercel": "^48.12.1",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "puppeteer": "^21.6.1"
   }
 }
