@@ -241,9 +241,81 @@ export default async function handler(req, res) {
         });
       }
       
+      if (action === 'refresh') {
+        // Refresh notifications for a user using the optimized SQL function
+        // This is called once on page load to ensure notifications are up-to-date
+        const { user_id } = requestData;
+        
+        if (!user_id) {
+          return res.status(400).json({
+            success: false,
+            error: 'user_id is required'
+          });
+        }
+        
+        try {
+          // Call the refresh_user_notifications SQL function
+          const { data: refreshResult, error: refreshError } = await supabase.rpc(
+            'refresh_user_notifications',
+            { user_id_param: user_id }
+          );
+          
+          if (refreshError) {
+            // If function doesn't exist, fall back to fetching current state
+            console.warn('refresh_user_notifications function not available, fetching current state:', refreshError.message);
+            const { data: currentState, error: fetchError } = await supabase
+              .from('user_notification_states')
+              .select('*')
+              .eq('user_id', user_id)
+              .single();
+            
+            if (fetchError && fetchError.code !== 'PGRST116') {
+              throw fetchError;
+            }
+            
+            return res.status(200).json({
+              success: true,
+              data: currentState || {
+                user_id: user_id,
+                notifications: [],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            });
+          }
+          
+          // Fetch the updated state
+          const { data: updatedState, error: fetchError } = await supabase
+            .from('user_notification_states')
+            .select('*')
+            .eq('user_id', user_id)
+            .single();
+          
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            throw fetchError;
+          }
+          
+          return res.status(200).json({
+            success: true,
+            data: updatedState || {
+              user_id: user_id,
+              notifications: refreshResult || [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          });
+        } catch (error) {
+          console.error('Error refreshing notifications:', error);
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to refresh notifications'
+          });
+        }
+      }
+      
       return res.status(400).json({
         success: false,
-        error: 'Invalid action. Use "upsert" or "update_read"'
+        error: 'Invalid action. Use "upsert", "update_read", or "refresh"'
       });
     }
     

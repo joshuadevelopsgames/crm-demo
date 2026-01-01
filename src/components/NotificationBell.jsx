@@ -78,21 +78,62 @@ export default function NotificationBell() {
         console.log(`🔔 NotificationBell: Fetching notifications for user_id: ${currentUserIdStr}`);
         
         // Fetch from both sources in parallel
-        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
-          // Fetch bulk notifications from JSONB table
-          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
-            .then(async r => {
+        // Optionally refresh notifications on page load (once per session)
+        const shouldRefresh = !sessionStorage.getItem(`notifications_refreshed_${currentUserIdStr}`);
+        const refreshPromise = shouldRefresh 
+          ? fetch('/api/data/userNotificationStates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'refresh',
+                data: { user_id: currentUserIdStr }
+              })
+            }).then(async r => {
               const json = await r.json();
-              if (!r.ok) {
-                console.error(`❌ Error fetching userNotificationStates: ${r.status}`, json);
-                return { success: false, error: json.error || 'Unknown error' };
+              if (r.ok && json.success) {
+                sessionStorage.setItem(`notifications_refreshed_${currentUserIdStr}`, 'true');
+                console.log('✅ Refreshed notifications on page load');
+                return json;
               }
-              return json;
+              // If refresh fails, fall back to regular fetch
+              console.warn('⚠️ Refresh failed, falling back to regular fetch:', json.error);
+              return fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
+                .then(async r => {
+                  const json = await r.json();
+                  if (!r.ok) {
+                    return { success: false, error: json.error || 'Unknown error' };
+                  }
+                  return json;
+                });
+            }).catch(error => {
+              console.error('❌ Error refreshing notifications:', error);
+              // Fall back to regular fetch
+              return fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
+                .then(async r => {
+                  const json = await r.json();
+                  if (!r.ok) {
+                    return { success: false, error: json.error || 'Unknown error' };
+                  }
+                  return json;
+                });
             })
-            .catch(error => {
-              console.error('❌ Error fetching userNotificationStates:', error);
-              return { success: false, error: error.message };
-            }),
+          : fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
+              .then(async r => {
+                const json = await r.json();
+                if (!r.ok) {
+                  console.error(`❌ Error fetching userNotificationStates: ${r.status}`, json);
+                  return { success: false, error: json.error || 'Unknown error' };
+                }
+                return json;
+              })
+              .catch(error => {
+                console.error('❌ Error fetching userNotificationStates:', error);
+                return { success: false, error: error.message };
+              });
+        
+        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
+          // Fetch bulk notifications from JSONB table (with optional refresh)
+          refreshPromise,
           // Fetch task notifications from individual rows
           base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
         ]);
