@@ -62,6 +62,20 @@ export default function Login() {
 
       if (error) {
         console.error('❌ Login error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          fullError: JSON.stringify(error, null, 2)
+        });
+        
+        // Check if it's an API key error
+        if (error.message && error.message.includes('API key')) {
+          console.error('❌ API KEY ERROR DETECTED');
+          console.error('Current URL:', import.meta.env.VITE_SUPABASE_URL);
+          console.error('Current Key (first 30 chars):', import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 30));
+        }
+        
         toast.error(error.message || 'Login failed. Please check your credentials.');
         setIsLoading(false);
         return;

@@ -32,14 +32,47 @@ export function getSupabaseClient() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
+      // Decode JWT to verify project ID matches URL
+      let projectIdFromKey = null;
+      let projectIdFromUrl = null;
+      
+      if (supabaseUrl) {
+        const urlMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+        projectIdFromUrl = urlMatch ? urlMatch[1] : null;
+      }
+      
+      if (supabaseAnonKey) {
+        try {
+          // Decode JWT payload (second part, base64)
+          const parts = supabaseAnonKey.split('.');
+          if (parts.length >= 2) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            projectIdFromKey = payload.ref || null;
+          }
+        } catch (e) {
+          console.warn('Could not decode anon key:', e);
+        }
+      }
+      
       console.log('🔧 Supabase client initialization:', {
         hasUrl: !!supabaseUrl,
         hasKey: !!supabaseAnonKey,
         urlLength: supabaseUrl?.length || 0,
         keyLength: supabaseAnonKey?.length || 0,
-        urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
-        keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'missing'
+        urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'missing',
+        keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 30)}...` : 'missing',
+        projectIdFromUrl: projectIdFromUrl,
+        projectIdFromKey: projectIdFromKey,
+        keysMatch: projectIdFromUrl === projectIdFromKey
       });
+      
+      if (projectIdFromUrl && projectIdFromKey && projectIdFromUrl !== projectIdFromKey) {
+        console.error('❌ PROJECT ID MISMATCH!', {
+          urlProjectId: projectIdFromUrl,
+          keyProjectId: projectIdFromKey,
+          message: 'The URL and anon key are from different Supabase projects!'
+        });
+      }
       
       if (!supabaseUrl || !supabaseAnonKey) {
         console.warn('⚠️ Supabase client-side keys not configured. Using API endpoints instead.');
