@@ -22,6 +22,8 @@ import AddInteractionDialog from './AddInteractionDialog';
 
 export default function InteractionTimeline({ interactions, contacts, accountId, contactId }) {
   const queryClient = useQueryClient();
+  const { permissions } = useUserPermissions();
+  const canManageInteractions = permissions['manage_interactions'] === true;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [interactionToDelete, setInteractionToDelete] = useState(null);
   const [editingInteraction, setEditingInteraction] = useState(null);
@@ -182,26 +184,28 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditClick(interaction)}
-                        className="text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                        title="Edit interaction"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(interaction)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        title="Delete interaction"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    {canManageInteractions && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(interaction)}
+                          className="text-slate-600 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                          title="Edit interaction"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(interaction)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete interaction"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   {interaction.content && (
                     <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mt-3">

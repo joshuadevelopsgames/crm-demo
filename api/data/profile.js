@@ -94,18 +94,29 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Update user's own profile
-      const { full_name, phone_number } = req.body;
+      const { full_name, phone_number, notification_preferences } = req.body;
+
+      // Build update object
+      const updateData = {
+        id: user.id,
+        email: user.email,
+        updated_at: new Date().toISOString()
+      };
+
+      if (full_name !== undefined) {
+        updateData.full_name = full_name || null;
+      }
+      if (phone_number !== undefined) {
+        updateData.phone_number = phone_number || null;
+      }
+      if (notification_preferences !== undefined) {
+        updateData.notification_preferences = notification_preferences;
+      }
 
       // Validate that user is only updating their own profile
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          full_name: full_name || null,
-          phone_number: phone_number || null,
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(updateData, {
           onConflict: 'id'
         })
         .select()

@@ -16,15 +16,18 @@ import {
   LogOut,
   HelpCircle,
   ChevronDown,
-  Settings
+  Settings,
+  Megaphone
 } from 'lucide-react';
 
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useTutorial } from '../contexts/TutorialContext';
 import { useUser } from '../contexts/UserContext';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import NotificationBell from './NotificationBell';
 import ProfileDropdown from './ProfileDropdown';
+import AnnouncementBanner from './AnnouncementBanner';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { clearGoogleAuthSession } from '@/services/googleAuthService';
@@ -36,6 +39,7 @@ export default function Layout({ children, currentPageName }) {
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
   const { isTutorialMode, exitTutorial } = useTutorial();
   const { isAdmin } = useUser();
+  const { permissions: userPermissions } = useUserPermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -81,22 +85,32 @@ export default function Layout({ children, currentPageName }) {
   }, [isTutorialMode]);
 
   const regularNavigation = [
-    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard },
-    { name: 'Accounts', path: 'Accounts', icon: Building2 },
-    { name: 'Contacts', path: 'Contacts', icon: Users },
-    { name: 'Tasks', path: 'Tasks', icon: CheckSquare },
-    { name: 'Sequences', path: 'Sequences', icon: GitBranch },
+    { name: 'Dashboard', path: 'Dashboard', icon: LayoutDashboard, permission: null }, // Always visible
+    { name: 'Accounts', path: 'Accounts', icon: Building2, permission: 'view_all_accounts' },
+    { name: 'Contacts', path: 'Contacts', icon: Users, permission: 'view_all_contacts' },
+    { name: 'Tasks', path: 'Tasks', icon: CheckSquare, permission: null }, // Always visible for now
+    { name: 'Sequences', path: 'Sequences', icon: GitBranch, permission: null }, // Always visible for now
   ];
 
   const adminNavigation = [
-    { name: 'Scoring', path: 'Scoring', icon: Award },
-    { name: 'Permissions', path: 'Permissions', icon: Shield },
+    { name: 'Scoring', path: 'Scoring', icon: Award, permission: 'access_scoring' },
+    { name: 'Permissions', path: 'Permissions', icon: Shield, permission: 'manage_permissions' },
+    { name: 'Announcements', path: 'Announcements', icon: Megaphone, permission: null }, // Always visible for admins
   ];
 
-  // Combine regular navigation with admin items if user is admin
-  const navigation = isAdmin 
-    ? [...regularNavigation, ...adminNavigation]
-    : regularNavigation;
+  // Filter navigation items based on permissions
+  const visibleRegularNav = regularNavigation.filter(item => 
+    !item.permission || userPermissions[item.permission] === true
+  );
+
+  const visibleAdminNav = adminNavigation.filter(item => 
+    !item.permission || userPermissions[item.permission] === true
+  );
+
+  // Combine regular navigation with admin items if user has any admin permissions
+  const navigation = visibleAdminNav.length > 0
+    ? [...visibleRegularNav, ...visibleAdminNav]
+    : visibleRegularNav;
 
   const handleLogout = async (e) => {
     // Prevent any default behavior
@@ -247,12 +261,12 @@ export default function Layout({ children, currentPageName }) {
               })}
               
               {/* Admin Dropdown */}
-              {isAdmin && (
+              {visibleAdminNav.length > 0 && (
                 <SimpleDropdown
                   trigger={
                     <button
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                        adminNavigation.some(item => currentPageName === item.path) || currentPageName === 'Tutorial'
+                        visibleAdminNav.some(item => currentPageName === item.path) || currentPageName === 'Tutorial'
                           ? 'bg-primary text-primary-foreground shadow-md'
                           : 'text-foreground/70 hover:bg-surface-2 hover:text-foreground hover:shadow-sm'
                       }`}
@@ -264,7 +278,7 @@ export default function Layout({ children, currentPageName }) {
                   }
                 >
                   <div className="py-1 min-w-[160px]">
-                    {adminNavigation.map((item) => {
+                    {visibleAdminNav.map((item) => {
                       const Icon = item.icon;
                       const isActive = currentPageName === item.path;
                       return (
@@ -389,12 +403,12 @@ export default function Layout({ children, currentPageName }) {
               })}
               
               {/* Admin Section in Mobile */}
-              {isAdmin && (
+              {visibleAdminNav.length > 0 && (
                 <>
                   <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Admin
                   </div>
-                  {adminNavigation.map((item) => {
+                  {visibleAdminNav.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentPageName === item.path;
                     return (
@@ -454,6 +468,9 @@ export default function Layout({ children, currentPageName }) {
           </div>
         )}
       </nav>
+
+      {/* Announcement Banner */}
+      <AnnouncementBanner />
 
       {/* Main Content - Responsive padding: different for PWA/mobile vs desktop */}
       <main 

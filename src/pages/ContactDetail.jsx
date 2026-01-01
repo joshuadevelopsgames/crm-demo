@@ -30,6 +30,8 @@ export default function ContactDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const contactId = urlParams.get('id');
   const navigate = useNavigate();
+  const { permissions } = useUserPermissions();
+  const canManageInteractions = permissions['manage_interactions'] === true;
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
 
@@ -310,10 +312,12 @@ export default function ContactDetail() {
         <TabsContent value="interactions" className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-slate-900">Interaction History</h3>
-            <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
-              <Plus className="w-4 h-4 mr-2" />
-              Log Interaction
-            </Button>
+            {canManageInteractions && (
+              <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
+                <Plus className="w-4 h-4 mr-2" />
+                Log Interaction
+              </Button>
+            )}
           </div>
           <InteractionTimeline interactions={allInteractions} contacts={accountContacts.length > 0 ? accountContacts : [contact]} accountId={contact?.account_id} contactId={contactId} />
         </TabsContent>

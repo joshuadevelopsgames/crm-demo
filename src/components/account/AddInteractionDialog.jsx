@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import toast from 'react-hot-toast';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,8 @@ import {
 
 export default function AddInteractionDialog({ open, onClose, accountId, contactId, contacts = [], editingInteraction = null }) {
   const queryClient = useQueryClient();
+  const { permissions } = useUserPermissions();
+  const canManageInteractions = permissions['manage_interactions'] === true;
   const isEditing = !!editingInteraction;
   
   const [interaction, setInteraction] = useState({
@@ -137,6 +140,12 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
   });
 
   const handleSubmit = async () => {
+    // Check permission before allowing create/edit
+    if (!canManageInteractions) {
+      toast.error('You do not have permission to manage interactions');
+      return;
+    }
+
     const user = await base44.auth.me();
     const interactionData = {
       ...interaction,

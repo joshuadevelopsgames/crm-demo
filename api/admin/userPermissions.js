@@ -101,6 +101,86 @@ export default async function handler(req, res) {
         });
       }
 
+      // Get the requesting user's ID from the auth header or session
+      // For now, we'll need to pass it in the request or get it from a session
+      // This is a simplified check - in production, you'd get this from the authenticated session
+      const requestingUserId = req.headers['x-user-id'] || req.body.requestingUserId;
+      
+      // Check if target user is system admin - prevent permission changes
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, email')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error(`❌ [${requestId}] Error fetching user profile:`, profileError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to verify user role',
+          requestId
+        });
+      }
+
+      if (userProfile?.role === 'system_admin') {
+        console.log(`⚠️ [${requestId}] Attempt to modify system admin permissions blocked for user:`, userId);
+        return res.status(403).json({
+          success: false,
+          error: 'System Admin permissions cannot be modified',
+          requestId
+        });
+      }
+
+      // If requesting user is provided, check if they have the permission they're trying to modify
+      if (requestingUserId) {
+        const { data: requestingUserProfile } = await supabase
+          .from('profiles')
+          .select('role, email')
+          .eq('id', requestingUserId)
+          .single();
+
+        // System admin can modify any permission
+        if (requestingUserProfile?.role !== 'system_admin') {
+          // Check if requesting user has this permission
+          const { data: requestingUserPerms } = await supabase
+            .from('user_permissions')
+            .select('enabled')
+            .eq('user_id', requestingUserId)
+            .eq('permission_id', permissionId)
+            .single();
+
+          // Determine if requesting user has this permission
+          let hasPermission = false;
+          
+          // Special case: manage_permissions is always available to admins
+          if (permissionId === 'manage_permissions' && requestingUserProfile?.role === 'admin') {
+            hasPermission = true;
+          } 
+          // Special case: access_scoring and manage_icp_template are available to admins
+          else if ((permissionId === 'access_scoring' || permissionId === 'manage_icp_template') && requestingUserProfile?.role === 'admin') {
+            hasPermission = true;
+          }
+          // Check database permission
+          else if (requestingUserPerms?.enabled === true) {
+            hasPermission = true;
+          }
+          // If no database record exists, check default (most permissions default to true)
+          else if (requestingUserPerms === null) {
+            // Default to true for most permissions unless explicitly false
+            hasPermission = true; // Most permissions default to enabled
+          }
+          
+          if (!hasPermission) {
+            console.log(`⚠️ [${requestId}] Admin ${requestingUserId} attempted to modify permission ${permissionId} they don't have`);
+            return res.status(403).json({
+              success: false,
+              error: 'You can only modify permissions that you have access to',
+              requestId
+            });
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('user_permissions')
         .upsert({
@@ -137,6 +217,31 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           error: 'userId and permissionId are required',
+          requestId
+        });
+      }
+
+      // Check if user is system admin - prevent permission deletion
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, email')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error(`❌ [${requestId}] Error fetching user profile:`, profileError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to verify user role',
+          requestId
+        });
+      }
+
+      if (userProfile?.role === 'system_admin') {
+        console.log(`⚠️ [${requestId}] Attempt to delete system admin permissions blocked for user:`, userId);
+        return res.status(403).json({
+          success: false,
+          error: 'System Admin permissions cannot be modified',
           requestId
         });
       }

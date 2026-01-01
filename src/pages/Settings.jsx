@@ -44,6 +44,12 @@ export default function Settings() {
   useEffect(() => {
     setFullName(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
     setPhoneNumber(profile?.phone_number || '');
+    
+    // Load notification preferences from profile
+    const prefs = profile?.notification_preferences || {};
+    setEmailNotifications(prefs.email_notifications !== false); // Default to true
+    setTaskReminders(prefs.task_reminders !== false); // Default to true
+    setSystemAnnouncements(prefs.system_announcements !== false); // Default to true
   }, [profile, user]);
 
   const updateProfileMutation = useMutation({
@@ -94,7 +100,12 @@ export default function Settings() {
   const handleSaveProfile = () => {
     updateProfileMutation.mutate({
       full_name: fullName,
-      phone_number: phoneNumber
+      phone_number: phoneNumber,
+      notification_preferences: {
+        email_notifications: emailNotifications,
+        task_reminders: taskReminders,
+        system_announcements: systemAnnouncements
+      }
     });
   };
 
@@ -228,6 +239,14 @@ export default function Settings() {
               onCheckedChange={setSystemAnnouncements}
             />
           </div>
+          <Button 
+            onClick={handleSaveProfile}
+            disabled={updateProfileMutation.isPending}
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 mt-4"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {updateProfileMutation.isPending ? 'Saving...' : 'Save Notification Preferences'}
+          </Button>
         </CardContent>
       </Card>
 

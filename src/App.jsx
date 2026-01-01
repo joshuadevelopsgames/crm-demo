@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { useUserPermissions } from './hooks/useUserPermissions';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import TutorialBar from './components/TutorialBar';
@@ -46,10 +47,11 @@ const queryClient = new QueryClient({
 });
 
 // Component to protect admin routes
-function AdminRoute({ children }) {
+function AdminRoute({ children, requiredPermission }) {
   const { isAdmin, isLoading } = useUser();
+  const { permissions: userPermissions, isLoading: permsLoading } = useUserPermissions();
   
-  if (isLoading) {
+  if (isLoading || permsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -60,7 +62,16 @@ function AdminRoute({ children }) {
     );
   }
   
-  if (!isAdmin) {
+  // If no specific permission required, just check if admin
+  if (!requiredPermission) {
+    if (!isAdmin) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return children;
+  }
+  
+  // Check specific permission
+  if (!userPermissions[requiredPermission]) {
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -203,22 +214,38 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path={createPageUrl('Dashboard')} element={<Dashboard />} />
-              <Route path={createPageUrl('Accounts')} element={<Accounts />} />
-              <Route path={createPageUrl('AccountDetail')} element={<AccountDetail />} />
-              <Route path={createPageUrl('ContactDetail')} element={<ContactDetail />} />
-              <Route path={createPageUrl('Contacts')} element={<Contacts />} />
+              <Route path={createPageUrl('Accounts')} element={
+                <AdminRoute requiredPermission="view_all_accounts">
+                  <Accounts />
+                </AdminRoute>
+              } />
+              <Route path={createPageUrl('AccountDetail')} element={
+                <AdminRoute requiredPermission="view_all_accounts">
+                  <AccountDetail />
+                </AdminRoute>
+              } />
+              <Route path={createPageUrl('ContactDetail')} element={
+                <AdminRoute requiredPermission="view_all_contacts">
+                  <ContactDetail />
+                </AdminRoute>
+              } />
+              <Route path={createPageUrl('Contacts')} element={
+                <AdminRoute requiredPermission="view_all_contacts">
+                  <Contacts />
+                </AdminRoute>
+              } />
               <Route path={createPageUrl('NeglectedAccounts')} element={<NeglectedAccounts />} />
               <Route path={createPageUrl('Tasks')} element={<Tasks />} />
               <Route path={createPageUrl('Sequences')} element={<Sequences />} />
               <Route path={createPageUrl('Scoring')} element={
-                <AdminRoute>
+                <AdminRoute requiredPermission="access_scoring">
                   <Scoring />
                 </AdminRoute>
               } />
               <Route path={createPageUrl('TakeScorecard')} element={<TakeScorecard />} />
               <Route path={createPageUrl('BuildScorecard')} element={<BuildScorecard />} />
               <Route path={createPageUrl('Permissions')} element={
-                <AdminRoute>
+                <AdminRoute requiredPermission="manage_permissions">
                   <Permissions />
                 </AdminRoute>
               } />

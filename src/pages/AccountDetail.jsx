@@ -28,6 +28,7 @@ import {
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import toast from 'react-hot-toast';
 import InteractionTimeline from '../components/account/InteractionTimeline';
 import ContactsList from '../components/account/ContactsList';
@@ -60,6 +61,8 @@ export default function AccountDetail() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
+  const { permissions } = useUserPermissions();
+  const canManageInteractions = permissions['manage_interactions'] === true;
 
   const queryClient = useQueryClient();
 
@@ -353,10 +356,12 @@ export default function AccountDetail() {
             <Edit className="w-4 h-4 mr-2" />
             Edit
           </Button>
-          <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
-            <Plus className="w-4 h-4 mr-2" />
-            Log Interaction
-          </Button>
+          {canManageInteractions && (
+            <Button onClick={() => setShowAddInteraction(true)} variant="outline" className="border-slate-300">
+              <Plus className="w-4 h-4 mr-2" />
+              Log Interaction
+            </Button>
+          )}
         </div>
       </div>
 

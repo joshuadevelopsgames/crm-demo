@@ -143,6 +143,56 @@ export default function Permissions() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
+  // Fetch current admin's permissions to determine what they can see/modify
+  const { data: currentAdminPerms = {} } = useQuery({
+    queryKey: ['current-admin-permissions', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return {};
+      
+      // System admin has all permissions
+      if (isSystemAdmin) {
+        const allPerms = {};
+        PERMISSIONS.forEach(perm => {
+          allPerms[perm.id] = true;
+        });
+        return allPerms;
+      }
+      
+      // For regular admins, get their actual permissions
+      const isUserAdmin = profile.role === 'admin' || profile.role === 'system_admin';
+      const roleBasedPerms = {};
+      PERMISSIONS.forEach(perm => {
+        if (perm.id === 'manage_permissions') {
+          roleBasedPerms[perm.id] = isUserAdmin;
+        } else if (perm.id === 'access_scoring' || perm.id === 'manage_icp_template') {
+          roleBasedPerms[perm.id] = isUserAdmin;
+        } else {
+          roleBasedPerms[perm.id] = perm.checkedByDefault !== false;
+        }
+      });
+      
+      // Fetch custom permissions from database
+      try {
+        const response = await fetch(`/api/admin/userPermissions?userId=${profile.id}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // Merge: database permissions override role-based defaults
+            return {
+              ...roleBasedPerms,
+              ...result.data
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching current admin permissions:', error);
+      }
+      
+      return roleBasedPerms;
+    },
+    enabled: !!profile?.id && isAdmin
+  });
+
   // Fetch all users/profiles
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['profiles'],
@@ -224,6 +274,17 @@ export default function Permissions() {
       const supabase = getSupabaseAuth();
       if (!supabase) throw new Error('Supabase not configured');
       
+      // Check if user is system admin before allowing role change
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (userProfile?.role === 'system_admin') {
+        throw new Error('System Admin role cannot be changed');
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .update({ role })
@@ -245,6 +306,13 @@ export default function Permissions() {
   });
 
   const handleRoleChange = (userId, newRole) => {
+    // Prevent changing role for system admins
+    const user = users.find(u => u.id === userId);
+    if (user?.role === 'system_admin') {
+      toast.error('System Admin role cannot be changed');
+      return;
+    }
+    
     updateUserRoleMutation.mutate({ userId, role: newRole });
   };
 
@@ -253,7 +321,12 @@ export default function Permissions() {
       const response = await fetch('/api/admin/userPermissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, permissionId, enabled })
+        body: JSON.stringify({ 
+          userId, 
+          permissionId, 
+          enabled,
+          requestingUserId: profile?.id // Pass current admin's ID for backend validation
+        })
       });
 
       if (!response.ok) {
@@ -275,6 +348,18 @@ export default function Permissions() {
 
   const handlePermissionToggle = (permissionId, enabled) => {
     if (!selectedUser) return;
+    
+    // Prevent changing permissions for system admins
+    if (selectedUser.role === 'system_admin') {
+      toast.error('System Admin permissions cannot be modified');
+      return;
+    }
+    
+    // Prevent admins from changing permissions they don't have
+    if (!isSystemAdmin && !currentAdminPerms[permissionId]) {
+      toast.error('You can only modify permissions that you have access to');
+      return;
+    }
     
     // Optimistically update UI
     setUserPermissions(prev => ({
@@ -615,56 +700,76 @@ export default function Permissions() {
 
                 {/* Permissions by Category */}
                 <div className="space-y-6">
-                  {Object.entries(PERMISSIONS_BY_CATEGORY).map(([category, perms]) => (
-                    <div key={category}>
-                      <h3 className="text-sm font-semibold text-slate-700 dark:text-white mb-3 uppercase tracking-wide">
-                        {category}
-                      </h3>
-                      <div className="space-y-3">
-                        {perms.map(perm => {
-                          const Icon = perm.icon;
-                          const isEnabled = userPermissions[perm.id] || false;
-                          
-                          return (
-                            <div
-                              key={perm.id}
-                              className={`p-3 rounded-lg border ${
-                                isEnabled ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Icon className="w-4 h-4 text-slate-600" />
-                                    <Label className="font-medium text-slate-900">
-                                      {perm.name}
-                                    </Label>
+                  {Object.entries(PERMISSIONS_BY_CATEGORY).map(([category, perms]) => {
+                    // Filter permissions to only show those the current admin has access to
+                    const visiblePerms = isSystemAdmin 
+                      ? perms 
+                      : perms.filter(perm => currentAdminPerms[perm.id] === true);
+                    
+                    // Don't show category if no permissions are visible
+                    if (visiblePerms.length === 0) return null;
+                    
+                    return (
+                      <div key={category}>
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-white mb-3 uppercase tracking-wide">
+                          {category}
+                        </h3>
+                        <div className="space-y-3">
+                          {visiblePerms.map(perm => {
+                            const Icon = perm.icon;
+                            const isEnabled = userPermissions[perm.id] || false;
+                            const canModify = isSystemAdmin || currentAdminPerms[perm.id] === true;
+                            
+                            return (
+                              <div
+                                key={perm.id}
+                                className={`p-3 rounded-lg border ${
+                                  isEnabled ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200'
+                                } ${!canModify ? 'opacity-50' : ''}`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Icon className="w-4 h-4 text-slate-600" />
+                                      <Label className="font-medium text-slate-900">
+                                        {perm.name}
+                                      </Label>
+                                    </div>
+                                    <p className="text-xs text-slate-600">{perm.description}</p>
                                   </div>
-                                  <p className="text-xs text-slate-600">{perm.description}</p>
+                                  <Switch
+                                    checked={isEnabled}
+                                    onCheckedChange={(checked) => {
+                                      handlePermissionToggle(perm.id, checked);
+                                    }}
+                                    disabled={selectedUser?.role === 'system_admin' || !canModify}
+                                  />
                                 </div>
-                                <Switch
-                                  checked={isEnabled}
-                                  onCheckedChange={(checked) => {
-                                    handlePermissionToggle(perm.id, checked);
-                                  }}
-                                  disabled={false}
-                                />
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Info Note */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> As System Admin, you can enable or disable any permission for any user. 
-                    Permissions are stored individually and override role-based defaults. Changes are saved immediately.
-                  </p>
-                </div>
+                {selectedUser?.role === 'system_admin' ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-sm text-amber-800">
+                      <strong>🔒 System Admin:</strong> This user has full access and their permissions cannot be modified. 
+                      System Admin role is protected and cannot be changed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Note:</strong> As System Admin, you can enable or disable any permission for any user. 
+                      Permissions are stored individually and override role-based defaults. Changes are saved immediately.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
