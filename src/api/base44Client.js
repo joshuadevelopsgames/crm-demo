@@ -1193,6 +1193,13 @@ const base44Instance = {
   },
 };
 
-// Simple direct export - object is fully constructed before this line
-export const base44 = base44Instance;
+// Export a function that returns the instance
+// This pattern avoids any bundler static analysis issues
+export function getBase44() {
+  return base44Instance;
+}
+
+// Also export as const for backward compatibility
+// But create it via function call to ensure proper initialization
+export const base44 = getBase44();
 
