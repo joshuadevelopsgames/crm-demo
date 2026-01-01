@@ -48,7 +48,8 @@ export default async function handler(req, res) {
     'http://localhost:3000',
     'https://lecrm-dev.vercel.app',
     'https://lecrm-stg.vercel.app',
-    'https://lecrm.vercel.app'
+    'https://lecrm.vercel.app',
+    'https://lecrm-*.vercel.app' // Allow all Vercel preview URLs
   ];
 
   const origin = req.headers.origin;
@@ -75,14 +76,31 @@ export default async function handler(req, res) {
     const token = authHeader.replace('Bearer ', '');
     
     // Verify the token using anon key client (service role can't verify user tokens)
-    const supabaseAnon = getSupabaseAnon();
+    let supabaseAnon;
+    try {
+      supabaseAnon = getSupabaseAnon();
+    } catch (error) {
+      console.error('Failed to create anon client:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error: ' + error.message
+      });
+    }
+    
     const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
     
     if (authError || !user) {
-      console.error('Token verification error:', authError);
+      console.error('Token verification error:', {
+        error: authError,
+        errorMessage: authError?.message,
+        errorStatus: authError?.status,
+        hasUser: !!user,
+        tokenPreview: token.substring(0, 20) + '...'
+      });
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized - Invalid token'
+        error: 'Unauthorized - Invalid token. Please log out and log back in.',
+        details: authError?.message
       });
     }
 

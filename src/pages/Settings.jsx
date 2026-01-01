@@ -58,29 +58,64 @@ export default function Settings() {
         throw new Error('Not authenticated');
       }
       
-      // Get the session token for API authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No session token available');
+      // Update profile directly using Supabase client (RLS will handle permissions)
+      const updateData = {
+        id: user.id,
+        updated_at: new Date().toISOString()
+      };
+
+      if (data.full_name !== undefined) {
+        updateData.full_name = data.full_name || null;
+      }
+      if (data.phone_number !== undefined) {
+        updateData.phone_number = data.phone_number || null;
+      }
+      if (data.notification_preferences !== undefined) {
+        updateData.notification_preferences = data.notification_preferences;
       }
 
-      // Use API endpoint to bypass RLS issues
-      const response = await fetch('/api/data/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(data)
-      });
+      const { data: updatedProfile, error } = await supabase
+        .from('profiles')
+        .upsert(updateData, {
+          onConflict: 'id'
+        })
+        .select()
+        .single();
 
-      const result = await response.json();
+      if (error) {
+        console.error('Error updating profile:', error);
+        // If RLS error, try API endpoint as fallback
+        if (error.code === '42501' || error.message?.includes('permission')) {
+          console.log('RLS error, trying API endpoint as fallback...');
+          
+          // Get session token for API fallback
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            throw new Error('No session token available. Please log out and log back in.');
+          }
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to update profile');
+          const response = await fetch('/api/data/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify(data)
+          });
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Failed to update profile');
+          }
+
+          return result.data;
+        }
+        
+        throw new Error(error.message || 'Failed to update profile');
       }
 
-      return result.data;
+      return updatedProfile;
     },
     onSuccess: () => {
       // Invalidate all user-related queries
