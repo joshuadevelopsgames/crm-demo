@@ -62,24 +62,13 @@ const mockResearchNotes = [];
 // Placeholder - replace with actual base44 SDK initialization
 // Currently using Google Sheets data (with mock fallback)
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
-// Using lazy initialization to avoid circular dependency issues
-let _base44Instance = null;
+// Export directly - all helper functions are defined above, no circular deps in object definition
 
 // #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:66',message:'Module loading - _base44Instance declared',data:{hasInstance:!!_base44Instance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:66',message:'About to create base44 object directly',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
 // #endregion
 
-function createBase44Instance() {
-  // #region agent log
-  const stack = new Error().stack;
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:69',message:'createBase44Instance called',data:{hasInstance:!!_base44Instance,stackTrace:stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  if (_base44Instance) return _base44Instance;
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:72',message:'Creating _base44Instance object',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  _base44Instance = {
+export const base44 = {
   entities: {
     Account: {
       list: async (forceRefresh = false) => {
@@ -1206,41 +1195,9 @@ function createBase44Instance() {
     },
     logout: () => {},
   },
-  };
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1200',message:'_base44Instance created successfully',data:{hasInstance:!!_base44Instance},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  return _base44Instance;
-}
+};
 
 // #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1204',message:'About to export base44 - using direct object instead of Proxy',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-// #endregion
-
-// Export the instance directly - create it lazily on first access via getter
-// This avoids Proxy traps that bundlers call during module analysis
-const base44Obj = {};
-Object.defineProperty(base44Obj, 'entities', {
-  get() {
-    const instance = createBase44Instance();
-    return instance.entities;
-  },
-  enumerable: true,
-  configurable: true
-});
-Object.defineProperty(base44Obj, 'auth', {
-  get() {
-    const instance = createBase44Instance();
-    return instance.auth;
-  },
-  enumerable: true,
-  configurable: true
-});
-
-export const base44 = base44Obj;
-
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1225',message:'base44 exported with property getters',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1200',message:'base44 object created and exported directly',data:{hasEntities:!!base44.entities,hasAuth:!!base44.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{});
 // #endregion
 
