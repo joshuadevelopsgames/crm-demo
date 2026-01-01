@@ -31,6 +31,29 @@ async function getData(entityType, forceRefresh = false) {
   }
 }
 
+// Helper to get current user (extracted to avoid circular dependency)
+async function getCurrentUser() {
+  // Try to get real user from Supabase
+  try {
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        return {
+          id: session.user.id,
+          email: session.user.email,
+          ...session.user
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('Error getting Supabase user, using fallback:', error);
+  }
+  // Fallback to mock user
+  return { email: 'user@example.com', id: '1' };
+}
+
 // Placeholder - replace with actual base44 SDK initialization
 // Currently using Google Sheets data (with mock fallback)
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
@@ -604,7 +627,7 @@ export const base44 = {
           console.warn('Error loading users from API:', error);
           // Fallback: try to get current user
           try {
-            const currentUser = await base44.auth.me();
+            const currentUser = await getCurrentUser();
             return currentUser ? [currentUser] : [];
           } catch (e) {
             return [];
@@ -612,8 +635,17 @@ export const base44 = {
         }
       },
       filter: async (filters) => {
-        const users = await base44.entities.User.list();
-        let results = [...users];
+        // Avoid circular dependency by calling the list method directly
+        try {
+          const data = await getData('profiles');
+          const users = data.map(profile => ({
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            role: profile.role,
+            ...profile
+          }));
+          let results = [...users];
         if (filters && Object.keys(filters).length > 0) {
           results = results.filter(user => {
             return Object.entries(filters).every(([key, value]) => {
@@ -624,8 +656,27 @@ export const base44 = {
         return results;
       },
       get: async (id) => {
-        const users = await base44.entities.User.list();
-        return users.find(u => u.id === id);
+        // Avoid circular dependency by calling getData directly
+        try {
+          const data = await getData('profiles');
+          const users = data.map(profile => ({
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            role: profile.role,
+            ...profile
+          }));
+          return users.find(u => u.id === id);
+        } catch (error) {
+          console.warn('Error loading users from API:', error);
+          // Fallback: try to get current user
+          try {
+            const currentUser = await getCurrentUser();
+            return currentUser?.id === id ? currentUser : null;
+          } catch (e) {
+            return null;
+          }
+        }
       },
       create: async (data) => {
         // Not implemented - users are created via auth
@@ -696,7 +747,7 @@ export const base44 = {
         // Fallback: client-side filtering (for non-user_id filters or if API call fails)
         // NOTE: This fallback should rarely be used. If filtering by user_id, the API call above should succeed.
         // For non-user_id filters, we still need to get current user for security
-        const currentUser = await base44.auth.me();
+        const currentUser = await getCurrentUser();
         if (!currentUser?.id) {
           console.warn('No current user for notification filter, returning empty array');
           return [];
@@ -1110,25 +1161,8 @@ export const base44 = {
   },
   auth: {
     me: async () => {
-      // Try to get real user from Supabase
-      try {
-        const { getSupabaseAuth } = await import('@/services/supabaseClient');
-        const supabase = getSupabaseAuth();
-        if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            return {
-              id: session.user.id,
-              email: session.user.email,
-              ...session.user
-            };
-          }
-        }
-      } catch (error) {
-        console.warn('Error getting Supabase user, using fallback:', error);
-      }
-      // Fallback to mock user
-      return { email: 'user@example.com', id: '1' };
+      // Use the helper function to avoid circular dependency
+      return await getCurrentUser();
     },
     logout: () => {},
   },
