@@ -21,7 +21,6 @@ export default function BugReportButton() {
   const [description, setDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [consoleLogs, setConsoleLogs] = useState([]);
   const consoleLogRef = useRef([]);
   const originalConsoleRef = useRef(null);
 
@@ -210,7 +209,6 @@ export default function BugReportButton() {
 
   const handleOpen = () => {
     setIsOpen(true);
-    setConsoleLogs([]);
     consoleLogRef.current = [];
   };
 
@@ -220,7 +218,6 @@ export default function BugReportButton() {
     setSelectedElement(null);
     setDescription('');
     setUserEmail('');
-    setConsoleLogs([]);
     consoleLogRef.current = [];
   };
 
@@ -247,9 +244,8 @@ export default function BugReportButton() {
     setIsSubmitting(true);
 
     try {
-      // Get current console logs
+      // Get current console logs (not shown to user, only sent in email)
       const currentLogs = [...consoleLogRef.current];
-      setConsoleLogs(currentLogs);
 
       // Get user info
       const userInfo = {
@@ -420,30 +416,6 @@ export default function BugReportButton() {
                 className="resize-none"
               />
             </div>
-
-            {/* Console Logs Preview */}
-            {consoleLogs.length > 0 && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Console Logs Captured ({consoleLogs.length})
-                </label>
-                <Card>
-                  <CardContent className="p-4 max-h-40 overflow-y-auto">
-                    <pre className="text-xs font-mono space-y-1">
-                      {consoleLogs.slice(-20).map((log, idx) => (
-                        <div key={idx} className={`${
-                          log.type === 'error' ? 'text-red-600' :
-                          log.type === 'warn' ? 'text-yellow-600' :
-                          'text-gray-600'
-                        }`}>
-                          <span className="text-gray-400">[{log.timestamp}]</span> {log.message}
-                        </div>
-                      ))}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
 
           <DialogFooter>

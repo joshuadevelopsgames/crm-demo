@@ -18,7 +18,10 @@ import {
   Save,
   Link as LinkIcon,
   Download,
-  Loader2
+  Loader2,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -38,6 +41,14 @@ export default function Settings() {
   const [taskReminders, setTaskReminders] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Update state when profile/user data loads
   useEffect(() => {
@@ -167,6 +178,69 @@ export default function Settings() {
     });
   };
 
+  const changePasswordMutation = useMutation({
+    mutationFn: async ({ currentPassword, newPassword }) => {
+      if (!supabase || !user?.id) {
+        throw new Error('Not authenticated');
+      }
+
+      // Validate passwords
+      if (!currentPassword || !newPassword) {
+        throw new Error('Current password and new password are required');
+      }
+
+      if (newPassword.length < 6) {
+        throw new Error('New password must be at least 6 characters long');
+      }
+
+      // Supabase requires re-authentication before password change
+      // First, verify the current password by signing in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      });
+
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+
+      // Now update the password
+      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        throw new Error(updateError.message || 'Failed to update password');
+      }
+
+      return updateData;
+    },
+    onSuccess: () => {
+      // Clear password fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('✓ Password changed successfully');
+    },
+    onError: (error) => {
+      console.error('Error changing password:', error);
+      toast.error(error.message || 'Failed to change password. Please try again.');
+    }
+  });
+
+  const handleChangePassword = () => {
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword,
+      newPassword
+    });
+  };
+
   const handleExportAllData = async () => {
     setIsExporting(true);
     setExportProgress({ message: 'Preparing export...', accounts: 0, contacts: 0 });
@@ -254,6 +328,87 @@ export default function Settings() {
           >
             <Save className="w-4 h-4 mr-2" />
             {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Security Settings - Password Change */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="w-5 h-5" />
+            Security Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword" className="dark:text-[#ffffff]">Current Password</Label>
+            <div className="relative">
+              <Input
+                id="currentPassword"
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter your current password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="dark:text-[#ffffff]">New Password</Label>
+            <div className="relative">
+              <Input
+                id="newPassword"
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Password must be at least 6 characters long</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="dark:text-[#ffffff]">Confirm New Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your new password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <Button 
+            onClick={handleChangePassword}
+            disabled={changePasswordMutation.isPending || !currentPassword || !newPassword || !confirmPassword}
+            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600"
+          >
+            <Lock className="w-4 h-4 mr-2" />
+            {changePasswordMutation.isPending ? 'Changing Password...' : 'Change Password'}
           </Button>
         </CardContent>
       </Card>

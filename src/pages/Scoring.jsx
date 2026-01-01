@@ -272,7 +272,7 @@ export default function Scoring() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">ICP Template</h1>
-            <p className="text-slate-600 mt-1">Manage the Ideal Customer Profile scorecard template</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Manage the Ideal Customer Profile scorecard template</p>
           </div>
           <div className="flex gap-2">
             {!icpTemplate && (
@@ -289,7 +289,7 @@ export default function Scoring() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
                   <Button 
-                    className="bg-slate-900 hover:bg-slate-800" 
+                    className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900" 
                     onClick={() => openEditDialog(icpTemplate)}
                   >
                     <Edit className="w-4 h-4 mr-2" />
@@ -329,18 +329,18 @@ export default function Scoring() {
                     onChange={(e) => setNewTemplate({ ...newTemplate, pass_threshold: parseInt(e.target.value) || 70 })}
                     placeholder="70"
                   />
-                  <p className="text-xs text-slate-500 mt-1">Scores at or above this will be marked as PASS</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Scores at or above this will be marked as PASS</p>
                 </div>
                 {!editingTemplate && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p className="text-sm text-blue-800">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
                       This will create the ICP template that all accounts will use for scoring.
                     </p>
                   </div>
                 )}
                 {editingTemplate && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded">
-                    <p className="text-sm text-amber-800">
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
                       ⚠️ Updating the ICP template will create a new version. Previous scorecards will retain their original template version.
                     </p>
                   </div>
@@ -358,11 +358,11 @@ export default function Scoring() {
                 </div>
                 <div className="space-y-4">
                   {newTemplate.questions.map((question, index) => (
-                    <Card key={index} className="border-slate-200">
+                    <Card key={index} className="border-slate-200 dark:border-slate-700">
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold flex-shrink-0 mt-1">
+                            <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center font-semibold flex-shrink-0 mt-1">
                               {index + 1}
                             </div>
                             <div className="flex-1 space-y-3">
@@ -417,7 +417,7 @@ export default function Scoring() {
                                   onChange={(e) => updateQuestion(index, 'section', e.target.value)}
                                   placeholder="e.g., Corporate Demographics, Non-Negotiables"
                                 />
-                                <p className="text-xs text-slate-400 mt-1">Group questions together (e.g., "Corporate Demographic Information")</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Group questions together (e.g., "Corporate Demographic Information")</p>
                               </div>
                             </div>
                             {newTemplate.questions.length > 1 && (
@@ -461,7 +461,7 @@ export default function Scoring() {
       {icpLoading ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <p className="text-slate-600">Loading ICP template...</p>
+            <p className="text-slate-600 dark:text-slate-400">Loading ICP template...</p>
           </CardContent>
         </Card>
       ) : !icpTemplate ? (
@@ -469,7 +469,7 @@ export default function Scoring() {
           <CardContent className="p-12 text-center">
             <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">No ICP Template</h3>
-            <p className="text-slate-600 mb-4">Import or create an ICP template to start scoring accounts</p>
+            <p className="text-slate-600 dark:text-slate-400 mb-4">Import or create an ICP template to start scoring accounts</p>
             <Button 
               variant="outline" 
               onClick={() => importTemplateMutation.mutate()}
@@ -483,25 +483,25 @@ export default function Scoring() {
       ) : (
         <div className="space-y-6">
           {/* Current ICP Template */}
-          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+          <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950 dark:to-slate-900">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <Award className="w-5 h-5 text-emerald-600" />
+                    <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     {icpTemplate.name}
                   </CardTitle>
                   {icpTemplate.description && (
-                    <p className="text-sm text-slate-600 mt-2">{icpTemplate.description}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{icpTemplate.description}</p>
                   )}
                 </div>
-                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                <Badge className="bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700">
                   Version {icpTemplate.version_number || 1} (Current)
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 text-sm text-slate-600">
+              <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                 <Badge variant="outline">
                   {icpTemplate.questions?.length || 0} questions
                 </Badge>
@@ -513,8 +513,8 @@ export default function Scoring() {
 
               {/* Question Sections Summary */}
               {icpTemplate.questions && icpTemplate.questions.length > 0 && (
-                <div className="pt-3 border-t border-slate-200">
-                  <p className="text-xs font-semibold text-slate-700 mb-2">Question Sections:</p>
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Question Sections:</p>
                   <div className="flex flex-wrap gap-2">
                     {Array.from(new Set(icpTemplate.questions.map(q => q.section).filter(Boolean))).map((section, i) => {
                       const sectionQuestions = icpTemplate.questions.filter(q => q.section === section);
@@ -545,12 +545,12 @@ export default function Scoring() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Version History</CardTitle>
-                <p className="text-sm text-slate-600 mt-1">Previous versions of the ICP template</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Previous versions of the ICP template</p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {icpVersionHistory.filter(v => !v.is_current_version).map((version) => (
-                    <div key={version.id} className="p-4 border border-slate-200 rounded-lg">
+                    <div key={version.id} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2">
@@ -560,9 +560,9 @@ export default function Scoring() {
                             </Badge>
                           </div>
                           {version.description && (
-                            <p className="text-sm text-slate-600 mt-1">{version.description}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{version.description}</p>
                           )}
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                             {version.questions?.length || 0} questions • Max score: 100 (normalized)
                           </p>
                         </div>
