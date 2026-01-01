@@ -157,8 +157,16 @@ export default function Reports() {
   fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:140',message:'AFTER useQuery availableOfficialYears',data:{availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsIsArray:Array.isArray(availableOfficialYears),availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataLength:yearlyOfficialData?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
   // #endregion
 
+  // Calculate useOfficialData and hasOfficialDataForYear at component level for use throughout
+  // MUST be defined before sourceEstimates to avoid TDZ (Temporal Dead Zone) error
+  const { useOfficialData, hasOfficialDataForYear } = useMemo(() => {
+    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
+    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
+    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
+    return { useOfficialData, hasOfficialDataForYear };
+  }, [selectedYear, availableOfficialYears, yearlyOfficialData]);
+
   // Determine which data source to use
-  // Note: useOfficialData is calculated above at component level
   const sourceEstimates = useMemo(() => {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:145',message:'INSIDE sourceEstimates useMemo START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
@@ -168,14 +176,6 @@ export default function Reports() {
     // #endregion
     return useOfficialData ? yearlyOfficialData : estimates;
   }, [useOfficialData, yearlyOfficialData, estimates]);
-  
-  // Calculate useOfficialData and hasOfficialDataForYear at component level for use throughout
-  const { useOfficialData, hasOfficialDataForYear } = useMemo(() => {
-    const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
-    const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
-    const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
-    return { useOfficialData, hasOfficialDataForYear };
-  }, [selectedYear, availableOfficialYears, yearlyOfficialData]);
 
   const dataSource = useMemo(() => {
     return useOfficialData ? 'LMN Official (Detailed Export)' : 'Database (General Export)';
