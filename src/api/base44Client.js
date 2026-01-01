@@ -1199,19 +1199,27 @@ function createBase44() {
   };
 }
 
-// Create instance immediately but via function call to avoid bundler issues
+// Use IIFE to create instance immediately and avoid any hoisting issues
 // #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1200',message:'About to call createBase44 and export',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'A'})}).catch(()=>{});
-// #endregion
-const _base44Instance = createBase44();
-
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1204',message:'_base44Instance created, about to export',data:{hasInstance:!!_base44Instance,hasEntities:!!_base44Instance?.entities,hasAuth:!!_base44Instance?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'A'})}).catch(()=>{});
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1200',message:'About to create base44 via IIFE',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run5',hypothesisId:'A'})}).catch(()=>{});
 // #endregion
 
-export const base44 = _base44Instance;
+export const base44 = (function() {
+  try {
+    const instance = createBase44();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1206',message:'base44 instance created in IIFE',data:{hasInstance:!!instance,hasEntities:!!instance?.entities,hasAuth:!!instance?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run5',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    return instance;
+  } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1210',message:'ERROR creating base44 in IIFE',data:{error:error?.message,stack:error?.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run5',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    throw error;
+  }
+})();
 
 // #region agent log
-fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1208',message:'base44 exported successfully',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'A'})}).catch(()=>{});
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1215',message:'base44 exported via IIFE',data:{hasBase44:!!base44},timestamp:Date.now(),sessionId:'debug-session',runId:'run5',hypothesisId:'A'})}).catch(()=>{});
 // #endregion
 
