@@ -65,9 +65,20 @@ const mockResearchNotes = [];
 // Using lazy initialization to avoid circular dependency issues
 let _base44Instance = null;
 
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:66',message:'Module loading - _base44Instance declared',data:{hasInstance:!!_base44Instance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+// #endregion
+
 function createBase44Instance() {
+  // #region agent log
+  const stack = new Error().stack;
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:69',message:'createBase44Instance called',data:{hasInstance:!!_base44Instance,stackTrace:stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   if (_base44Instance) return _base44Instance;
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:72',message:'Creating _base44Instance object',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   _base44Instance = {
   entities: {
     Account: {
@@ -1197,31 +1208,39 @@ function createBase44Instance() {
   },
   };
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1200',message:'_base44Instance created successfully',data:{hasInstance:!!_base44Instance},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   return _base44Instance;
 }
 
-// Export a getter function to ensure lazy initialization
-export const base44 = new Proxy({}, {
-  get(target, prop) {
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1204',message:'About to export base44 - using direct object instead of Proxy',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+// #endregion
+
+// Export the instance directly - create it lazily on first access via getter
+// This avoids Proxy traps that bundlers call during module analysis
+const base44Obj = {};
+Object.defineProperty(base44Obj, 'entities', {
+  get() {
     const instance = createBase44Instance();
-    return instance[prop];
+    return instance.entities;
   },
-  set(target, prop, value) {
-    const instance = createBase44Instance();
-    instance[prop] = value;
-    return true;
-  },
-  has(target, prop) {
-    const instance = createBase44Instance();
-    return prop in instance;
-  },
-  ownKeys(target) {
-    const instance = createBase44Instance();
-    return Object.keys(instance);
-  },
-  getOwnPropertyDescriptor(target, prop) {
-    const instance = createBase44Instance();
-    return Object.getOwnPropertyDescriptor(instance, prop);
-  }
+  enumerable: true,
+  configurable: true
 });
+Object.defineProperty(base44Obj, 'auth', {
+  get() {
+    const instance = createBase44Instance();
+    return instance.auth;
+  },
+  enumerable: true,
+  configurable: true
+});
+
+export const base44 = base44Obj;
+
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'base44Client.js:1225',message:'base44 exported with property getters',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+// #endregion
 

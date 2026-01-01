@@ -106,6 +106,28 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { action, data } = req.body;
       
+      if (action === 'rebuild_all') {
+        // Rebuild all notifications using database function
+        // This is expensive - only use for initial setup or manual refresh
+        const { error } = await supabase.rpc('rebuild_all_notifications');
+        
+        if (error) {
+          // If function doesn't exist, return helpful error
+          if (error.message && (error.message.includes('function') || error.message.includes('does not exist'))) {
+            return res.status(500).json({
+              success: false,
+              error: 'rebuild_all_notifications function not found. Run optimize-notification-system.sql in Supabase first.'
+            });
+          }
+          throw error;
+        }
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Notification rebuild initiated. This may take a few minutes for large datasets.'
+        });
+      }
+      
       if (action === 'create') {
         // Create new notification in Supabase
         const { id, ...dataWithoutId } = data;

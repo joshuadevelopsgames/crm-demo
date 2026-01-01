@@ -50,99 +50,66 @@ export default function Dashboard() {
     console.log('🔄 Dashboard: Invalidated notifications cache on page load');
   }, [queryClient]);
 
-  // Create renewal notifications on mount and daily
+  // OPTIMIZED: Notifications are maintained by database triggers
+  // On page load, we just fetch the pre-built list - no expensive recalculation!
   useEffect(() => {
-    let lastNotificationCheck = 0;
-    const NOTIFICATION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes - don't run full check more often than this
+    // Only update account statuses periodically - triggers handle notification updates automatically
+    let lastStatusCheck = 0;
+    const STATUS_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes - only check account statuses
     
-    // Always run renewal notification creation - the function itself handles duplicates
-    // This ensures all at-risk accounts get notifications, even if some were created earlier
-    const checkAndRunRenewals = async (force = false) => {
+    // Update account statuses (at_risk) based on renewal dates
+    // Triggers will automatically update notifications when account.status changes
+    const checkAndUpdateAccountStatuses = async (force = false) => {
       try {
         // Skip if we just ran recently (unless forced)
-        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
-        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
-          return; // Skip to avoid too frequent checks
+        const timeSinceLastCheck = Date.now() - lastStatusCheck;
+        if (!force && timeSinceLastCheck < STATUS_CHECK_INTERVAL) {
+          return;
         }
         
         // Get current user
         const currentUser = await base44.auth.me();
         if (!currentUser?.id) {
-          console.warn('No current user, skipping renewal notification check');
+          console.warn('No current user, skipping account status check');
           return;
         }
         
-        // Always run - the function will skip notifications that already exist today
-        // This ensures newly at-risk accounts get notifications even if the function ran earlier
+        // Only update account statuses - triggers handle notification updates
         await createRenewalNotifications();
-        // Invalidate queries to refresh both notifications and accounts (for at_risk status)
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        // Invalidate queries to refresh accounts (notifications are auto-updated by triggers)
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
-        lastNotificationCheck = Date.now();
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }); // Refresh to get trigger-updated notifications
+        lastStatusCheck = Date.now();
       } catch (error) {
-        console.error('Error checking/creating renewal notifications:', error);
+        console.error('Error checking/updating account statuses:', error);
       }
     };
     
-    // Create neglected account notifications on mount and daily
-    // Always run to ensure all neglected accounts have notifications (function handles duplicates)
-    const checkAndRunNeglected = async (force = false) => {
-      try {
-        // Skip if we just ran recently (unless forced)
-        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
-        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
-          return; // Skip to avoid too frequent checks
-        }
-        
-        // Get current user to filter notifications
-        const currentUser = await base44.auth.me();
-        if (!currentUser?.id) {
-          console.warn('No current user, skipping neglected account notification check');
-          return;
-        }
-        
-        // Run notification creation - it will skip accounts that already have notifications
-        // This ensures newly neglected accounts get notifications even if the function ran earlier today
-        await createNeglectedAccountNotifications();
-        // Invalidate queries to refresh notifications
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        queryClient.invalidateQueries({ queryKey: ['accounts'] });
-        lastNotificationCheck = Date.now();
-      } catch (error) {
-        console.error('Error checking/creating neglected account notifications:', error);
-      }
-    };
-    
-    // Check and create overdue task notifications
+    // Check and create overdue task notifications (these are still handled in JS for now)
     const checkAndRunOverdueTasks = async (force = false) => {
       try {
-        // Skip if we just ran recently (unless forced)
-        const timeSinceLastCheck = Date.now() - lastNotificationCheck;
-        if (!force && timeSinceLastCheck < NOTIFICATION_CHECK_INTERVAL) {
-          return; // Skip to avoid too frequent checks
+        const timeSinceLastCheck = Date.now() - lastStatusCheck;
+        if (!force && timeSinceLastCheck < STATUS_CHECK_INTERVAL) {
+          return;
         }
         
-        // Get current user to filter notifications
         const currentUser = await base44.auth.me();
         if (!currentUser?.id) {
           console.warn('No current user, skipping overdue task notification check');
           return;
         }
         
-        // Run notification creation - it will skip tasks that already have notifications
         await createOverdueTaskNotifications();
-        // Invalidate queries to refresh notifications
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        lastNotificationCheck = Date.now();
+        lastStatusCheck = Date.now();
       } catch (error) {
         console.error('Error checking/creating overdue task notifications:', error);
       }
     };
     
-    // Run on mount (force run)
-    checkAndRunRenewals(true);
-    checkAndRunNeglected(true);
+    // Run on mount (force run) - but only update statuses, not full notification recalculation
+    checkAndUpdateAccountStatuses(true);
     checkAndRunOverdueTasks(true);
     
     // Generate recurring task instances on page load
@@ -150,15 +117,16 @@ export default function Dashboard() {
       console.error('Error generating recurring task instances:', error);
     });
     
-    // Schedule periodic check every 30 minutes (increased from 15 to reduce Supabase egress)
+    // Schedule periodic check every 30 minutes
     const intervalId = setInterval(async () => {
-      await checkAndRunRenewals();
-      await checkAndRunNeglected();
+      await checkAndUpdateAccountStatuses();
       await checkAndRunOverdueTasks();
-    }, 30 * 60 * 1000); // Check every 30 minutes
+    }, 30 * 60 * 1000);
     
-    // Note: Task assignment notifications are already handled automatically when tasks are created/updated
-    // via createTaskAssignmentNotifications() in Tasks.jsx, so no periodic check needed for those
+    // Note: 
+    // - Bulk notifications (neglected_account, renewal_reminder) are maintained by database triggers
+    // - Task notifications are still handled in JavaScript (task_assigned, task_overdue, etc.)
+    // - On page load, NotificationBell just fetches the pre-built list from user_notification_states
     
     return () => {
       clearInterval(intervalId);

@@ -485,14 +485,15 @@ export async function createEndOfYearNotification() {
 
 /**
  * Create renewal notifications for accounts with renewals coming up in 6 months
- * NEW APPROACH: Uses JSONB user_notification_states table instead of individual rows
- * This prevents duplicates and is more efficient
+ * OPTIMIZED APPROACH: Database triggers maintain the notification list automatically
+ * This function only updates account statuses - triggers handle notification updates
  */
 export async function createRenewalNotifications() {
-  console.log('🔄 Starting renewal notification creation (JSONB approach)...');
+  console.log('🔄 Starting renewal notification creation (trigger-based approach)...');
   
   try {
     // First, update account statuses based on renewal dates
+    // The database triggers will automatically update notifications when accounts change
     const accounts = await base44.entities.Account.list();
     const estimates = await base44.entities.Estimate.list();
     const today = startOfDay(new Date());
@@ -501,6 +502,7 @@ export async function createRenewalNotifications() {
     let atRiskAlreadyCount = 0;
     
     // Update account statuses based on renewal dates
+    // When we update account.status, the trigger will automatically update notifications
     for (const account of accounts) {
       if (account.archived) continue;
       
@@ -522,6 +524,7 @@ export async function createRenewalNotifications() {
         try {
           await base44.entities.Account.update(account.id, { status: 'at_risk' });
           atRiskUpdatedCount++;
+          // Trigger will automatically update notifications for this account
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
@@ -532,17 +535,18 @@ export async function createRenewalNotifications() {
         // Keep at_risk if renewal passed (daysUntilRenewal < 0) - those are URGENT
         try {
           await base44.entities.Account.update(account.id, { status: 'active' });
+          // Trigger will automatically update notifications for this account
         } catch (error) {
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
       }
     }
     
-    // Now update all user notification states (this will include renewal reminders)
-    await updateAllUserNotificationStates();
+    // No need to call updateAllUserNotificationStates() - triggers handle it automatically!
     
     console.log(`✅ Renewal notification creation complete`);
     console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
+    console.log(`📊 Notifications maintained automatically by database triggers`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }
@@ -550,20 +554,16 @@ export async function createRenewalNotifications() {
 
 /**
  * Create notifications for neglected accounts (no interaction in 30+ days)
- * NEW APPROACH: Uses JSONB user_notification_states table instead of individual rows
- * This prevents duplicates and is more efficient
+ * OPTIMIZED APPROACH: Database triggers maintain the notification list automatically
+ * This function is kept for backwards compatibility but does nothing - triggers handle it
  */
 export async function createNeglectedAccountNotifications() {
-  console.log('🔄 Starting neglected account notification creation (JSONB approach)...');
-  
-  try {
-    // Update all user notification states (this will include neglected accounts)
-    await updateAllUserNotificationStates();
-    
-    console.log(`✅ Neglected account notification creation complete`);
-  } catch (error) {
-    console.error('❌ Error creating neglected account notifications:', error);
-  }
+  console.log('🔄 Neglected account notifications are maintained automatically by database triggers');
+  console.log('📊 No manual recalculation needed - triggers update notifications when accounts/interactions change');
+  // Triggers automatically maintain the notification list when:
+  // - Accounts are updated (last_interaction_date, archived, status, etc.)
+  // - Interactions are created/updated
+  // - Estimates are created/updated (affects renewal dates)
 }
 
 /**
@@ -615,12 +615,44 @@ async function updateUserNotificationState(userId, notifications) {
 
 /**
  * Recalculate and update notification states for all users
- * This is the new JSONB-based approach for bulk notifications
+ * 
+ * ⚠️ DEPRECATED: This function is expensive and should NOT be called on page load!
+ * 
+ * The database triggers automatically maintain the notification list when accounts/interactions/estimates change.
+ * On page load, just query the pre-built list from user_notification_states table.
+ * 
+ * Only use this function for:
+ * - Initial setup (one-time rebuild)
+ * - Manual refresh (admin action)
+ * - After bulk data imports
+ * 
+ * For normal operation, rely on triggers to maintain the list automatically.
  */
 export async function updateAllUserNotificationStates() {
-  console.log('🔄 Starting notification state recalculation (JSONB approach)...');
+  console.warn('⚠️ updateAllUserNotificationStates() is expensive - only use for initial setup or manual refresh');
+  console.log('🔄 Starting notification state recalculation (trigger-based approach with manual rebuild)...');
   
   try {
+    // Call the database function to rebuild all notifications
+    // This is more efficient than doing it in JavaScript
+    const response = await fetch('/api/data/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'rebuild_all'
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ Notification rebuild complete via database function');
+        return;
+      }
+    }
+    
+    // Fallback: If database function doesn't exist, do it the old way
+    console.log('⚠️ Database rebuild function not available, falling back to JavaScript approach...');
     const accounts = await base44.entities.Account.list();
     const users = await base44.entities.User.list();
     const estimates = await base44.entities.Estimate.list();

@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:4',message:'App.jsx module loading - before context imports',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+// #endregion
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:7',message:'App.jsx module loading - after UserContext import',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+// #endregion
 import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import TutorialBar from './components/TutorialBar';
