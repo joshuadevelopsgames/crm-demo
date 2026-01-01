@@ -230,7 +230,7 @@ export default function Login() {
                 style={{
                   width: '100%',
                   padding: (isPWA || isMobile) ? '14px 16px' : '10px 16px',
-                  backgroundColor: isLoading || isGoogleLoading ? '#94a3b8' : '#0f172a',
+                  backgroundColor: isLoading ? '#94a3b8' : '#0f172a',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
