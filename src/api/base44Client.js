@@ -1193,13 +1193,7 @@ const base44Instance = {
   },
 };
 
-// Export a function that returns the instance
-// This pattern avoids any bundler static analysis issues
-export function getBase44() {
-  return base44Instance;
-}
-
-// Also export as const for backward compatibility
-// But create it via function call to ensure proper initialization
-export const base44 = getBase44();
+// Export directly - the object is fully constructed
+// Using Object.freeze to prevent any modifications that might confuse the bundler
+export const base44 = Object.freeze(base44Instance);
 
