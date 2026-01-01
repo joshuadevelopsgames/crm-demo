@@ -54,6 +54,11 @@ async function getCurrentUser() {
   return { email: 'user@example.com', id: '1' };
 }
 
+// Mock arrays for SalesInsights and ResearchNotes (used as fallback for create/update)
+// These are only used if API endpoints are not available
+const mockSalesInsights = [];
+const mockResearchNotes = [];
+
 // Placeholder - replace with actual base44 SDK initialization
 // Currently using Google Sheets data (with mock fallback)
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
