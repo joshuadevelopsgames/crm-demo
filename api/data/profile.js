@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-function getSupabase() {
+function getSupabaseService() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -9,6 +9,31 @@ function getSupabase() {
   }
 
   return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+function getSupabaseAnon() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  // Try multiple possible env var names for anon key
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 
+                          process.env.VITE_SUPABASE_ANON_KEY ||
+                          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase anon key. Available env vars:', {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+      hasViteAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
+      hasNextAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    });
+    throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY to Vercel environment variables.');
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -37,8 +62,6 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const supabase = getSupabase();
-
   try {
     // Get the user from the Authorization header
     const authHeader = req.headers.authorization;
@@ -51,15 +74,20 @@ export default async function handler(req, res) {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Verify the token using anon key client (service role can't verify user tokens)
+    const supabaseAnon = getSupabaseAnon();
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('Token verification error:', authError);
       return res.status(401).json({
         success: false,
         error: 'Unauthorized - Invalid token'
       });
     }
+
+    // Use service role client for database operations (bypasses RLS)
+    const supabase = getSupabaseService();
 
     if (req.method === 'GET') {
       // Get user's own profile
