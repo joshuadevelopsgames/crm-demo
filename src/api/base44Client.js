@@ -62,7 +62,13 @@ const mockResearchNotes = [];
 // Placeholder - replace with actual base44 SDK initialization
 // Currently using Google Sheets data (with mock fallback)
 // BUILD_VERSION: 2025-12-29-12:00 - Fixed Sequence.create to use API
-export const base44 = {
+// Using lazy initialization to avoid circular dependency issues
+let _base44Instance = null;
+
+function createBase44Instance() {
+  if (_base44Instance) return _base44Instance;
+  
+  _base44Instance = {
   entities: {
     Account: {
       list: async (forceRefresh = false) => {
@@ -1189,5 +1195,33 @@ export const base44 = {
     },
     logout: () => {},
   },
-};
+  };
+  
+  return _base44Instance;
+}
+
+// Export a getter function to ensure lazy initialization
+export const base44 = new Proxy({}, {
+  get(target, prop) {
+    const instance = createBase44Instance();
+    return instance[prop];
+  },
+  set(target, prop, value) {
+    const instance = createBase44Instance();
+    instance[prop] = value;
+    return true;
+  },
+  has(target, prop) {
+    const instance = createBase44Instance();
+    return prop in instance;
+  },
+  ownKeys(target) {
+    const instance = createBase44Instance();
+    return Object.keys(instance);
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    const instance = createBase44Instance();
+    return Object.getOwnPropertyDescriptor(instance, prop);
+  }
+});
 
