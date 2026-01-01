@@ -47,30 +47,40 @@ if (Capacitor.isNativePlatform()) {
 }
 
 // Render the app with error boundary
+console.log('🚀 Starting React initialization...');
+console.log('React version:', React.version);
+console.log('ReactDOM available:', typeof ReactDOM !== 'undefined');
+
 try {
   const rootElement = document.getElementById('root');
+  console.log('Root element:', rootElement);
+  
   if (!rootElement) {
-    console.error('Root element not found!');
+    console.error('❌ Root element not found!');
     // Show error on loading screen
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) {
       loadingScreen.innerHTML = '<div style="text-align: center; color: red;"><p>Error: Root element not found</p></div>';
     }
   } else {
+    console.log('✅ Root element found, creating React root...');
     const root = ReactDOM.createRoot(rootElement);
+    console.log('✅ React root created, rendering App...');
+    
     root.render(
       <React.StrictMode>
         <App />
       </React.StrictMode>
     );
-    console.log('React app rendered');
+    console.log('✅ React app rendered successfully');
   }
 } catch (error) {
-  console.error('Error rendering React app:', error);
+  console.error('❌ Error rendering React app:', error);
+  console.error('Error stack:', error.stack);
   // Show error on loading screen
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
-    loadingScreen.innerHTML = `<div style="text-align: center; color: red;"><p>Error loading app: ${error.message}</p></div>`;
+    loadingScreen.innerHTML = `<div style="text-align: center; color: red; padding: 2rem;"><p style="font-weight: 600;">Error loading app</p><p style="margin-top: 0.5rem; font-size: 0.875rem;">${error.message}</p><details style="margin-top: 1rem; text-align: left;"><summary style="cursor: pointer; color: #64748b;">Stack trace</summary><pre style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b; overflow: auto;">${error.stack}</pre></details></div>`;
   }
 }
 

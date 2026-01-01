@@ -230,7 +230,26 @@
         }, 10000); // 10 second timeout
       })();
     </script>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module">
+      console.log('📦 Module script tag executing...');
+      try {
+        import('/src/main.jsx').then(() => {
+          console.log('✅ main.jsx module loaded successfully');
+        }).catch((error) => {
+          console.error('❌ Failed to load main.jsx:', error);
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.innerHTML = `<div style="text-align: center; color: red; padding: 2rem;"><p style="font-weight: 600;">Failed to load app</p><p style="margin-top: 0.5rem; font-size: 0.875rem;">${error.message}</p><details style="margin-top: 1rem; text-align: left;"><summary style="cursor: pointer; color: #64748b;">Error details</summary><pre style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b; overflow: auto;">${error.stack || error}</pre></details></div>`;
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error importing main.jsx:', error);
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.innerHTML = `<div style="text-align: center; color: red; padding: 2rem;"><p style="font-weight: 600;">Error loading app</p><p style="margin-top: 0.5rem; font-size: 0.875rem;">${error.message}</p></div>`;
+        }
+      }
+    </script>
   </body>
 </html>
 
