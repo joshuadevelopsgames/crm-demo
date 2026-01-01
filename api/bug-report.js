@@ -1,7 +1,27 @@
 /**
  * API endpoint for sending bug reports via email
  * Supports multiple email services: Resend, SendGrid, or SMTP via Nodemailer
+ * Also creates a notification for the admin user
  */
+
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null; // Return null if not configured, notification creation will be skipped
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
 
 export default async function handler(req, res) {
   // CORS headers
@@ -113,6 +133,53 @@ ${bugReport.consoleLogs.map(log =>
         success: false,
         error: 'Failed to send bug report email. Please check email service configuration.' 
       });
+    }
+
+    // Create notification for admin user (jrsschroeder@gmail.com)
+    try {
+      const supabase = getSupabase();
+      if (supabase) {
+        // Find user by email
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('email', 'jrsschroeder@gmail.com')
+          .single();
+
+        if (!profileError && profile) {
+          // Create notification
+          const notificationTitle = '🐛 New Bug Report';
+          const notificationMessage = bugReport.description.length > 100 
+            ? bugReport.description.substring(0, 100) + '...'
+            : bugReport.description;
+
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: profile.id,
+              type: 'bug_report',
+              title: notificationTitle,
+              message: notificationMessage,
+              is_read: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+
+          if (notificationError) {
+            console.error('Error creating notification:', notificationError);
+            // Don't fail the request if notification creation fails
+          } else {
+            console.log('Notification created for bug report');
+          }
+        } else {
+          console.warn('User jrsschroeder@gmail.com not found in profiles, skipping notification');
+        }
+      } else {
+        console.warn('Supabase not configured, skipping notification creation');
+      }
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+      // Don't fail the request if notification creation fails
     }
 
     return res.status(200).json({ 
