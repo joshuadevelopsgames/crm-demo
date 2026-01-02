@@ -1087,11 +1087,26 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Force refetch all active queries
       await queryClient.refetchQueries({ type: 'active' });
       
-      // Calculate and assign revenue segments based on 12-month rolling revenue
+      // Calculate and assign revenue segments based on current year revenue
       try {
         console.log('📊 Calculating revenue segments for all accounts...');
         const allAccounts = await base44.entities.Account.list();
-        const allEstimates = await base44.entities.Estimate.list();
+        
+        // Use API endpoint to get estimates with all fields (contract_end, estimate_close_date, etc.)
+        const estimatesResponse = await fetch('/api/data/estimates');
+        let allEstimates = [];
+        if (estimatesResponse.ok) {
+          const result = await estimatesResponse.json();
+          if (result.success) {
+            allEstimates = result.data || [];
+          } else {
+            console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+            allEstimates = await base44.entities.Estimate.list();
+          }
+        } else {
+          console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
+          allEstimates = await base44.entities.Estimate.list();
+        }
         
         // Group estimates by account_id
         const estimatesByAccountId = {};

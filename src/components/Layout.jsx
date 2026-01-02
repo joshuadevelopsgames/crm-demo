@@ -105,11 +105,15 @@ export default function Layout({ children, currentPageName }) {
     !item.permission || userPermissions[item.permission] === true
   );
 
-  const visibleAdminNav = adminNavigation.filter(item => 
-    !item.permission || userPermissions[item.permission] === true
-  );
+  // Only show admin navigation if user is actually an admin
+  // Then filter admin items based on permissions
+  const visibleAdminNav = isAdmin 
+    ? adminNavigation.filter(item => 
+        !item.permission || userPermissions[item.permission] === true
+      )
+    : [];
 
-  // Combine regular navigation with admin items if user has any admin permissions
+  // Combine regular navigation with admin items if user is admin and has visible admin items
   const navigation = visibleAdminNav.length > 0
     ? [...visibleRegularNav, ...visibleAdminNav]
     : visibleRegularNav;

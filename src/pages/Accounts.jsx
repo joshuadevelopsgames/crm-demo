@@ -260,7 +260,7 @@ export default function Accounts() {
   });
 
   const handleRecalculateSegments = () => {
-    if (window.confirm('Recalculate revenue segments for all accounts based on rolling 12-month average revenue percentages? This will update all accounts.')) {
+    if (window.confirm('Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)? This will update all accounts.')) {
       recalculateSegmentsMutation.mutate();
     }
   };
@@ -486,7 +486,7 @@ export default function Accounts() {
             variant="outline"
             disabled={recalculateSegmentsMutation.isPending}
             className="border-slate-300"
-            title="Recalculate revenue segments for all accounts based on rolling 12-month average revenue percentages"
+            title="Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${recalculateSegmentsMutation.isPending ? 'animate-spin' : ''}`} />
             Recalculate Segments

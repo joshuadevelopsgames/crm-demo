@@ -39,5 +39,9 @@ CREATE POLICY notification_snoozes_authenticated_all ON notification_snoozes
   WITH CHECK (true);
 
 -- Add comment
-COMMENT ON TABLE notification_snoozes IS 'Tracks universal snoozes for notifications. When any user snoozes a notification, it disappears for ALL users until the snooze period ends.';
+COMMENT ON TABLE notification_snoozes IS 'Tracks universal snoozes for notifications. When any user snoozes a notification, it disappears for ALL users until the snooze period ends. Snoozes persist across account imports/updates because account IDs are preserved during updates.';
+
+-- Add comment to foreign key constraint
+COMMENT ON CONSTRAINT notification_snoozes_related_account_id_fkey ON notification_snoozes IS 
+'Snoozes are linked to accounts by ID. ON DELETE CASCADE means snoozes are only deleted if the account is deleted, NOT when the account is updated. Account IDs are preserved during imports, so snoozes persist across imports.';
 

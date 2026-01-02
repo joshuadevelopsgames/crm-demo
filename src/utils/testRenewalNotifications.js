@@ -20,8 +20,21 @@ export async function testRenewalNotifications() {
     const activeAccounts = accounts.filter(acc => !acc.archived);
     console.log(`📊 Found ${activeAccounts.length} active accounts\n`);
 
-    // Get all estimates
-    const estimates = await base44.entities.Estimate.list();
+    // Get all estimates - use API endpoint to ensure contract_end field is included
+    const estimatesResponse = await fetch('/api/data/estimates');
+    let estimates = [];
+    if (estimatesResponse.ok) {
+      const result = await estimatesResponse.json();
+      if (result.success) {
+        estimates = result.data || [];
+      } else {
+        console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+        estimates = await base44.entities.Estimate.list();
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
+      estimates = await base44.entities.Estimate.list();
+    }
     console.log(`📋 Found ${estimates.length} total estimates\n`);
 
     // Get all users
@@ -117,7 +130,23 @@ export async function previewRenewalNotifications() {
   
   try {
     const accounts = await base44.entities.Account.list();
-    const estimates = await base44.entities.Estimate.list();
+    
+    // Use API endpoint to ensure contract_end field is included
+    const estimatesResponse = await fetch('/api/data/estimates');
+    let estimates = [];
+    if (estimatesResponse.ok) {
+      const result = await estimatesResponse.json();
+      if (result.success) {
+        estimates = result.data || [];
+      } else {
+        console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+        estimates = await base44.entities.Estimate.list();
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
+      estimates = await base44.entities.Estimate.list();
+    }
+    
     const users = await base44.entities.User.list();
     
     const activeAccounts = accounts.filter(acc => !acc.archived);

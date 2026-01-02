@@ -1,5 +1,5 @@
 /**
- * Calculate revenue segment based on current year revenue percentage
+ * Calculate revenue segment based on current year revenue percentage (year-based, not rolling 12 months)
  * 
  * Segment A: >= 15% of total revenue (current year)
  * Segment B: 5-15% of total revenue (current year)
@@ -9,7 +9,13 @@
  *   - "Service" = ongoing/recurring
  *   - If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
  * 
- * Revenue is calculated from won estimates for the current year only
+ * Revenue is calculated from won estimates for the current year only (year-based calculation)
+ * Year determination priority (matching Excel logic):
+ * 1. estimate_close_date (primary - matches Excel "Estimate Close Date")
+ * 2. contract_start (fallback)
+ * 3. estimate_date (fallback)
+ * 4. created_date (fallback)
+ * 
  * Multi-year contracts are annualized (total price divided by number of years)
  */
 
@@ -66,12 +72,19 @@ function getContractYears(durationMonths) {
 
 /**
  * Get the year an estimate applies to and its allocated value for the current year
- * Uses contract-year allocation logic: revenue allocated by contract years, not calendar year coverage
+ * Uses year-based calculation (not rolling 12 months): revenue allocated by calendar year
+ * Priority for year determination (matching Excel logic):
+ * 1. estimate_close_date (primary - matches Excel "Estimate Close Date")
+ * 2. contract_start (fallback)
+ * 3. estimate_date (fallback)
+ * 4. created_date (fallback)
  * @param {Object} estimate - Estimate object
- * @param {number} currentYear - Current year (e.g., 2024)
+ * @param {number} currentYear - Current year (e.g., 2025)
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
+  // Priority 1: estimate_close_date (matches Excel "Estimate Close Date")
+  const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
@@ -104,6 +117,8 @@ function getEstimateYearData(estimate, currentYear) {
     const debugInfo = {
       estimateId: estimate.id || estimate.lmn_estimate_id,
       currentYear,
+      estimateCloseDateRaw: estimate.estimate_close_date,
+      estimateCloseDateParsed: estimateCloseDate ? estimateCloseDate.getFullYear() : null,
       contractStartRaw: estimate.contract_start,
       contractStartParsed: contractStart ? contractStart.getFullYear() : null,
       contractEndRaw: estimate.contract_end,
@@ -111,6 +126,7 @@ function getEstimateYearData(estimate, currentYear) {
       estimateDateRaw: estimate.estimate_date,
       estimateDateParsed: estimateDate ? estimateDate.getFullYear() : null,
       totalPrice,
+      hasEstimateCloseDate: !!estimateCloseDate && !isNaN(estimateCloseDate.getTime()),
       hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
       hasContractEnd: !!contractEnd && !isNaN(contractEnd.getTime()),
       hasEstimateDate: !!estimateDate && !isNaN(estimateDate.getTime())
@@ -123,61 +139,60 @@ function getEstimateYearData(estimate, currentYear) {
     }
   }
   
-  // Case 1: Both contract_start and contract_end exist
-  // Use contract-year allocation logic
-  if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-    const startYear = contractStart.getFullYear();
+  // Determine which date to use for year calculation (priority order matches Excel)
+  let yearDeterminationDate = null;
+  let yearDeterminationSource = null;
+  
+  // Priority 1: estimate_close_date (matches Excel "Estimate Close Date")
+  if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
+    yearDeterminationDate = estimateCloseDate;
+    yearDeterminationSource = 'estimate_close_date';
+  }
+  // Priority 2: contract_start
+  else if (contractStart && !isNaN(contractStart.getTime())) {
+    yearDeterminationDate = contractStart;
+    yearDeterminationSource = 'contract_start';
+  }
+  // Priority 3: estimate_date
+  else if (estimateDate && !isNaN(estimateDate.getTime())) {
+    yearDeterminationDate = estimateDate;
+    yearDeterminationSource = 'estimate_date';
+  }
+  // Priority 4: created_date
+  else if (createdDate && !isNaN(createdDate.getTime())) {
+    yearDeterminationDate = createdDate;
+    yearDeterminationSource = 'created_date';
+  }
+  
+  // If we have a date for year determination, use it
+  if (yearDeterminationDate) {
+    const determinationYear = yearDeterminationDate.getFullYear();
+    const appliesToCurrentYear = currentYear === determinationYear;
     
-    // STEP 1: Calculate duration in months
-    const durationMonths = calculateDurationMonths(contractStart, contractEnd);
-    if (durationMonths <= 0) return null;
-    
-    // STEP 2: Determine number of contract years
-    const yearsCount = getContractYears(durationMonths);
-    
-    // STEP 3: Determine which calendar years receive allocation
-    // years_applied = [start_year, start_year+1, ..., start_year+(years_count-1)]
-    const yearsApplied = [];
-    for (let i = 0; i < yearsCount; i++) {
-      yearsApplied.push(startYear + i);
+    // If we have both contract_start and contract_end, annualize the revenue
+    // Otherwise, use the full price
+    if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+      // Multi-year contract: annualize the revenue
+      const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+      if (durationMonths <= 0) return null;
+      
+      const yearsCount = getContractYears(durationMonths);
+      const annualAmount = totalPrice / yearsCount;
+      
+      return {
+        appliesToCurrentYear,
+        value: appliesToCurrentYear ? annualAmount : 0
+      };
+    } else {
+      // Single-year or no contract dates: use full price
+      return {
+        appliesToCurrentYear,
+        value: appliesToCurrentYear ? totalPrice : 0
+      };
     }
-    
-    // Check if current year is in years_applied
-    const appliesToCurrentYear = yearsApplied.includes(currentYear);
-    
-    // STEP 4: Allocate revenue
-    // annual_amount = total_price / years_count
-    const annualAmount = totalPrice / yearsCount;
-    
-    return {
-      appliesToCurrentYear,
-      value: appliesToCurrentYear ? annualAmount : 0
-    };
   }
   
-  // Case 2: Only contract_start exists
-  if (contractStart && !isNaN(contractStart.getTime())) {
-    const startYear = contractStart.getFullYear();
-    const appliesToCurrentYear = currentYear === startYear;
-    
-    return {
-      appliesToCurrentYear,
-      value: totalPrice
-    };
-  }
-  
-  // Case 3: No contract dates, use estimate_date as fallback
-  if (estimateDate && !isNaN(estimateDate.getTime())) {
-    const estimateYear = estimateDate.getFullYear();
-    const appliesToCurrentYear = currentYear === estimateYear;
-    
-    return {
-      appliesToCurrentYear,
-      value: totalPrice
-    };
-  }
-  
-  // Case 4: No dates at all - treat as applying to current year
+  // Case: No dates at all - treat as applying to current year
   // This handles estimates that have no date information at all
   // We assume they apply to the current year (useful for test mode or estimates without dates)
   return {
@@ -311,9 +326,10 @@ export function getAccountRevenue(account, estimates = []) {
 
 /**
  * Calculate revenue segment for a single account
+ * Uses stored annual_revenue directly (already calculated for current year)
  * @param {Object} account - The account object
- * @param {number} totalRevenue - Total revenue across all accounts
- * @param {Array} estimates - Array of estimate objects for this account (optional)
+ * @param {number} totalRevenue - Total revenue across all accounts (sum of annual_revenue)
+ * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
  * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
 export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
@@ -348,22 +364,11 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     }
   }
   
-  // For segment calculation, use revenue from won estimates
-  // Note: annual_revenue should be calculated from won estimates automatically, not manually entered
-  // If annual_revenue exists, it should match revenue from won estimates
-  let accountRevenue = getAccountRevenue(account, estimates);
-  
-  // Legacy fallback: if no revenue from won estimates but annual_revenue exists, use it
-  // This handles cases where annual_revenue was manually set before we made it calculated-only
-  // In the future, annual_revenue should always be calculated from won estimates
-  if (accountRevenue <= 0 && account?.annual_revenue) {
-    const annualRevenue = typeof account.annual_revenue === 'number' 
-      ? account.annual_revenue 
-      : parseFloat(account.annual_revenue) || 0;
-    if (annualRevenue > 0) {
-      accountRevenue = annualRevenue;
-    }
-  }
+  // Use stored annual_revenue directly (already calculated for current year from won estimates)
+  // annual_revenue should be updated whenever estimates change, so we can use it directly here
+  const accountRevenue = typeof account.annual_revenue === 'number' 
+    ? account.annual_revenue 
+    : parseFloat(account.annual_revenue) || 0;
   
   if (accountRevenue <= 0 || !totalRevenue || totalRevenue <= 0) {
     return 'C'; // Default to C if no revenue data
@@ -387,26 +392,17 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 
 /**
  * Calculate total revenue across all accounts (current year total)
+ * Uses stored annual_revenue directly from each account
  * @param {Array} accounts - Array of account objects
- * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional)
- * @returns {number} - Total revenue from current year (sum of all accounts, annualized for multi-year contracts)
+ * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, not used anymore)
+ * @returns {number} - Total revenue from current year (sum of all accounts' annual_revenue)
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
   return accounts.reduce((total, account) => {
-    const estimates = estimatesByAccountId[account.id] || [];
-    let revenue = getAccountRevenue(account, estimates);
-    
-    // Legacy fallback: include annual_revenue if no revenue from won estimates
-    // Note: annual_revenue should be calculated from won estimates automatically
-    // This handles legacy data where annual_revenue might have been manually set
-    if (revenue <= 0 && account?.annual_revenue) {
-      const annualRevenue = typeof account.annual_revenue === 'number' 
-        ? account.annual_revenue 
-        : parseFloat(account.annual_revenue) || 0;
-      if (annualRevenue > 0) {
-        revenue = annualRevenue;
-      }
-    }
+    // Use stored annual_revenue directly (already calculated for current year)
+    const revenue = typeof account.annual_revenue === 'number' 
+      ? account.annual_revenue 
+      : parseFloat(account.annual_revenue) || 0;
     
     return total + revenue;
   }, 0);
@@ -414,12 +410,14 @@ export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
 
 /**
  * Auto-assign revenue segments for all accounts based on current year revenue percentages
+ * Uses stored annual_revenue directly (already calculated for current year)
  * @param {Array} accounts - Array of account objects
- * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional)
+ * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, only used for Segment D check)
  * @returns {Array} - Array of accounts with updated revenue_segment
  */
 export function autoAssignRevenueSegments(accounts, estimatesByAccountId = {}) {
   // Calculate total revenue from current year across all accounts
+  // Uses stored annual_revenue directly - no need to recalculate from estimates
   const totalRevenue = calculateTotalRevenue(accounts, estimatesByAccountId);
   
   if (totalRevenue <= 0) {

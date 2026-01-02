@@ -254,6 +254,11 @@ export default async function handler(req, res) {
             
             if (existingMap.has(lookupValue)) {
               // Update existing account - use the existing database ID for the update
+              // IMPORTANT: We preserve the existing account ID to maintain relationships:
+              // - notification_snoozes (related_account_id) will persist
+              // - contacts (account_id) will remain linked
+              // - estimates (account_id) will remain linked
+              // - jobsites (account_id) will remain linked
               const existingId = existingMap.get(lookupValue);
               
               // If the imported ID is different from the existing ID, log a warning
@@ -264,6 +269,7 @@ export default async function handler(req, res) {
               }
               
               // Don't include id in update data (can't update primary key)
+              // This ensures the account ID never changes, preserving all relationships including snoozes
               const { id, ...updateDataWithoutId } = accountData;
               toUpdate.push({ id: existingId, data: updateDataWithoutId });
             } else {

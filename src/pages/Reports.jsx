@@ -77,10 +77,24 @@ export default function Reports() {
     queryFn: async () => {
       console.log('📊 Reports: useQuery EXECUTING for estimates');
       try {
-        const data = await base44.entities.Estimate.list();
+        // Use API endpoint to get estimates with all fields (estimate_close_date, contract_end, etc.)
+        const response = await fetch('/api/data/estimates');
+        if (!response.ok) {
+          console.warn('⚠️ Estimates API failed, falling back to base44');
+          const data = await base44.entities.Estimate.list();
+          return data;
+        }
+        const result = await response.json();
+        if (!result.success) {
+          console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+          const data = await base44.entities.Estimate.list();
+          return data;
+        }
+        const data = result.data || [];
         console.log('📊 Reports: ✅ Fetched estimates', {
           total: data.length,
           withEstimateDate: data.filter(e => e.estimate_date).length,
+          withEstimateCloseDate: data.filter(e => e.estimate_close_date).length,
           sampleDates: data.filter(e => e.estimate_date).slice(0, 5).map(e => e.estimate_date),
           selectedYear
         });

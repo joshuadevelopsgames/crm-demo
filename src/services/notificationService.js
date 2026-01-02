@@ -495,7 +495,23 @@ export async function createRenewalNotifications() {
     // First, update account statuses based on renewal dates
     // The database triggers will automatically update notifications when accounts change
     const accounts = await base44.entities.Account.list();
-    const estimates = await base44.entities.Estimate.list();
+    
+    // Use the API endpoint to get estimates with contract_end field (more reliable than base44.list())
+    const estimatesResponse = await fetch('/api/data/estimates');
+    let estimates = [];
+    if (estimatesResponse.ok) {
+      const result = await estimatesResponse.json();
+      if (result.success) {
+        estimates = result.data || [];
+        console.log(`✅ Fetched ${estimates.length} estimates with contract_end dates`);
+      } else {
+        console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+        estimates = await base44.entities.Estimate.list();
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
+      estimates = await base44.entities.Estimate.list();
+    }
     
     // Always use actual current date for at-risk calculations (not test mode)
     // At-risk accounts are about real business operations, not test data
@@ -506,13 +522,29 @@ export async function createRenewalNotifications() {
     
     // Update account statuses based on renewal dates
     // When we update account.status, the trigger will automatically update notifications
+    let accountsWithEstimates = 0;
+    let accountsWithContractEnd = 0;
+    let accountsWithRenewalDate = 0;
+    
     for (const account of accounts) {
       if (account.archived) continue;
       
       const accountEstimates = estimates.filter(est => est.account_id === account.id);
+      if (accountEstimates.length > 0) {
+        accountsWithEstimates++;
+        const wonEstimatesWithEnd = accountEstimates.filter(est => 
+          est.status && est.status.toLowerCase() === 'won' && est.contract_end
+        );
+        if (wonEstimatesWithEnd.length > 0) {
+          accountsWithContractEnd++;
+        }
+      }
+      
       const renewalDate = calculateRenewalDate(accountEstimates);
       
       if (!renewalDate) continue;
+      
+      accountsWithRenewalDate++;
       
       const renewalDateStart = startOfDay(renewalDate);
       const daysUntilRenewal = differenceInDays(renewalDateStart, today);
@@ -549,6 +581,7 @@ export async function createRenewalNotifications() {
     
     console.log(`✅ Renewal notification creation complete`);
     console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
+    console.log(`📊 Accounts with estimates: ${accountsWithEstimates}, with contract_end: ${accountsWithContractEnd}, with renewal date: ${accountsWithRenewalDate}`);
     console.log(`📊 Notifications maintained automatically by database triggers`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
@@ -658,7 +691,22 @@ export async function updateAllUserNotificationStates() {
     console.log('⚠️ Database rebuild function not available, falling back to JavaScript approach...');
     const accounts = await base44.entities.Account.list();
     const users = await base44.entities.User.list();
-    const estimates = await base44.entities.Estimate.list();
+    
+    // Use API endpoint to get estimates with contract_end field (more reliable than base44.list())
+    const estimatesResponse = await fetch('/api/data/estimates');
+    let estimates = [];
+    if (estimatesResponse.ok) {
+      const result = await estimatesResponse.json();
+      if (result.success) {
+        estimates = result.data || [];
+      } else {
+        console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
+        estimates = await base44.entities.Estimate.list();
+      }
+    } else {
+      console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
+      estimates = await base44.entities.Estimate.list();
+    }
     const today = startOfDay(new Date());
     
     console.log(`📊 Processing ${accounts.length} accounts for ${users.length} users`);
