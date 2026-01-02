@@ -399,11 +399,17 @@ export function parseEstimatesList(csvTextOrRows) {
     const estimatesWithoutContactId = estimates.length - estimatesWithContactId;
     const wonEstimates = estimates.filter(e => e.status === 'won').length;
     
-    // Log summary about won estimates missing contract_end (only if significant)
-    if (wonEstimatesWithoutContractEnd > 0 && wonEstimatesWithoutContractEnd <= 10) {
-      console.log(`ℹ️ PARSER: ${wonEstimatesWithoutContractEnd} won estimate${wonEstimatesWithoutContractEnd !== 1 ? 's' : ''} missing contract_end date (out of ${wonEstimates} total won estimates)`);
-    } else if (wonEstimatesWithoutContractEnd > 10) {
-      console.warn(`⚠️ PARSER: ${wonEstimatesWithoutContractEnd} won estimates missing contract_end date (out of ${wonEstimates} total won estimates). This may affect at-risk account calculations.`);
+    // Log summary about won estimates missing contract_end
+    // Note: This is informational - not all won estimates have contract_end dates in LMN
+    if (wonEstimatesWithoutContractEnd > 0) {
+      const percentage = ((wonEstimatesWithoutContractEnd / wonEstimates) * 100).toFixed(1);
+      if (wonEstimatesWithoutContractEnd <= 10) {
+        console.log(`ℹ️ PARSER: ${wonEstimatesWithoutContractEnd} won estimate${wonEstimatesWithoutContractEnd !== 1 ? 's' : ''} missing contract_end date (out of ${wonEstimates} total won estimates)`);
+      } else {
+        // Only warn if a significant portion is missing (helps identify data quality issues)
+        // But make it clear this is expected behavior, not an error
+        console.log(`ℹ️ PARSER: ${wonEstimatesWithoutContractEnd} won estimates (${percentage}%) missing contract_end date in Excel file (out of ${wonEstimates} total won estimates). This is expected - not all won estimates have contract end dates in LMN. Only estimates with contract_end dates will be used for at-risk account calculations.`);
+      }
     }
 
     return {
