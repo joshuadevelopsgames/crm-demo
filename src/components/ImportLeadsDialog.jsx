@@ -599,6 +599,15 @@ export default function ImportLeadsDialog({ open, onClose }) {
         }
       }
       
+      // Check if estimate is missing estimate_date (and contract dates)
+      if (!est.estimate_date && !est.contract_start && !est.contract_end) {
+        estimateIrregularities.push({
+          type: 'missing_estimate_date',
+          estimate: est,
+          message: `Estimate "${est.lmn_estimate_id || est.id}" is missing estimate_date, contract_start, and contract_end - revenue calculation may be affected`
+        });
+      }
+      
       return est;
     }) || [];
 
@@ -899,6 +908,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
       if (filteredOut.estimates > 0 || filteredOut.jobsites > 0 || filteredOut.accounts > 0 || filteredOut.contacts > 0) {
         console.warn('⚠️ Filtered out records not in import sheets:', filteredOut);
         results.errors.push(`Filtered out ${filteredOut.estimates} estimates, ${filteredOut.jobsites} jobsites, ${filteredOut.accounts} accounts, ${filteredOut.contacts} contacts that were not in import sheets`);
+      }
+
+      // Check for estimates missing estimate_date and notify
+      const missingDateEstimates = estimateIrregularities.filter(ir => ir.type === 'missing_estimate_date');
+      if (missingDateEstimates.length > 0) {
+        const estimateIds = missingDateEstimates.slice(0, 5).map(ir => ir.estimate.lmn_estimate_id || ir.estimate.id).join(', ');
+        const moreCount = missingDateEstimates.length > 5 ? ` and ${missingDateEstimates.length - 5} more` : '';
+        toast.warning(
+          `⚠️ ${missingDateEstimates.length} estimate${missingDateEstimates.length !== 1 ? 's' : ''} missing estimate_date${missingDateEstimates.length > 1 ? 's' : ''}: ${estimateIds}${moreCount}. Revenue calculation may be affected.`,
+          { duration: 8000 }
+        );
+        console.warn(`⚠️ ${missingDateEstimates.length} estimates missing estimate_date:`, missingDateEstimates.map(ir => ir.estimate.lmn_estimate_id || ir.estimate.id));
       }
 
       setImportResults(results);
