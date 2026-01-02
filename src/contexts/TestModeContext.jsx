@@ -70,7 +70,20 @@ export function TestModeProvider({ children }) {
       'jon@lecm.ca',
       'blake@lecm.ca'
     ];
-    return eligibleEmails.includes(user?.email);
+    const userEmail = user?.email?.toLowerCase()?.trim();
+    const isEligible = userEmail && eligibleEmails.some(email => email.toLowerCase() === userEmail);
+    
+    // Debug logging to help diagnose issues
+    console.log('[TestModeContext] Eligibility check:', {
+      userEmail,
+      userEmailRaw: user?.email,
+      eligibleEmails,
+      isEligible,
+      hasUser: !!user,
+      hasEmail: !!user?.email
+    });
+    
+    return isEligible;
   }, [user?.email]);
   
   // Load test mode preference from localStorage first (for initial load before profile is fetched)

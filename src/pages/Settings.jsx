@@ -474,7 +474,7 @@ export default function Settings() {
               onCheckedChange={toggleDarkMode}
             />
           </div>
-          {isEligibleForTestMode && (
+          {isEligibleForTestMode ? (
             <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
               <div className="space-y-0.5">
                 <Label>2025 Test Mode</Label>
@@ -485,6 +485,14 @@ export default function Settings() {
                 onCheckedChange={toggleTestMode}
               />
             </div>
+          ) : (
+            // Debug info for troubleshooting (only show in development or for admins)
+            (process.env.NODE_ENV === 'development' || isAdmin) && user?.email && (
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-500">
+                <p>Test Mode not available for: {user.email}</p>
+                <p className="mt-1">Eligible emails: jrsschroeder@gmail.com, jon@lecm.ca, blake@lecm.ca</p>
+              </div>
+            )
           )}
         </CardContent>
       </Card>
