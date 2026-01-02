@@ -299,6 +299,21 @@ export function compareWithExisting(
       const lookupId = importedEstimate.lmn_estimate_id || importedEstimate.id;
       const existing = existingEstimatesMap.get(lookupId);
 
+      // Debug: Log first few estimates that aren't found
+      if (!existing && comparison.estimates.new.length < 5) {
+        console.log('[compareWithExisting] Estimate not found in database:', {
+          lookupId,
+          lmn_estimate_id: importedEstimate.lmn_estimate_id,
+          id: importedEstimate.id,
+          existingEstimatesCount: existingEstimates.length,
+          sampleExistingIds: existingEstimates.slice(0, 5).map(e => ({
+            id: e.id,
+            lmn_estimate_id: e.lmn_estimate_id,
+            estimate_number: e.estimate_number
+          }))
+        });
+      }
+
       if (!existing) {
         comparison.estimates.new.push(importedEstimate);
       } else {
@@ -343,6 +358,22 @@ export function compareWithExisting(
     importedData.jobsites.forEach(importedJobsite => {
       const lookupId = importedJobsite.lmn_jobsite_id || importedJobsite.id;
       const existing = existingJobsitesMap.get(lookupId);
+
+      // Debug: Log first few jobsites that aren't found
+      if (!existing && comparison.jobsites.new.length < 5) {
+        console.log('[compareWithExisting] Jobsite not found in database:', {
+          lookupId,
+          lmn_jobsite_id: importedJobsite.lmn_jobsite_id,
+          id: importedJobsite.id,
+          name: importedJobsite.name,
+          existingJobsitesCount: existingJobsites.length,
+          sampleExistingIds: existingJobsites.slice(0, 5).map(j => ({
+            id: j.id,
+            lmn_jobsite_id: j.lmn_jobsite_id,
+            name: j.name
+          }))
+        });
+      }
 
       if (!existing) {
         comparison.jobsites.new.push(importedJobsite);
