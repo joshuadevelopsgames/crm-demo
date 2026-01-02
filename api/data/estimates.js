@@ -63,7 +63,8 @@ export default async function handler(req, res) {
         let query = supabase
           .from('estimates')
           .select(fields)
-          .order('created_at', { ascending: false });
+          // Order by id as fallback to ensure consistent ordering and include NULL created_at records
+          .order('id', { ascending: true });
         
         // Filter by account_id if provided (server-side filtering for accuracy)
         if (accountId) {
