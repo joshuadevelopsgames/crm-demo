@@ -324,11 +324,18 @@ async function sendViaResend(recipientEmail, subject, body) {
   try {
     // Use verified domain email (not onboarding@resend.dev which goes to spam)
     // Format: "Name <email@domain.com>" or just "email@domain.com"
+    // NOTE: Resend requires a verified domain - Gmail addresses won't work with Resend
+    // Use SMTP with EMAIL_SERVICE=smtp if you want to use Gmail
     const fromEmailRaw = process.env.RESEND_FROM_EMAIL;
-    if (!fromEmailRaw || fromEmailRaw === 'onboarding@resend.dev') {
-      const errorMsg = 'RESEND_FROM_EMAIL not configured or using default. Please set a verified domain email in Vercel environment variables. Example: noreply@yourdomain.com';
+    if (!fromEmailRaw) {
+      const errorMsg = 'RESEND_FROM_EMAIL not configured. Please set a verified domain email in Vercel environment variables, or use EMAIL_SERVICE=smtp with Gmail SMTP settings. Example: noreply@yourdomain.com';
       console.error(`❌ ${errorMsg}`);
       throw new Error(errorMsg);
+    }
+    
+    // Warn if using default Resend email (will likely go to spam)
+    if (fromEmailRaw === 'onboarding@resend.dev') {
+      console.warn('⚠️ Using onboarding@resend.dev - emails may go to spam. Consider verifying a domain or using SMTP.');
     }
     
     // Format from email properly
@@ -470,8 +477,9 @@ async function sendViaSMTP(recipientEmail, subject, body) {
   try {
     nodemailer = require('nodemailer');
   } catch (e) {
-    console.error('❌ Nodemailer not installed');
-    return false;
+    const errorMsg = 'Nodemailer not installed. Run: npm install nodemailer';
+    console.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   const smtpConfig = {
@@ -485,19 +493,29 @@ async function sendViaSMTP(recipientEmail, subject, body) {
   };
 
   if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
-    console.error('❌ SMTP configuration incomplete. Missing:', {
-      host: !smtpConfig.host ? 'SMTP_HOST' : null,
-      user: !smtpConfig.auth.user ? 'SMTP_USER' : null,
-      pass: !smtpConfig.auth.pass ? 'SMTP_PASS' : null
-    });
-    return false;
+    const missing = [];
+    if (!smtpConfig.host) missing.push('SMTP_HOST');
+    if (!smtpConfig.auth.user) missing.push('SMTP_USER');
+    if (!smtpConfig.auth.pass) missing.push('SMTP_PASS');
+    const errorMsg = `SMTP configuration incomplete. Missing: ${missing.join(', ')}`;
+    console.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   try {
     const fromEmail = process.env.SMTP_FROM || smtpConfig.auth.user;
-    console.log(`📧 Sending email via SMTP from ${fromEmail} to ${recipientEmail}`);
+    console.log(`📧 Sending email via SMTP from ${fromEmail} to ${recipientEmail}`, {
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
+      user: smtpConfig.auth.user
+    });
     
     const transporter = nodemailer.createTransport(smtpConfig);
+
+    // Verify connection before sending
+    await transporter.verify();
+    console.log('✅ SMTP connection verified');
 
     const info = await transporter.sendMail({
       from: fromEmail,
@@ -510,8 +528,25 @@ async function sendViaSMTP(recipientEmail, subject, body) {
     console.log('✅ Email sent via SMTP:', info.messageId || 'success');
     return true;
   } catch (error) {
-    console.error('❌ Error sending via SMTP:', error.message || error);
-    return false;
+    let errorMsg = 'Unknown SMTP error';
+    if (error.code === 'EAUTH') {
+      errorMsg = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS (app password).';
+    } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
+      errorMsg = `SMTP connection failed. Check SMTP_HOST (${smtpConfig.host}) and SMTP_PORT (${smtpConfig.port}).`;
+    } else if (error.code === 'EENVELOPE') {
+      errorMsg = 'SMTP envelope error. Check recipient email address.';
+    } else if (error.message) {
+      errorMsg = `SMTP error: ${error.message}`;
+    }
+    console.error('❌ Error sending via SMTP:', {
+      code: error.code,
+      message: error.message,
+      response: error.response,
+      responseCode: error.responseCode,
+      command: error.command,
+      error: errorMsg
+    });
+    throw new Error(errorMsg);
   }
 }
 

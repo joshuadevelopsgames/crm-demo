@@ -169,6 +169,17 @@ export default function NotificationBell() {
           !['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder', 'neglected_account', 'renewal_reminder'].includes(n.type)
         );
         
+        // Debug: Log bug_report notifications
+        const bugReportNotifications = otherNotifications.filter(n => n.type === 'bug_report');
+        if (bugReportNotifications.length > 0) {
+          console.log(`🔔 Found ${bugReportNotifications.length} bug_report notifications:`, bugReportNotifications.map(n => ({
+            id: n.id,
+            user_id: n.user_id,
+            title: n.title,
+            type: n.type
+          })));
+        }
+        
         // Combine all sources
         const allNotifications = [...bulkNotifications, ...taskNotificationsFiltered, ...otherNotifications];
         
@@ -912,6 +923,8 @@ export default function NotificationBell() {
   const [snoozeDuration, setSnoozeDuration] = useState(1);
   const [snoozeUnit, setSnoozeUnit] = useState('weeks');
   const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [bugReportDialogOpen, setBugReportDialogOpen] = useState(false);
+  const [selectedBugReport, setSelectedBugReport] = useState(null);
 
   const handleSnoozeClick = (e, notification) => {
     e.stopPropagation();
@@ -934,6 +947,14 @@ export default function NotificationBell() {
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) {
       markAsReadMutation.mutate(notification.id);
+    }
+    
+    // Show bug report details in a dialog
+    if (notification.type === 'bug_report') {
+      setSelectedBugReport(notification);
+      setBugReportDialogOpen(true);
+      setIsOpen(false);
+      return;
     }
     
     // Navigate based on notification type
@@ -1262,6 +1283,56 @@ export default function NotificationBell() {
           </div>
         </>
       )}
+
+      {/* Bug Report Details Dialog */}
+      <Dialog open={bugReportDialogOpen} onOpenChange={setBugReportDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bug className="w-5 h-5 text-red-600" />
+              Bug Report Details
+            </DialogTitle>
+            <DialogDescription>
+              Full details of the bug report
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBugReport && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-sm font-semibold">Title</Label>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                  {selectedBugReport.title}
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Description</Label>
+                <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                    {selectedBugReport.message}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Reported At</Label>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                  {format(new Date(selectedBugReport.created_at), 'PPpp')}
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setBugReportDialogOpen(false);
+                    setSelectedBugReport(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Snooze Dialog */}
       <Dialog open={snoozeDialogOpen} onOpenChange={setSnoozeDialogOpen}>
