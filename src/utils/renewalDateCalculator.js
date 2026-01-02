@@ -69,14 +69,9 @@ export function getDaysUntilRenewal(renewalDate) {
   const renewal = new Date(renewalDate);
   if (isNaN(renewal.getTime())) return null;
   
-  // Use test mode date if available, otherwise use actual current date
-  let today;
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentDate) {
-    today = window.__testModeGetCurrentDate();
-  } else {
-    // Fallback to actual current date if test mode not available
-    today = new Date();
-  }
+  // Always use actual current date for renewal calculations (not test mode)
+  // Renewal dates are about real business operations, not test data
+  const today = new Date();
   
   today.setHours(0, 0, 0, 0);
   renewal.setHours(0, 0, 0, 0);
