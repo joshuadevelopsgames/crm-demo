@@ -1,8 +1,15 @@
 #!/bin/bash
 # Safely syncs staging → production
 # This ensures production gets the exact code from staging
+# SECURITY: Requires FLASH25 codeword to proceed
 
 set -e
+
+# Check if FLASH25 is provided as environment variable (for non-interactive use)
+if [ -n "$REQUIRE_FLASH25" ] && [ "$REQUIRE_FLASH25" != "FLASH25" ]; then
+    echo "❌ Invalid codeword. Deployment cancelled."
+    exit 1
+fi
 
 echo "🚀 Syncing staging → production..."
 echo ""
@@ -39,9 +46,11 @@ fi
 
 echo ""
 echo "⚠️  WARNING: This will deploy to PRODUCTION (lecrm.vercel.app)"
-read -p "⚠️  Type 'DEPLOY' to confirm: " confirm
-if [ "$confirm" != "DEPLOY" ]; then
-    echo "❌ Deployment cancelled"
+echo ""
+echo "🔒 SECURITY: Emergency codeword required"
+read -p "⚠️  Type 'FLASH25' to confirm deployment: " confirm
+if [ "$confirm" != "FLASH25" ]; then
+    echo "❌ Deployment cancelled - FLASH25 codeword required"
     exit 1
 fi
 

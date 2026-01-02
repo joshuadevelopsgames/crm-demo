@@ -40,10 +40,12 @@ This will:
 ```
 This will:
 - Show you what changes will be deployed
-- Require typing "DEPLOY" to confirm
+- **Require typing "FLASH25" to confirm** (security requirement)
 - Verify staging matches dev
 - Push staging → production
 - Trigger Vercel deployment to lecrm.vercel.app
+
+⚠️ **SECURITY**: The script now requires the FLASH25 codeword instead of "DEPLOY"
 
 **OR** use GitHub Actions:
 1. Go to: https://github.com/joshuadevelopsgames/LECRM-staging/actions
