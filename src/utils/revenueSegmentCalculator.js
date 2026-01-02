@@ -124,7 +124,7 @@ function getEstimateYearData(estimate, currentYear) {
     };
   }
   
-  // Case 3: No contract dates, use estimate_date
+  // Case 3: No contract dates, use estimate_date as fallback
   if (estimateDate && !isNaN(estimateDate.getTime())) {
     const estimateYear = estimateDate.getFullYear();
     const appliesToCurrentYear = currentYear === estimateYear;
@@ -135,12 +135,9 @@ function getEstimateYearData(estimate, currentYear) {
     };
   }
   
-  // Case 4: No contract dates or estimate_date - treat as applying to current year
-  // This handles estimates that don't have contract dates or estimate_date
+  // Case 4: No dates at all - treat as applying to current year
+  // This handles estimates that have no date information at all
   // We assume they apply to the current year (useful for test mode or estimates without dates)
-  // Note: We don't use created_date because it reflects when the estimate was imported,
-  // not when the work applies. For test mode, we want estimates without dates to show
-  // revenue for the test year (2025), regardless of when they were created.
   return {
     appliesToCurrentYear: true,
     value: totalPrice
