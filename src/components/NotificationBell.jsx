@@ -443,11 +443,13 @@ export default function NotificationBell() {
       ? String(notification.related_account_id).trim() 
       : null;
     
+    // For renewal_reminder and neglected_account: these are UNIVERSAL notifications
+    // If ANY user snoozes them, they're snoozed for ALL users
     // Check if this specific notification is snoozed
     // Only match snoozes that:
     // 1. Have the same notification type
     // 2. Have the same account ID (or both are null for universal snoozes)
-    // 3. Are still active (not expired)
+    // 3. Are still active (not expired) - API already filters this, but double-check
     const isSnoozed = snoozes.some(snooze => {
       // Type must match exactly
       if (snooze.notification_type !== notification.type) return false;
@@ -457,7 +459,7 @@ export default function NotificationBell() {
         ? String(snooze.related_account_id).trim() 
         : null;
       
-      // For account ID matching:
+      // For account ID matching (universal snoozes):
       // - If notification has an account ID, snooze must have the SAME account ID
       // - If notification has NO account ID (null), only match snoozes that also have NO account ID (universal snooze for this type)
       // - Never match a notification with an account ID to a snooze without one (or vice versa)
@@ -470,7 +472,7 @@ export default function NotificationBell() {
         if (snoozeAccountId && snoozeAccountId !== 'null') return false;
       }
       
-      // Check if snooze is still active (not expired)
+      // Double-check if snooze is still active (API should already filter, but be safe)
       const snoozedUntil = new Date(snooze.snoozed_until);
       if (isNaN(snoozedUntil.getTime())) {
         console.warn(`⚠️ Invalid snooze date for snooze:`, snooze);
@@ -525,24 +527,54 @@ export default function NotificationBell() {
     // Log filtering results
     const totalFilteredOut = filteredOutCount.renewal_reminder + filteredOutCount.neglected_account + filteredOutCount.task;
     const totalShown = filteredCount.renewal_reminder + filteredCount.neglected_account + filteredCount.task;
+    const now = new Date();
+    const activeSnoozes = snoozes?.filter(s => {
+      const until = new Date(s.snoozed_until);
+      return !isNaN(until.getTime()) && until > now;
+    }) || [];
+    
     console.log(`🔔 After filtering: ${totalShown} shown (${filteredCount.renewal_reminder} renewal_reminder, ${filteredCount.neglected_account} neglected_account, ${filteredCount.task} task)`);
     if (totalFilteredOut > 0) {
       console.log(`🚫 Filtered out: ${totalFilteredOut} total (${filteredOutCount.renewal_reminder} renewal_reminder, ${filteredOutCount.neglected_account} neglected_account, ${filteredOutCount.task} task)`);
-      console.log(`📊 Snooze stats: ${snoozes?.length || 0} total snoozes, ${snoozes?.filter(s => new Date(s.snoozed_until) > now).length || 0} active`);
+      console.log(`📊 Snooze stats: ${snoozes?.length || 0} total snoozes, ${activeSnoozes.length} active`);
+      
+      // Log breakdown of snoozes by type
+      const snoozesByType = {};
+      activeSnoozes.forEach(s => {
+        const type = s.notification_type;
+        if (!snoozesByType[type]) snoozesByType[type] = { total: 0, withAccount: 0, universal: 0 };
+        snoozesByType[type].total++;
+        if (s.related_account_id) {
+          snoozesByType[type].withAccount++;
+        } else {
+          snoozesByType[type].universal++;
+        }
+      });
+      if (Object.keys(snoozesByType).length > 0) {
+        console.log(`📊 Snoozes by type:`, snoozesByType);
+      }
     }
     
     // Debug: Log if ALL notifications were filtered (this indicates a problem)
     if (allNotifications.length > 0 && totalShown === 0 && totalFilteredOut > 0) {
-      console.error(`❌ CRITICAL: All ${allNotifications.length} notifications were filtered out! This is likely a bug.`, {
+      console.error(`❌ CRITICAL: All ${allNotifications.length} notifications were filtered out!`, {
         totalNotifications: allNotifications.length,
         totalFilteredOut,
         snoozesCount: snoozes?.length || 0,
-        activeSnoozes: snoozes?.filter(s => new Date(s.snoozed_until) > now).length || 0,
-        sampleSnoozes: snoozes?.slice(0, 3).map(s => ({
+        activeSnoozesCount: activeSnoozes.length,
+        renewalReminderSnoozes: activeSnoozes.filter(s => s.notification_type === 'renewal_reminder').length,
+        neglectedAccountSnoozes: activeSnoozes.filter(s => s.notification_type === 'neglected_account').length,
+        universalSnoozes: activeSnoozes.filter(s => !s.related_account_id).length,
+        sampleSnoozes: activeSnoozes.slice(0, 5).map(s => ({
           type: s.notification_type,
-          account_id: s.related_account_id,
+          account_id: s.related_account_id || 'null (universal)',
           snoozed_until: s.snoozed_until,
           isActive: new Date(s.snoozed_until) > now
+        })),
+        sampleNotifications: allNotifications.slice(0, 3).map(n => ({
+          type: n.type,
+          account_id: n.related_account_id || 'null',
+          id: n.id
         }))
       });
     }
