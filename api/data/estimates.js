@@ -275,16 +275,21 @@ export default async function handler(req, res) {
               });
             }
             
-            // Remove id if it's not a valid UUID - let Supabase generate it
+            // CRITICAL: Preserve id if it's provided (from parser: "lmn-estimate-EST123")
+            // Supabase requires id to be set for inserts, and we use custom IDs from parser
             // Also remove internal tracking fields and fields that don't exist in the schema
-            const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutIds } = estimate;
+            const { account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutInternal } = estimate;
             const estimateData = {
-              ...estimateWithoutIds,
+              ...estimateWithoutInternal,
               updated_at: new Date().toISOString()
             };
             
-            // CRITICAL: Always preserve lmn_estimate_id and estimate_number - these are used for matching
-            // If they're missing, records won't match on subsequent imports
+            // CRITICAL: Always preserve id, lmn_estimate_id and estimate_number
+            // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
+            // lmn_estimate_id and estimate_number are used for matching
+            if (estimate.id !== undefined) {
+              estimateData.id = estimate.id;
+            }
             if (estimate.lmn_estimate_id !== undefined) {
               estimateData.lmn_estimate_id = estimate.lmn_estimate_id;
             }
