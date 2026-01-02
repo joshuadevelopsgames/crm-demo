@@ -158,15 +158,31 @@ export function parseEstimatesList(csvTextOrRows) {
           }
           // Try parsing as date string
           if (typeof value === 'string') {
+            const trimmed = value.trim();
+            
             // If it's already in YYYY-MM-DD format, convert to ISO timestamp
-            const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (isoMatch) {
               return `${isoMatch[0]}T00:00:00Z`; // Convert to ISO timestamp
             }
+            
+            // Handle MM/DD/YYYY format (common in Excel exports)
+            const mmddyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (mmddyyyyMatch) {
+              const [, month, day, year] = mmddyyyyMatch;
+              const monthPadded = String(month).padStart(2, '0');
+              const dayPadded = String(day).padStart(2, '0');
+              // Create date in UTC to avoid timezone issues
+              const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+              if (!isNaN(date.getTime())) {
+                return `${year}-${monthPadded}-${dayPadded}T00:00:00Z`;
+              }
+            }
+            
             // Try parsing as UTC date string
             // If the string includes timezone info, parse it as UTC
-            if (value.includes('T') || value.includes('Z') || value.includes('+') || value.includes('-')) {
-              const parsed = new Date(value);
+            if (trimmed.includes('T') || trimmed.includes('Z') || trimmed.includes('+') || (trimmed.includes('-') && trimmed.match(/^\d{4}-\d{2}-\d{2}/))) {
+              const parsed = new Date(trimmed);
               if (!isNaN(parsed.getTime())) {
                 // Extract UTC date components and return as ISO timestamp
                 const year = parsed.getUTCFullYear();
@@ -176,7 +192,8 @@ export function parseEstimatesList(csvTextOrRows) {
               }
             } else {
               // Try parsing as a simple date string (assume UTC)
-              const parsed = new Date(value + 'T00:00:00Z'); // Force UTC
+              // Try MM/DD/YYYY first (most common in Excel)
+              const parsed = new Date(trimmed);
               if (!isNaN(parsed.getTime())) {
                 const year = parsed.getUTCFullYear();
                 const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
