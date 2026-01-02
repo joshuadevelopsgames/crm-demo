@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx';
 import { parseEstimatesList } from './src/utils/lmnEstimatesListParser.js';
 
 // Get file path from command line or use default
@@ -91,6 +91,51 @@ try {
     result.errors.slice(0, 10).forEach(err => console.log(`  - ${err}`));
     if (result.errors.length > 10) {
       console.log(`  ... and ${result.errors.length - 10} more`);
+    }
+  }
+  
+  // Analyze empty values in Estimate Date column
+  if (colMap.estimateDate >= 0) {
+    let emptyCount = 0;
+    let nonEmptyCount = 0;
+    const sampleEmptyRows = [];
+    const sampleNonEmptyRows = [];
+    
+    for (let i = 1; i < rows.length; i++) {
+      const value = rows[i][colMap.estimateDate];
+      if (value === null || value === undefined || value === '' || (typeof value === 'number' && isNaN(value))) {
+        emptyCount++;
+        if (sampleEmptyRows.length < 5) {
+          const estimateId = rows[i][colMap.estimateId]?.toString().trim() || `Row ${i + 1}`;
+          sampleEmptyRows.push({ row: i + 1, estimateId, value, valueType: typeof value });
+        }
+      } else {
+        nonEmptyCount++;
+        if (sampleNonEmptyRows.length < 3) {
+          const estimateId = rows[i][colMap.estimateId]?.toString().trim() || `Row ${i + 1}`;
+          sampleNonEmptyRows.push({ row: i + 1, estimateId, value, valueType: typeof value });
+        }
+      }
+    }
+    
+    console.log(`\n📊 Estimate Date Column Analysis:`);
+    console.log(`  - Total rows: ${rows.length - 1}`);
+    console.log(`  - Rows with data: ${nonEmptyCount}`);
+    console.log(`  - Rows with empty/null values: ${emptyCount}`);
+    console.log(`  - Empty percentage: ${((emptyCount / (rows.length - 1)) * 100).toFixed(1)}%`);
+    
+    if (sampleEmptyRows.length > 0) {
+      console.log(`\n  Sample empty rows:`);
+      sampleEmptyRows.forEach(({ row, estimateId, value, valueType }) => {
+        console.log(`    Row ${row} (${estimateId}): value="${value}" (type: ${valueType})`);
+      });
+    }
+    
+    if (sampleNonEmptyRows.length > 0) {
+      console.log(`\n  Sample non-empty rows:`);
+      sampleNonEmptyRows.forEach(({ row, estimateId, value, valueType }) => {
+        console.log(`    Row ${row} (${estimateId}): value=${value} (type: ${valueType})`);
+      });
     }
   }
   
