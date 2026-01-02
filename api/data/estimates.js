@@ -80,9 +80,22 @@ export default async function handler(req, res) {
           allEstimates = allEstimates.concat(data);
           hasMore = data.length === pageSize;
           page++;
+          console.log(`📄 Estimates page ${page}: Fetched ${data.length} estimates (total so far: ${allEstimates.length})`);
         } else {
           hasMore = false;
         }
+      }
+      
+      console.log(`✅ Finished fetching estimates. Total: ${allEstimates.length}`);
+      
+      // Log response size estimate
+      const responseSize = JSON.stringify(allEstimates).length;
+      const responseSizeMB = (responseSize / 1024 / 1024).toFixed(2);
+      console.log(`📊 Estimates response size: ${responseSizeMB} MB (${responseSize} bytes)`);
+      
+      // Vercel has a 4.5MB response limit, warn if approaching
+      if (responseSize > 4 * 1024 * 1024) {
+        console.warn(`⚠️ Estimates response size (${responseSizeMB} MB) is approaching Vercel's 4.5MB limit`);
       }
       
       return res.status(200).json({

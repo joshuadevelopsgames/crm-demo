@@ -80,9 +80,22 @@ export default async function handler(req, res) {
           allJobsites = allJobsites.concat(data);
           hasMore = data.length === pageSize;
           page++;
+          console.log(`📄 Jobsites page ${page}: Fetched ${data.length} jobsites (total so far: ${allJobsites.length})`);
         } else {
           hasMore = false;
         }
+      }
+      
+      console.log(`✅ Finished fetching jobsites. Total: ${allJobsites.length}`);
+      
+      // Log response size estimate
+      const responseSize = JSON.stringify(allJobsites).length;
+      const responseSizeMB = (responseSize / 1024 / 1024).toFixed(2);
+      console.log(`📊 Jobsites response size: ${responseSizeMB} MB (${responseSize} bytes)`);
+      
+      // Vercel has a 4.5MB response limit, warn if approaching
+      if (responseSize > 4 * 1024 * 1024) {
+        console.warn(`⚠️ Jobsites response size (${responseSizeMB} MB) is approaching Vercel's 4.5MB limit`);
       }
       
       return res.status(200).json({
