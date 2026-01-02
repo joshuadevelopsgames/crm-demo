@@ -24,6 +24,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useTutorial } from '../contexts/TutorialContext';
 import { useUser } from '../contexts/UserContext';
+import { useTestMode } from '../contexts/TestModeContext';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import NotificationBell from './NotificationBell';
 import ProfileDropdown from './ProfileDropdown';
@@ -39,6 +40,7 @@ export default function Layout({ children, currentPageName }) {
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
   const { isTutorialMode, exitTutorial } = useTutorial();
   const { isAdmin } = useUser();
+  const { isTestMode } = useTestMode();
   const { permissions: userPermissions } = useUserPermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -199,7 +201,10 @@ export default function Layout({ children, currentPageName }) {
         className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 z-50 shadow-sm" 
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
-          top: isTutorialMode ? '3rem' : `max(0px, env(safe-area-inset-top, 0px))`,
+          // Account for test mode banner (40px height) if active
+          top: isTutorialMode ? '3rem' : isTestMode 
+            ? `calc(max(0px, env(safe-area-inset-top, 0px)) + 40px)`
+            : `max(0px, env(safe-area-inset-top, 0px))`,
           left: '0',
           right: '0',
           paddingTop: '0',
@@ -213,8 +218,9 @@ export default function Layout({ children, currentPageName }) {
           marginBottom: '0',
           zIndex: '9999'
         } : {
-          // Desktop web browser styles (unchanged)
-          top: isTutorialMode ? '3rem' : '0',
+          // Desktop web browser styles
+          // Account for test mode banner (40px height) if active
+          top: isTutorialMode ? '3rem' : isTestMode ? '40px' : '0',
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -517,13 +523,17 @@ export default function Layout({ children, currentPageName }) {
         }}
         className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} style={(isPWA || isNativeApp) ? {
         // PWA and native app specific padding (with safe areas)
-        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + env(safe-area-inset-top, 0px) + 1rem)`,
+        // Add 40px for test mode banner if active
+        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + ${isTestMode ? '40px + ' : ''}env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
         backgroundColor: 'hsl(var(--background))',
-        minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
+        minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - ${isTestMode ? '40px - ' : ''}env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
       } : {
         // Desktop web browser styles - standard padding
-        paddingTop: isTutorialMode ? '7rem' : isDesktop ? '6rem' : '5rem',
+        // Add 40px for test mode banner if active
+        paddingTop: isTutorialMode ? '7rem' : isTestMode 
+          ? (isDesktop ? '10rem' : '9rem') // 6rem/5rem nav + 40px banner
+          : (isDesktop ? '6rem' : '5rem'),
         backgroundColor: 'hsl(var(--background))'
       }}>
         <div className="animate-in fade-in duration-300">

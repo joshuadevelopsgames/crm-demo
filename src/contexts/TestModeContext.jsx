@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useState } from 'react';
 import { useUser } from './UserContext';
 
 const TestModeContext = createContext(null);
@@ -13,13 +13,39 @@ export function getCurrentYear() {
 export function TestModeProvider({ children }) {
   const { user } = useUser();
   
-  // Test mode is enabled for jrsschroeder@gmail.com
-  const isTestMode = useMemo(() => {
+  // Check if user is eligible for test mode (jrsschroeder@gmail.com)
+  const isEligibleForTestMode = useMemo(() => {
     return user?.email === 'jrsschroeder@gmail.com';
   }, [user?.email]);
   
+  // Load test mode preference from localStorage (only if eligible)
+  const [isTestModeEnabled, setIsTestModeEnabled] = useState(() => {
+    if (!isEligibleForTestMode) return false;
+    try {
+      const stored = localStorage.getItem('testMode2025');
+      return stored === 'true';
+    } catch {
+      return false;
+    }
+  });
+  
   // Test year is 2025
   const testYear = 2025;
+  
+  // Test mode is active if user is eligible AND has it enabled
+  const isTestMode = isEligibleForTestMode && isTestModeEnabled;
+  
+  // Toggle test mode
+  const toggleTestMode = () => {
+    if (!isEligibleForTestMode) return;
+    const newValue = !isTestModeEnabled;
+    setIsTestModeEnabled(newValue);
+    try {
+      localStorage.setItem('testMode2025', newValue.toString());
+    } catch (error) {
+      console.error('Error saving test mode preference:', error);
+    }
+  };
   
   // Get the effective current year (test year if in test mode, otherwise actual year)
   const getCurrentYear = useMemo(() => {
@@ -38,34 +64,35 @@ export function TestModeProvider({ children }) {
     if (typeof window !== 'undefined') {
       window.__testModeGetCurrentYear = getCurrentYear;
     }
-    
-    // Add padding to body when test mode is active to account for banner
-    if (isTestMode) {
-      document.body.style.paddingTop = '40px';
-    } else {
-      document.body.style.paddingTop = '';
-    }
-    
-    return () => {
-      // Cleanup: remove padding when component unmounts or test mode changes
-      if (!isTestMode) {
-        document.body.style.paddingTop = '';
-      }
-    };
-  }, [getCurrentYear, isTestMode]);
+  }, [getCurrentYear]);
   
   const value = useMemo(() => ({
     isTestMode,
+    isEligibleForTestMode,
     testYear,
-    getCurrentYear
-  }), [isTestMode, getCurrentYear]);
+    getCurrentYear,
+    toggleTestMode
+  }), [isTestMode, isEligibleForTestMode, getCurrentYear]);
   
   return (
     <TestModeContext.Provider value={value}>
       {children}
       {isTestMode && (
-        <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 px-4 z-[99999] font-semibold text-sm">
-          🧪 TEST MODE: Viewing site as if it's 2025
+        <div 
+          className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 px-4 z-[60] font-semibold text-sm shadow-md"
+          style={{ height: '40px', lineHeight: '24px' }}
+        >
+          <div className="flex items-center justify-center h-full">
+            <span>🧪 TEST MODE: Viewing site as if it's 2025</span>
+            {isEligibleForTestMode && (
+              <button
+                onClick={toggleTestMode}
+                className="ml-4 underline hover:no-underline opacity-90 hover:opacity-100"
+              >
+                Disable
+              </button>
+            )}
+          </div>
         </div>
       )}
     </TestModeContext.Provider>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useTestMode } from '@/contexts/TestModeContext';
 import { base44 } from '@/api/base44Client';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,7 @@ import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
 export default function Settings() {
   const { profile, user, isAdmin } = useUser();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isTestMode, isEligibleForTestMode, toggleTestMode } = useTestMode();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const supabase = getSupabaseAuth();
@@ -472,6 +474,18 @@ export default function Settings() {
               onCheckedChange={toggleDarkMode}
             />
           </div>
+          {isEligibleForTestMode && (
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+              <div className="space-y-0.5">
+                <Label>2025 Test Mode</Label>
+                <p className="text-sm text-slate-500 dark:text-slate-400">View the site as if it's 2025 (for testing revenue calculations)</p>
+              </div>
+              <Switch
+                checked={isTestMode}
+                onCheckedChange={toggleTestMode}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
