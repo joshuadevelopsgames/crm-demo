@@ -26,13 +26,28 @@ export function parseEstimatesList(csvTextOrRows) {
 
     // Map column indices
     // Use trim() to handle any whitespace issues in column headers
+    // Also use case-insensitive matching and partial matching for robustness
+    const findColumn = (exactName, ...alternatives) => {
+      const exact = headers.findIndex(h => h && h.toString().trim() === exactName);
+      if (exact >= 0) return exact;
+      // Try case-insensitive
+      const caseInsensitive = headers.findIndex(h => h && h.toString().trim().toLowerCase() === exactName.toLowerCase());
+      if (caseInsensitive >= 0) return caseInsensitive;
+      // Try alternatives
+      for (const alt of alternatives) {
+        const altMatch = headers.findIndex(h => h && h.toString().trim().toLowerCase() === alt.toLowerCase());
+        if (altMatch >= 0) return altMatch;
+      }
+      return -1;
+    };
+    
     const colMap = {
-      estimateType: headers.findIndex(h => h?.trim() === 'Estimate Type'),
-      estimateId: headers.findIndex(h => h?.trim() === 'Estimate ID'),
-      estimateDate: headers.findIndex(h => h?.trim() === 'Estimate Date'),
-      estimateCloseDate: headers.findIndex(h => h?.trim() === 'Estimate Close Date'),
-      contractStart: headers.findIndex(h => h?.trim() === 'Contract Start'),
-      contractEnd: headers.findIndex(h => h?.trim() === 'Contract End'),
+      estimateType: findColumn('Estimate Type'),
+      estimateId: findColumn('Estimate ID', 'Estimate #', 'Estimate Number'),
+      estimateDate: findColumn('Estimate Date'),
+      estimateCloseDate: findColumn('Estimate Close Date', 'Close Date'),
+      contractStart: findColumn('Contract Start', 'Contract Start Date'),
+      contractEnd: findColumn('Contract End', 'Contract End Date', 'Renewal Date'),
       projectName: headers.findIndex(h => h === 'Project Name'),
       version: headers.findIndex(h => h === 'Version'),
       contactName: headers.findIndex(h => h === 'Contact Name'),
