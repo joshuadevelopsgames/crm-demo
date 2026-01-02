@@ -104,6 +104,16 @@ export function parseEstimatesList(csvTextOrRows) {
       console.log(`✅ PARSER: "Contract End" column found at index ${colMap.contractEnd}`);
     }
     
+    // Warn if Estimate Date column is not found
+    if (colMap.estimateDate === -1) {
+      errors.push('WARNING: "Estimate Date" column not found in file. Estimate dates will not be imported.');
+      console.warn('⚠️ PARSER: "Estimate Date" column not found in Excel file headers');
+      console.warn('Available headers:', headers.filter(h => h).slice(0, 20));
+      console.warn('Looking for column names containing "date":', headers.filter(h => h && h.toString().toLowerCase().includes('date')).map((h, i) => `${i}: "${h}"`));
+    } else {
+      console.log(`✅ PARSER: "Estimate Date" column found at index ${colMap.estimateDate}`);
+    }
+    
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.length === 0) continue;
