@@ -292,14 +292,25 @@ export default function BugReportButton() {
       // Check for warnings (e.g., email failed but notification succeeded)
       if (result.warnings && result.warnings.length > 0) {
         console.warn('⚠️ Bug report sent with warnings:', result.warnings);
-        toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
+        
+        // Show detailed error message if email failed
+        if (!result.emailSent && result.emailError) {
+          console.error('❌ Email error:', result.emailError);
+          toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
+        } else if (!result.emailSent) {
+          toast.warning('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { duration: 8000 });
+        } else {
+          toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
+        }
       } else {
         toast.success('✓ Bug report sent successfully!');
       }
       
       console.log('✅ Bug report submitted:', {
         emailSent: result.emailSent,
-        notificationCreated: result.notificationCreated
+        notificationCreated: result.notificationCreated,
+        emailError: result.emailError || 'none',
+        notificationError: result.notificationError || 'none'
       });
       
       handleClose();
@@ -369,6 +380,7 @@ export default function BugReportButton() {
               </label>
               <Input
                 id="user-email"
+                name="user-email"
                 type="email"
                 placeholder="your.email@example.com"
                 value={userEmail}
@@ -429,11 +441,13 @@ export default function BugReportButton() {
               </label>
               <Textarea
                 id="description"
+                name="description"
                 placeholder="What went wrong? What were you trying to do? What did you expect to happen?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 className="resize-none"
+                required
               />
             </div>
           </div>

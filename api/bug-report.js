@@ -153,6 +153,7 @@ ${bugReport.consoleLogs.map(log =>
       emailError = error.message || 'Unknown error occurred';
       console.error('❌ Error sending email:', error);
       console.error('❌ Error stack:', error.stack);
+      // Don't re-throw - we want to continue and create notification even if email fails
     }
 
     // Create notification for admin user (jrsschroeder@gmail.com)
@@ -258,10 +259,16 @@ ${bugReport.consoleLogs.map(log =>
     // Return success with warnings if one method failed
     const warnings = [];
     if (!emailSent) {
-      warnings.push('Email could not be sent (check email service configuration)');
+      const emailWarning = emailError 
+        ? `Email could not be sent: ${emailError}` 
+        : 'Email could not be sent (check email service configuration)';
+      warnings.push(emailWarning);
     }
     if (!notificationCreated) {
-      warnings.push('Notification could not be created (check Supabase configuration)');
+      const notificationWarning = notificationError
+        ? `Notification could not be created: ${notificationError}`
+        : 'Notification could not be created (check Supabase configuration)';
+      warnings.push(notificationWarning);
     }
 
     const responseData = { 
@@ -273,14 +280,24 @@ ${bugReport.consoleLogs.map(log =>
     
     if (warnings.length > 0) {
       responseData.warnings = warnings;
+      responseData.emailError = !emailSent ? emailError : undefined;
+      responseData.notificationError = !notificationCreated ? notificationError : undefined;
       console.warn('⚠️ Bug report sent with warnings:', warnings);
+      if (emailError) {
+        console.error('❌ Email error details:', emailError);
+      }
+      if (notificationError) {
+        console.error('❌ Notification error details:', notificationError);
+      }
     }
     
     console.log('✅ Bug report processed:', {
       emailSent,
       notificationCreated,
       recipientEmail,
-      emailService
+      emailService,
+      emailError: emailError || 'none',
+      notificationError: notificationError || 'none'
     });
     
     return res.status(200).json(responseData);
@@ -299,8 +316,9 @@ async function sendViaResend(recipientEmail, subject, body) {
   const resendApiKey = process.env.RESEND_API_KEY;
   
   if (!resendApiKey) {
-    console.error('❌ Resend API key not configured (RESEND_API_KEY missing)');
-    return false;
+    const errorMsg = 'Resend API key not configured (RESEND_API_KEY missing)';
+    console.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   try {
@@ -308,9 +326,9 @@ async function sendViaResend(recipientEmail, subject, body) {
     // Format: "Name <email@domain.com>" or just "email@domain.com"
     const fromEmailRaw = process.env.RESEND_FROM_EMAIL;
     if (!fromEmailRaw || fromEmailRaw === 'onboarding@resend.dev') {
-      console.error('❌ RESEND_FROM_EMAIL not configured or using default. Please set a verified domain email in Vercel environment variables.');
-      console.error('   Example: noreply@yourdomain.com or "Your App Name <noreply@yourdomain.com>"');
-      return false;
+      const errorMsg = 'RESEND_FROM_EMAIL not configured or using default. Please set a verified domain email in Vercel environment variables. Example: noreply@yourdomain.com';
+      console.error(`❌ ${errorMsg}`);
+      throw new Error(errorMsg);
     }
     
     // Format from email properly
@@ -353,6 +371,7 @@ async function sendViaResend(recipientEmail, subject, body) {
       } catch (e) {
         errorDetails = { message: errorText };
       }
+      const errorMsg = `Resend API error (${response.status}): ${errorDetails.message || JSON.stringify(errorDetails)}`;
       console.error('❌ Resend API error:', {
         status: response.status,
         statusText: response.statusText,
@@ -360,7 +379,7 @@ async function sendViaResend(recipientEmail, subject, body) {
         fromEmail,
         recipientEmail
       });
-      return false;
+      throw new Error(errorMsg);
     }
 
     let result;
@@ -372,8 +391,9 @@ async function sendViaResend(recipientEmail, subject, body) {
     }
     
     if (result.error) {
+      const errorMsg = `Resend API returned error: ${result.error.message || JSON.stringify(result.error)}`;
       console.error('❌ Resend API returned error:', result.error);
-      return false;
+      throw new Error(errorMsg);
     }
     
     console.log('✅ Email sent via Resend:', {
@@ -384,7 +404,8 @@ async function sendViaResend(recipientEmail, subject, body) {
     return true;
   } catch (error) {
     console.error('❌ Error sending via Resend:', error.message || error);
-    return false;
+    // Re-throw to preserve error message
+    throw error;
   }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -164,8 +164,13 @@ export default function NotificationBell() {
           ['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder'].includes(n.type)
         );
         
-        // Combine both sources
-        const allNotifications = [...bulkNotifications, ...taskNotificationsFiltered];
+        // Get other notifications (bug_report, end_of_year_analysis, etc.) - not task-related and not bulk
+        const otherNotifications = taskNotifications.filter(n => 
+          !['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder', 'neglected_account', 'renewal_reminder'].includes(n.type)
+        );
+        
+        // Combine all sources
+        const allNotifications = [...bulkNotifications, ...taskNotificationsFiltered, ...otherNotifications];
         
         // Sort by created_at descending (newest first)
         allNotifications.sort((a, b) => {
@@ -420,9 +425,9 @@ export default function NotificationBell() {
     
     // Check if this notification is snoozed (universal)
     // Note: Task notifications (task_overdue, task_due_today, task_reminder, task_assigned) 
-    // are not snoozeable via the notification_snoozes table, so skip snooze check for them
-    if (notification.type.startsWith('task_')) {
-      return true; // Task notifications are not snoozeable, always show them (unless filtered above)
+    // and bug_report notifications are not snoozeable via the notification_snoozes table, so skip snooze check for them
+    if (notification.type.startsWith('task_') || notification.type === 'bug_report') {
+      return true; // Task and bug report notifications are not snoozeable, always show them (unless filtered above)
     }
     
     // Safety check: if snoozes haven't loaded yet, show the notification (don't filter it out)
@@ -759,6 +764,7 @@ export default function NotificationBell() {
     const priorities = {
       'renewal_reminder': 1,        // At Risk - highest priority
       'neglected_account': 2,       // Neglected Accounts - second priority
+      'bug_report': 2.5,            // Bug Reports - high priority (after neglected accounts)
       'task_overdue': 3,            // Overdue Tasks - third priority (after neglected accounts)
       'task_assigned': 4,
       'task_due_today': 5,
@@ -960,6 +966,8 @@ export default function NotificationBell() {
         return <AlertTriangle className="w-6 h-6 text-red-600" />;
       case 'neglected_account':
         return <Clock className="w-6 h-6 text-amber-600" />;
+      case 'bug_report':
+        return <Bug className="w-6 h-6 text-red-600" />;
       default:
         return <Mail className="w-6 h-6 text-slate-600" />;
     }
@@ -979,6 +987,8 @@ export default function NotificationBell() {
         return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       case 'neglected_account':
         return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
+      case 'bug_report':
+        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       default:
         return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }
@@ -1060,6 +1070,7 @@ export default function NotificationBell() {
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :
                                      group.type === 'task_due_today' ? 'Tasks Due Today' :
                                      group.type === 'end_of_year_analysis' ? 'Reports' :
+                                     group.type === 'bug_report' ? 'Bug Reports' :
                                      'Notifications';
 
                     return (
