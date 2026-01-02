@@ -149,13 +149,22 @@ export default function Dashboard() {
   });
 
   // Fetch estimates to calculate renewal dates
-  const { data: estimates = [] } = useQuery({
+  const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
     queryKey: ['estimates'],
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
-      if (!response.ok) return [];
+      if (!response.ok) {
+        console.error('❌ Failed to fetch estimates:', response.status, response.statusText);
+        return [];
+      }
       const result = await response.json();
-      return result.success ? (result.data || []) : [];
+      if (!result.success) {
+        console.error('❌ Estimates API returned error:', result.error);
+        return [];
+      }
+      const data = result.data || [];
+      console.log('✅ Fetched estimates:', data.length, 'total estimates');
+      return data;
     }
   });
 
@@ -235,6 +244,41 @@ export default function Dashboard() {
       const daysB = differenceInDays(new Date(b.calculated_renewal_date), new Date());
       return daysA - daysB;
     });
+
+  // Debug logging for at-risk accounts calculation
+  useEffect(() => {
+    if (accounts.length > 0 && estimates.length > 0) {
+      const accountsWithEstimates = accounts.filter(acc => {
+        const accEstimates = estimates.filter(est => est.account_id === acc.id);
+        return accEstimates.length > 0;
+      });
+      const accountsWithWonEstimates = accounts.filter(acc => {
+        const accEstimates = estimates.filter(est => 
+          est.account_id === acc.id && est.status === 'won' && est.contract_end
+        );
+        return accEstimates.length > 0;
+      });
+      const accountsWithRenewalDates = accounts.filter(acc => {
+        const accEstimates = estimates.filter(est => est.account_id === acc.id);
+        const renewalDate = calculateRenewalDate(accEstimates);
+        return renewalDate !== null;
+      });
+      
+      console.log('🔍 At-Risk Accounts Debug:', {
+        totalAccounts: accounts.length,
+        totalEstimates: estimates.length,
+        accountsWithEstimates: accountsWithEstimates.length,
+        accountsWithWonEstimates: accountsWithWonEstimates.length,
+        accountsWithRenewalDates: accountsWithRenewalDates.length,
+        atRiskRenewalsCount: atRiskRenewals.length,
+        atRiskRenewals: atRiskRenewals.map(acc => ({
+          name: acc.name,
+          renewalDate: acc.calculated_renewal_date,
+          daysUntil: differenceInDays(new Date(acc.calculated_renewal_date), new Date())
+        }))
+      });
+    }
+  }, [accounts, estimates, atRiskRenewals]);
 
   // Use calculated at-risk renewals count for stats
   const atRiskAccounts = atRiskRenewals.length;
