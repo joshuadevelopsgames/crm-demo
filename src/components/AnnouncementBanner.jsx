@@ -191,20 +191,13 @@ export default function AnnouncementBanner() {
     });
   }, [userLoading, isLoading, announcements.length, visibleAnnouncements.length, dismissedAnnouncements.length, user, supabase, queryError]);
 
-  // Check if user has announcements enabled (default to true if not set)
-  const notificationPrefs = profile?.notification_preferences || {};
-  const systemAnnouncementsEnabled = notificationPrefs.system_announcements !== false; // Default to true
-
   // Don't show banner while loading or if no visible announcements
   if (userLoading || isLoading) {
     return null;
   }
 
-  // Don't show banner if user has disabled system announcements
-  if (!systemAnnouncementsEnabled) {
-    console.log('AnnouncementBanner: User has disabled system announcements in preferences');
-    return null;
-  }
+  // NOTE: Announcements always show for all users, including system admins
+  // This ensures important system announcements are visible to everyone
 
   // Log if we have announcements but they're all dismissed
   if (announcements.length > 0 && visibleAnnouncements.length === 0) {
