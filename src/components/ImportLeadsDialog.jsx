@@ -256,45 +256,15 @@ export default function ImportLeadsDialog({ open, onClose }) {
         const accounts = accountsRes.ok ? (await accountsRes.json()).data || [] : [];
         const contacts = contactsRes.ok ? (await contactsRes.json()).data || [] : [];
 
-        // Fetch estimates with pagination (API returns up to 1000 per page)
-        let allEstimates = [];
-        let estimatesPage = 0;
-        const estimatesPageSize = 1000;
-        let hasMoreEstimates = true;
+        // Fetch estimates - API handles pagination internally and returns ALL records
+        const estimatesRes = await fetch('/api/data/estimates', { signal: controller.signal });
+        const estimatesData = estimatesRes.ok ? (await estimatesRes.json()) : { data: [] };
+        const allEstimates = estimatesData.data || [];
 
-        while (hasMoreEstimates) {
-          const estimatesRes = await fetch(`/api/data/estimates?page=${estimatesPage}&pageSize=${estimatesPageSize}`, { signal: controller.signal });
-          if (!estimatesRes.ok) break;
-          
-          const estimatesData = await estimatesRes.json();
-          if (estimatesData.data && estimatesData.data.length > 0) {
-            allEstimates = allEstimates.concat(estimatesData.data);
-            hasMoreEstimates = estimatesData.data.length === estimatesPageSize;
-            estimatesPage++;
-          } else {
-            hasMoreEstimates = false;
-          }
-        }
-
-        // Fetch jobsites with pagination
-        let allJobsites = [];
-        let jobsitesPage = 0;
-        const jobsitesPageSize = 1000;
-        let hasMoreJobsites = true;
-
-        while (hasMoreJobsites) {
-          const jobsitesRes = await fetch(`/api/data/jobsites?page=${jobsitesPage}&pageSize=${jobsitesPageSize}`, { signal: controller.signal });
-          if (!jobsitesRes.ok) break;
-          
-          const jobsitesData = await jobsitesRes.json();
-          if (jobsitesData.data && jobsitesData.data.length > 0) {
-            allJobsites = allJobsites.concat(jobsitesData.data);
-            hasMoreJobsites = jobsitesData.data.length === jobsitesPageSize;
-            jobsitesPage++;
-          } else {
-            hasMoreJobsites = false;
-          }
-        }
+        // Fetch jobsites - API handles pagination internally and returns ALL records
+        const jobsitesRes = await fetch('/api/data/jobsites', { signal: controller.signal });
+        const jobsitesData = jobsitesRes.ok ? (await jobsitesRes.json()) : { data: [] };
+        const allJobsites = jobsitesData.data || [];
 
         clearTimeout(timeoutId);
 
