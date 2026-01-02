@@ -149,8 +149,8 @@ export function calculateRevenueFromEstimates(estimates = []) {
   
   return estimates
     .filter(est => {
-      // Only include won estimates
-      if (est.status !== 'won') {
+      // Only include won estimates (case-insensitive)
+      if (!est.status || est.status.toLowerCase() !== 'won') {
         return false;
       }
       
@@ -198,8 +198,8 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     
     // Only consider won estimates from current year for type checking
     const wonEstimates = estimates.filter(est => {
-      // Must be won
-      if (est.status !== 'won') {
+      // Must be won (case-insensitive)
+      if (!est.status || est.status.toLowerCase() !== 'won') {
         return false;
       }
       
