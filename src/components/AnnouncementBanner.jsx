@@ -223,8 +223,11 @@ export default function AnnouncementBanner() {
       <div 
         className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal} fixed left-0 right-0 w-full`}
         style={{
-          top: isTestMode ? '40px' : '0', // Below test mode banner if active
-          zIndex: 55, // Above nav (z-50) but below test mode banner (z-[60])
+          // Position below nav (nav is 64px/4rem tall)
+          // If test mode: below test mode (40px) + nav (64px) = 104px
+          // If no test mode: below nav (64px) = 64px
+          top: isTestMode ? '104px' : '64px', // Below nav (64px) + test mode banner (40px) if active
+          zIndex: 45, // Below nav (z-50) but above content
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

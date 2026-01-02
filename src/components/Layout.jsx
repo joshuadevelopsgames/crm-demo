@@ -201,10 +201,10 @@ export default function Layout({ children, currentPageName }) {
         className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 shadow-sm"
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
-          // Account for test mode banner (40px) + announcement banner (~50px) if active
+          // Nav is below test mode banner (40px) if active
           top: isTutorialMode ? '3rem' : isTestMode 
-            ? `calc(max(0px, env(safe-area-inset-top, 0px)) + 40px + 50px)` // Test mode + announcement banner
-            : `calc(max(0px, env(safe-area-inset-top, 0px)) + 50px)`, // Just announcement banner
+            ? `calc(max(0px, env(safe-area-inset-top, 0px)) + 40px)` // Below test mode banner
+            : `max(0px, env(safe-area-inset-top, 0px))`, // At top if no test mode
           left: '0',
           right: '0',
           paddingTop: '0',
@@ -219,8 +219,8 @@ export default function Layout({ children, currentPageName }) {
           zIndex: 50
         } : {
           // Desktop web browser styles
-          // Account for test mode banner (40px) + announcement banner (~50px) if active
-          top: isTutorialMode ? '3rem' : isTestMode ? '90px' : '50px', // Test mode (40px) + announcement (50px) or just announcement (50px)
+          // Nav is below test mode banner (40px) if active
+          top: isTutorialMode ? '3rem' : isTestMode ? '40px' : '0', // Below test mode banner or at top
           zIndex: 50
         }}
       >
@@ -524,17 +524,17 @@ export default function Layout({ children, currentPageName }) {
         }}
         className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} style={(isPWA || isNativeApp) ? {
         // PWA and native app specific padding (with safe areas)
-        // Account for: nav (4rem) + test mode banner (40px if active) + announcement banner (50px)
+        // Account for: nav (4rem) + test mode banner (40px if active) + announcement banner (~50px)
         paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + ${isTestMode ? '40px + ' : ''}50px + env(safe-area-inset-top, 0px) + 1rem)`,
         paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
         backgroundColor: 'hsl(var(--background))',
         minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - ${isTestMode ? '40px + ' : ''}50px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
       } : {
         // Desktop web browser styles - standard padding
-        // Account for: nav (6rem/5rem) + test mode banner (40px if active) + announcement banner (50px)
+        // Account for: nav (6rem/5rem = 64px/80px) + test mode banner (40px if active) + announcement banner (~50px)
         paddingTop: isTutorialMode ? '7rem' : isTestMode 
-          ? (isDesktop ? '11rem' : '10rem') // 6rem/5rem nav + 40px test mode + 50px announcement
-          : (isDesktop ? '7rem' : '6rem'), // 6rem/5rem nav + 50px announcement
+          ? (isDesktop ? '11rem' : '10rem') // 6rem/5rem nav (64px/80px) + 40px test mode + 50px announcement
+          : (isDesktop ? '7rem' : '6rem'), // 6rem/5rem nav (64px/80px) + 50px announcement
         backgroundColor: 'hsl(var(--background))'
       }}>
         <div className="animate-in fade-in duration-300">
