@@ -201,10 +201,10 @@ export default function Layout({ children, currentPageName }) {
         className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 shadow-sm"
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
-          // Account for test mode banner (40px height) if active
+          // Account for test mode banner (40px) + announcement banner (~50px) if active
           top: isTutorialMode ? '3rem' : isTestMode 
-            ? `calc(max(0px, env(safe-area-inset-top, 0px)) + 40px)`
-            : `max(0px, env(safe-area-inset-top, 0px))`,
+            ? `calc(max(0px, env(safe-area-inset-top, 0px)) + 40px + 50px)` // Test mode + announcement banner
+            : `calc(max(0px, env(safe-area-inset-top, 0px)) + 50px)`, // Just announcement banner
           left: '0',
           right: '0',
           paddingTop: '0',
@@ -219,8 +219,8 @@ export default function Layout({ children, currentPageName }) {
           zIndex: 50
         } : {
           // Desktop web browser styles
-          // Account for test mode banner (40px height) if active
-          top: isTutorialMode ? '3rem' : isTestMode ? '40px' : '0',
+          // Account for test mode banner (40px) + announcement banner (~50px) if active
+          top: isTutorialMode ? '3rem' : isTestMode ? '90px' : '50px', // Test mode (40px) + announcement (50px) or just announcement (50px)
           zIndex: 50
         }}
       >

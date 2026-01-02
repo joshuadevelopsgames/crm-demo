@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
+import { useTestMode } from '@/contexts/TestModeContext';
 import { X, AlertCircle, AlertTriangle, Info, CheckCircle, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ const PRIORITY_ICONS = {
 
 export default function AnnouncementBanner() {
   const { user, profile, isLoading: userLoading } = useUser();
+  const { isTestMode } = useTestMode();
   const supabase = getSupabaseAuth();
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState(() => {
     // Load dismissed announcements from localStorage
@@ -218,7 +220,13 @@ export default function AnnouncementBanner() {
 
   return (
     <>
-      <div className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal}`}>
+      <div 
+        className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal} fixed left-0 right-0 w-full`}
+        style={{
+          top: isTestMode ? '40px' : '0', // Below test mode banner if active
+          zIndex: 55, // Above nav (z-50) but below test mode banner (z-[60])
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-2">
             <button
