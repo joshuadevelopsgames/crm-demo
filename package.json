@@ -22,7 +22,8 @@
     "compare:estimates": "node compare_estimates_with_excel.js",
     "test:build": "node test-build.js",
     "test:runtime": "node test-runtime.js",
-    "test:all": "npm run build && npm run test:build && npm run test:runtime"
+    "test:all": "npm run build && npm run test:build && npm run test:runtime",
+    "test:estimates-parser": "node test-estimates-parser.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
