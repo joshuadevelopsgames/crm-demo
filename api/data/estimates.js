@@ -261,14 +261,17 @@ export default async function handler(req, res) {
             
             // Debug: Log contract_end for first few estimates to diagnose missing dates
             if (seenInBatch.size <= 5) {
-              console.log(`🔍 API: Sample estimate ${lookupValue}:`, {
+              console.log(`🔍 API: Sample estimate ${lookupValue} (INCOMING):`, {
                 status: estimate.status,
                 hasContractEnd: !!estimate.contract_end,
                 contractEnd: estimate.contract_end,
                 contractEndType: typeof estimate.contract_end,
+                contractEndIsNull: estimate.contract_end === null,
+                contractEndIsUndefined: estimate.contract_end === undefined,
                 hasContractStart: !!estimate.contract_start,
                 contractStart: estimate.contract_start,
-                account_id: estimate.account_id
+                account_id: estimate.account_id,
+                allKeys: Object.keys(estimate).filter(k => k.includes('contract') || k.includes('date'))
               });
             }
             
@@ -289,19 +292,17 @@ export default async function handler(req, res) {
               estimateData.estimate_number = estimate.estimate_number;
             }
             
-            // Debug: Verify contract_end and lmn_estimate_id are in estimateData
+            // Debug: Check if contract_end survived the destructuring
             if (seenInBatch.size <= 5) {
-              console.log(`🔍 API: estimateData for ${lookupValue}:`, {
-                status: estimateData.status,
-                hasLmnEstimateId: !!estimateData.lmn_estimate_id,
-                lmn_estimate_id: estimateData.lmn_estimate_id,
-                hasEstimateNumber: !!estimateData.estimate_number,
-                estimate_number: estimateData.estimate_number,
+              console.log(`🔍 API: estimateData AFTER destructuring (${lookupValue}):`, {
                 hasContractEnd: !!estimateData.contract_end,
                 contractEnd: estimateData.contract_end,
                 contractEndType: typeof estimateData.contract_end,
+                contractEndIsNull: estimateData.contract_end === null,
+                contractEndIsUndefined: estimateData.contract_end === undefined,
                 hasContractStart: !!estimateData.contract_start,
-                contractStart: estimateData.contract_start
+                contractStart: estimateData.contract_start,
+                allKeys: Object.keys(estimateData).filter(k => k.includes('contract') || k.includes('date'))
               });
             }
             
@@ -334,11 +335,31 @@ export default async function handler(req, res) {
             
             // Always preserve contract_start and contract_end from incoming data, even if they're null
             // This ensures contract dates are properly saved during import
+            // CRITICAL: Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
             if (estimate.contract_start !== undefined) {
               estimateData.contract_start = estimate.contract_start;
+            } else if (estimate.contract_start === null) {
+              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
+              estimateData.contract_start = null;
             }
             if (estimate.contract_end !== undefined) {
               estimateData.contract_end = estimate.contract_end;
+            } else if (estimate.contract_end === null) {
+              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
+              estimateData.contract_end = null;
+            }
+            
+            // Debug: Final check before save
+            if (seenInBatch.size <= 5) {
+              console.log(`🔍 API: estimateData FINAL (${lookupValue}):`, {
+                hasContractEnd: !!estimateData.contract_end,
+                contractEnd: estimateData.contract_end,
+                contractEndType: typeof estimateData.contract_end,
+                hasContractStart: !!estimateData.contract_start,
+                contractStart: estimateData.contract_start,
+                willBeInserted: !existingMap.has(lookupValue),
+                willBeUpdated: existingMap.has(lookupValue)
+              });
             }
             
             if (existingMap.has(lookupValue)) {
