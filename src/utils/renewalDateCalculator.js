@@ -14,13 +14,7 @@
  * @returns {Date|null} - The latest contract_end date from won estimates, or null
  */
 export function calculateRenewalDate(estimates = []) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:16',message:'calculateRenewalDate entry',data:{estimatesCount:estimates?.length||0,estimatesSample:estimates?.slice(0,2).map(e=>({id:e.id,status:e.status,contract_end:e.contract_end}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   if (!estimates || estimates.length === 0) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:18',message:'No estimates provided',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     return null;
   }
 
@@ -41,14 +35,8 @@ export function calculateRenewalDate(estimates = []) {
       ...est,
       contract_end_date: new Date(est.contract_end)
     }));
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:33',message:'Filtered won estimates',data:{wonWithEndCount:wonEstimatesWithEndDate.length,contractEndDates:wonEstimatesWithEndDate.map(e=>e.contract_end)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   if (wonEstimatesWithEndDate.length === 0) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:39',message:'No won estimates with contract_end',data:{totalEstimates:estimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     return null;
   }
 
@@ -57,7 +45,8 @@ export function calculateRenewalDate(estimates = []) {
     return est.contract_end_date > latest ? est.contract_end_date : latest;
   }, wonEstimatesWithEndDate[0].contract_end_date);
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:48',message:'Renewal date calculated',data:{renewalDate:latestEndDate.toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // Only log when we actually find a renewal date (successful case)
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:48',message:'Renewal date calculated successfully',data:{renewalDate:latestEndDate.toISOString(),estimatesCount:estimates.length,wonWithEndCount:wonEstimatesWithEndDate.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
 
   return latestEndDate;

@@ -117,7 +117,7 @@ export function SimpleDropdown({
         <div
           ref={dropdownRef}
           className={cn(
-            "fixed z-50 rounded-md border bg-popover text-popover-foreground shadow-md",
+            "fixed rounded-md border bg-popover text-popover-foreground shadow-md",
             "animate-in fade-in-0 slide-in-from-top-2 duration-200",
             className
           )}
@@ -125,6 +125,7 @@ export function SimpleDropdown({
             top: `${position.top}px`,
             left: `${position.left}px`,
             minWidth: `${position.width}px`,
+            zIndex: 60, // Above announcement bar (z-55) and nav (z-50)
           }}
         >
           {children}

@@ -217,21 +217,9 @@ export default function Dashboard() {
       
       // Get estimates for this account
       const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      // #region agent log
-      const wonEstimates = accountEstimates.filter(e => e.status?.toLowerCase() === 'won');
-      const wonWithEnd = wonEstimates.filter(e => e.contract_end);
-      if (accountEstimates.length > 0 || account.status === 'at_risk') {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:219',message:'Account estimates check',data:{accountId:account.id,accountName:account.name,accountStatus:account.status,totalEstimates:accountEstimates.length,wonCount:wonEstimates.length,wonWithEndCount:wonWithEnd.length,hasContractEnd:wonWithEnd.length>0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
-      // #endregion
       
       // Calculate renewal date from estimates
       const renewalDate = calculateRenewalDate(accountEstimates);
-      // #region agent log
-      if (accountEstimates.length > 0 || account.status === 'at_risk') {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:222',message:'Renewal date calculated',data:{accountId:account.id,renewalDate:renewalDate?.toISOString()||null,hasRenewalDate:!!renewalDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
-      // #endregion
       
       if (!renewalDate) return null;
       
@@ -240,8 +228,11 @@ export default function Dashboard() {
       const today = new Date();
       const daysUntil = differenceInDays(new Date(renewalDate), today);
       // #region agent log
-      if (account.status === 'at_risk' || daysUntil <= 180) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:229',message:'Days until renewal calculated',data:{accountId:account.id,renewalDate:renewalDate.toISOString(),daysUntil,shouldBeAtRisk:daysUntil<=180,accountStatus:account.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // Only log accounts that should be at-risk or are already at-risk
+      if (daysUntil <= 180 || account.status === 'at_risk') {
+        const wonEstimates = accountEstimates.filter(e => e.status?.toLowerCase() === 'won');
+        const wonWithEnd = wonEstimates.filter(e => e.contract_end);
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:229',message:'At-risk account analysis',data:{accountId:account.id,accountName:account.name,accountStatus:account.status,renewalDate:renewalDate.toISOString(),daysUntil,shouldBeAtRisk:daysUntil<=180,totalEstimates:accountEstimates.length,wonWithEndCount:wonWithEnd.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       }
       // #endregion
       
