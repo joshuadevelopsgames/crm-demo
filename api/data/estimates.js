@@ -149,13 +149,36 @@ export default async function handler(req, res) {
           estimateData.contact_id = null;
         }
         
-        // Always preserve contract_start and contract_end from incoming data, even if they're null
-        // This ensures contract dates are properly saved during import
+        // CRITICAL: Always preserve ALL date fields (estimate_date, estimate_close_date, contract_start, contract_end)
+        // This ensures dates are properly saved during import
+        // Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
+        
+        // Preserve estimate_date (used as fallback when contract dates are missing)
+        if (estimate.estimate_date !== undefined) {
+          estimateData.estimate_date = estimate.estimate_date;
+        } else if (estimate.estimate_date === null) {
+          estimateData.estimate_date = null;
+        }
+        
+        // Preserve estimate_close_date
+        if (estimate.estimate_close_date !== undefined) {
+          estimateData.estimate_close_date = estimate.estimate_close_date;
+        } else if (estimate.estimate_close_date === null) {
+          estimateData.estimate_close_date = null;
+        }
+        
+        // Preserve contract_start
         if (estimate.contract_start !== undefined) {
           estimateData.contract_start = estimate.contract_start;
+        } else if (estimate.contract_start === null) {
+          estimateData.contract_start = null;
         }
+        
+        // Preserve contract_end
         if (estimate.contract_end !== undefined) {
           estimateData.contract_end = estimate.contract_end;
+        } else if (estimate.contract_end === null) {
+          estimateData.contract_end = null;
         }
         
         // Include id if provided (should be from import)
@@ -336,15 +359,35 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
-            // Always preserve contract_start and contract_end from incoming data, even if they're null
-            // This ensures contract dates are properly saved during import
-            // CRITICAL: Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
+            // CRITICAL: Always preserve ALL date fields (estimate_date, estimate_close_date, contract_start, contract_end)
+            // This ensures dates are properly saved during import
+            // Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
+            
+            // Preserve estimate_date (used as fallback when contract dates are missing)
+            if (estimate.estimate_date !== undefined) {
+              estimateData.estimate_date = estimate.estimate_date;
+            } else if (estimate.estimate_date === null) {
+              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
+              estimateData.estimate_date = null;
+            }
+            
+            // Preserve estimate_close_date
+            if (estimate.estimate_close_date !== undefined) {
+              estimateData.estimate_close_date = estimate.estimate_close_date;
+            } else if (estimate.estimate_close_date === null) {
+              // Explicitly set to null if it was null
+              estimateData.estimate_close_date = null;
+            }
+            
+            // Preserve contract_start
             if (estimate.contract_start !== undefined) {
               estimateData.contract_start = estimate.contract_start;
             } else if (estimate.contract_start === null) {
               // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
               estimateData.contract_start = null;
             }
+            
+            // Preserve contract_end
             if (estimate.contract_end !== undefined) {
               estimateData.contract_end = estimate.contract_end;
             } else if (estimate.contract_end === null) {
