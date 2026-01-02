@@ -436,6 +436,21 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Link grouped estimates to accounts
   const estimatesWithAccountId = [];
   
+  // Debug: Check if dates are present in estimates BEFORE merge
+  if (estimates.length > 0) {
+    const sampleEst = estimates[0];
+    console.log('🔍 [Merge] Sample estimate BEFORE merge:', {
+      estimateId: sampleEst.lmn_estimate_id || sampleEst.id,
+      estimate_date: sampleEst.estimate_date,
+      contract_start: sampleEst.contract_start,
+      contract_end: sampleEst.contract_end,
+      hasEstimateDate: !!sampleEst.estimate_date,
+      hasContractStart: !!sampleEst.contract_start,
+      hasContractEnd: !!sampleEst.contract_end,
+      allDateKeys: Object.keys(sampleEst).filter(k => k.includes('date') || k.includes('Date'))
+    });
+  }
+  
   // First: Link estimates grouped by account_id (including those matched via CRM ID)
   estimatesByAccountId.forEach((estimateGroup, accountId) => {
     let linkedAccountId = null;
@@ -863,6 +878,21 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Filter orphaned jobsites for easy access
   const orphanedJobsites = jobsitesWithAccountId.filter(jobsite => jobsite._is_orphaned);
 
+  // Debug: Check if dates are present in estimates AFTER merge
+  if (estimatesWithAccountId.length > 0) {
+    const sampleEst = estimatesWithAccountId[0];
+    console.log('🔍 [Merge] Sample estimate AFTER merge:', {
+      estimateId: sampleEst.lmn_estimate_id || sampleEst.id,
+      estimate_date: sampleEst.estimate_date,
+      contract_start: sampleEst.contract_start,
+      contract_end: sampleEst.contract_end,
+      hasEstimateDate: !!sampleEst.estimate_date,
+      hasContractStart: !!sampleEst.contract_start,
+      hasContractEnd: !!sampleEst.contract_end,
+      allDateKeys: Object.keys(sampleEst).filter(k => k.includes('date') || k.includes('Date'))
+    });
+  }
+  
   return {
     accounts: accountsArray,
     contacts: mergedContacts,
