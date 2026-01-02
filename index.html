@@ -210,24 +210,24 @@
         to { transform: rotate(360deg); }
       }
       
-      /* Dark mode support for loading screen */
+      /* Dark mode support for loading screen - only if not explicitly set to light */
       @media (prefers-color-scheme: dark) {
-        #loading-screen {
+        html:not([data-theme="light"]):not(.light) #loading-screen {
           background-color: hsl(222, 22%, 8%) !important;
         }
-        #loading-screen .loading-text {
+        html:not([data-theme="light"]):not(.light) #loading-screen .loading-text {
           color: hsl(215, 15%, 70%) !important;
         }
-        #loading-screen .loading-title {
+        html:not([data-theme="light"]):not(.light) #loading-screen .loading-title {
           background: linear-gradient(to right, hsl(210, 30%, 96%), hsl(215, 15%, 70%)) !important;
           -webkit-background-clip: text !important;
           -webkit-text-fill-color: transparent !important;
           background-clip: text !important;
         }
-        #loading-screen .spinner-track {
+        html:not([data-theme="light"]):not(.light) #loading-screen .spinner-track {
           border-color: hsl(222, 20%, 14%) !important;
         }
-        #loading-screen .spinner-active {
+        html:not([data-theme="light"]):not(.light) #loading-screen .spinner-active {
           border-color: hsl(210, 30%, 96%) !important;
           border-top-color: transparent !important;
         }
