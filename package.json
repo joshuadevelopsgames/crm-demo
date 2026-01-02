@@ -23,7 +23,8 @@
     "test:build": "node test-build.js",
     "test:runtime": "node test-runtime.js",
     "test:all": "npm run build && npm run test:build && npm run test:runtime",
-    "test:estimates-parser": "node test-estimates-parser.js"
+    "test:estimates-parser": "node test-estimates-parser.js",
+    "test:contacts-parser": "node test-contacts-parser.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
