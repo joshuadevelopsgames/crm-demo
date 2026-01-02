@@ -57,7 +57,8 @@ export default async function handler(req, res) {
       // For import validation, only fetch fields needed for comparison to reduce response size
       // This prevents hitting Vercel's 4.5MB response limit
       // Fields needed: id for matching, plus all fields used in findEstimateDifferences
-      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number, estimate_type, estimate_date, contract_start, contract_end, total_price, total_price_with_tax, status, division, project_name';
+      // CRITICAL: Must include account_id for renewal date calculations (at-risk accounts)
+      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number, estimate_type, estimate_date, contract_start, contract_end, total_price, total_price_with_tax, status, division, project_name, account_id';
 
       while (hasMore) {
         let query = supabase
