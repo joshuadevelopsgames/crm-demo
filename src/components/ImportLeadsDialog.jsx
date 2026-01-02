@@ -268,28 +268,52 @@ export default function ImportLeadsDialog({ open, onClose }) {
         const jobsitesRes = await fetch('/api/data/jobsites', { signal: controller.signal });
         if (!jobsitesRes.ok) {
           console.error('Failed to fetch jobsites:', jobsitesRes.status, jobsitesRes.statusText);
+          const errorText = await jobsitesRes.text();
+          console.error('Error response:', errorText);
         }
         const jobsitesData = jobsitesRes.ok ? (await jobsitesRes.json()) : { data: [] };
         const allJobsites = jobsitesData.data || [];
+        
+        // Debug: Verify response structure
+        console.log('🔍 Jobsites API Response:', {
+          ok: jobsitesRes.ok,
+          status: jobsitesRes.status,
+          hasData: !!jobsitesData.data,
+          dataLength: jobsitesData.data?.length || 0,
+          count: jobsitesData.count,
+          hasCount: 'count' in jobsitesData
+        });
 
         clearTimeout(timeoutId);
 
         console.log(`✅ Fetched existing data: ${accounts.length} accounts, ${contacts.length} contacts, ${allEstimates.length} estimates, ${allJobsites.length} jobsites`);
         
         // Debug: Check if specific problematic records are in the fetched data
-        const problematicJobsiteIds = ['8629925', '8700630', '9906807', '6347524'];
+        const problematicJobsiteIds = ['8629925', '8700630', '9906807', '6347524', '3948460', '5567721', '9471049', '7450257', '8561379', '9814225', '5246186', '6148702', '8629924'];
+        const foundProblematic = [];
+        const missingProblematic = [];
         problematicJobsiteIds.forEach(id => {
           const found = allJobsites.find(j => String(j.lmn_jobsite_id) === id);
           if (found) {
-            console.log(`✅ Found problematic jobsite ${id} in fetched data:`, {
-              id: found.id,
-              lmn_jobsite_id: found.lmn_jobsite_id,
-              name: found.name
-            });
+            foundProblematic.push(id);
+            if (foundProblematic.length <= 3) {
+              console.log(`✅ Found problematic jobsite ${id} in fetched data:`, {
+                id: found.id,
+                lmn_jobsite_id: found.lmn_jobsite_id,
+                name: found.name
+              });
+            }
           } else {
-            console.warn(`❌ Problematic jobsite ${id} NOT in fetched data (fetched ${allJobsites.length} total)`);
+            missingProblematic.push(id);
+            if (missingProblematic.length <= 3) {
+              console.warn(`❌ Problematic jobsite ${id} NOT in fetched data (fetched ${allJobsites.length} total)`);
+            }
           }
         });
+        console.log(`📊 Problematic jobsites check: ${foundProblematic.length} found, ${missingProblematic.length} missing out of ${problematicJobsiteIds.length} total`);
+        if (missingProblematic.length > 0) {
+          console.warn(`⚠️ Missing problematic jobsites:`, missingProblematic);
+        }
 
         setExistingData({ accounts, contacts, estimates: allEstimates, jobsites: allJobsites });
         return { accounts, contacts, estimates: allEstimates, jobsites: allJobsites };
