@@ -1583,12 +1583,12 @@ export default function Tasks() {
                 onValueChange={setTaskDialogTab}
                 className="w-full"
               >
-                <TabsList className={editingTask || viewingTask ? "grid w-full grid-cols-3" : "grid w-full grid-cols-2"}>
+                <TabsList className={`grid w-full ${editingTask || viewingTask ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="details">Details</TabsTrigger>
                   <TabsTrigger
                     value="comments"
-                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'hidden' : ''}`}
-                    disabled={!(editingTask || viewingTask)}
+                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'invisible pointer-events-none' : ''}`}
+                    tabIndex={!(editingTask || viewingTask) ? -1 : undefined}
                   >
                     <MessageSquare className="w-4 h-4" />
                     Comments ({taskComments.length})
