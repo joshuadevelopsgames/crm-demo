@@ -381,7 +381,8 @@ export default function NotificationBell() {
         // Task overdue notifications are always shown if they match the current user
       }
       
-    // For renewal reminders, only show if account SHOULD be at_risk based on renewal date (source of truth)
+    // For renewal reminders, always show them (server is source of truth)
+    // The client-side calculation is just for verification/debugging
     if (notification.type === 'renewal_reminder') {
       // Handle null, undefined, or 'null' string values
       const accountId = notification.related_account_id;
@@ -390,37 +391,24 @@ export default function NotificationBell() {
         return false; // No account ID means we can't verify if it should be at-risk
       }
       
-      // If accounts/estimates haven't loaded yet, or calculation hasn't completed, 
-      // still show the notification (don't filter it out) - it was created by the server
-      // which is the source of truth. The client-side calculation is just for verification.
+      // Always show renewal reminders - server created them, so they're valid
+      // Log verification status for debugging, but don't filter based on client-side calculation
       if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
-        // Still show the notification - server created it, so it's valid
-        // We'll just skip the verification step
         console.log(`✅ Showing renewal_reminder (data not loaded yet): account ${accountId}`);
-        // Continue to snooze check below
       } else {
-        // Once calculation is complete, verify the notification matches an account that SHOULD be at_risk
-        // Use string comparison to handle type mismatches (UUID vs text)
+        // Verify the notification matches an account that SHOULD be at_risk (for debugging only)
         const accountIdStr = String(accountId).trim();
         const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
         const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
         
-        // If the account is not in the at-risk set, it might have been filtered out incorrectly
-        // or the calculation is slightly off. Log a warning but still show the notification
-        // (the server created it, so it's likely valid)
         if (!isInAtRiskSet) {
-          console.warn(`⚠️ Renewal reminder notification for account ${accountIdStr} doesn't match calculated at-risk accounts. Showing anyway (server created it).`);
-          console.warn(`⚠️ Calculated at-risk accounts (${atRiskAccountIds.length}):`, atRiskAccountIds.slice(0, 5));
-          // Still show it - server is source of truth
-          // Continue to snooze check below
+          console.warn(`⚠️ Renewal reminder for account ${accountIdStr} doesn't match calculated at-risk accounts (${atRiskAccountIds.length} total). Showing anyway - server is source of truth.`);
         } else {
-          // Debug: Log when notification matches
-          console.log(`✅ Renewal reminder notification for account ${accountIdStr} matches calculated at-risk accounts`);
+          console.log(`✅ Renewal reminder for account ${accountIdStr} matches calculated at-risk accounts`);
         }
       }
       
-      // If we get here, the notification should be shown (account is at-risk or server says so)
-      // But we still need to check if it's snoozed (check happens below)
+      // Continue to snooze check below (don't filter out based on at-risk calculation)
     }
     
     // For neglected_account notifications, they should always be shown (server created them)
@@ -445,7 +433,12 @@ export default function NotificationBell() {
     }
     
     // Safety check: if snoozes haven't loaded yet, show the notification (don't filter it out)
+    // Also, if snoozes is an empty array, show all notifications
     if (!snoozes || !Array.isArray(snoozes) || snoozes.length === 0) {
+      // Log why we're showing the notification
+      if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account') {
+        console.log(`✅ Showing ${notification.type} notification (no snoozes loaded or empty snoozes array)`);
+      }
       return true; // No snoozes loaded, show all notifications
     }
     
