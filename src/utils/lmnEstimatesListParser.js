@@ -166,8 +166,9 @@ export function parseEstimatesList(csvTextOrRows) {
         
         const stat = status.toLowerCase().trim();
         
-        // Check for explicit Won statuses first (most specific)
+        // Explicit Won statuses
         // Reading from LMN CSV column: "Status" only
+        // These are the actual status values that appear in LMN Excel exports
         if (
           stat === 'email contract award' ||
           stat === 'verbal contract award' ||
@@ -175,21 +176,11 @@ export function parseEstimatesList(csvTextOrRows) {
           stat === 'work in progress' ||
           stat === 'billing complete' ||
           stat === 'contract signed' ||
-          stat === 'won' ||
-          stat === 'sold' ||
-          stat === 'completed' ||
-          stat === 'awarded' ||
-          stat === 'accepted' ||
           stat.includes('email contract award') ||
           stat.includes('verbal contract award') ||
           stat.includes('work complete') ||
           stat.includes('billing complete') ||
-          stat.includes('contract signed') ||
-          stat.includes('contract awarded') ||
-          stat.includes('work completed') ||
-          stat.includes('billing completed') ||
-          stat.includes('closed won') ||
-          stat.includes('sold')
+          stat.includes('contract signed')
         ) {
           estimateStatus = 'won';
         }
@@ -202,19 +193,30 @@ export function parseEstimatesList(csvTextOrRows) {
           stat === 'estimate on hold' ||
           stat === 'estimate lost - no reply' ||
           stat === 'estimate lost - price too high' ||
-          stat === 'lost' ||
-          stat === 'closed lost' ||
           stat.includes('estimate in progress - lost') ||
           stat.includes('review + approve - lost') ||
           stat.includes('client proposal phase - lost') ||
           stat.includes('estimate lost - no reply') ||
           stat.includes('estimate lost - price too high') ||
-          stat.includes('estimate on hold') ||
-          stat.includes('closed lost')
+          stat.includes('estimate on hold')
         ) {
           estimateStatus = 'lost';
         }
         // All other cases default to lost (no pattern matching)
+        
+        // Debug: Log unrecognized status values to help identify what's in the Excel file
+        // Only log once per unique status to avoid spam
+        if (status && estimateStatus === 'lost' && 
+            !stat.includes('lost') && 
+            !stat.includes('on hold') &&
+            !stat.includes('in progress') &&
+            !stat.includes('pending') &&
+            !stat.includes('estimate')) {
+          // Only log if we haven't seen this status before (to avoid console spam)
+          if (!errors.some(e => e.includes(`Unrecognized status: "${status}"`))) {
+            errors.push(`Unrecognized status: "${status}" (row ${i + 1}) - defaulting to 'lost'. If this should be 'won', the status value needs to be added to the parser.`);
+          }
+        }
 
         // Parse dates
         const estimateDate = parseDate(row[colMap.estimateDate]);
