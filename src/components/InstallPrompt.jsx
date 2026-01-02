@@ -120,12 +120,12 @@ export default function InstallPrompt() {
           maxWidth: '260px',
           minHeight: '260px',
           maxHeight: '260px',
-          backgroundColor: 'white',
+          backgroundColor: isDarkMode ? 'hsl(222, 22%, 8%)' : 'white',
           borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          boxShadow: isDarkMode ? '0 8px 32px rgba(0, 0, 0, 0.5)' : '0 8px 32px rgba(0, 0, 0, 0.2)',
           padding: '20px',
           zIndex: 10000,
-          border: '1px solid #e2e8f0',
+          border: isDarkMode ? '1px solid hsl(222, 20%, 14%)' : '1px solid #e2e8f0',
           animation: 'popIn 0.3s ease-out',
           overflow: 'hidden',
           display: 'flex',
@@ -175,7 +175,7 @@ export default function InstallPrompt() {
         }}
         aria-label="Dismiss"
       >
-        <X size={18} style={{ color: '#94a3b8' }} />
+        <X size={18} style={{ color: isDarkMode ? 'hsl(215, 15%, 70%)' : '#94a3b8' }} />
       </button>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px', width: '100%' }}>
@@ -207,7 +207,7 @@ export default function InstallPrompt() {
             <p style={{ 
               margin: '0 0 12px 0', 
               fontSize: '12px', 
-              color: '#64748b', 
+              color: isDarkMode ? 'hsl(215, 15%, 70%)' : '#64748b', 
               lineHeight: '1.4' 
             }}>
               Tap Share → Add to Home Screen
@@ -216,7 +216,7 @@ export default function InstallPrompt() {
             <p style={{ 
               margin: '0 0 16px 0', 
               fontSize: '12px', 
-              color: '#64748b', 
+              color: isDarkMode ? 'hsl(215, 15%, 70%)' : '#64748b', 
               lineHeight: '1.4' 
             }}>
               Get faster, app-like access
