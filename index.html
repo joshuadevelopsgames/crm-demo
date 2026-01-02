@@ -149,7 +149,30 @@
             if (document.body) {
               document.body.style.backgroundColor = bgColor;
             }
+            // Also update loading screen background
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+              loadingScreen.style.backgroundColor = bgColor;
+            }
           });
+        }
+        
+        // Update loading screen background immediately if it exists
+        const updateLoadingScreen = () => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.backgroundColor = bgColor;
+          }
+        };
+        
+        // Try immediately
+        updateLoadingScreen();
+        
+        // Also try after DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateLoadingScreen);
+        } else {
+          updateLoadingScreen();
         }
       })();
     </script>
@@ -157,7 +180,7 @@
   </head>
   <body>
     <!-- Loading Screen - Shows immediately before React loads -->
-    <div id="loading-screen" style="position: fixed !important; inset: 0 !important; z-index: 99999 !important; background-color: #ffffff !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; padding-top: env(safe-area-inset-top, 0px) !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; padding-left: env(safe-area-inset-left, 0px) !important; padding-right: env(safe-area-inset-right, 0px) !important; visibility: visible !important; opacity: 1 !important;">
+    <div id="loading-screen" style="position: fixed !important; inset: 0 !important; z-index: 99999 !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; padding-top: env(safe-area-inset-top, 0px) !important; padding-bottom: env(safe-area-inset-bottom, 0px) !important; padding-left: env(safe-area-inset-left, 0px) !important; padding-right: env(safe-area-inset-right, 0px) !important; visibility: visible !important; opacity: 1 !important;">
       <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
         <div style="position: relative; width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center;">
           <img id="logo-img" src="/logo.png" alt="LECRM Logo" style="height: 4rem; width: auto; max-width: 4rem; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';" />
@@ -264,6 +287,12 @@
         if (document.documentElement) {
           document.documentElement.style.backgroundColor = bgColor;
         }
+        
+        // Update loading screen background to match dark mode
+        if (loadingScreen) {
+          loadingScreen.style.backgroundColor = bgColor;
+        }
+        
         console.log('✅ Background set to', isDarkMode ? 'dark' : 'white');
         
         // Ensure root is visible
