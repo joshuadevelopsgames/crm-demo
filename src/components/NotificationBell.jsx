@@ -177,21 +177,22 @@ export default function NotificationBell() {
         const taskOverdueCount = taskNotificationsFiltered.filter(n => n.type === 'task_overdue').length;
         // Debug logging removed
         if (false) {
-        console.log(`🔔 NotificationBell: Fetched ${allNotifications.length} total notifications for user ${currentUser.id}`, {
-          bulkNotifications: bulkNotifications.length,
-          taskNotifications: taskNotificationsFiltered.length,
-          renewalReminders: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
-          neglectedAccounts: bulkNotifications.filter(n => n.type === 'neglected_account').length,
-          taskOverdue: taskOverdueCount,
-          taskDueToday: taskNotificationsFiltered.filter(n => n.type === 'task_due_today').length,
-          taskReminder: taskNotificationsFiltered.filter(n => n.type === 'task_reminder').length,
-          taskAssigned: taskNotificationsFiltered.filter(n => n.type === 'task_assigned').length,
-          unread: allNotifications.filter(n => !n.is_read).length
-        });
-        
-        if (taskOverdueCount > 0) {
-          const taskOverdueNotifications = taskNotificationsFiltered.filter(n => n.type === 'task_overdue');
-          console.log(`🔔 Task overdue notifications found:`, taskOverdueNotifications.map(n => ({ id: n.id, user_id: n.user_id, task_id: n.related_task_id, title: n.title })));
+          console.log(`🔔 NotificationBell: Fetched ${allNotifications.length} total notifications for user ${currentUser.id}`, {
+            bulkNotifications: bulkNotifications.length,
+            taskNotifications: taskNotificationsFiltered.length,
+            renewalReminders: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
+            neglectedAccounts: bulkNotifications.filter(n => n.type === 'neglected_account').length,
+            taskOverdue: taskOverdueCount,
+            taskDueToday: taskNotificationsFiltered.filter(n => n.type === 'task_due_today').length,
+            taskReminder: taskNotificationsFiltered.filter(n => n.type === 'task_reminder').length,
+            taskAssigned: taskNotificationsFiltered.filter(n => n.type === 'task_assigned').length,
+            unread: allNotifications.filter(n => !n.is_read).length
+          });
+          
+          if (taskOverdueCount > 0) {
+            const taskOverdueNotifications = taskNotificationsFiltered.filter(n => n.type === 'task_overdue');
+            console.log(`🔔 Task overdue notifications found:`, taskOverdueNotifications.map(n => ({ id: n.id, user_id: n.user_id, task_id: n.related_task_id, title: n.title })));
+          }
         }
         
         return allNotifications;
@@ -519,7 +520,7 @@ export default function NotificationBell() {
           snoozed_until: s.snoozed_until
         }))
       });
-    
+    }
     
     return filtered;
   }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes, overdueTaskIds]);
@@ -643,7 +644,7 @@ export default function NotificationBell() {
         // Debug: log if we filtered out any notifications
         if (type === 'neglected_account') {
           if (false) { // Debug logging disabled
-          if (notifications.length !== activeNotificationsOnly.length) {
+            if (notifications.length !== activeNotificationsOnly.length) {
             console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
           } else {
             console.log(`🔔 Neglected account: No snoozed notifications found (checked ${snoozes?.length || 0} snoozes)`);
@@ -695,6 +696,7 @@ export default function NotificationBell() {
                 });
               }
             }
+          }
           }
         }
         
