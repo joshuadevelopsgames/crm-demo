@@ -357,8 +357,19 @@ export function compareWithExisting(
         }
       }
 
-      // Debug: Log first few estimates that aren't found
-      if (!existing && comparison.estimates.new.length < 5) {
+      // Debug: Log first few estimates that aren't found, especially the problematic ones
+      const problematicIds = ['EST5703935', 'EST5685587', 'EST5492985', 'EST5230771', 'EST5230791'];
+      const isProblematic = problematicIds.includes(lookupId.toUpperCase()) || problematicIds.some(id => lookupId.toUpperCase().includes(id));
+      
+      if (!existing && (comparison.estimates.new.length < 5 || isProblematic)) {
+        // Check if it exists in the database but with a different key
+        const foundInDb = existingEstimates.find(e => {
+          const dbLmnId = String(e.lmn_estimate_id || '').toUpperCase();
+          const dbEstNum = String(e.estimate_number || '').toUpperCase();
+          const lookupUpper = lookupId.toUpperCase();
+          return dbLmnId === lookupUpper || dbEstNum === lookupUpper;
+        });
+        
         console.log('[compareWithExisting] Estimate not found in database:', {
           lookupId,
           lookupIdType: typeof lookupId,
@@ -371,6 +382,13 @@ export function compareWithExisting(
           mapSize: existingEstimatesMap.size,
           mapHasLookupId: existingEstimatesMap.has(lookupId),
           mapHasUppercase: existingEstimatesMap.has(lookupId.toUpperCase()),
+          mapHasLowercase: existingEstimatesMap.has(lookupId.toLowerCase()),
+          foundInDbButNotInMap: foundInDb ? {
+            id: foundInDb.id,
+            lmn_estimate_id: foundInDb.lmn_estimate_id,
+            estimate_number: foundInDb.estimate_number
+          } : null,
+          sampleMapKeys: Array.from(existingEstimatesMap.keys()).slice(0, 10),
           sampleExistingIds: existingEstimates.slice(0, 10).map(e => ({
             id: e.id,
             lmn_estimate_id: e.lmn_estimate_id,
@@ -441,8 +459,18 @@ export function compareWithExisting(
         }
       }
 
-      // Debug: Log first few jobsites that aren't found
-      if (!existing && comparison.jobsites.new.length < 5) {
+      // Debug: Log first few jobsites that aren't found, especially the problematic ones
+      const problematicJobsiteIds = ['7695461', '8526852', '3730678', '9703450', '9618131', '9906807', '6347524', '3948460', '5567721', '9471049', '7450257', '8561379', '9814225', '5246186', '6148702', '8629924', '8629925', '8700630'];
+      const isProblematicJobsite = problematicJobsiteIds.includes(String(lookupId)) || problematicJobsiteIds.some(id => String(lookupId) === id);
+      
+      if (!existing && (comparison.jobsites.new.length < 5 || isProblematicJobsite)) {
+        // Check if it exists in the database but with a different key
+        const foundInDb = existingJobsites.find(j => {
+          const dbJobsiteId = String(j.lmn_jobsite_id || '');
+          const lookupStr = String(lookupId);
+          return dbJobsiteId === lookupStr || dbJobsiteId === String(parseInt(lookupStr, 10)) || String(parseInt(dbJobsiteId, 10)) === lookupStr;
+        });
+        
         console.log('[compareWithExisting] Jobsite not found in database:', {
           lookupId,
           lookupIdType: typeof lookupId,
@@ -451,6 +479,17 @@ export function compareWithExisting(
           id: importedJobsite.id,
           name: importedJobsite.name,
           existingJobsitesCount: existingJobsites.length,
+          mapSize: existingJobsitesMap.size,
+          mapHasLookupId: existingJobsitesMap.has(lookupId),
+          mapHasString: existingJobsitesMap.has(String(lookupId)),
+          mapHasNumber: typeof lookupId === 'string' ? existingJobsitesMap.has(parseInt(lookupId, 10)) : existingJobsitesMap.has(String(lookupId)),
+          foundInDbButNotInMap: foundInDb ? {
+            id: foundInDb.id,
+            lmn_jobsite_id: foundInDb.lmn_jobsite_id,
+            lmn_jobsite_idType: typeof foundInDb.lmn_jobsite_id,
+            name: foundInDb.name
+          } : null,
+          sampleMapKeys: Array.from(existingJobsitesMap.keys()).slice(0, 10),
           sampleExistingIds: existingJobsites.slice(0, 10).map(j => ({
             id: j.id,
             lmn_jobsite_id: j.lmn_jobsite_id,
