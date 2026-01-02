@@ -223,7 +223,12 @@ export default function Dashboard() {
       
       if (!renewalDate) return null;
       
-      const daysUntil = differenceInDays(new Date(renewalDate), new Date());
+      // Use test mode date if available, otherwise use actual current date
+      const today = typeof window !== 'undefined' && window.__testModeGetCurrentDate 
+        ? window.__testModeGetCurrentDate()
+        : new Date();
+      
+      const daysUntil = differenceInDays(new Date(renewalDate), today);
       
       // Include if renewal is within 6 months (180 days) OR has passed (negative days = urgent)
       // Only exclude if renewal is more than 6 months away (not urgent yet)
@@ -239,8 +244,11 @@ export default function Dashboard() {
     .filter(Boolean) // Remove null entries
     .sort((a, b) => {
       // Sort by days until renewal (soonest first, including past renewals)
-      const daysA = differenceInDays(new Date(a.calculated_renewal_date), new Date());
-      const daysB = differenceInDays(new Date(b.calculated_renewal_date), new Date());
+      const today = typeof window !== 'undefined' && window.__testModeGetCurrentDate 
+        ? window.__testModeGetCurrentDate()
+        : new Date();
+      const daysA = differenceInDays(new Date(a.calculated_renewal_date), today);
+      const daysB = differenceInDays(new Date(b.calculated_renewal_date), today);
       return daysA - daysB;
     });
 
@@ -309,11 +317,16 @@ export default function Dashboard() {
           contract_end: est.contract_end,
           hasContractEnd: !!est.contract_end
         })),
-        atRiskRenewals: atRiskRenewals.map(acc => ({
-          name: acc.name,
-          renewalDate: acc.calculated_renewal_date,
-          daysUntil: differenceInDays(new Date(acc.calculated_renewal_date), new Date())
-        }))
+        atRiskRenewals: atRiskRenewals.map(acc => {
+          const today = typeof window !== 'undefined' && window.__testModeGetCurrentDate 
+            ? window.__testModeGetCurrentDate()
+            : new Date();
+          return {
+            name: acc.name,
+            renewalDate: acc.calculated_renewal_date,
+            daysUntil: differenceInDays(new Date(acc.calculated_renewal_date), today)
+          };
+        })
       });
     }
   }, [accounts, estimates, atRiskRenewals]);
@@ -599,7 +612,10 @@ export default function Dashboard() {
               <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {atRiskRenewals.slice(0, 5).map(account => {
-                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
+                  const today = typeof window !== 'undefined' && window.__testModeGetCurrentDate 
+                    ? window.__testModeGetCurrentDate()
+                    : new Date();
+                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), today);
                   return (
                     <div
                       key={account.id}
