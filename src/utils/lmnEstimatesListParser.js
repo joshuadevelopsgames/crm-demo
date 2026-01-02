@@ -176,11 +176,15 @@ export function parseEstimatesList(csvTextOrRows) {
           stat === 'work in progress' ||
           stat === 'billing complete' ||
           stat === 'contract signed' ||
+          stat === 'contract in progress' ||
+          stat === 'contract + billing complete' ||
           stat.includes('email contract award') ||
           stat.includes('verbal contract award') ||
           stat.includes('work complete') ||
           stat.includes('billing complete') ||
-          stat.includes('contract signed')
+          stat.includes('contract signed') ||
+          stat.includes('contract in progress') ||
+          stat.includes('contract + billing complete')
         ) {
           estimateStatus = 'won';
         }
