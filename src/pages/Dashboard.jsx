@@ -252,12 +252,40 @@ export default function Dashboard() {
         const accEstimates = estimates.filter(est => est.account_id === acc.id);
         return accEstimates.length > 0;
       });
+      
+      // Check what status values actually exist
+      const statusCounts = {};
+      const estimatesWithContractEnd = estimates.filter(est => est.contract_end);
+      estimates.forEach(est => {
+        const status = est.status || 'null';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      // Check estimates with contract_end by status
+      const contractEndByStatus = {};
+      estimatesWithContractEnd.forEach(est => {
+        const status = est.status || 'null';
+        contractEndByStatus[status] = (contractEndByStatus[status] || 0) + 1;
+      });
+      
       const accountsWithWonEstimates = accounts.filter(acc => {
         const accEstimates = estimates.filter(est => 
           est.account_id === acc.id && est.status === 'won' && est.contract_end
         );
         return accEstimates.length > 0;
       });
+      
+      // Try case-insensitive matching
+      const accountsWithWonEstimatesCaseInsensitive = accounts.filter(acc => {
+        const accEstimates = estimates.filter(est => 
+          est.account_id === acc.id && 
+          est.status && 
+          est.status.toLowerCase() === 'won' && 
+          est.contract_end
+        );
+        return accEstimates.length > 0;
+      });
+      
       const accountsWithRenewalDates = accounts.filter(acc => {
         const accEstimates = estimates.filter(est => est.account_id === acc.id);
         const renewalDate = calculateRenewalDate(accEstimates);
@@ -267,10 +295,21 @@ export default function Dashboard() {
       console.log('🔍 At-Risk Accounts Debug:', {
         totalAccounts: accounts.length,
         totalEstimates: estimates.length,
+        estimatesWithContractEnd: estimatesWithContractEnd.length,
         accountsWithEstimates: accountsWithEstimates.length,
         accountsWithWonEstimates: accountsWithWonEstimates.length,
+        accountsWithWonEstimatesCaseInsensitive: accountsWithWonEstimatesCaseInsensitive.length,
         accountsWithRenewalDates: accountsWithRenewalDates.length,
         atRiskRenewalsCount: atRiskRenewals.length,
+        statusCounts,
+        contractEndByStatus,
+        sampleEstimates: estimates.slice(0, 5).map(est => ({
+          id: est.id,
+          account_id: est.account_id,
+          status: est.status,
+          contract_end: est.contract_end,
+          hasContractEnd: !!est.contract_end
+        })),
         atRiskRenewals: atRiskRenewals.map(acc => ({
           name: acc.name,
           renewalDate: acc.calculated_renewal_date,

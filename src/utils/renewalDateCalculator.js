@@ -21,8 +21,8 @@ export function calculateRenewalDate(estimates = []) {
   // Filter to only won estimates with valid contract_end dates
   const wonEstimatesWithEndDate = estimates
     .filter(est => {
-      // Must be won status
-      if (est.status !== 'won') return false;
+      // Must be won status (case-insensitive)
+      if (!est.status || est.status.toLowerCase() !== 'won') return false;
       
       // Must have contract_end date
       if (!est.contract_end) return false;
