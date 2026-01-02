@@ -54,10 +54,10 @@ This will:
 
 ## 🚫 What NOT to Do
 
-❌ `git push production main` - **BLOCKED** by git pre-push hook
+❌ `git push production main` - **BLOCKED** by git pre-push hook (unless using emergency bypass)
 ❌ `git push staging main` - Use `./scripts/sync-to-staging.sh` instead
 ❌ Skip staging - Always test on staging first
-❌ Push directly from local to production - Must go through staging
+❌ Push directly from local to production - Must go through staging (except emergencies)
 
 ## ✅ What TO Do
 
@@ -137,11 +137,34 @@ After syncing code, you may need to apply SQL migrations:
 | **Staging** | LECRM-staging | lecrm-stg | lecrm-stg.vercel.app | (your staging project) |
 | **Production** | LECRM | lecrm | lecrm.vercel.app | nyyukbaodgzyvcccpojn |
 
+## 🚨 Emergency Bypass
+
+In true emergencies, you can bypass the production push block using the codeword:
+
+### Option 1: Use the Emergency Script (Recommended)
+```bash
+./scripts/emergency-production-push.sh
+```
+This script will:
+- Ask for multiple confirmations
+- Require the emergency codeword
+- Push directly to production
+
+### Option 2: Manual Bypass
+```bash
+PRODUCTION_BYPASS=DEPLOY_EMERGENCY_2024 git push production main
+```
+
+**Emergency Codeword:** `DEPLOY_EMERGENCY_2024`
+
+⚠️ **Use sparingly!** This bypasses all safety checks. Only use in true emergencies.
+
 ## 🆘 Troubleshooting
 
 ### "Direct pushes to production are blocked"
 - This is intentional! Use `./scripts/sync-to-production.sh` instead
 - The hook prevents accidental production deployments
+- For emergencies, use `./scripts/emergency-production-push.sh`
 
 ### "Staging and dev are not in sync"
 - Sync dev → staging first: `./scripts/sync-to-staging.sh`
