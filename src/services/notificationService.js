@@ -496,7 +496,21 @@ export async function createRenewalNotifications() {
     // The database triggers will automatically update notifications when accounts change
     const accounts = await base44.entities.Account.list();
     const estimates = await base44.entities.Estimate.list();
-    const today = startOfDay(new Date());
+    
+    // Use test mode date if available, otherwise use actual current date
+    let todayDate;
+    if (typeof window !== 'undefined' && window.__testModeGetCurrentDate) {
+      todayDate = window.__testModeGetCurrentDate();
+    } else {
+      // Try to import from TestModeContext
+      try {
+        const { getCurrentDate } = await import('@/contexts/TestModeContext');
+        todayDate = getCurrentDate();
+      } catch {
+        todayDate = new Date();
+      }
+    }
+    const today = startOfDay(todayDate);
     
     let atRiskUpdatedCount = 0;
     let atRiskAlreadyCount = 0;

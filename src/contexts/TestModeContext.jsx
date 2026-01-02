@@ -23,6 +23,26 @@ function initializeGlobalGetCurrentYear() {
 // Global function to get current year (can be used outside React components)
 let globalGetCurrentYear = initializeGlobalGetCurrentYear();
 
+// Initialize global function to get current date (respects test mode)
+function initializeGlobalGetCurrentDate() {
+  try {
+    const stored = localStorage.getItem('testMode2025');
+    if (stored === 'true') {
+      // Return a date in 2025 (use current month/day but in 2025 for realistic testing)
+      return () => {
+        const now = new Date();
+        return new Date(2025, now.getMonth(), now.getDate());
+      };
+    }
+  } catch (error) {
+    // localStorage not available or error
+  }
+  return () => new Date();
+}
+
+// Global function to get current date (can be used outside React components)
+let globalGetCurrentDate = initializeGlobalGetCurrentDate();
+
 export function getCurrentYear() {
   const year = globalGetCurrentYear();
   // Debug: Log when test mode is active
@@ -30,6 +50,11 @@ export function getCurrentYear() {
     console.log('[getCurrentYear] Called, returning:', year, 'globalGetCurrentYear === window.__testModeGetCurrentYear:', globalGetCurrentYear === window.__testModeGetCurrentYear);
   }
   return year;
+}
+
+export function getCurrentDate() {
+  const date = globalGetCurrentDate();
+  return date;
 }
 
 export function TestModeProvider({ children }) {
@@ -80,13 +105,27 @@ export function TestModeProvider({ children }) {
     };
   }, [isTestMode]);
   
+  // Get the effective current date (test date if in test mode, otherwise actual date)
+  const getCurrentDate = useMemo(() => {
+    return () => {
+      if (isTestMode) {
+        // Use current month/day but in test year (2025) for realistic testing
+        const now = new Date();
+        return new Date(testYear, now.getMonth(), now.getDate());
+      }
+      return new Date();
+    };
+  }, [isTestMode, testYear]);
+  
   // Update global function immediately when getCurrentYear changes or user loads
   useEffect(() => {
     // Update global function whenever test mode state changes
     globalGetCurrentYear = getCurrentYear;
+    globalGetCurrentDate = getCurrentDate;
     // Also expose on window for easier access in non-React code
     if (typeof window !== 'undefined') {
       window.__testModeGetCurrentYear = getCurrentYear;
+      window.__testModeGetCurrentDate = getCurrentDate;
       // Debug: Log when test mode state changes
       console.log('[TestModeContext] Updated global function:', {
         isTestMode,
@@ -94,6 +133,7 @@ export function TestModeProvider({ children }) {
         isTestModeEnabled,
         testYear,
         currentYear: getCurrentYear(),
+        currentDate: getCurrentDate().toISOString(),
         userEmail: user?.email
       });
     }
@@ -102,7 +142,7 @@ export function TestModeProvider({ children }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode } }));
     }
-  }, [getCurrentYear, isTestMode, isEligibleForTestMode, isTestModeEnabled, user?.email]);
+  }, [getCurrentYear, getCurrentDate, isTestMode, isEligibleForTestMode, isTestModeEnabled, user?.email]);
   
   // Toggle test mode
   const toggleTestMode = () => {
@@ -119,22 +159,32 @@ export function TestModeProvider({ children }) {
         }
         return new Date().getFullYear();
       };
+      const updatedGetCurrentDate = () => {
+        if (updatedIsTestMode) {
+          const now = new Date();
+          return new Date(testYear, now.getMonth(), now.getDate());
+        }
+        return new Date();
+      };
       globalGetCurrentYear = updatedGetCurrentYear;
+      globalGetCurrentDate = updatedGetCurrentDate;
       if (typeof window !== 'undefined') {
         window.__testModeGetCurrentYear = updatedGetCurrentYear;
+        window.__testModeGetCurrentDate = updatedGetCurrentDate;
       }
     } catch (error) {
       console.error('Error saving test mode preference:', error);
     }
   };
   
-  const value = useMemo(() => ({
+  const value = useMemo(() =>({
     isTestMode,
     isEligibleForTestMode,
     testYear,
     getCurrentYear,
+    getCurrentDate,
     toggleTestMode
-  }), [isTestMode, isEligibleForTestMode, getCurrentYear]);
+  }), [isTestMode, isEligibleForTestMode, getCurrentYear, getCurrentDate]);
   
   return (
     <TestModeContext.Provider value={value}>
@@ -174,7 +224,8 @@ export function useTestMode() {
     return {
       isTestMode: false,
       testYear: new Date().getFullYear(),
-      getCurrentYear: () => new Date().getFullYear()
+      getCurrentYear: () => new Date().getFullYear(),
+      getCurrentDate: () => new Date()
     };
   }
   return context;
