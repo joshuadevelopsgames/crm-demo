@@ -57,12 +57,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs";
 
 export default function ImportLeadsDialog({ open, onClose }) {
   // File 1: Contacts Export
@@ -1811,12 +1805,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                     <h3 className="font-semibold text-slate-900">Data Validation Results</h3>
                   </div>
 
-                  {/* Summary Stats - Clickable Tabs */}
-                  <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
+                  {/* Summary Stats - Clickable Buttons (Replaced Tabs to fix RovingFocusGroup error) */}
+                  <div className="w-full">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <TabsTrigger 
-                        value="overview" 
-                        className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer data-[state=active]:bg-slate-100 data-[state=active]:border-slate-300"
+                      <Button
+                        variant={activeDetailTab === "overview" ? "default" : "outline"}
+                        onClick={() => setActiveDetailTab("overview")}
+                        className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 data-[state=active]:bg-slate-100 data-[state=active]:border-slate-300 h-auto flex flex-col"
                       >
                         <p className="text-2xl font-bold text-slate-600">
                           {validationResults.accounts.new.length + validationResults.contacts.new.length + 
@@ -1825,51 +1820,56 @@ export default function ImportLeadsDialog({ open, onClose }) {
                            validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
                         </p>
                         <p className="text-xs text-slate-600 mt-1">Total Records</p>
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="new" 
-                        className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 cursor-pointer data-[state=active]:bg-blue-100 data-[state=active]:border-blue-300"
+                      </Button>
+                      <Button
+                        variant={activeDetailTab === "new" ? "default" : "outline"}
+                        onClick={() => setActiveDetailTab("new")}
+                        className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 data-[state=active]:bg-blue-100 data-[state=active]:border-blue-300 h-auto flex flex-col"
                       >
                         <p className="text-2xl font-bold text-blue-600">
                           {validationResults.accounts.new.length + validationResults.contacts.new.length + 
                            validationResults.estimates.new.length + validationResults.jobsites.new.length}
                         </p>
                         <p className="text-xs text-slate-600 mt-1">New Records</p>
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="updated" 
-                        className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200 hover:bg-amber-100 cursor-pointer data-[state=active]:bg-amber-100 data-[state=active]:border-amber-300"
+                      </Button>
+                      <Button
+                        variant={activeDetailTab === "updated" ? "default" : "outline"}
+                        onClick={() => setActiveDetailTab("updated")}
+                        className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200 hover:bg-amber-100 data-[state=active]:bg-amber-100 data-[state=active]:border-amber-300 h-auto flex flex-col"
                       >
                         <p className="text-2xl font-bold text-amber-600">
                           {validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
                            validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
                         </p>
                         <p className="text-xs text-slate-600 mt-1">Will Be Updated</p>
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="orphaned" 
-                        className="text-center p-3 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 cursor-pointer data-[state=active]:bg-red-100 data-[state=active]:border-red-300"
+                      </Button>
+                      <Button
+                        variant={activeDetailTab === "orphaned" ? "default" : "outline"}
+                        onClick={() => setActiveDetailTab("orphaned")}
+                        className="text-center p-3 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 data-[state=active]:bg-red-100 data-[state=active]:border-red-300 h-auto flex flex-col"
                       >
                         <p className="text-2xl font-bold text-red-600">
                           {validationResults.accounts.orphaned.length + validationResults.contacts.orphaned.length + 
                            validationResults.estimates.orphaned.length + validationResults.jobsites.orphaned.length}
                         </p>
                         <p className="text-xs text-slate-600 mt-1">Orphaned (Not in Sheets)</p>
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="warnings" 
-                        className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 cursor-pointer data-[state=active]:bg-orange-100 data-[state=active]:border-orange-300"
+                      </Button>
+                      <Button
+                        variant={activeDetailTab === "warnings" ? "default" : "outline"}
+                        onClick={() => setActiveDetailTab("warnings")}
+                        className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 data-[state=active]:bg-orange-100 data-[state=active]:border-orange-300 h-auto flex flex-col"
                       >
                         <p className="text-2xl font-bold text-orange-600">
                           {validationResults.warnings.length + validationResults.errors.length}
                         </p>
                         <p className="text-xs text-slate-600 mt-1">Warnings/Errors</p>
-                      </TabsTrigger>
+                      </Button>
                     </div>
 
-                    {/* Tab Content */}
-                    <TabsContent value="overview" className="mt-4">
-                      <div className="space-y-4">
+                    {/* Overview Content */}
+                    {activeDetailTab === "overview" && (
+                      <div className="mt-4">
+                        <div className="space-y-4">
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                           <h4 className="font-semibold text-slate-900 mb-3">Overview</h4>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1915,9 +1915,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </div>
                         </div>
                       </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
-                    <TabsContent value="new" className="mt-4">
+                    {/* New Content */}
+                    {activeDetailTab === "new" && (
+                      <div className="mt-4">
                       <div className="space-y-4">
                         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <h4 className="font-semibold text-blue-900 mb-3">New Records to be Created</h4>
@@ -2017,9 +2020,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           )}
                         </div>
                       </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
-                    <TabsContent value="updated" className="mt-4">
+                    {/* Updated Content */}
+                    {activeDetailTab === "updated" && (
+                      <div className="mt-4">
                       <div className="space-y-4">
                         <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                           <h4 className="font-semibold text-amber-900 mb-3">Records to be Updated</h4>
@@ -2129,9 +2135,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           )}
                         </div>
                       </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
-                    <TabsContent value="orphaned" className="mt-4">
+                    {/* Orphaned Content */}
+                    {activeDetailTab === "orphaned" && (
+                      <div className="mt-4">
                       <div className="space-y-4">
                         {(validationResults.accounts.orphaned.length > 0 || 
                           validationResults.contacts.orphaned.length > 0 || 
@@ -2340,9 +2349,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </div>
                         )}
                       </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
-                    <TabsContent value="warnings" className="mt-4">
+                    {/* Warnings Content */}
+                    {activeDetailTab === "warnings" && (
+                      <div className="mt-4">
                       <div className="space-y-4">
                         {(validationResults.warnings.length > 0 || validationResults.errors.length > 0) && (
                           <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
@@ -2389,8 +2401,9 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           </div>
                         )}
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                    )}
+                  </div>
 
                   {/* Legacy Detailed Results - Hidden, kept for reference */}
                   {false && showValidation && (
