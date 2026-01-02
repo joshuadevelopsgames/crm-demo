@@ -800,19 +800,6 @@ export default function ImportLeadsDialog({ open, onClose }) {
             
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
             
-            // Debug: Log sample estimates to verify contract_end is included
-            if (chunkNum === 1) {
-              const wonEstimates = chunk.filter(e => e.status === 'won');
-              if (wonEstimates.length > 0) {
-                console.log(`🔍 Sample won estimates from chunk:`, wonEstimates.slice(0, 3).map(e => ({
-                  id: e.lmn_estimate_id,
-                  status: e.status,
-                  hasContractEnd: !!e.contract_end,
-                  contractEnd: e.contract_end
-                })));
-              }
-            }
-            
             const response = await fetch('/api/data/estimates', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
