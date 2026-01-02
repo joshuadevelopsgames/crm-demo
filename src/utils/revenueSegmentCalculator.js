@@ -75,17 +75,7 @@ function getEstimateYearData(estimate, currentYear) {
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
-  
-  // Debug: Log when we can't find dates
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && !contractStart && !contractEnd && !estimateDate) {
-    console.log('[getEstimateYearData] No dates found for estimate:', {
-      id: estimate.id,
-      contract_start: estimate.contract_start,
-      contract_end: estimate.contract_end,
-      estimate_date: estimate.estimate_date,
-      allKeys: Object.keys(estimate).filter(k => k.includes('date') || k.includes('Date') || k.includes('start') || k.includes('end') || k.includes('Start') || k.includes('End'))
-    });
-  }
+  const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
   // Use total_price_with_tax consistently
   const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
@@ -145,8 +135,25 @@ function getEstimateYearData(estimate, currentYear) {
     };
   }
   
-  // No valid date found
-  return null;
+  // Case 4: Fallback to created_date if no other dates exist
+  // This handles estimates that don't have contract dates or estimate_date
+  if (createdDate && !isNaN(createdDate.getTime())) {
+    const createdYear = createdDate.getFullYear();
+    const appliesToCurrentYear = currentYear === createdYear;
+    
+    return {
+      appliesToCurrentYear,
+      value: totalPrice
+    };
+  }
+  
+  // Case 5: No dates at all - if this is a won estimate, treat it as applying to current year
+  // This handles estimates that have no date information but are won
+  // We assume they apply to the current year (useful for test mode or estimates without dates)
+  return {
+    appliesToCurrentYear: true,
+    value: totalPrice
+  };
 }
 
 // Import getCurrentYear from test mode context
