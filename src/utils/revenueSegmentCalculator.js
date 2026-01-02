@@ -77,9 +77,27 @@ function getEstimateYearData(estimate, currentYear) {
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
-  // Use total_price_with_tax consistently, fallback to total_price if missing
-  const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
-  if (totalPrice === 0) return null;
+  // Use total_price_with_tax consistently - this is the standard field for revenue calculations
+  const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
+  const totalPriceNoTax = parseFloat(estimate.total_price);
+  
+  // If total_price_with_tax is missing but total_price exists, this is an edge case that should be reported
+  if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
+    if (totalPriceNoTax && totalPriceNoTax > 0) {
+      // Edge case: missing total_price_with_tax but total_price exists
+      // Log warning for debugging (only log first few to avoid spam)
+      if (typeof window !== 'undefined') {
+        if (!window.__missingTotalPriceWithTaxCount) window.__missingTotalPriceWithTaxCount = 0;
+        if (window.__missingTotalPriceWithTaxCount < 10) {
+          console.warn(`⚠️ [getEstimateYearData] Estimate ${estimate.id || estimate.lmn_estimate_id} missing total_price_with_tax but has total_price (${totalPriceNoTax}). Revenue calculation will be skipped. This may indicate a data import issue.`);
+          window.__missingTotalPriceWithTaxCount++;
+        }
+      }
+    }
+    return null; // Don't calculate revenue if total_price_with_tax is missing
+  }
+  
+  const totalPrice = totalPriceWithTax;
   
   // Debug logging for test mode
   if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && currentYear === 2025) {
