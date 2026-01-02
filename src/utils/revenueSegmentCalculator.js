@@ -144,13 +144,22 @@ import { getCurrentYear } from '@/contexts/TestModeContext';
 // Use the exported getCurrentYear function which respects test mode
 function getCurrentYearForCalculation() {
   try {
-    return getCurrentYear();
+    const year = getCurrentYear();
+    // Debug: log the year being used when test mode is active
+    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+      console.log('[getCurrentYearForCalculation] Using year:', year, 'from getCurrentYear()');
+    }
+    return year;
   } catch (error) {
     // Fallback if context not initialized yet
     if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-      return window.__testModeGetCurrentYear();
+      const year = window.__testModeGetCurrentYear();
+      console.log('[getCurrentYearForCalculation] Using year:', year, 'from window.__testModeGetCurrentYear (fallback)');
+      return year;
     }
-    return new Date().getFullYear();
+    const year = new Date().getFullYear();
+    console.warn('[getCurrentYearForCalculation] Using year:', year, 'from new Date() (no test mode available)');
+    return year;
   }
 }
 
@@ -162,9 +171,9 @@ function getCurrentYearForCalculation() {
  */
 export function calculateRevenueFromEstimates(estimates = []) {
   const currentYear = getCurrentYearForCalculation();
-  // Debug log to verify test mode is working
+  
   if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-    console.log('[Revenue Calc] Using year:', currentYear, 'for', estimates.length, 'estimates');
+    console.log(`[calculateRevenueFromEstimates] Using year: ${currentYear} for ${estimates.length} estimates`);
   }
   
   return estimates
@@ -196,23 +205,54 @@ export function getAccountRevenue(account, estimates = []) {
   // If there are no won estimates, return 0 (which will display as "-" in the UI)
   // Do NOT fall back to annual_revenue - that's a separate field for segment calculation
   
+  const currentYear = getCurrentYearForCalculation();
+  
+  // Debug logging for test mode
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    console.log(`[getAccountRevenue] Account: ${account.name}, Year: ${currentYear}, Estimates: ${estimates.length}`);
+  }
+  
   if (estimates && estimates.length > 0) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
     
     // Check if we have won estimates that apply to the current year
-    const currentYear = getCurrentYearForCalculation();
     const hasWonEstimatesForCurrentYear = estimates.some(est => {
       if (!est.status || est.status.toLowerCase() !== 'won') {
         return false;
       }
       const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
+      if (yearData && yearData.appliesToCurrentYear) {
+        if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+          console.log(`[getAccountRevenue] Found won estimate for ${currentYear}:`, {
+            estimateId: est.id,
+            status: est.status,
+            contractStart: est.contract_start,
+            contractEnd: est.contract_end,
+            estimateDate: est.estimate_date,
+            value: yearData.value
+          });
+        }
+        return true;
+      }
+      return false;
     });
     
     if (hasWonEstimatesForCurrentYear) {
       // We have won estimates that apply to current year, return calculated revenue
       // (even if 0, because that's the actual revenue from won estimates)
+      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+        console.log(`[getAccountRevenue] Revenue for ${account.name}: $${calculatedRevenue}`);
+      }
       return calculatedRevenue;
+    } else {
+      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+        console.log(`[getAccountRevenue] No won estimates for ${currentYear} for account ${account.name}`);
+        // Log all estimates to see what we have
+        estimates.forEach(est => {
+          const yearData = getEstimateYearData(est, currentYear);
+          console.log(`  Estimate ${est.id}: status=${est.status}, appliesTo${currentYear}=${yearData?.appliesToCurrentYear}, contractStart=${est.contract_start}, contractEnd=${est.contract_end}`);
+        });
+      }
     }
   }
   
