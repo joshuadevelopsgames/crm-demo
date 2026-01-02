@@ -278,7 +278,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                 <div 
                   className={`border-b px-4 py-3 cursor-pointer transition-colors ${
                     department === 'Uncategorized'
-                      ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30' 
                       : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                   onClick={() => toggleDepartment(department)}
@@ -288,19 +288,19 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                       {isExpanded ? (
                         <ChevronDown className={`w-4 h-4 ${
                           department === 'Uncategorized'
-                            ? 'text-amber-600' 
+                            ? 'text-amber-600 dark:text-amber-400' 
                             : 'text-slate-600 dark:text-slate-400'
                         }`} />
                       ) : (
                         <ChevronRight className={`w-4 h-4 ${
                           department === 'Uncategorized'
-                            ? 'text-amber-600' 
+                            ? 'text-amber-600 dark:text-amber-400' 
                             : 'text-slate-600 dark:text-slate-400'
                         }`} />
                       )}
                       <h4 className={`font-semibold ${
                         department === 'Uncategorized'
-                          ? 'text-amber-900' 
+                          ? 'text-amber-900 dark:text-amber-200' 
                           : 'text-slate-900 dark:text-[#ffffff]'
                       }`}>
                         {department}
