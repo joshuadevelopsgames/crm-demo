@@ -75,7 +75,7 @@ export default function NotificationBell() {
       }
       try {
         const currentUserIdStr = String(currentUser.id).trim();
-        console.log(`🔔 NotificationBell: Fetching notifications for user_id: ${currentUserIdStr}`);
+        // Debug logging removed
         
         // Fetch from both sources in parallel
         // Optionally refresh notifications on page load (once per session)
@@ -175,6 +175,8 @@ export default function NotificationBell() {
         });
         
         const taskOverdueCount = taskNotificationsFiltered.filter(n => n.type === 'task_overdue').length;
+        // Debug logging removed
+        if (false) {
         console.log(`🔔 NotificationBell: Fetched ${allNotifications.length} total notifications for user ${currentUser.id}`, {
           bulkNotifications: bulkNotifications.length,
           taskNotifications: taskNotificationsFiltered.length,
@@ -344,7 +346,7 @@ export default function NotificationBell() {
         }
       });
       
-      console.log(`🔍 NotificationBell: Calculated ${atRiskSet.size} accounts that should be at_risk from renewal dates`);
+      // Debug logging removed
       setAccountsThatShouldBeAtRisk(atRiskSet);
       setAtRiskCalculationComplete(true);
     });
@@ -397,21 +399,6 @@ export default function NotificationBell() {
       }
       
       // Always show renewal reminders - server created them, so they're valid
-      // Log verification status for debugging, but don't filter based on client-side calculation
-      if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0 || !atRiskCalculationComplete) {
-        console.log(`✅ Showing renewal_reminder (data not loaded yet): account ${accountId}`);
-      } else {
-        // Verify the notification matches an account that SHOULD be at_risk (for debugging only)
-        const accountIdStr = String(accountId).trim();
-        const atRiskAccountIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
-        const isInAtRiskSet = atRiskAccountIds.includes(accountIdStr);
-        
-        if (!isInAtRiskSet) {
-          console.warn(`⚠️ Renewal reminder for account ${accountIdStr} doesn't match calculated at-risk accounts (${atRiskAccountIds.length} total). Showing anyway - server is source of truth.`);
-        } else {
-          console.log(`✅ Renewal reminder for account ${accountIdStr} matches calculated at-risk accounts`);
-        }
-      }
       
       // Continue to snooze check below (don't filter out based on at-risk calculation)
     }
@@ -486,9 +473,6 @@ export default function NotificationBell() {
       return snoozedUntil > now;
     });
     
-    if (notification.type === 'task_overdue' && isSnoozed) {
-      console.log(`⚠️ task_overdue notification ${notification.id} is snoozed (shouldn't happen, but logging anyway)`);
-    }
     
     const shouldShow = !isSnoozed;
     
@@ -535,59 +519,12 @@ export default function NotificationBell() {
           snoozed_until: s.snoozed_until
         }))
       });
-    } else if (allNotifications.length > 0 && totalFilteredOut > 0) {
-      // Some filtered out - log summary only
-      console.log(`🔔 Notifications: ${totalShown} shown, ${totalFilteredOut} filtered out of ${allNotifications.length} total`);
-    }
     
     
     return filtered;
   }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes, overdueTaskIds]);
 
-  // Debug logging
-  useEffect(() => {
-    if (allNotifications.length > 0 && atRiskCalculationComplete) {
-      const renewalCount = allNotifications.filter(n => n.type === 'renewal_reminder').length;
-      const activeRenewalCount = activeNotifications.filter(n => n.type === 'renewal_reminder').length;
-      const renewalNotifications = allNotifications.filter(n => n.type === 'renewal_reminder');
-      const renewalAccountIds = renewalNotifications.map(n => String(n.related_account_id).trim()).filter(Boolean);
-      const uniqueRenewalAccountIds = [...new Set(renewalAccountIds)];
-      
-      console.log(`🔔 NotificationBell: ${allNotifications.length} total, ${renewalCount} renewal reminders, ${activeRenewalCount} active (not snoozed)`, {
-        accountsThatShouldBeAtRisk: accountsThatShouldBeAtRisk.size,
-        atRiskCalculationComplete,
-        accountsLoading,
-        estimatesLoading,
-        accountsCount: accounts.length,
-        estimatesCount: estimates.length,
-        uniqueRenewalAccountIds: uniqueRenewalAccountIds.length,
-        atRiskAccountIds: Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim()).slice(0, 5),
-        renewalAccountIdsSample: uniqueRenewalAccountIds.slice(0, 5)
-      });
-      
-      // Check for mismatches
-      if (renewalCount > 0 && accountsThatShouldBeAtRisk.size > 0) {
-        const atRiskIds = Array.from(accountsThatShouldBeAtRisk).map(id => String(id).trim());
-        const missingFromAtRisk = uniqueRenewalAccountIds.filter(id => {
-          const trimmedId = String(id).trim();
-          return trimmedId && trimmedId !== 'null' && !atRiskIds.includes(trimmedId);
-        });
-        if (missingFromAtRisk.length > 0) {
-          console.warn(`⚠️ Found ${missingFromAtRisk.length} renewal notifications for accounts NOT in at-risk set:`, missingFromAtRisk.slice(0, 10));
-        }
-        
-        // Count how many notifications should be filtered
-        const notificationsToFilter = renewalNotifications.filter(n => {
-          const accountId = n.related_account_id;
-          if (!accountId || accountId === 'null' || accountId === null) return true;
-          const accountIdStr = String(accountId).trim();
-          return !atRiskIds.includes(accountIdStr);
-        }).length;
-        
-        console.log(`📊 Filter analysis: ${renewalCount} total renewal notifications, ${notificationsToFilter} should be filtered out, ${renewalCount - notificationsToFilter} should remain`);
-      }
-    }
-  }, [allNotifications, activeNotifications, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete]);
+  // Debug logging removed to reduce console noise
 
   // Sort by newest first (created_at descending), then unread status
   // This ensures newest notifications (usually tasks) appear at the top
@@ -705,6 +642,7 @@ export default function NotificationBell() {
         
         // Debug: log if we filtered out any notifications
         if (type === 'neglected_account') {
+          if (false) { // Debug logging disabled
           if (notifications.length !== activeNotificationsOnly.length) {
             console.log(`🔔 Neglected account: Filtered ${notifications.length - activeNotificationsOnly.length} snoozed notifications (${notifications.length} -> ${activeNotificationsOnly.length})`);
           } else {
@@ -1264,10 +1202,7 @@ export default function NotificationBell() {
                               {hasMultiple && (
                                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                                   {(() => {
-                                    // Debug: log what value is being used for display
-                                    if (group.type === 'renewal_reminder') {
-                                      console.log(`🔔 RENDERING TEXT: group.unreadCount=${group.unreadCount}, group.count=${group.count}, showing: ${group.unreadCount > 0 ? group.unreadCount : group.count}`);
-                                    }
+                                    // Debug logging removed
                                     return group.unreadCount > 0 
                                       ? `${group.unreadCount} unread ${group.unreadCount === 1 ? 'notification' : 'notifications'}`
                                       : `${group.count} ${group.count === 1 ? 'notification' : 'notifications'}`;
