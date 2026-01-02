@@ -258,17 +258,38 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
         // Fetch estimates - API handles pagination internally and returns ALL records
         const estimatesRes = await fetch('/api/data/estimates', { signal: controller.signal });
+        if (!estimatesRes.ok) {
+          console.error('Failed to fetch estimates:', estimatesRes.status, estimatesRes.statusText);
+        }
         const estimatesData = estimatesRes.ok ? (await estimatesRes.json()) : { data: [] };
         const allEstimates = estimatesData.data || [];
 
         // Fetch jobsites - API handles pagination internally and returns ALL records
         const jobsitesRes = await fetch('/api/data/jobsites', { signal: controller.signal });
+        if (!jobsitesRes.ok) {
+          console.error('Failed to fetch jobsites:', jobsitesRes.status, jobsitesRes.statusText);
+        }
         const jobsitesData = jobsitesRes.ok ? (await jobsitesRes.json()) : { data: [] };
         const allJobsites = jobsitesData.data || [];
 
         clearTimeout(timeoutId);
 
         console.log(`✅ Fetched existing data: ${accounts.length} accounts, ${contacts.length} contacts, ${allEstimates.length} estimates, ${allJobsites.length} jobsites`);
+        
+        // Debug: Check if specific problematic records are in the fetched data
+        const problematicJobsiteIds = ['8629925', '8700630', '9906807', '6347524'];
+        problematicJobsiteIds.forEach(id => {
+          const found = allJobsites.find(j => String(j.lmn_jobsite_id) === id);
+          if (found) {
+            console.log(`✅ Found problematic jobsite ${id} in fetched data:`, {
+              id: found.id,
+              lmn_jobsite_id: found.lmn_jobsite_id,
+              name: found.name
+            });
+          } else {
+            console.warn(`❌ Problematic jobsite ${id} NOT in fetched data (fetched ${allJobsites.length} total)`);
+          }
+        });
 
         setExistingData({ accounts, contacts, estimates: allEstimates, jobsites: allJobsites });
         return { accounts, contacts, estimates: allEstimates, jobsites: allJobsites };
