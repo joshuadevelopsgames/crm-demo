@@ -258,8 +258,20 @@ export function parseEstimatesList(csvTextOrRows) {
         }
 
         // Parse dates
-        const estimateDate = parseDate(row[colMap.estimateDate]);
+        const estimateDateRaw = colMap.estimateDate >= 0 ? row[colMap.estimateDate] : null;
+        const estimateDate = parseDate(estimateDateRaw);
         const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
+        
+        // Debug: Log first few estimates with missing estimate_date
+        if (!estimateDate && estimates.length < 5) {
+          console.log(`🔍 PARSER: Estimate ${estimateId} missing estimate_date:`, {
+            estimateId,
+            colMapEstimateDate: colMap.estimateDate,
+            rawValue: estimateDateRaw,
+            rawValueType: typeof estimateDateRaw,
+            rowLength: row.length
+          });
+        }
         
         // Parse contract dates
         const contractStartRaw = colMap.contractStart >= 0 ? row[colMap.contractStart] : null;
