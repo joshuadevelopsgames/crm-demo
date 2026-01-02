@@ -184,8 +184,17 @@ export function compareWithExisting(
 
   const existingEstimatesMap = new Map();
   existingEstimates.forEach(est => {
+    // Try multiple lookup keys for estimates
     if (est.lmn_estimate_id) {
+      // Store with original case
       existingEstimatesMap.set(est.lmn_estimate_id, est);
+      // Also store with uppercase for case-insensitive matching
+      existingEstimatesMap.set(est.lmn_estimate_id.toUpperCase(), est);
+    }
+    // Also try estimate_number as fallback
+    if (est.estimate_number) {
+      existingEstimatesMap.set(est.estimate_number, est);
+      existingEstimatesMap.set(est.estimate_number.toUpperCase(), est);
     }
     if (est.id) {
       existingEstimatesMap.set(est.id, est);
@@ -195,7 +204,16 @@ export function compareWithExisting(
   const existingJobsitesMap = new Map();
   existingJobsites.forEach(jobsite => {
     if (jobsite.lmn_jobsite_id) {
+      // Store with original value
       existingJobsitesMap.set(jobsite.lmn_jobsite_id, jobsite);
+      // Also store as string and number for flexible matching
+      existingJobsitesMap.set(String(jobsite.lmn_jobsite_id), jobsite);
+      if (typeof jobsite.lmn_jobsite_id === 'string') {
+        const numId = parseInt(jobsite.lmn_jobsite_id, 10);
+        if (!isNaN(numId)) {
+          existingJobsitesMap.set(numId, jobsite);
+        }
+      }
     }
     if (jobsite.id) {
       existingJobsitesMap.set(jobsite.id, jobsite);
@@ -296,20 +314,43 @@ export function compareWithExisting(
   // Compare Estimates
   if (importedData.estimates) {
     importedData.estimates.forEach(importedEstimate => {
-      const lookupId = importedEstimate.lmn_estimate_id || importedEstimate.id;
-      const existing = existingEstimatesMap.get(lookupId);
+      // Try multiple lookup strategies
+      let lookupId = importedEstimate.lmn_estimate_id || importedEstimate.estimate_number || importedEstimate.id;
+      let existing = existingEstimatesMap.get(lookupId);
+      
+      // Try uppercase if not found (case-insensitive matching)
+      if (!existing && lookupId) {
+        existing = existingEstimatesMap.get(lookupId.toUpperCase());
+      }
+      
+      // Try with "EST" prefix if it's missing
+      if (!existing && lookupId && !lookupId.toUpperCase().startsWith('EST')) {
+        existing = existingEstimatesMap.get('EST' + lookupId.toUpperCase());
+      }
+      
+      // Try without "EST" prefix if it has it
+      if (!existing && lookupId && lookupId.toUpperCase().startsWith('EST')) {
+        const withoutPrefix = lookupId.substring(3);
+        existing = existingEstimatesMap.get(withoutPrefix);
+        if (!existing) {
+          existing = existingEstimatesMap.get(withoutPrefix.toUpperCase());
+        }
+      }
 
       // Debug: Log first few estimates that aren't found
       if (!existing && comparison.estimates.new.length < 5) {
         console.log('[compareWithExisting] Estimate not found in database:', {
           lookupId,
           lmn_estimate_id: importedEstimate.lmn_estimate_id,
+          estimate_number: importedEstimate.estimate_number,
           id: importedEstimate.id,
           existingEstimatesCount: existingEstimates.length,
-          sampleExistingIds: existingEstimates.slice(0, 5).map(e => ({
+          sampleExistingIds: existingEstimates.slice(0, 10).map(e => ({
             id: e.id,
             lmn_estimate_id: e.lmn_estimate_id,
-            estimate_number: e.estimate_number
+            estimate_number: e.estimate_number,
+            hasLmnId: !!e.lmn_estimate_id,
+            hasEstimateNumber: !!e.estimate_number
           }))
         });
       }
@@ -356,20 +397,36 @@ export function compareWithExisting(
   // Compare Jobsites
   if (importedData.jobsites) {
     importedData.jobsites.forEach(importedJobsite => {
-      const lookupId = importedJobsite.lmn_jobsite_id || importedJobsite.id;
-      const existing = existingJobsitesMap.get(lookupId);
+      let lookupId = importedJobsite.lmn_jobsite_id || importedJobsite.id;
+      let existing = existingJobsitesMap.get(lookupId);
+      
+      // Try as string if not found
+      if (!existing && lookupId) {
+        existing = existingJobsitesMap.get(String(lookupId));
+      }
+      
+      // Try as number if it's a string that looks like a number
+      if (!existing && lookupId && typeof lookupId === 'string') {
+        const numId = parseInt(lookupId, 10);
+        if (!isNaN(numId)) {
+          existing = existingJobsitesMap.get(numId);
+        }
+      }
 
       // Debug: Log first few jobsites that aren't found
       if (!existing && comparison.jobsites.new.length < 5) {
         console.log('[compareWithExisting] Jobsite not found in database:', {
           lookupId,
+          lookupIdType: typeof lookupId,
           lmn_jobsite_id: importedJobsite.lmn_jobsite_id,
+          lmn_jobsite_idType: typeof importedJobsite.lmn_jobsite_id,
           id: importedJobsite.id,
           name: importedJobsite.name,
           existingJobsitesCount: existingJobsites.length,
-          sampleExistingIds: existingJobsites.slice(0, 5).map(j => ({
+          sampleExistingIds: existingJobsites.slice(0, 10).map(j => ({
             id: j.id,
             lmn_jobsite_id: j.lmn_jobsite_id,
+            lmn_jobsite_idType: typeof j.lmn_jobsite_id,
             name: j.name
           }))
         });
