@@ -210,10 +210,18 @@ export default function NotificationBell() {
 
   // Safety check: Filter out any notifications that don't match current user (defensive programming)
   // This ensures we never show notifications from other users, even if the API returns them
+  // NOTE: Bulk notifications (neglected_account, renewal_reminder) don't have user_id because
+  // they're already user-specific (fetched from user_notification_states table for this user)
   const allNotifications = useMemo(() => {
     if (!currentUserId) return [];
     const currentUserIdStr = String(currentUserId).trim();
     return allNotificationsRaw.filter(notification => {
+      // Bulk notifications (neglected_account, renewal_reminder) don't have user_id
+      // They're already user-specific, so always include them
+      if (notification.type === 'neglected_account' || notification.type === 'renewal_reminder') {
+        return true; // Already user-specific, no need to check user_id
+      }
+      // Task notifications have user_id and must match current user
       const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
       return notificationUserId === currentUserIdStr;
     });
