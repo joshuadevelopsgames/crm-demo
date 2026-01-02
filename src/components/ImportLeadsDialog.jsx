@@ -603,12 +603,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
     // (we'll set account_id/contact_id to null instead of excluding the estimate)
     // Track irregularities for reporting - these will be added to results later
     const estimateIrregularities = [];
+    let debugCount = 0; // Track count for debug logging
     const validEstimates = mergedData.estimates?.filter(est => {
       const estId = est.lmn_estimate_id || est.id;
       
       // Debug: Log first few estimates to see their structure
-      const currentCount = validEstimates ? validEstimates.length : 0;
-      if (currentCount < 3) {
+      if (debugCount < 3) {
         console.log('🔍 [Import] Sample estimate from mergedData:', {
           estimateId: estId,
           estimate_date: est.estimate_date,
@@ -617,6 +617,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
           contract_end: est.contract_end,
           hasEstimateDate: !!est.estimate_date
         });
+        debugCount++;
       }
       
       // Only filter if estimate ID is missing (shouldn't happen if parsed correctly)
