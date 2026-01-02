@@ -149,19 +149,27 @@
             if (document.body) {
               document.body.style.backgroundColor = bgColor;
             }
-            // Also update loading screen background
+            // Also update loading screen background (only if dark mode is active)
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) {
-              loadingScreen.style.backgroundColor = bgColor;
+              if (isDarkMode) {
+                loadingScreen.style.backgroundColor = bgColor;
+              } else {
+                loadingScreen.style.backgroundColor = '#ffffff';
+              }
             }
           });
         }
         
-        // Update loading screen background immediately if it exists
+        // Update loading screen background immediately if it exists (only if dark mode is active)
         const updateLoadingScreen = () => {
           const loadingScreen = document.getElementById('loading-screen');
           if (loadingScreen) {
-            loadingScreen.style.backgroundColor = bgColor;
+            if (isDarkMode) {
+              loadingScreen.style.backgroundColor = bgColor;
+            } else {
+              loadingScreen.style.backgroundColor = '#ffffff';
+            }
           }
         };
         
