@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
 // Initialize Supabase client
 function getSupabase() {
@@ -486,12 +487,9 @@ async function sendViaSendGrid(recipientEmail, subject, body) {
 
 // Send email via SMTP (Nodemailer)
 async function sendViaSMTP(recipientEmail, subject, body) {
-  // Check if nodemailer is available
-  let nodemailer;
-  try {
-    nodemailer = require('nodemailer');
-  } catch (e) {
-    const errorMsg = 'Nodemailer not installed. Run: npm install nodemailer';
+  // nodemailer is imported at the top of the file
+  if (!nodemailer) {
+    const errorMsg = 'Nodemailer not available. Please ensure nodemailer is installed: npm install nodemailer';
     console.error(`❌ ${errorMsg}`);
     throw new Error(errorMsg);
   }
