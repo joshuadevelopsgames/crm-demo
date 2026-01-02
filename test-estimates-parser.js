@@ -94,6 +94,24 @@ try {
     }
   }
   
+  // Build colMap for analysis (simplified version)
+  const findColumn = (exactName, ...alternatives) => {
+    const exact = headers.findIndex(h => h && h.toString().trim() === exactName);
+    if (exact >= 0) return exact;
+    const caseInsensitive = headers.findIndex(h => h && h.toString().trim().toLowerCase() === exactName.toLowerCase());
+    if (caseInsensitive >= 0) return caseInsensitive;
+    for (const alt of alternatives) {
+      const altMatch = headers.findIndex(h => h && h.toString().trim().toLowerCase() === alt.toLowerCase());
+      if (altMatch >= 0) return altMatch;
+    }
+    return -1;
+  };
+  
+  const colMap = {
+    estimateDate: findColumn('Estimate Date'),
+    estimateId: findColumn('Estimate ID', 'Estimate #', 'Estimate Number')
+  };
+  
   // Analyze empty values in Estimate Date column
   if (colMap.estimateDate >= 0) {
     let emptyCount = 0;
