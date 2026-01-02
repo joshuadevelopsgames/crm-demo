@@ -321,19 +321,20 @@ export default async function handler(req, res) {
               estimateData.estimate_number = estimate.estimate_number;
             }
             
-            // Debug: Check if contract_end survived the destructuring
+            // Debug: Check if date fields survived the destructuring
             if (seenInBatch.size <= 5) {
               console.log(`🔍 API: estimateData AFTER destructuring (${lookupValue}):`, {
-                hasContractEnd: !!estimateData.contract_end,
-                contractEnd: estimateData.contract_end,
-                contractEndType: typeof estimateData.contract_end,
-                contractEndIsNull: estimateData.contract_end === null,
-                contractEndIsUndefined: estimateData.contract_end === undefined,
+                hasEstimateDate: !!estimateData.estimate_date,
+                estimateDate: estimateData.estimate_date,
+                hasEstimateCloseDate: !!estimateData.estimate_close_date,
+                estimateCloseDate: estimateData.estimate_close_date,
                 hasContractStart: !!estimateData.contract_start,
                 contractStart: estimateData.contract_start,
+                hasContractEnd: !!estimateData.contract_end,
+                contractEnd: estimateData.contract_end,
                 id: estimateData.id,
                 lmn_estimate_id: estimateData.lmn_estimate_id,
-                allKeys: Object.keys(estimateData).filter(k => k.includes('contract') || k.includes('date') || k.includes('id'))
+                allDateKeys: Object.keys(estimateData).filter(k => k.includes('date') || k.includes('Date'))
               });
             }
             
@@ -395,16 +396,25 @@ export default async function handler(req, res) {
               estimateData.contract_end = null;
             }
             
-            // Debug: Final check before save
+            // Debug: Final check before save - verify ALL date fields are present
             if (seenInBatch.size <= 5) {
               console.log(`🔍 API: estimateData FINAL (${lookupValue}):`, {
-                hasContractEnd: !!estimateData.contract_end,
-                contractEnd: estimateData.contract_end,
-                contractEndType: typeof estimateData.contract_end,
+                estimate_date: estimateData.estimate_date,
+                estimate_close_date: estimateData.estimate_close_date,
+                contract_start: estimateData.contract_start,
+                contract_end: estimateData.contract_end,
+                hasEstimateDate: !!estimateData.estimate_date,
+                hasEstimateCloseDate: !!estimateData.estimate_close_date,
                 hasContractStart: !!estimateData.contract_start,
-                contractStart: estimateData.contract_start,
+                hasContractEnd: !!estimateData.contract_end,
                 willBeInserted: !existingMap.has(lookupValue),
-                willBeUpdated: existingMap.has(lookupValue)
+                willBeUpdated: existingMap.has(lookupValue),
+                allDateFields: {
+                  estimate_date: estimateData.estimate_date,
+                  estimate_close_date: estimateData.estimate_close_date,
+                  contract_start: estimateData.contract_start,
+                  contract_end: estimateData.contract_end
+                }
               });
             }
             
