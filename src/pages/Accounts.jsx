@@ -701,7 +701,28 @@ export default function Accounts() {
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
                           {(() => {
-                            const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                            const estimates = estimatesByAccountId[account.id] || [];
+                            const revenue = getAccountRevenue(account, estimates);
+                            
+                            // Debug logging for first few accounts
+                            if (isTestMode && account.name && account.name.includes('Valard')) {
+                              console.log('[Accounts Table] Revenue calculation:', {
+                                accountName: account.name,
+                                accountId: account.id,
+                                estimatesCount: estimates.length,
+                                wonEstimates: estimates.filter(e => e.status?.toLowerCase() === 'won').length,
+                                revenue,
+                                currentYear: getCurrentYear(),
+                                sampleEstimate: estimates[0] ? {
+                                  id: estimates[0].id,
+                                  status: estimates[0].status,
+                                  contract_start: estimates[0].contract_start,
+                                  contract_end: estimates[0].contract_end,
+                                  estimate_date: estimates[0].estimate_date
+                                } : null
+                              });
+                            }
+                            
                             return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
                           })()}
                         </td>

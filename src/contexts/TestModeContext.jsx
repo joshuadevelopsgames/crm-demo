@@ -24,7 +24,12 @@ function initializeGlobalGetCurrentYear() {
 let globalGetCurrentYear = initializeGlobalGetCurrentYear();
 
 export function getCurrentYear() {
-  return globalGetCurrentYear();
+  const year = globalGetCurrentYear();
+  // Debug: Log when test mode is active
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    console.log('[getCurrentYear] Called, returning:', year, 'globalGetCurrentYear === window.__testModeGetCurrentYear:', globalGetCurrentYear === window.__testModeGetCurrentYear);
+  }
+  return year;
 }
 
 export function TestModeProvider({ children }) {
@@ -69,13 +74,22 @@ export function TestModeProvider({ children }) {
     // Also expose on window for easier access in non-React code
     if (typeof window !== 'undefined') {
       window.__testModeGetCurrentYear = getCurrentYear;
+      // Debug: Log when test mode state changes
+      console.log('[TestModeContext] Updated global function:', {
+        isTestMode,
+        isEligibleForTestMode,
+        isTestModeEnabled,
+        testYear,
+        currentYear: getCurrentYear(),
+        userEmail: user?.email
+      });
     }
     // Force a re-render of components that depend on this
     // This ensures revenue calculations update when test mode changes
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode } }));
     }
-  }, [getCurrentYear, isTestMode]);
+  }, [getCurrentYear, isTestMode, isEligibleForTestMode, isTestModeEnabled, user?.email]);
   
   // Toggle test mode
   const toggleTestMode = () => {
