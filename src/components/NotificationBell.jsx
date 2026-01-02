@@ -325,8 +325,12 @@ export default function NotificationBell() {
         if (renewalDate) {
           const renewalDateStart = startOfDay(renewalDate);
           const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-          // Account should be at_risk if renewal is within 6 months (180 days) and in the future
-          if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
+          // Account should be at_risk if:
+          // 1. Renewal is coming up (0-180 days in future) - proactive renewal
+          // 2. Renewal has passed (daysUntilRenewal < 0) - URGENT: contract expired, needs immediate attention
+          // Account should NOT be at_risk only if renewal is > 180 days away
+          // This matches the server logic in notificationService.js
+          if (daysUntilRenewal <= 180) {
             atRiskSet.add(account.id);
           }
         }
@@ -724,84 +728,31 @@ export default function NotificationBell() {
         }
         
         // Normalize account IDs to strings for proper Set deduplication
+        // Trust the server's notifications - don't filter based on client-side calculations
+        // The server created these notifications, so they're valid
         const allAccountIds = activeNotificationsOnly
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim());
         
-        // For neglected_account type, filter to only accounts that are currently neglected
-        // This ensures the count matches the dashboard calculation
-        if (type === 'neglected_account' && accounts.length > 0) {
-          const today = startOfDay(new Date());
-          const currentlyNeglectedAccountIds = new Set(
-            accounts
-              .filter(account => {
-                // Skip archived accounts
-                if (account.archived) return false;
-                
-                // Skip accounts with ICP status = 'na' (permanently excluded)
-                if (account.icp_status === 'na') return false;
-                
-                // Determine threshold based on revenue segment
-                const segment = account.revenue_segment || 'C';
-                const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
-                
-                // Check if no interaction beyond threshold
-                if (!account.last_interaction_date) return true;
-                const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
-                const daysSince = differenceInDays(today, lastInteractionDate);
-                return daysSince > thresholdDays;
-              })
-              .map(acc => String(acc.id).trim())
-          );
-          
-          // Filter account IDs to only those that are currently neglected
-          const filteredAccountIds = allAccountIds.filter(id => currentlyNeglectedAccountIds.has(id));
-          const uniqueAccountIds = new Set(filteredAccountIds);
-          count = uniqueAccountIds.size;
-        } else {
-          const uniqueAccountIds = new Set(allAccountIds);
-          count = uniqueAccountIds.size;
-        }
+        // Count unique accounts from notifications (server is source of truth)
+        const uniqueAccountIds = new Set(allAccountIds);
+        count = uniqueAccountIds.size;
         
         // For unread count, use the EXACT SAME logic as count, but only for unread notifications
         // This ensures consistency - if count works, unreadCount will work the same way
         const unreadNotifications = activeNotificationsOnly.filter(n => !n.is_read);
         
         // Use EXACT same pattern as count calculation above
+        // Trust the server's notifications - don't filter based on client-side calculations
         const unreadAccountIds = unreadNotifications
           .map(n => n.related_account_id)
           .filter(id => id && id !== 'null' && id !== null)
           .map(id => String(id).trim()); // Same normalization as count
         
-        // Declare uniqueUnreadAccountIds in outer scope
-        let uniqueUnreadAccountIds;
-        
-        // For neglected_account type, filter to only accounts that are currently neglected
-        if (type === 'neglected_account' && accounts.length > 0) {
-          const today = startOfDay(new Date());
-          const currentlyNeglectedAccountIds = new Set(
-            accounts
-              .filter(account => {
-                if (account.archived) return false;
-                if (account.icp_status === 'na') return false;
-                // Note: Snooze check is done via notification_snoozes table, not account.snoozed_until
-                const segment = account.revenue_segment || 'C';
-                const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
-                if (!account.last_interaction_date) return true;
-                const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
-                const daysSince = differenceInDays(today, lastInteractionDate);
-                return daysSince > thresholdDays;
-              })
-              .map(acc => String(acc.id).trim())
-          );
-          const filteredUnreadAccountIds = unreadAccountIds.filter(id => currentlyNeglectedAccountIds.has(id));
-          uniqueUnreadAccountIds = new Set(filteredUnreadAccountIds);
-          unreadCount = uniqueUnreadAccountIds.size;
-        } else {
-          uniqueUnreadAccountIds = new Set(unreadAccountIds);
-          unreadCount = uniqueUnreadAccountIds.size;
-        }
+        // Count unique unread accounts from notifications (server is source of truth)
+        const uniqueUnreadAccountIds = new Set(unreadAccountIds);
+        unreadCount = uniqueUnreadAccountIds.size;
         
         // Safety: if calculation somehow fails, fall back to count (all accounts have unread)
         if (unreadCount > count) {

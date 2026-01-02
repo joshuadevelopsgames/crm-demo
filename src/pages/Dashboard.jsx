@@ -185,8 +185,59 @@ export default function Dashboard() {
   const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
   const archivedAccounts = accounts.filter(a => a.status === 'archived' || a.archived === true).length;
   const totalAccounts = accounts.length;
-  const atRiskAccounts = accounts.filter(a => a.status === 'at_risk').length;
+  // Calculate at-risk accounts based on renewal dates (not just status)
+  // This ensures the count matches what's actually shown in the dashboard
+  // Note: atRiskRenewals is calculated below, so we'll use that length
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
+  
+  // At-risk accounts (renewals within 6 months / 180 days)
+  // Calculate renewal dates from estimates for each account
+  // IMPORTANT: Calculate based on renewal dates, not just status='at_risk'
+  // This ensures accounts show up even if status hasn't been updated yet
+  const atRiskRenewals = accounts
+    .map(account => {
+      // Skip archived accounts
+      if (account.archived) return null;
+      
+      // Skip if 'renewal_reminder' notification is snoozed for this account
+      const isSnoozed = notificationSnoozes.some(snooze => 
+        snooze.notification_type === 'renewal_reminder' &&
+        snooze.related_account_id === account.id &&
+        new Date(snooze.snoozed_until) > new Date()
+      );
+      if (isSnoozed) return null;
+      
+      // Get estimates for this account
+      const accountEstimates = estimates.filter(est => est.account_id === account.id);
+      
+      // Calculate renewal date from estimates
+      const renewalDate = calculateRenewalDate(accountEstimates);
+      
+      if (!renewalDate) return null;
+      
+      const daysUntil = differenceInDays(new Date(renewalDate), new Date());
+      
+      // Include if renewal is within 6 months (180 days) OR has passed (negative days = urgent)
+      // Only exclude if renewal is more than 6 months away (not urgent yet)
+      // This matches the logic in createRenewalNotifications() service
+      if (daysUntil > 180) return null;
+      
+      return {
+        ...account,
+        renewal_date: renewalDate.toISOString(),
+        calculated_renewal_date: renewalDate
+      };
+    })
+    .filter(Boolean) // Remove null entries
+    .sort((a, b) => {
+      // Sort by days until renewal (soonest first, including past renewals)
+      const daysA = differenceInDays(new Date(a.calculated_renewal_date), new Date());
+      const daysB = differenceInDays(new Date(b.calculated_renewal_date), new Date());
+      return daysA - daysB;
+    });
+
+  // Use calculated at-risk renewals count for stats
+  const atRiskAccounts = atRiskRenewals.length;
   
   // Debug logging to verify counts
   useEffect(() => {
@@ -195,10 +246,11 @@ export default function Dashboard() {
       active: activeAccounts,
       archived: archivedAccounts,
       atRisk: atRiskAccounts,
+      atRiskRenewalsCount: atRiskRenewals.length,
       sum: activeAccounts + archivedAccounts,
       difference: totalAccounts - (activeAccounts + archivedAccounts)
     });
-  }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts]);
+  }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts, atRiskRenewals.length]);
   
   // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
   const neglectedAccounts = accounts.filter(account => {
@@ -271,49 +323,6 @@ export default function Dashboard() {
       });
     }
   }, [accounts, neglectedAccounts, notificationSnoozes]);
-
-  // At-risk accounts (renewals within 6 months / 180 days)
-  // Calculate renewal dates from estimates for each account
-  const atRiskRenewals = accounts
-    .map(account => {
-      if (account.archived) return null;
-      if (account.status !== 'at_risk') return null;
-      
-      // Skip if 'renewal_reminder' notification is snoozed for this account
-      const isSnoozed = notificationSnoozes.some(snooze => 
-        snooze.notification_type === 'renewal_reminder' &&
-        snooze.related_account_id === account.id &&
-        new Date(snooze.snoozed_until) > new Date()
-      );
-      if (isSnoozed) return null;
-      
-      // Get estimates for this account
-      const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      
-      // Calculate renewal date from estimates
-      const renewalDate = calculateRenewalDate(accountEstimates);
-      
-      if (!renewalDate) return null;
-      
-      const daysUntil = differenceInDays(new Date(renewalDate), new Date());
-      
-      // Include if renewal is within 6 months (180 days) OR has passed (negative days = urgent)
-      // Only exclude if renewal is more than 6 months away (not urgent yet)
-      if (daysUntil > 180) return null;
-      
-      return {
-        ...account,
-        renewal_date: renewalDate.toISOString(),
-        calculated_renewal_date: renewalDate
-      };
-    })
-    .filter(Boolean) // Remove null entries
-    .sort((a, b) => {
-      // Sort by days until renewal (soonest first)
-      const daysA = differenceInDays(new Date(a.calculated_renewal_date), new Date());
-      const daysB = differenceInDays(new Date(b.calculated_renewal_date), new Date());
-      return daysA - daysB;
-    });
 
   // Overdue tasks (matches notification service logic)
   const overdueTasks = tasks.filter(task => {
