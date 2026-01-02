@@ -261,10 +261,23 @@ export default async function handler(req, res) {
               updated_at: new Date().toISOString()
             };
             
-            // Debug: Verify contract_end is in estimateData
+            // CRITICAL: Always preserve lmn_estimate_id and estimate_number - these are used for matching
+            // If they're missing, records won't match on subsequent imports
+            if (estimate.lmn_estimate_id !== undefined) {
+              estimateData.lmn_estimate_id = estimate.lmn_estimate_id;
+            }
+            if (estimate.estimate_number !== undefined) {
+              estimateData.estimate_number = estimate.estimate_number;
+            }
+            
+            // Debug: Verify contract_end and lmn_estimate_id are in estimateData
             if (seenInBatch.size <= 5) {
               console.log(`🔍 API: estimateData for ${lookupValue}:`, {
                 status: estimateData.status,
+                hasLmnEstimateId: !!estimateData.lmn_estimate_id,
+                lmn_estimate_id: estimateData.lmn_estimate_id,
+                hasEstimateNumber: !!estimateData.estimate_number,
+                estimate_number: estimateData.estimate_number,
                 hasContractEnd: !!estimateData.contract_end,
                 contractEnd: estimateData.contract_end,
                 contractEndType: typeof estimateData.contract_end,
