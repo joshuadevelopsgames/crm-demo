@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Bug, X, MousePointer2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -15,6 +16,7 @@ import { Card, CardContent } from './ui/card';
 import toast from 'react-hot-toast';
 
 export default function BugReportButton() {
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
@@ -312,6 +314,13 @@ export default function BugReportButton() {
         emailError: result.emailError || 'none',
         notificationError: result.notificationError || 'none'
       });
+      
+      // Invalidate notifications query to refresh the notification bell
+      // This ensures the new bug report notification appears immediately
+      if (result.notificationCreated) {
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        console.log('🔄 Invalidated notifications query to refresh notification bell');
+      }
       
       handleClose();
     } catch (error) {
