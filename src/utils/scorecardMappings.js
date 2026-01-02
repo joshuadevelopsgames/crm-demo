@@ -54,7 +54,16 @@ export const mappingRules = [
     data_field: 'revenue',
     mapping_function: (account, estimates) => {
       // Use contract-year allocation logic for current year revenue
-      const currentYear = new Date().getFullYear();
+      // Helper to get current year (respects test mode)
+      function getCurrentYearForCalculation() {
+        // Use window function if available (set by TestModeProvider)
+        if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+          return window.__testModeGetCurrentYear();
+        }
+        // Fallback to actual year
+        return new Date().getFullYear();
+      }
+      const currentYear = getCurrentYearForCalculation();
       
       // Import the helper functions from revenueSegmentCalculator
       // For now, we'll calculate inline to avoid circular dependencies

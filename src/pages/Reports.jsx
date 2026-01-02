@@ -29,12 +29,19 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
+import { getCurrentYear } from '@/contexts/TestModeContext';
+
 // Helper to get current year (respects test mode)
 function getCurrentYearForCalculation() {
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-    return window.__testModeGetCurrentYear();
+  try {
+    return getCurrentYear();
+  } catch (error) {
+    // Fallback if context not initialized yet
+    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+      return window.__testModeGetCurrentYear();
+    }
+    return new Date().getFullYear();
   }
-  return new Date().getFullYear();
 }
 
 export default function Reports() {

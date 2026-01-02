@@ -3,8 +3,25 @@ import { useUser } from './UserContext';
 
 const TestModeContext = createContext(null);
 
+// Initialize global function synchronously based on localStorage
+// This ensures it works even before React renders
+function initializeGlobalGetCurrentYear() {
+  try {
+    const stored = localStorage.getItem('testMode2025');
+    if (stored === 'true') {
+      // Check if user is eligible (jrsschroeder@gmail.com)
+      // Note: We can't check user email here since UserContext isn't available yet
+      // So we'll check it in the provider and update accordingly
+      return () => 2025; // Test mode year
+    }
+  } catch (error) {
+    // localStorage not available or error
+  }
+  return () => new Date().getFullYear();
+}
+
 // Global function to get current year (can be used outside React components)
-let globalGetCurrentYear = () => new Date().getFullYear();
+let globalGetCurrentYear = initializeGlobalGetCurrentYear();
 
 export function getCurrentYear() {
   return globalGetCurrentYear();

@@ -138,12 +138,20 @@ function getEstimateYearData(estimate, currentYear) {
   return null;
 }
 
-// Import getCurrentYear from test mode context (will be available after TestModeProvider initializes)
+// Import getCurrentYear from test mode context
+import { getCurrentYear } from '@/contexts/TestModeContext';
+
+// Use the exported getCurrentYear function which respects test mode
 function getCurrentYearForCalculation() {
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-    return window.__testModeGetCurrentYear();
+  try {
+    return getCurrentYear();
+  } catch (error) {
+    // Fallback if context not initialized yet
+    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+      return window.__testModeGetCurrentYear();
+    }
+    return new Date().getFullYear();
   }
-  return new Date().getFullYear();
 }
 
 /**

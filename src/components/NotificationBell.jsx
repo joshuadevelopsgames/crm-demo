@@ -959,7 +959,16 @@ export default function NotificationBell() {
     
     // Navigate based on notification type
     if (notification.type === 'end_of_year_analysis') {
-      const currentYear = new Date().getFullYear();
+      // Helper to get current year (respects test mode)
+      function getCurrentYearForCalculation() {
+        // Use window function if available (set by TestModeProvider)
+        if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+          return window.__testModeGetCurrentYear();
+        }
+        // Fallback to actual year
+        return new Date().getFullYear();
+      }
+      const currentYear = getCurrentYearForCalculation();
       navigate(`${createPageUrl('Reports')}?year=${currentYear}`);
       setIsOpen(false);
     } else if (notification.related_task_id) {

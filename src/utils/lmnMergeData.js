@@ -770,7 +770,16 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
 
     // Calculate revenue from won estimates for current year using contract-year allocation
     // Import the calculation function (using inline version to avoid circular dependencies)
-    const currentYear = new Date().getFullYear();
+    // Helper to get current year (respects test mode)
+    function getCurrentYearForCalculation() {
+      // Use window function if available (set by TestModeProvider)
+      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+        return window.__testModeGetCurrentYear();
+      }
+      // Fallback to actual year
+      return new Date().getFullYear();
+    }
+    const currentYear = getCurrentYearForCalculation();
     const calculateDurationMonths = (startDate, endDate) => {
       const start = new Date(startDate);
       const end = new Date(endDate);

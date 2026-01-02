@@ -4,6 +4,7 @@
  */
 
 import { findMappingRule, applyMappingRule } from './scorecardMappings';
+import { getCurrentYear } from '@/contexts/TestModeContext';
 
 /**
  * Auto-score an account using the primary scorecard template
@@ -20,7 +21,19 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
 
   // Calculate derived values from account data
   // Use current year revenue with contract-year allocation (same logic as revenueSegmentCalculator)
-  const currentYear = new Date().getFullYear();
+  // Helper to get current year (respects test mode)
+  function getCurrentYearForCalculation() {
+    try {
+      return getCurrentYear();
+    } catch (error) {
+      // Fallback if context not initialized yet
+      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+        return window.__testModeGetCurrentYear();
+      }
+      return new Date().getFullYear();
+    }
+  }
+  const currentYear = getCurrentYearForCalculation();
   const calculateDurationMonths = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
