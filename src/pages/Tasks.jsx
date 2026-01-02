@@ -2618,81 +2618,99 @@ export default function Tasks() {
         position="bottom"
       >
         <div className="space-y-4">
-          {/* Task Type Tabs (Sales/Organizational) */}
-          <Tabs value={taskType} onValueChange={setTaskType}>
-            <div
-              className="overflow-x-auto -mx-4 px-4"
-              style={
-                isPWA || isMobile || isNativeApp
-                  ? {
-                      overflowY: "hidden",
-                      WebkitOverflowScrolling: "touch",
-                      touchAction: "pan-x",
-                      overscrollBehaviorX: "contain",
-                      overscrollBehaviorY: "none",
-                    }
-                  : {}
-              }
-            >
-              <TabsList className="bg-white dark:bg-surface-1 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start border-b border-slate-200 dark:border-slate-700">
-                <TabsTrigger value="all" className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  All Tasks
-                </TabsTrigger>
-                <TabsTrigger value="sales" className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Sales
-                </TabsTrigger>
-                <TabsTrigger value="operations" className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Operations
-                </TabsTrigger>
-              </TabsList>
+          {/* Task Type Filters (Sales/Organizational) - Using Buttons instead of Tabs */}
+          <div
+            className="overflow-x-auto -mx-4 px-4"
+            style={
+              isPWA || isMobile || isNativeApp
+                ? {
+                    overflowY: "hidden",
+                    WebkitOverflowScrolling: "touch",
+                    touchAction: "pan-x",
+                    overscrollBehaviorX: "contain",
+                    overscrollBehaviorY: "none",
+                  }
+                : {}
+            }
+          >
+            <div className="inline-flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+              <Button
+                variant={taskType === "all" ? "default" : "ghost"}
+                onClick={() => setTaskType("all")}
+                className="flex items-center gap-2"
+              >
+                <Building2 className="w-4 h-4" />
+                All Tasks
+              </Button>
+              <Button
+                variant={taskType === "sales" ? "default" : "ghost"}
+                onClick={() => setTaskType("sales")}
+                className="flex items-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Sales
+              </Button>
+              <Button
+                variant={taskType === "operations" ? "default" : "ghost"}
+                onClick={() => setTaskType("operations")}
+                className="flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Operations
+              </Button>
             </div>
-          </Tabs>
+          </div>
 
-          {/* Status Tabs (Inbox/Today/Upcoming/Completed) */}
-          <Tabs value={activeFilter} onValueChange={setActiveFilter}>
-            <div
-              className="overflow-x-auto -mx-4 px-4"
-              style={
-                isPWA || isMobile || isNativeApp
-                  ? {
-                      overflowY: "hidden",
-                      WebkitOverflowScrolling: "touch",
-                      touchAction: "pan-x",
-                      overscrollBehaviorX: "contain",
-                      overscrollBehaviorY: "none",
-                    }
-                  : {}
-              }
-            >
-              <TabsList className="bg-white dark:bg-surface-1 backdrop-blur-sm inline-flex w-auto flex-nowrap justify-start">
-                <TabsTrigger value="inbox" className="flex items-center gap-2">
-                  <Inbox className="w-4 h-4" />
-                  Inbox ({counts.inbox})
-                </TabsTrigger>
-                <TabsTrigger value="today" className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Today ({counts.today})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="upcoming"
-                  className="flex items-center gap-2"
-                >
-                  <Clock className="w-4 h-4" />
-                  Upcoming ({counts.upcoming})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="completed"
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Completed ({counts.completed})
-                </TabsTrigger>
-              </TabsList>
+          {/* Status Filters (Inbox/Today/Upcoming/Completed) - Using Buttons instead of Tabs */}
+          <div
+            className="overflow-x-auto -mx-4 px-4"
+            style={
+              isPWA || isMobile || isNativeApp
+                ? {
+                    overflowY: "hidden",
+                    WebkitOverflowScrolling: "touch",
+                    touchAction: "pan-x",
+                    overscrollBehaviorX: "contain",
+                    overscrollBehaviorY: "none",
+                  }
+                : {}
+            }
+          >
+            <div className="inline-flex gap-2">
+              <Button
+                variant={activeFilter === "inbox" ? "default" : "ghost"}
+                onClick={() => setActiveFilter("inbox")}
+                className="flex items-center gap-2"
+              >
+                <Inbox className="w-4 h-4" />
+                Inbox ({counts.inbox})
+              </Button>
+              <Button
+                variant={activeFilter === "today" ? "default" : "ghost"}
+                onClick={() => setActiveFilter("today")}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                Today ({counts.today})
+              </Button>
+              <Button
+                variant={activeFilter === "upcoming" ? "default" : "ghost"}
+                onClick={() => setActiveFilter("upcoming")}
+                className="flex items-center gap-2"
+              >
+                <Clock className="w-4 h-4" />
+                Upcoming ({counts.upcoming})
+              </Button>
+              <Button
+                variant={activeFilter === "completed" ? "default" : "ghost"}
+                onClick={() => setActiveFilter("completed")}
+                className="flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Completed ({counts.completed})
+              </Button>
             </div>
-          </Tabs>
+          </div>
 
           <Card className="p-4">
             <div className="flex flex-col lg:flex-row gap-4 items-center">
