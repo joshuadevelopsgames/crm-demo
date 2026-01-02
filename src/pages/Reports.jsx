@@ -990,6 +990,7 @@ export default function Reports() {
         <TabsContent value="department" className="space-y-4">
           <DepartmentReport 
             estimates={filteredYearEstimates}
+            accounts={accounts}
           />
         </TabsContent>
         

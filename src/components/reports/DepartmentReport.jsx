@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building2, TrendingUp } from 'lucide-react';
-import { calculateDepartmentStats, formatCurrency } from '@/utils/reportCalculations';
+import { Building2, TrendingUp, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { calculateDepartmentStats, calculateDepartmentAccountStats, formatCurrency, isWonStatus } from '@/utils/reportCalculations';
 
-export default function DepartmentReport({ estimates }) {
+export default function DepartmentReport({ estimates, accounts = [] }) {
+  const navigate = useNavigate();
   const deptStats = calculateDepartmentStats(estimates);
+  const [expandedDepartments, setExpandedDepartments] = useState(new Set());
+  
+  const toggleDepartment = (division) => {
+    const newExpanded = new Set(expandedDepartments);
+    if (newExpanded.has(division)) {
+      newExpanded.delete(division);
+    } else {
+      newExpanded.add(division);
+    }
+    setExpandedDepartments(newExpanded);
+  };
+  
+  const getDepartmentAccountStats = (division) => {
+    return calculateDepartmentAccountStats(estimates, accounts, division);
+  };
+  
+  const getStatusBadge = (status) => {
+    if (isWonStatus(status)) {
+      return <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Won</Badge>;
+    } else if (status === 'lost' || (status && status.toLowerCase().includes('lost'))) {
+      return <Badge variant="secondary" className="bg-red-100 text-red-800">Lost</Badge>;
+    } else {
+      return <Badge variant="secondary" className="bg-amber-100 text-amber-800">Pending</Badge>;
+    }
+  };
   
   // Data for bar chart
   const barChartData = deptStats.map(dept => ({
@@ -139,16 +168,18 @@ export default function DepartmentReport({ estimates }) {
         </CardContent>
       </Card>
       
-      {/* Department Statistics Table */}
+      {/* Department Statistics Table with Account Drill-Down */}
       <Card>
         <CardHeader>
-          <CardTitle>Department Breakdown</CardTitle>
+          <CardTitle>Department Breakdown by Client</CardTitle>
+          <p className="text-sm text-slate-600 mt-1">Click a department row to see client breakdown</p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
+                  <th className="text-left p-3 font-semibold text-slate-900 dark:text-white w-8"></th>
                   <th className="text-left p-3 font-semibold text-slate-900 dark:text-white">Department</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won</th>
@@ -161,35 +192,120 @@ export default function DepartmentReport({ estimates }) {
                 </tr>
               </thead>
               <tbody>
-                {deptStats.map((dept) => (
-                  <tr key={dept.division} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-3 text-slate-900 dark:text-white font-medium">{dept.division}</td>
-                    <td className="p-3 text-right text-slate-600">{dept.total}</td>
-                    <td className="p-3 text-right text-emerald-600 font-medium">{dept.won}</td>
-                    <td className="p-3 text-right text-red-600 font-medium">{dept.lost}</td>
-                    <td className="p-3 text-right">
-                      <Badge 
-                        variant="secondary" 
-                        className={dept.winRate >= 50 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}
-                      >
-                        {dept.winRate}%
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right text-slate-600">
-                      {formatCurrency(dept.totalValue)}
-                    </td>
-                    <td className="p-3 text-right text-emerald-600 font-medium">
-                      {formatCurrency(dept.wonValue)}
-                    </td>
-                    <td className="p-3 text-right text-red-600 font-medium">
-                      {formatCurrency(dept.lostValue)}
-                    </td>
-                    <td className="p-3 text-right text-slate-600">{dept.estimatesVsWonRatio}%</td>
-                  </tr>
-                ))}
+                {deptStats.map((dept) => {
+                  const isExpanded = expandedDepartments.has(dept.division);
+                  const accountStats = getDepartmentAccountStats(dept.division);
+                  
+                  return (
+                    <React.Fragment key={dept.division}>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <td className="p-3">
+                          {accountStats.length > 0 && (
+                            <button
+                              onClick={() => toggleDepartment(dept.division)}
+                              className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                              aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                        </td>
+                        <td className="p-3 text-slate-900 dark:text-white font-medium">{dept.division}</td>
+                        <td className="p-3 text-right text-slate-600">{dept.total}</td>
+                        <td className="p-3 text-right text-emerald-600 font-medium">{dept.won}</td>
+                        <td className="p-3 text-right text-red-600 font-medium">{dept.lost}</td>
+                        <td className="p-3 text-right">
+                          <Badge 
+                            variant="secondary" 
+                            className={dept.winRate >= 50 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}
+                          >
+                            {dept.winRate}%
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right text-slate-600">
+                          {formatCurrency(dept.totalValue)}
+                        </td>
+                        <td className="p-3 text-right text-emerald-600 font-medium">
+                          {formatCurrency(dept.wonValue)}
+                        </td>
+                        <td className="p-3 text-right text-red-600 font-medium">
+                          {formatCurrency(dept.lostValue)}
+                        </td>
+                        <td className="p-3 text-right text-slate-600">{dept.estimatesVsWonRatio}%</td>
+                      </tr>
+                      
+                      {/* Expanded Account Breakdown */}
+                      {isExpanded && accountStats.length > 0 && (
+                        <tr>
+                          <td colSpan="10" className="p-0 bg-slate-50 dark:bg-slate-900">
+                            <div className="p-4">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                                Clients in {dept.division}
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="border-b border-slate-200">
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Client</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Total</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Won</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Lost</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Win Rate</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Total Value</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Won Value</th>
+                                      <th className="text-center p-2 font-semibold text-slate-700 dark:text-slate-300">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {accountStats.map((account) => (
+                                      <tr key={account.accountId} className="border-b border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800">
+                                        <td className="p-2 text-slate-600 dark:text-slate-300 font-medium">{account.accountName}</td>
+                                        <td className="p-2 text-right text-slate-600 dark:text-slate-300">{account.total}</td>
+                                        <td className="p-2 text-right text-emerald-600 dark:text-emerald-400 font-medium">{account.won}</td>
+                                        <td className="p-2 text-right text-red-600 dark:text-red-400 font-medium">{account.lost}</td>
+                                        <td className="p-2 text-right">
+                                          <Badge 
+                                            variant="secondary" 
+                                            className={account.winRate >= 50 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
+                                          >
+                                            {account.winRate}%
+                                          </Badge>
+                                        </td>
+                                        <td className="p-2 text-right text-slate-600 dark:text-slate-300">
+                                          {formatCurrency(account.totalValue)}
+                                        </td>
+                                        <td className="p-2 text-right text-emerald-600 dark:text-emerald-400 font-medium">
+                                          {formatCurrency(account.wonValue)}
+                                        </td>
+                                        <td className="p-2 text-center">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.accountId}`))}
+                                            className="h-6 px-2"
+                                          >
+                                            <ExternalLink className="w-3 h-3" />
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
                 {deptStats.length === 0 && (
                   <tr>
-                    <td colSpan="9" className="p-8 text-center text-slate-500">
+                    <td colSpan="10" className="p-8 text-center text-slate-500">
                       No department data available
                     </td>
                   </tr>

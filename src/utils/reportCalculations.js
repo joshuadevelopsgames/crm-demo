@@ -208,6 +208,21 @@ export function calculateDepartmentStats(estimates) {
 }
 
 /**
+ * Calculate win/loss statistics per account within a specific department
+ * @param {Array} estimates - Array of estimate objects (should be filtered to a specific department)
+ * @param {Array} accounts - Array of account objects (for account names)
+ * @param {string} department - Department/division name to filter by
+ * @returns {Array} Array of account statistics objects for that department
+ */
+export function calculateDepartmentAccountStats(estimates, accounts, department) {
+  // Filter estimates to only this department
+  const deptEstimates = estimates.filter(e => (e.division || 'Unknown') === department);
+  
+  // Use the existing calculateAccountStats function but with filtered estimates
+  return calculateAccountStats(deptEstimates, accounts);
+}
+
+/**
  * Check if an estimate status is considered "won" (sold) based on LMN's logic
  * Won statuses: Contract Signed, Work Complete, Billing Complete, Email Contract Award, Verbal Contract Award
  * @param {string} status - Estimate status
