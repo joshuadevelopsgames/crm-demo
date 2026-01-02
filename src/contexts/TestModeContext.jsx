@@ -40,9 +40,9 @@ export function TestModeProvider({ children }) {
     return user?.email === 'jrsschroeder@gmail.com';
   }, [user?.email]);
   
-  // Load test mode preference from localStorage (only if eligible)
+  // Load test mode preference from localStorage (preserve setting even if user not loaded yet)
+  // This ensures test mode stays on after page refresh
   const [isTestModeEnabled, setIsTestModeEnabled] = useState(() => {
-    if (!isEligibleForTestMode) return false;
     try {
       const stored = localStorage.getItem('testMode2025');
       return stored === 'true';
@@ -50,6 +50,19 @@ export function TestModeProvider({ children }) {
       return false;
     }
   });
+  
+  // If user loads and is not eligible, turn off test mode
+  useEffect(() => {
+    if (user && !isEligibleForTestMode && isTestModeEnabled) {
+      console.log('[TestModeContext] User is not eligible, turning off test mode');
+      setIsTestModeEnabled(false);
+      try {
+        localStorage.setItem('testMode2025', 'false');
+      } catch (error) {
+        console.error('Error saving test mode preference:', error);
+      }
+    }
+  }, [user, isEligibleForTestMode, isTestModeEnabled]);
   
   // Test year is 2025
   const testYear = 2025;
