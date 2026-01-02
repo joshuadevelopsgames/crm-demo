@@ -287,6 +287,7 @@ export default async function handler(req, res) {
             // CRITICAL: Always preserve id, lmn_estimate_id and estimate_number
             // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
             // lmn_estimate_id and estimate_number are used for matching
+            // These MUST be preserved to ensure data integrity - all fields stay with their correct ID
             if (estimate.id !== undefined) {
               estimateData.id = estimate.id;
             }
@@ -307,13 +308,10 @@ export default async function handler(req, res) {
                 contractEndIsUndefined: estimateData.contract_end === undefined,
                 hasContractStart: !!estimateData.contract_start,
                 contractStart: estimateData.contract_start,
-                allKeys: Object.keys(estimateData).filter(k => k.includes('contract') || k.includes('date'))
+                id: estimateData.id,
+                lmn_estimate_id: estimateData.lmn_estimate_id,
+                allKeys: Object.keys(estimateData).filter(k => k.includes('contract') || k.includes('date') || k.includes('id'))
               });
-            }
-            
-            // Include id if provided (should be from import)
-            if (id) {
-              estimateData.id = id;
             }
             
             // Include account_id if provided AND the account exists in the database

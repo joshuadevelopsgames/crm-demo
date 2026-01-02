@@ -203,12 +203,20 @@ export default async function handler(req, res) {
               updated_at: new Date().toISOString()
             };
             
-            // Include id if provided (should be from import like "lmn-contact-XXXXX")
+            // CRITICAL: Always preserve id, lmn_contact_id, and account_id
+            // These MUST be preserved to ensure data integrity - all fields stay with their correct ID
+            // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
+            // lmn_contact_id is used for matching existing records
             if (id) {
               contactData.id = id;
             }
+            // Explicitly preserve lmn_contact_id if it exists (should always be present from parser)
+            if (contact.lmn_contact_id !== undefined) {
+              contactData.lmn_contact_id = contact.lmn_contact_id;
+            }
             
             // Include account_id if provided (should be text like "lmn-account-XXXXX")
+            // This links the contact to the correct account
             if (account_id) {
               contactData.account_id = account_id;
             } else {

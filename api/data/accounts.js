@@ -240,9 +240,16 @@ export default async function handler(req, res) {
               updated_at: new Date().toISOString()
             };
             
-            // Always use the imported ID if provided (should be from import like "lmn-account-XXXXX")
+            // CRITICAL: Always preserve id and lmn_crm_id
+            // These MUST be preserved to ensure data integrity - all fields stay with their correct ID
+            // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
+            // lmn_crm_id is used for matching existing records
             if (importedId) {
               accountData.id = importedId;
+            }
+            // Explicitly preserve lmn_crm_id if it exists (should always be present from parser)
+            if (account.lmn_crm_id !== undefined) {
+              accountData.lmn_crm_id = account.lmn_crm_id;
             }
             
             if (existingMap.has(lookupValue)) {

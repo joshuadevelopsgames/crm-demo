@@ -248,9 +248,16 @@ export default async function handler(req, res) {
               updated_at: new Date().toISOString()
             };
             
-            // Include id if provided (should be from import)
+            // CRITICAL: Always preserve id, lmn_jobsite_id, account_id, and contact_id
+            // These MUST be preserved to ensure data integrity - all fields stay with their correct ID
+            // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
+            // lmn_jobsite_id is used for matching existing records
             if (id) {
               jobsiteData.id = id;
+            }
+            // Explicitly preserve lmn_jobsite_id if it exists (should always be present from parser)
+            if (jobsite.lmn_jobsite_id !== undefined) {
+              jobsiteData.lmn_jobsite_id = jobsite.lmn_jobsite_id;
             }
             
             // Include account_id if provided (should be text like "lmn-account-XXXXX")
