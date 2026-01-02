@@ -17,9 +17,9 @@ import {
 
 const PRIORITY_COLORS = {
   low: 'bg-slate-50 border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200',
-  normal: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-200',
-  high: 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-200',
-  urgent: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200'
+  normal: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-200',
+  high: 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900 dark:border-orange-800 dark:text-orange-200',
+  urgent: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900 dark:border-red-800 dark:text-red-200'
 };
 
 const PRIORITY_ICONS = {
@@ -221,13 +221,14 @@ export default function AnnouncementBanner() {
   return (
     <>
       <div 
-        className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal} fixed left-0 right-0 w-full`}
+        className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal} fixed left-0 right-0 w-full backdrop-blur-sm`}
         style={{
           // Position below nav (nav is 64px/4rem tall)
           // If test mode: below test mode (40px) + nav (64px) = 104px
           // If no test mode: below nav (64px) = 64px
           top: isTestMode ? '104px' : '64px', // Below nav (64px) + test mode banner (40px) if active
-          zIndex: 45, // Below nav (z-50) but above content
+          zIndex: 55, // Above nav (z-50) to ensure content doesn't scroll through it
+          backgroundColor: 'inherit', // Ensure background is opaque
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
