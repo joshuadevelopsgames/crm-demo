@@ -125,7 +125,7 @@ export function SimpleDropdown({
             top: `${position.top}px`,
             left: `${position.left}px`,
             minWidth: `${position.width}px`,
-            zIndex: 1000, // Well above announcement bar (z-55) and nav (z-50) to ensure it's always on top
+            zIndex: 99999, // Super high z-index to ensure it's always on top of everything
           }}
         >
           {children}

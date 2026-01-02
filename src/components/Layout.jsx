@@ -39,7 +39,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
   const { isTutorialMode, exitTutorial } = useTutorial();
-  const { isAdmin, isLoading: userLoading } = useUser();
+  const { isAdmin, isLoading: userLoading, profile } = useUser();
   const { isTestMode } = useTestMode();
   const { permissions: userPermissions, isLoading: permsLoading } = useUserPermissions();
   const navigate = useNavigate();
@@ -100,23 +100,36 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Announcements', path: 'Announcements', icon: Megaphone, permission: null }, // Always visible for admins
   ];
 
-  // Wait for user and permissions to load before determining admin navigation
-  // This prevents admin nav from not showing on initial login due to race conditions
-  const isUserDataReady = !userLoading && !permsLoading;
-
   // Filter navigation items based on permissions
-  const visibleRegularNav = regularNavigation.filter(item => 
-    !item.permission || userPermissions[item.permission] === true
+  // Don't wait for permissions to load - show items based on defaults if permissions not loaded yet
+  const visibleRegularNav = React.useMemo(() => 
+    regularNavigation.filter(item => {
+      if (!item.permission) return true; // Always show items without permission requirement
+      // If permissions haven't loaded yet, show items with default permissions (most are true by default)
+      if (Object.keys(userPermissions).length === 0) return true;
+      return userPermissions[item.permission] === true;
+    }),
+    [userPermissions]
   );
 
-  // Only show admin navigation if user is actually an admin
-  // Wait for user data to be ready to avoid false negatives on initial load
-  // This ensures admin nav appears immediately when user data loads, without requiring a refresh
-  const visibleAdminNav = isUserDataReady && isAdmin
-    ? adminNavigation.filter(item => 
-        !item.permission || userPermissions[item.permission] === true
-      )
-    : [];
+  // Show admin navigation as soon as we know user is admin
+  // Don't wait for permissions to fully load - if user is admin, show admin nav immediately
+  // This ensures admin nav appears without requiring a refresh
+  const visibleAdminNav = React.useMemo(() => {
+    // Show admin nav if user is admin, even if permissions haven't fully loaded yet
+    // This prevents the need for a refresh to see admin tools
+    if (!isAdmin) return [];
+    
+    // If permissions haven't loaded yet, show all admin items (they'll be filtered once permissions load)
+    if (Object.keys(userPermissions).length === 0) {
+      return adminNavigation;
+    }
+    
+    // Filter based on permissions once they've loaded
+    return adminNavigation.filter(item => 
+      !item.permission || userPermissions[item.permission] === true
+    );
+  }, [isAdmin, userPermissions]);
 
   // Combine regular navigation with admin items if user is admin and has visible admin items
   const navigation = visibleAdminNav.length > 0
