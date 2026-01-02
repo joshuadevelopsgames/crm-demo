@@ -43,9 +43,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
+import { useTestMode } from '@/contexts/TestModeContext';
 import toast from 'react-hot-toast';
 
 export default function Accounts() {
+  // Use test mode to trigger re-render when test mode changes
+  const { isTestMode } = useTestMode();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');

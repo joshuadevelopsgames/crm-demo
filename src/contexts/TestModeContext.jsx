@@ -52,18 +52,6 @@ export function TestModeProvider({ children }) {
   // Test mode is active if user is eligible AND has it enabled
   const isTestMode = isEligibleForTestMode && isTestModeEnabled;
   
-  // Toggle test mode
-  const toggleTestMode = () => {
-    if (!isEligibleForTestMode) return;
-    const newValue = !isTestModeEnabled;
-    setIsTestModeEnabled(newValue);
-    try {
-      localStorage.setItem('testMode2025', newValue.toString());
-    } catch (error) {
-      console.error('Error saving test mode preference:', error);
-    }
-  };
-  
   // Get the effective current year (test year if in test mode, otherwise actual year)
   const getCurrentYear = useMemo(() => {
     return () => {
@@ -74,14 +62,44 @@ export function TestModeProvider({ children }) {
     };
   }, [isTestMode]);
   
-  // Update global function so it can be used in utility functions
+  // Update global function immediately when getCurrentYear changes or user loads
   useEffect(() => {
+    // Update global function whenever test mode state changes
     globalGetCurrentYear = getCurrentYear;
     // Also expose on window for easier access in non-React code
     if (typeof window !== 'undefined') {
       window.__testModeGetCurrentYear = getCurrentYear;
     }
-  }, [getCurrentYear]);
+    // Force a re-render of components that depend on this
+    // This ensures revenue calculations update when test mode changes
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode } }));
+    }
+  }, [getCurrentYear, isTestMode]);
+  
+  // Toggle test mode
+  const toggleTestMode = () => {
+    if (!isEligibleForTestMode) return;
+    const newValue = !isTestModeEnabled;
+    setIsTestModeEnabled(newValue);
+    try {
+      localStorage.setItem('testMode2025', newValue.toString());
+      // Update global function immediately when toggling
+      const updatedIsTestMode = isEligibleForTestMode && newValue;
+      const updatedGetCurrentYear = () => {
+        if (updatedIsTestMode) {
+          return testYear;
+        }
+        return new Date().getFullYear();
+      };
+      globalGetCurrentYear = updatedGetCurrentYear;
+      if (typeof window !== 'undefined') {
+        window.__testModeGetCurrentYear = updatedGetCurrentYear;
+      }
+    } catch (error) {
+      console.error('Error saving test mode preference:', error);
+    }
+  };
   
   const value = useMemo(() => ({
     isTestMode,

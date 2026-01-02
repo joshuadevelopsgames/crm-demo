@@ -162,6 +162,10 @@ function getCurrentYearForCalculation() {
  */
 export function calculateRevenueFromEstimates(estimates = []) {
   const currentYear = getCurrentYearForCalculation();
+  // Debug log to verify test mode is working
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    console.log('[Revenue Calc] Using year:', currentYear, 'for', estimates.length, 'estimates');
+  }
   
   return estimates
     .filter(est => {
