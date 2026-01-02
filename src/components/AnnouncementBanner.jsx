@@ -62,33 +62,51 @@ export default function AnnouncementBanner() {
       }
 
       try {
+        console.log('AnnouncementBanner: Fetching announcements from API...');
         const response = await fetch('/api/data/announcements', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
           }
         });
 
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AnnouncementBanner: API response not OK:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+          });
+          return [];
+        }
+
         const result = await response.json();
-        if (!response.ok || !result.success) {
+        if (!result.success) {
           console.error('AnnouncementBanner: API error:', result.error || 'Unknown error', {
             status: response.status,
-            statusText: response.statusText
+            statusText: response.statusText,
+            result
           });
           return [];
         }
 
         const announcements = result.data || [];
-        console.log(`AnnouncementBanner: Received ${announcements.length} announcements`);
+        console.log(`AnnouncementBanner: Received ${announcements.length} announcements from API`, announcements);
 
         // API already filters for active/non-expired, but double-check client-side
         const now = new Date();
         const filtered = announcements.filter(announcement => {
-          if (!announcement.is_active) return false;
-          if (announcement.expires_at && new Date(announcement.expires_at) <= now) return false;
+          if (!announcement.is_active) {
+            console.log(`AnnouncementBanner: Filtered out inactive announcement: ${announcement.id} - ${announcement.title}`);
+            return false;
+          }
+          if (announcement.expires_at && new Date(announcement.expires_at) <= now) {
+            console.log(`AnnouncementBanner: Filtered out expired announcement: ${announcement.id} - ${announcement.title} (expired: ${announcement.expires_at})`);
+            return false;
+          }
           return true;
         });
 
-        console.log(`AnnouncementBanner: ${filtered.length} announcements after filtering`);
+        console.log(`AnnouncementBanner: ${filtered.length} announcements after filtering`, filtered.map(a => ({ id: a.id, title: a.title })));
         return filtered;
       } catch (error) {
         console.error('AnnouncementBanner: Fetch error:', error);
@@ -114,27 +132,45 @@ export default function AnnouncementBanner() {
   // Filter out dismissed announcements
   // Convert both to strings for comparison (handles UUID vs string mismatches)
   const visibleAnnouncements = announcements.filter(
-    a => !dismissedAnnouncements.some(dismissedId => String(dismissedId) === String(a.id))
+    a => !dismissedAnnouncements.some(dismissedId => {
+      const announcementIdStr = String(a.id);
+      const dismissedIdStr = String(dismissedId);
+      return announcementIdStr === dismissedIdStr;
+    })
   );
 
   // Debug: Log if announcements are being filtered out
   useEffect(() => {
     if (announcements.length > 0) {
-      const dismissed = announcements.filter(a => dismissedAnnouncements.includes(a.id));
+      const dismissed = announcements.filter(a => {
+        return dismissedAnnouncements.some(dismissedId => {
+          return String(dismissedId) === String(a.id);
+        });
+      });
+      
       if (dismissed.length > 0) {
         console.log(`AnnouncementBanner: ${dismissed.length} announcement(s) dismissed:`, dismissed.map(a => ({ id: a.id, title: a.title })));
+        console.log('AnnouncementBanner: Dismissed IDs:', dismissedAnnouncements);
         console.log('AnnouncementBanner: To clear dismissed announcements, run: localStorage.removeItem("dismissedAnnouncements")');
       }
+      
       if (visibleAnnouncements.length === 0 && announcements.length > 0) {
         console.warn('AnnouncementBanner: All announcements are dismissed!', {
           total: announcements.length,
           dismissed: dismissedAnnouncements,
-          announcementIds: announcements.map(a => a.id)
+          announcementIds: announcements.map(a => ({ id: a.id, idType: typeof a.id, title: a.title }))
         });
+        console.warn('AnnouncementBanner: Clear dismissed announcements with: localStorage.removeItem("dismissedAnnouncements")');
       }
-      console.log(`AnnouncementBanner: ${visibleAnnouncements.length} visible out of ${announcements.length} total announcements`);
+      
+      console.log(`AnnouncementBanner: ${visibleAnnouncements.length} visible out of ${announcements.length} total announcements`, {
+        visible: visibleAnnouncements.map(a => ({ id: a.id, title: a.title })),
+        dismissed: dismissed.map(a => ({ id: a.id, title: a.title }))
+      });
+    } else if (!isLoading && !userLoading) {
+      console.log('AnnouncementBanner: No announcements found in database');
     }
-  }, [announcements, visibleAnnouncements, dismissedAnnouncements]);
+  }, [announcements, visibleAnnouncements, dismissedAnnouncements, isLoading, userLoading]);
 
   // Debug logging
   useEffect(() => {
@@ -148,12 +184,28 @@ export default function AnnouncementBanner() {
       visibleCount: visibleAnnouncements.length,
       dismissedCount: dismissedAnnouncements.length,
       hasUser: !!user,
-      hasSession: !!supabase
+      userId: user?.id,
+      hasSession: !!supabase,
+      queryEnabled: !!user && !userLoading,
+      queryError: queryError?.message
     });
   }, [userLoading, isLoading, announcements.length, visibleAnnouncements.length, dismissedAnnouncements.length, user, supabase, queryError]);
 
-  // Don't show banner if no announcements (announcements are always required)
-  if (userLoading || isLoading || visibleAnnouncements.length === 0) {
+  // Don't show banner while loading or if no visible announcements
+  if (userLoading || isLoading) {
+    return null;
+  }
+
+  // Log if we have announcements but they're all dismissed
+  if (announcements.length > 0 && visibleAnnouncements.length === 0) {
+    console.warn('AnnouncementBanner: All announcements are dismissed', {
+      total: announcements.length,
+      dismissed: dismissedAnnouncements
+    });
+  }
+
+  // Don't show banner if no visible announcements
+  if (visibleAnnouncements.length === 0) {
     return null;
   }
 
