@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1577,43 +1576,39 @@ export default function Tasks() {
                 </div>
               </DialogHeader>
 
-              {/* Tabs for Details, Comments, Attachments */}
-              <Tabs
-                value={taskDialogTab}
-                onValueChange={(value) => {
-                  // Prevent switching to comments tab when it's hidden
-                  if (value === 'comments' && !(editingTask || viewingTask)) {
-                    return;
-                  }
-                  setTaskDialogTab(value);
-                }}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger
-                    value="comments"
-                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'opacity-0 pointer-events-none w-0 p-0 m-0 overflow-hidden' : ''}`}
-                    disabled={!(editingTask || viewingTask)}
-                    style={!(editingTask || viewingTask) ? { minWidth: 0, width: 0, padding: 0, margin: 0 } : undefined}
+              {/* Buttons for Details, Comments, Attachments - Replaced Tabs to fix RovingFocusGroup error */}
+              <div className="w-full">
+                <div className="grid w-full grid-cols-3 gap-2 mb-4">
+                  <Button
+                    variant={taskDialogTab === "details" ? "default" : "outline"}
+                    onClick={() => setTaskDialogTab("details")}
+                    className="w-full"
                   >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className={!(editingTask || viewingTask) ? 'hidden' : ''}>
+                    Details
+                  </Button>
+                  {(editingTask || viewingTask) && (
+                    <Button
+                      variant={taskDialogTab === "comments" ? "default" : "outline"}
+                      onClick={() => setTaskDialogTab("comments")}
+                      className="w-full flex items-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" />
                       Comments ({taskComments.length})
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="attachments"
-                    className="flex items-center gap-2"
+                    </Button>
+                  )}
+                  <Button
+                    variant={taskDialogTab === "attachments" ? "default" : "outline"}
+                    onClick={() => setTaskDialogTab("attachments")}
+                    className="w-full flex items-center gap-2"
                   >
                     <Paperclip className="w-4 h-4" />
-                    Files (
-                    {taskAttachments.length + pendingAttachments.length})
-                  </TabsTrigger>
-                </TabsList>
+                    Files ({taskAttachments.length + pendingAttachments.length})
+                  </Button>
+                </div>
 
-                {/* Details Tab Content */}
-                <TabsContent value="details" className="space-y-4 py-4">
+                {/* Details Content */}
+                {taskDialogTab === "details" && (
+                  <div className="space-y-4 py-4">
                   {/* Show task details/form when on Details tab (for both creating and editing) */}
                   <div>
                     {/* View Mode - Read-only task details */}
@@ -2304,10 +2299,12 @@ export default function Tasks() {
                       </div>
                     )}
                   </div>
-                </TabsContent>
+                </div>
+                )}
 
-                {/* Comments Tab Content */}
-                <TabsContent value="comments" className="space-y-4 py-4">
+                {/* Comments Content */}
+                {taskDialogTab === "comments" && (editingTask || viewingTask) && (
+                  <div className="space-y-4 py-4">
                   {(editingTask || viewingTask) && (
                         <div className="space-y-4">
                           {/* Add Comment */}
@@ -2424,10 +2421,12 @@ export default function Tasks() {
                           </div>
                         </div>
                       )}
-                </TabsContent>
+                </div>
+                )}
 
-                {/* Attachments Tab Content */}
-                <TabsContent value="attachments" className="space-y-4 py-4">
+                {/* Attachments Content */}
+                {taskDialogTab === "attachments" && (
+                  <div className="space-y-4 py-4">
                   <div className="space-y-4 min-h-[200px] p-4">
                     {/* Drag and drop area - only show when creating new task */}
                     {(!editingTask && !viewingTask) && (
@@ -2589,8 +2588,9 @@ export default function Tasks() {
                           )}
                         </div>
                   </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+                )}
+              </div>
 
               {/* Footer buttons - only show when creating a new task or editing (not viewing) */}
               {!isViewMode && (taskDialogTab === "details" || !editingTask) && (
