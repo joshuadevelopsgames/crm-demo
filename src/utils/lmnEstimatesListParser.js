@@ -94,6 +94,7 @@ export function parseEstimatesList(csvTextOrRows) {
     const estimates = [];
     const errors = [];
     const seenEstimateIds = new Set(); // Track duplicate IDs
+    let wonEstimatesWithoutContractEnd = 0; // Track won estimates missing contract_end
     
     // Warn if Contract End column is not found
     if (colMap.contractEnd === -1) {
@@ -299,7 +300,7 @@ export function parseEstimatesList(csvTextOrRows) {
           }
         }
         
-        // Also log if contract_end is missing for won estimates (first few)
+        // Track won estimates missing contract_end (for summary, not individual warnings)
         if (estimateId && (!contractEndRaw || contractEndRaw === null || contractEndRaw === '')) {
           const status = row[colMap.status]?.toString().trim() || '';
           const isWon = status.toLowerCase().includes('contract') || 
@@ -308,12 +309,7 @@ export function parseEstimatesList(csvTextOrRows) {
                        status.toLowerCase().includes('email contract award') ||
                        status.toLowerCase().includes('verbal contract award');
           if (isWon) {
-            const debugCount = errors.filter(e => e.startsWith('DEBUG MISSING:')).length;
-            if (debugCount < 2) {
-              const debugMsg = `DEBUG MISSING: Estimate ${estimateId} (${status}) - contractEndRaw is null/empty, colMap.contractEnd: ${colMap.contractEnd}`;
-              errors.push(debugMsg);
-              console.warn('⚠️ PARSER:', debugMsg);
-            }
+            wonEstimatesWithoutContractEnd++;
           }
         }
         
@@ -388,6 +384,14 @@ export function parseEstimatesList(csvTextOrRows) {
     const uniqueEstimateIds = new Set(estimates.map(e => e.lmn_estimate_id));
     const estimatesWithContactId = estimates.filter(e => e.lmn_contact_id).length;
     const estimatesWithoutContactId = estimates.length - estimatesWithContactId;
+    const wonEstimates = estimates.filter(e => e.status === 'won').length;
+    
+    // Log summary about won estimates missing contract_end (only if significant)
+    if (wonEstimatesWithoutContractEnd > 0 && wonEstimatesWithoutContractEnd <= 10) {
+      console.log(`ℹ️ PARSER: ${wonEstimatesWithoutContractEnd} won estimate${wonEstimatesWithoutContractEnd !== 1 ? 's' : ''} missing contract_end date (out of ${wonEstimates} total won estimates)`);
+    } else if (wonEstimatesWithoutContractEnd > 10) {
+      console.warn(`⚠️ PARSER: ${wonEstimatesWithoutContractEnd} won estimates missing contract_end date (out of ${wonEstimates} total won estimates). This may affect at-risk account calculations.`);
+    }
 
     return {
       estimates,
