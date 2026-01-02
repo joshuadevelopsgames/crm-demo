@@ -54,9 +54,10 @@ export default async function handler(req, res) {
       const pageSize = 1000;
       let hasMore = true;
       
-      // For import validation, only fetch minimal fields to reduce response size
+      // For import validation, only fetch fields needed for comparison to reduce response size
       // This prevents hitting Vercel's 4.5MB response limit
-      const fields = accountId ? '*' : 'id, lmn_jobsite_id, name'; // Full fields only when filtering by account
+      // Fields needed: id for matching, plus all fields used in findJobsiteDifferences
+      const fields = accountId ? '*' : 'id, lmn_jobsite_id, name, address_1, address_2, city, state, postal_code, country, notes';
 
       while (hasMore) {
         let query = supabase

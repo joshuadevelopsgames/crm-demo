@@ -54,9 +54,10 @@ export default async function handler(req, res) {
       const pageSize = 1000;
       let hasMore = true;
       
-      // For import validation, only fetch minimal fields to reduce response size
+      // For import validation, only fetch fields needed for comparison to reduce response size
       // This prevents hitting Vercel's 4.5MB response limit
-      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number'; // Full fields only when filtering by account
+      // Fields needed: id for matching, plus all fields used in findEstimateDifferences
+      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number, estimate_type, estimate_date, contract_start, contract_end, total_price, total_price_with_tax, status, division, project_name';
 
       while (hasMore) {
         let query = supabase
