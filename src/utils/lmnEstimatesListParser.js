@@ -263,14 +263,27 @@ export function parseEstimatesList(csvTextOrRows) {
         const estimateDate = parseDate(estimateDateRaw);
         const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
         
-        // Debug: Log first few estimates with missing estimate_date
-        if (!estimateDate && estimates.length < 5) {
-          console.log(`🔍 PARSER: Estimate ${estimateId} missing estimate_date:`, {
+        // Debug: Log first few estimates to see date parsing
+        if (estimates.length < 5) {
+          console.log(`🔍 PARSER: Estimate ${estimateId} date parsing:`, {
             estimateId,
+            estimateDateRaw,
+            estimateDateRawType: typeof estimateDateRaw,
+            estimateDateRawValue: estimateDateRaw,
+            estimateDateParsed: estimateDate,
+            estimateDateType: typeof estimateDate,
             colMapEstimateDate: colMap.estimateDate,
-            rawValue: estimateDateRaw,
-            rawValueType: typeof estimateDateRaw,
-            rowLength: row.length
+            hasEstimateDateColumn: colMap.estimateDate >= 0,
+            contractStartRaw,
+            contractStartRawType: typeof contractStartRaw,
+            contractStartParsed: contractStart,
+            contractEndRaw,
+            contractEndRawType: typeof contractEndRaw,
+            contractEndParsed: contractEnd,
+            colMapContractStart: colMap.contractStart,
+            colMapContractEnd: colMap.contractEnd,
+            hasContractStartColumn: colMap.contractStart >= 0,
+            hasContractEndColumn: colMap.contractEnd >= 0
           });
         }
         
