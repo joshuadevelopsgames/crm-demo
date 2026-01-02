@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
@@ -43,36 +43,62 @@ export default function AnnouncementBanner() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
   // Fetch active announcements (always enabled - announcements are required)
-  const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ['announcements'],
+  const { data: announcements = [], isLoading, error: queryError } = useQuery({
+    queryKey: ['announcements', user?.id],
     queryFn: async () => {
-      if (!supabase || !user?.id) return [];
+      if (!supabase || !user?.id) {
+        console.log('AnnouncementBanner: No supabase or user, skipping fetch');
+        return [];
+      }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return [];
-
-      const response = await fetch('/api/data/announcements', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      const result = await response.json();
-      if (!response.ok || !result.success) {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('AnnouncementBanner: Session error:', sessionError);
+        return [];
+      }
+      if (!session?.access_token) {
+        console.log('AnnouncementBanner: No access token, skipping fetch');
         return [];
       }
 
-      // Filter to only active, non-expired announcements
-      const now = new Date();
-      return (result.data || []).filter(announcement => {
-        if (!announcement.is_active) return false;
-        if (announcement.expires_at && new Date(announcement.expires_at) <= now) return false;
-        return true;
-      });
+      try {
+        const response = await fetch('/api/data/announcements', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          console.error('AnnouncementBanner: API error:', result.error || 'Unknown error', {
+            status: response.status,
+            statusText: response.statusText
+          });
+          return [];
+        }
+
+        const announcements = result.data || [];
+        console.log(`AnnouncementBanner: Received ${announcements.length} announcements`);
+
+        // API already filters for active/non-expired, but double-check client-side
+        const now = new Date();
+        const filtered = announcements.filter(announcement => {
+          if (!announcement.is_active) return false;
+          if (announcement.expires_at && new Date(announcement.expires_at) <= now) return false;
+          return true;
+        });
+
+        console.log(`AnnouncementBanner: ${filtered.length} announcements after filtering`);
+        return filtered;
+      } catch (error) {
+        console.error('AnnouncementBanner: Fetch error:', error);
+        return [];
+      }
     },
     enabled: !!user && !userLoading, // Always enabled - announcements are required
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    retry: 2, // Retry failed requests
   });
 
   const handleDismiss = (announcementId) => {
@@ -89,6 +115,22 @@ export default function AnnouncementBanner() {
   const visibleAnnouncements = announcements.filter(
     a => !dismissedAnnouncements.includes(a.id)
   );
+
+  // Debug logging
+  useEffect(() => {
+    if (queryError) {
+      console.error('AnnouncementBanner query error:', queryError);
+    }
+    console.log('AnnouncementBanner state:', {
+      userLoading,
+      isLoading,
+      announcementsCount: announcements.length,
+      visibleCount: visibleAnnouncements.length,
+      dismissedCount: dismissedAnnouncements.length,
+      hasUser: !!user,
+      hasSession: !!supabase
+    });
+  }, [userLoading, isLoading, announcements.length, visibleAnnouncements.length, dismissedAnnouncements.length, user, supabase, queryError]);
 
   // Don't show banner if no announcements (announcements are always required)
   if (userLoading || isLoading || visibleAnnouncements.length === 0) {

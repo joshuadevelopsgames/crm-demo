@@ -107,14 +107,16 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       // Get all active announcements (all authenticated users can read)
+      // Using service role key bypasses RLS, so we manually filter for active/non-expired
+      const now = new Date().toISOString();
       const { data: announcements, error } = await supabase
         .from('announcements')
         .select('*')
         .eq('is_active', true)
-        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Error fetching announcements:', error);
         if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
           return res.status(500).json({
             success: false,
@@ -124,9 +126,20 @@ export default async function handler(req, res) {
         throw error;
       }
 
+      // Filter out expired announcements manually (since we're using service role key)
+      const activeAnnouncements = (announcements || []).filter(announcement => {
+        if (!announcement.is_active) return false;
+        if (announcement.expires_at && new Date(announcement.expires_at) <= new Date(now)) {
+          return false;
+        }
+        return true;
+      });
+
+      console.log(`Fetched ${activeAnnouncements.length} active announcements for user ${user.id}`);
+
       return res.status(200).json({
         success: true,
-        data: announcements || []
+        data: activeAnnouncements
       });
     }
 

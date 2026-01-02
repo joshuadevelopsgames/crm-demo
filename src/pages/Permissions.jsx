@@ -545,7 +545,7 @@ export default function Permissions() {
             <div className="text-center">
               <Shield className="w-12 h-12 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Access Denied</h3>
-              <p className="text-slate-600">You must be a System Admin to access this page.</p>
+              <p className="text-slate-600 dark:text-slate-400">You must be a System Admin to access this page.</p>
             </div>
           </CardContent>
         </Card>
@@ -557,8 +557,8 @@ export default function Permissions() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Users</h1>
-        <p className="text-slate-600 mt-1">Manage user roles and permissions</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Users</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-1">Manage user roles and permissions</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -596,12 +596,12 @@ export default function Permissions() {
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
               {usersLoading ? (
                 <div className="text-center py-8">
-                  <RefreshCw className="w-6 h-6 text-slate-400 mx-auto mb-2 animate-spin" />
-                  <p className="text-sm text-slate-600">Loading users...</p>
+                  <RefreshCw className="w-6 h-6 text-slate-400 dark:text-slate-500 mx-auto mb-2 animate-spin" />
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Loading users...</p>
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-sm text-slate-600">No users found</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">No users found</p>
                 </div>
               ) : (
                 filteredUsers.map(user => (
@@ -610,8 +610,8 @@ export default function Permissions() {
                     onClick={() => setSelectedUser(user)}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedUser?.id === user.id
-                        ? 'bg-slate-100 border-slate-300'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                        ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -620,7 +620,7 @@ export default function Permissions() {
                           {user.full_name || user.email}
                         </p>
                         {user.full_name && (
-                          <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -635,7 +635,7 @@ export default function Permissions() {
                             variant="ghost"
                             size="sm"
                             onClick={(e) => handleDeleteClick(user, e)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950"
                             title="Delete user"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -661,13 +661,13 @@ export default function Permissions() {
           <CardContent>
             {!selectedUser ? (
               <div className="text-center py-12">
-                <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-600">Select a user to manage their permissions</p>
+                <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-600 dark:text-slate-400">Select a user to manage their permissions</p>
               </div>
             ) : permsLoading ? (
               <div className="text-center py-8">
-                <RefreshCw className="w-6 h-6 text-slate-400 mx-auto mb-2 animate-spin" />
-                <p className="text-sm text-slate-600">Loading permissions...</p>
+                <RefreshCw className="w-6 h-6 text-slate-400 dark:text-slate-500 mx-auto mb-2 animate-spin" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Loading permissions...</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -689,7 +689,7 @@ export default function Permissions() {
                       )}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                     {selectedUser.role === 'system_admin'
                       ? 'System Admin has full access and cannot be modified'
                       : selectedUser.role === 'admin'
@@ -711,7 +711,7 @@ export default function Permissions() {
                     
                     return (
                       <div key={category}>
-                        <h3 className="text-sm font-semibold text-slate-700 dark:text-white mb-3 uppercase tracking-wide">
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wide">
                           {category}
                         </h3>
                         <div className="space-y-3">
@@ -724,18 +724,18 @@ export default function Permissions() {
                               <div
                                 key={perm.id}
                                 className={`p-3 rounded-lg border ${
-                                  isEnabled ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200'
+                                  isEnabled ? 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
                                 } ${!canModify ? 'opacity-50' : ''}`}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <Icon className="w-4 h-4 text-slate-600" />
-                                      <Label className="font-medium text-slate-900">
+                                      <Icon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                                      <Label className="font-medium text-slate-900 dark:text-white">
                                         {perm.name}
                                       </Label>
                                     </div>
-                                    <p className="text-xs text-slate-600">{perm.description}</p>
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">{perm.description}</p>
                                   </div>
                                   <Switch
                                     checked={isEnabled}
@@ -756,15 +756,15 @@ export default function Permissions() {
 
                 {/* Info Note */}
                 {selectedUser?.role === 'system_admin' ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <p className="text-sm text-amber-800">
+                  <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
                       <strong>🔒 System Admin:</strong> This user has full access and their permissions cannot be modified. 
                       System Admin role is protected and cannot be changed.
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
+                  <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
                       <strong>Note:</strong> As System Admin, you can enable or disable any permission for any user. 
                       Permissions are stored individually and override role-based defaults. Changes are saved immediately.
                     </p>
@@ -807,7 +807,7 @@ export default function Permissions() {
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 disabled={isCreating}
               />
-              <p className="text-xs text-slate-500">Password must be at least 6 characters long</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Password must be at least 6 characters long</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-user-name">Full Name</Label>
@@ -835,12 +835,12 @@ export default function Permissions() {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {newUser.role === 'admin' 
                   ? 'Admin users have full access including Scoring and Permissions management'
                   : 'Regular users have access to most features except admin functions'}
               </p>
-              <p className="text-xs text-slate-400 italic">
+              <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                 Note: System Admin role is reserved for jrsschroeder@gmail.com and cannot be assigned to other users.
               </p>
             </div>
