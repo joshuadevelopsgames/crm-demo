@@ -604,18 +604,40 @@ export default function ImportLeadsDialog({ open, onClose }) {
     // Track irregularities for reporting - these will be added to results later
     const estimateIrregularities = [];
     let debugCount = 0; // Track count for debug logging
+    
+    // Debug: Check if dates are present in mergedData BEFORE filtering
+    if (mergedData.estimates && mergedData.estimates.length > 0) {
+      const sampleEst = mergedData.estimates[0];
+      console.log('🔍 [Import] Sample estimate from mergedData (BEFORE filter):', {
+        estimateId: sampleEst.lmn_estimate_id || sampleEst.id,
+        estimate_date: sampleEst.estimate_date,
+        estimate_dateType: typeof sampleEst.estimate_date,
+        contract_start: sampleEst.contract_start,
+        contract_startType: typeof sampleEst.contract_start,
+        contract_end: sampleEst.contract_end,
+        contract_endType: typeof sampleEst.contract_end,
+        hasEstimateDate: !!sampleEst.estimate_date,
+        hasContractStart: !!sampleEst.contract_start,
+        hasContractEnd: !!sampleEst.contract_end,
+        allDateKeys: Object.keys(sampleEst).filter(k => k.includes('date') || k.includes('Date')),
+        allKeys: Object.keys(sampleEst).slice(0, 20)
+      });
+    }
+    
     const validEstimates = mergedData.estimates?.filter(est => {
       const estId = est.lmn_estimate_id || est.id;
       
       // Debug: Log first few estimates to see their structure
       if (debugCount < 3) {
-        console.log('🔍 [Import] Sample estimate from mergedData:', {
+        console.log('🔍 [Import] Sample estimate from mergedData (IN filter):', {
           estimateId: estId,
           estimate_date: est.estimate_date,
           estimate_dateType: typeof est.estimate_date,
           contract_start: est.contract_start,
           contract_end: est.contract_end,
-          hasEstimateDate: !!est.estimate_date
+          hasEstimateDate: !!est.estimate_date,
+          hasContractStart: !!est.contract_start,
+          hasContractEnd: !!est.contract_end
         });
         debugCount++;
       }
@@ -905,6 +927,25 @@ export default function ImportLeadsDialog({ open, onClose }) {
             }));
             
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
+            
+            // Debug: Check if dates are present in chunk BEFORE sending to API
+            if (chunkNum === 1 && chunk.length > 0) {
+              const sampleEst = chunk[0];
+              console.log('🔍 [Import] Sample estimate in chunk (BEFORE API call):', {
+                estimateId: sampleEst.lmn_estimate_id || sampleEst.id,
+                estimate_date: sampleEst.estimate_date,
+                estimate_dateType: typeof sampleEst.estimate_date,
+                contract_start: sampleEst.contract_start,
+                contract_startType: typeof sampleEst.contract_start,
+                contract_end: sampleEst.contract_end,
+                contract_endType: typeof sampleEst.contract_end,
+                hasEstimateDate: !!sampleEst.estimate_date,
+                hasContractStart: !!sampleEst.contract_start,
+                hasContractEnd: !!sampleEst.contract_end,
+                allDateKeys: Object.keys(sampleEst).filter(k => k.includes('date') || k.includes('Date')),
+                allKeys: Object.keys(sampleEst).slice(0, 30)
+              });
+            }
             
             const response = await fetch('/api/data/estimates', {
               method: 'POST',

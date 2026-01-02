@@ -129,6 +129,7 @@ export default async function handler(req, res) {
         
         // Use the imported ID directly (e.g., from import)
         // Also remove internal tracking fields and fields that don't exist in the schema
+        // NOTE: The spread operator preserves ALL fields including dates - matching dev version approach
         const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutId } = estimate;
         const estimateData = {
           ...estimateWithoutId,
@@ -147,38 +148,6 @@ export default async function handler(req, res) {
           estimateData.contact_id = contact_id;
         } else {
           estimateData.contact_id = null;
-        }
-        
-        // CRITICAL: Always preserve ALL date fields (estimate_date, estimate_close_date, contract_start, contract_end)
-        // This ensures dates are properly saved during import
-        // Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
-        
-        // Preserve estimate_date (used as fallback when contract dates are missing)
-        if (estimate.estimate_date !== undefined) {
-          estimateData.estimate_date = estimate.estimate_date;
-        } else if (estimate.estimate_date === null) {
-          estimateData.estimate_date = null;
-        }
-        
-        // Preserve estimate_close_date
-        if (estimate.estimate_close_date !== undefined) {
-          estimateData.estimate_close_date = estimate.estimate_close_date;
-        } else if (estimate.estimate_close_date === null) {
-          estimateData.estimate_close_date = null;
-        }
-        
-        // Preserve contract_start
-        if (estimate.contract_start !== undefined) {
-          estimateData.contract_start = estimate.contract_start;
-        } else if (estimate.contract_start === null) {
-          estimateData.contract_start = null;
-        }
-        
-        // Preserve contract_end
-        if (estimate.contract_end !== undefined) {
-          estimateData.contract_end = estimate.contract_end;
-        } else if (estimate.contract_end === null) {
-          estimateData.contract_end = null;
         }
         
         // Include id if provided (should be from import)
@@ -298,44 +267,18 @@ export default async function handler(req, res) {
               });
             }
             
-            // CRITICAL: Preserve id if it's provided (from parser: "lmn-estimate-EST123")
-            // Supabase requires id to be set for inserts, and we use custom IDs from parser
+            // Remove id if it's not a valid UUID - let Supabase generate it
             // Also remove internal tracking fields and fields that don't exist in the schema
-            const { account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutInternal } = estimate;
+            // NOTE: The spread operator preserves ALL fields including dates, lmn_estimate_id, estimate_number - matching dev version
+            const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutIds } = estimate;
             const estimateData = {
-              ...estimateWithoutInternal,
+              ...estimateWithoutIds,
               updated_at: new Date().toISOString()
             };
             
-            // CRITICAL: Always preserve id, lmn_estimate_id and estimate_number
-            // id is required for inserts (Supabase doesn't auto-generate if we provide custom format)
-            // lmn_estimate_id and estimate_number are used for matching
-            // These MUST be preserved to ensure data integrity - all fields stay with their correct ID
-            if (estimate.id !== undefined) {
-              estimateData.id = estimate.id;
-            }
-            if (estimate.lmn_estimate_id !== undefined) {
-              estimateData.lmn_estimate_id = estimate.lmn_estimate_id;
-            }
-            if (estimate.estimate_number !== undefined) {
-              estimateData.estimate_number = estimate.estimate_number;
-            }
-            
-            // Debug: Check if date fields survived the destructuring
-            if (seenInBatch.size <= 5) {
-              console.log(`🔍 API: estimateData AFTER destructuring (${lookupValue}):`, {
-                hasEstimateDate: !!estimateData.estimate_date,
-                estimateDate: estimateData.estimate_date,
-                hasEstimateCloseDate: !!estimateData.estimate_close_date,
-                estimateCloseDate: estimateData.estimate_close_date,
-                hasContractStart: !!estimateData.contract_start,
-                contractStart: estimateData.contract_start,
-                hasContractEnd: !!estimateData.contract_end,
-                contractEnd: estimateData.contract_end,
-                id: estimateData.id,
-                lmn_estimate_id: estimateData.lmn_estimate_id,
-                allDateKeys: Object.keys(estimateData).filter(k => k.includes('date') || k.includes('Date'))
-              });
+            // Include id if provided (should be from import)
+            if (id) {
+              estimateData.id = id;
             }
             
             // Include account_id if provided AND the account exists in the database
@@ -360,63 +303,9 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
-            // CRITICAL: Always preserve ALL date fields (estimate_date, estimate_close_date, contract_start, contract_end)
-            // This ensures dates are properly saved during import
-            // Check the ORIGINAL estimate object, not estimateData (in case it was removed during destructuring)
-            
-            // Preserve estimate_date (used as fallback when contract dates are missing)
-            if (estimate.estimate_date !== undefined) {
-              estimateData.estimate_date = estimate.estimate_date;
-            } else if (estimate.estimate_date === null) {
-              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
-              estimateData.estimate_date = null;
-            }
-            
-            // Preserve estimate_close_date
-            if (estimate.estimate_close_date !== undefined) {
-              estimateData.estimate_close_date = estimate.estimate_close_date;
-            } else if (estimate.estimate_close_date === null) {
-              // Explicitly set to null if it was null
-              estimateData.estimate_close_date = null;
-            }
-            
-            // Preserve contract_start
-            if (estimate.contract_start !== undefined) {
-              estimateData.contract_start = estimate.contract_start;
-            } else if (estimate.contract_start === null) {
-              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
-              estimateData.contract_start = null;
-            }
-            
-            // Preserve contract_end
-            if (estimate.contract_end !== undefined) {
-              estimateData.contract_end = estimate.contract_end;
-            } else if (estimate.contract_end === null) {
-              // Explicitly set to null if it was null (null !== undefined, so the check above might miss it)
-              estimateData.contract_end = null;
-            }
-            
-            // Debug: Final check before save - verify ALL date fields are present
-            if (seenInBatch.size <= 5) {
-              console.log(`🔍 API: estimateData FINAL (${lookupValue}):`, {
-                estimate_date: estimateData.estimate_date,
-                estimate_close_date: estimateData.estimate_close_date,
-                contract_start: estimateData.contract_start,
-                contract_end: estimateData.contract_end,
-                hasEstimateDate: !!estimateData.estimate_date,
-                hasEstimateCloseDate: !!estimateData.estimate_close_date,
-                hasContractStart: !!estimateData.contract_start,
-                hasContractEnd: !!estimateData.contract_end,
-                willBeInserted: !existingMap.has(lookupValue),
-                willBeUpdated: existingMap.has(lookupValue),
-                allDateFields: {
-                  estimate_date: estimateData.estimate_date,
-                  estimate_close_date: estimateData.estimate_close_date,
-                  contract_start: estimateData.contract_start,
-                  contract_end: estimateData.contract_end
-                }
-              });
-            }
+            // NOTE: Date fields (estimate_date, estimate_close_date, contract_start, contract_end) are preserved
+            // by the spread operator above - no need to explicitly preserve them
+            // The dev version works this way and dates are saved correctly
             
             if (existingMap.has(lookupValue)) {
               toUpdate.push({ id: existingMap.get(lookupValue), data: estimateData });
