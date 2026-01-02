@@ -1585,15 +1585,14 @@ export default function Tasks() {
               >
                 <TabsList className={editingTask || viewingTask ? "grid w-full grid-cols-3" : "grid w-full grid-cols-2"}>
                   <TabsTrigger value="details">Details</TabsTrigger>
-                  {(editingTask || viewingTask) && (
-                    <TabsTrigger
-                      value="comments"
-                      className="flex items-center gap-2"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Comments ({taskComments.length})
-                    </TabsTrigger>
-                  )}
+                  <TabsTrigger
+                    value="comments"
+                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'hidden' : ''}`}
+                    disabled={!(editingTask || viewingTask)}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Comments ({taskComments.length})
+                  </TabsTrigger>
                   <TabsTrigger
                     value="attachments"
                     className="flex items-center gap-2"
