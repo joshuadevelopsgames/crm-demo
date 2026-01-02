@@ -341,6 +341,22 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Merge contacts and leads first
       const merged = mergeContactData(contacts, leads, estimates, jobsites);
       
+      // Debug: Check estimate_date in merged data
+      if (merged.estimates && merged.estimates.length > 0) {
+        const estimatesWithDate = merged.estimates.filter(e => e.estimate_date).length;
+        const estimatesWithoutDate = merged.estimates.filter(e => !e.estimate_date).length;
+        console.log('🔍 [Import] After mergeContactData:', {
+          totalEstimates: merged.estimates.length,
+          withEstimateDate: estimatesWithDate,
+          withoutEstimateDate: estimatesWithoutDate,
+          sampleEstimate: merged.estimates[0] ? {
+            id: merged.estimates[0].lmn_estimate_id || merged.estimates[0].id,
+            estimate_date: merged.estimates[0].estimate_date,
+            estimate_dateType: typeof merged.estimates[0].estimate_date
+          } : null
+        });
+      }
+      
       // Extract valid IDs from the sheets
       const validIds = extractValidIds(contacts, leads, estimates, jobsites);
       
@@ -655,7 +671,24 @@ export default function ImportLeadsDialog({ open, onClose }) {
       }
       
       // Check if estimate is missing estimate_date (and contract dates)
+      // Debug: Log first few estimates that trigger this check
       if (!est.estimate_date && !est.contract_start && !est.contract_end) {
+        // Debug logging for first few missing date estimates
+        if (estimateIrregularities.filter(ir => ir.type === 'missing_estimate_date').length < 5) {
+          console.log('🔍 [Import] Estimate missing all date fields:', {
+            estimateId: est.lmn_estimate_id || est.id,
+            estimate_date: est.estimate_date,
+            estimate_dateType: typeof est.estimate_date,
+            contract_start: est.contract_start,
+            contract_startType: typeof est.contract_start,
+            contract_end: est.contract_end,
+            contract_endType: typeof est.contract_end,
+            hasEstimateDate: !!est.estimate_date,
+            hasContractStart: !!est.contract_start,
+            hasContractEnd: !!est.contract_end,
+            estimateKeys: Object.keys(est).filter(k => k.includes('date') || k.includes('Date'))
+          });
+        }
         estimateIrregularities.push({
           type: 'missing_estimate_date',
           estimate: est,
