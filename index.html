@@ -41,6 +41,28 @@
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
       }
+      
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]):not(.light), 
+        body:not([data-theme="light"]) {
+          background-color: hsl(222, 22%, 8%) !important;
+        }
+        #root:not([data-theme="light"]) {
+          background-color: hsl(222, 22%, 8%);
+        }
+      }
+      
+      html.dark, html[data-theme="dark"] {
+        background-color: hsl(222, 22%, 8%) !important;
+      }
+      html.dark body, html[data-theme="dark"] body {
+        background-color: hsl(222, 22%, 8%) !important;
+      }
+      html.dark #root, html[data-theme="dark"] #root {
+        background-color: hsl(222, 22%, 8%);
+      }
+      
       /* Ensure white background extends to top for iPhone notch - only for PWA */
       @media (display-mode: standalone) {
         html {
@@ -62,8 +84,31 @@
           z-index: 9997;
           pointer-events: none;
         }
+        
+        /* Dark mode for PWA */
+        @media (prefers-color-scheme: dark) {
+          html:not([data-theme="light"]):not(.light) {
+            background-color: hsl(222, 22%, 8%) !important;
+          }
+          html:not([data-theme="light"]):not(.light) body {
+            background-color: hsl(222, 22%, 8%) !important;
+          }
+          html:not([data-theme="light"]):not(.light) body::before {
+            background-color: hsl(222, 22%, 8%) !important;
+          }
+        }
+        html.dark, html[data-theme="dark"] {
+          background-color: hsl(222, 22%, 8%) !important;
+        }
+        html.dark body, html[data-theme="dark"] body {
+          background-color: hsl(222, 22%, 8%) !important;
+        }
+        html.dark body::before, html[data-theme="dark"] body::before {
+          background-color: hsl(222, 22%, 8%) !important;
+        }
       }
-      /* Ensure root is white */
+      
+      /* Ensure root background */
       #root {
         background-color: #ffffff;
         width: 100%;
@@ -71,20 +116,42 @@
       }
     </style>
     <script>
+      // Check for dark mode preference and apply immediately
+      (function() {
+        const savedDarkMode = localStorage.getItem('darkMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
+        
+        if (isDarkMode) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+      
       // Set background immediately to prevent black screen
-      if (document.documentElement) {
-        document.documentElement.style.backgroundColor = '#ffffff';
-      }
-      if (document.body) {
-        document.body.style.backgroundColor = '#ffffff';
-      } else {
-        // Wait for body to be available
-        document.addEventListener('DOMContentLoaded', function() {
-          if (document.body) {
-            document.body.style.backgroundColor = '#ffffff';
-          }
-        });
-      }
+      (function() {
+        const savedDarkMode = localStorage.getItem('darkMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
+        const bgColor = isDarkMode ? 'hsl(222, 22%, 8%)' : '#ffffff';
+        
+        if (document.documentElement) {
+          document.documentElement.style.backgroundColor = bgColor;
+        }
+        if (document.body) {
+          document.body.style.backgroundColor = bgColor;
+        } else {
+          // Wait for body to be available
+          document.addEventListener('DOMContentLoaded', function() {
+            if (document.body) {
+              document.body.style.backgroundColor = bgColor;
+            }
+          });
+        }
+      })();
     </script>
     <title>LECRM</title>
   </head>
@@ -96,20 +163,69 @@
           <img id="logo-img" src="/logo.png" alt="LECRM Logo" style="height: 4rem; width: auto; max-width: 4rem; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';" />
           <div id="logo-fallback" style="display: none; width: 4rem; height: 4rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 0.5rem; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">LE</div>
         </div>
-        <span style="font-size: 1.875rem; font-weight: 700; background: linear-gradient(to right, #0f172a, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+        <span class="loading-title" style="font-size: 1.875rem; font-weight: 700; background: linear-gradient(to right, #0f172a, #475569); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
           LECRM
         </span>
       </div>
       <div style="position: relative;">
-        <div style="width: 3rem; height: 3rem; border: 4px solid #e2e8f0; border-radius: 9999px;"></div>
-        <div style="width: 3rem; height: 3rem; border: 4px solid #0f172a; border-top-color: transparent; border-radius: 9999px; position: absolute; top: 0; left: 0; animation: spin 1s linear infinite;"></div>
+        <div class="spinner-track" style="width: 3rem; height: 3rem; border: 4px solid #e2e8f0; border-radius: 9999px;"></div>
+        <div class="spinner-active" style="width: 3rem; height: 3rem; border: 4px solid #0f172a; border-top-color: transparent; border-radius: 9999px; position: absolute; top: 0; left: 0; animation: spin 1s linear infinite;"></div>
       </div>
-      <p style="margin-top: 1.5rem; color: #475569; font-size: 0.875rem; font-weight: 500;">Loading...</p>
+      <p class="loading-text" style="margin-top: 1.5rem; color: #475569; font-size: 0.875rem; font-weight: 500;">Loading...</p>
     </div>
     <style>
       @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+      }
+      
+      /* Dark mode support for loading screen */
+      @media (prefers-color-scheme: dark) {
+        #loading-screen {
+          background-color: hsl(222, 22%, 8%) !important;
+        }
+        #loading-screen .loading-text {
+          color: hsl(215, 15%, 70%) !important;
+        }
+        #loading-screen .loading-title {
+          background: linear-gradient(to right, hsl(210, 30%, 96%), hsl(215, 15%, 70%)) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+        }
+        #loading-screen .spinner-track {
+          border-color: hsl(222, 20%, 14%) !important;
+        }
+        #loading-screen .spinner-active {
+          border-color: hsl(210, 30%, 96%) !important;
+          border-top-color: transparent !important;
+        }
+      }
+      
+      /* Dark mode via class (for localStorage preference) */
+      html.dark #loading-screen,
+      html[data-theme="dark"] #loading-screen {
+        background-color: hsl(222, 22%, 8%) !important;
+      }
+      html.dark #loading-screen .loading-text,
+      html[data-theme="dark"] #loading-screen .loading-text {
+        color: hsl(215, 15%, 70%) !important;
+      }
+      html.dark #loading-screen .loading-title,
+      html[data-theme="dark"] #loading-screen .loading-title {
+        background: linear-gradient(to right, hsl(210, 30%, 96%), hsl(215, 15%, 70%)) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+      }
+      html.dark #loading-screen .spinner-track,
+      html[data-theme="dark"] #loading-screen .spinner-track {
+        border-color: hsl(222, 20%, 14%) !important;
+      }
+      html.dark #loading-screen .spinner-active,
+      html[data-theme="dark"] #loading-screen .spinner-active {
+        border-color: hsl(210, 30%, 96%) !important;
+        border-top-color: transparent !important;
       }
     </style>
     <div id="root"></div>
@@ -136,14 +252,19 @@
           console.error('❌ Loading screen element not found!');
         }
         
-        // Set body background immediately
+        // Set body background immediately (respect dark mode)
+        const savedDarkMode = localStorage.getItem('darkMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
+        const bgColor = isDarkMode ? 'hsl(222, 22%, 8%)' : '#ffffff';
+        
         if (document.body) {
-          document.body.style.backgroundColor = '#ffffff';
+          document.body.style.backgroundColor = bgColor;
         }
         if (document.documentElement) {
-          document.documentElement.style.backgroundColor = '#ffffff';
+          document.documentElement.style.backgroundColor = bgColor;
         }
-        console.log('✅ Background set to white');
+        console.log('✅ Background set to', isDarkMode ? 'dark' : 'white');
         
         // Ensure root is visible
         if (root) {
