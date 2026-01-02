@@ -198,7 +198,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Top Navigation - Apply mobile/PWA styles without affecting desktop */}
       <nav 
-        className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 z-50 shadow-sm" 
+        className="bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-slate-800 fixed left-0 right-0 shadow-sm"
         style={(isPWA || isNativeApp) ? { 
           // PWA and native app specific styles (not desktop)
           // Account for test mode banner (40px height) if active
@@ -216,11 +216,12 @@ export default function Layout({ children, currentPageName }) {
           WebkitBackfaceVisibility: 'hidden',
           marginTop: '0',
           marginBottom: '0',
-          zIndex: '9999'
+          zIndex: 50
         } : {
           // Desktop web browser styles
           // Account for test mode banner (40px height) if active
           top: isTutorialMode ? '3rem' : isTestMode ? '40px' : '0',
+          zIndex: 50
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

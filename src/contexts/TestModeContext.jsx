@@ -79,20 +79,26 @@ export function TestModeProvider({ children }) {
       {children}
       {isTestMode && (
         <div 
-          className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center py-2 px-4 z-[60] font-semibold text-sm shadow-md"
-          style={{ height: '40px', lineHeight: '24px' }}
+          className="fixed top-0 left-0 right-0 bg-amber-500 text-white text-center font-semibold text-sm shadow-md flex items-center justify-center"
+          style={{ 
+            height: '40px',
+            minHeight: '40px',
+            maxHeight: '40px',
+            zIndex: 100,
+            padding: '8px 16px',
+            pointerEvents: 'auto'
+          }}
         >
-          <div className="flex items-center justify-center h-full">
-            <span>🧪 TEST MODE: Viewing site as if it's 2025</span>
-            {isEligibleForTestMode && (
-              <button
-                onClick={toggleTestMode}
-                className="ml-4 underline hover:no-underline opacity-90 hover:opacity-100"
-              >
-                Disable
-              </button>
-            )}
-          </div>
+          <span>🧪 TEST MODE: Viewing site as if it's 2025</span>
+          {isEligibleForTestMode && (
+            <button
+              onClick={toggleTestMode}
+              className="ml-4 underline hover:no-underline opacity-90 hover:opacity-100"
+              type="button"
+            >
+              Disable
+            </button>
+          )}
         </div>
       )}
     </TestModeContext.Provider>
