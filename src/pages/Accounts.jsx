@@ -46,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
 import { useTestMode } from '@/contexts/TestModeContext';
 import toast from 'react-hot-toast';
+import { UserFilter } from '@/components/UserFilter';
 
 export default function Accounts() {
   // Use test mode to trigger re-render when test mode changes
@@ -61,6 +62,7 @@ export default function Accounts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterSegment, setFilterSegment] = useState('all');
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [sortBy, setSortBy] = useState('score');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -153,6 +155,87 @@ export default function Accounts() {
     });
     return accountIds;
   }, [allScorecards]);
+
+  // Extract unique users from estimates with counts
+  const usersWithCounts = useMemo(() => {
+    const userMap = new Map();
+    
+    allEstimates.forEach(est => {
+      // Count accounts per user (salesperson or estimator)
+      const accountId = est.account_id;
+      if (!accountId) return;
+      
+      // Track salesperson
+      if (est.salesperson && est.salesperson.trim()) {
+        const name = est.salesperson.trim();
+        if (!userMap.has(name)) {
+          userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+        }
+        userMap.get(name).accounts.add(accountId);
+        userMap.get(name).roles.add('salesperson');
+      }
+      
+      // Track estimator
+      if (est.estimator && est.estimator.trim()) {
+        const name = est.estimator.trim();
+        if (!userMap.has(name)) {
+          userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+        }
+        userMap.get(name).accounts.add(accountId);
+        userMap.get(name).roles.add('estimator');
+      }
+    });
+    
+    // Convert to array and sort by name
+    return Array.from(userMap.values())
+      .map(u => ({
+        name: u.name,
+        count: u.accounts.size,
+        roles: Array.from(u.roles)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEstimates]);
+
+  // Map of account_id to user roles (for displaying role badges)
+  const accountUserRoles = useMemo(() => {
+    const roleMap = {};
+    
+    allEstimates.forEach(est => {
+      if (!est.account_id) return;
+      const accountId = est.account_id;
+      
+      if (!roleMap[accountId]) {
+        roleMap[accountId] = {};
+      }
+      
+      if (est.salesperson && est.salesperson.trim()) {
+        const name = est.salesperson.trim();
+        if (!roleMap[accountId][name]) {
+          roleMap[accountId][name] = new Set();
+        }
+        roleMap[accountId][name].add('salesperson');
+      }
+      
+      if (est.estimator && est.estimator.trim()) {
+        const name = est.estimator.trim();
+        if (!roleMap[accountId][name]) {
+          roleMap[accountId][name] = new Set();
+        }
+        roleMap[accountId][name].add('estimator');
+      }
+    });
+    
+    // Convert Sets to arrays
+    const result = {};
+    Object.keys(roleMap).forEach(accountId => {
+      result[accountId] = {};
+      Object.keys(roleMap[accountId]).forEach(userName => {
+        result[accountId][userName] = Array.from(roleMap[accountId][userName]);
+      });
+    });
+    
+    return result;
+  }, [allEstimates]);
 
   // Group estimates by account_id for revenue calculation
   const estimatesByAccountId = useMemo(() => {
@@ -354,7 +437,19 @@ export default function Accounts() {
     const matchesType = accountMatchesType(account, filterType);
     const matchesSegment = filterSegment === 'all' || account.revenue_segment === filterSegment;
     
-    return matchesSearch && matchesType && matchesSegment;
+    // User filter: if users are selected, only show accounts that have estimates with those users
+    let matchesUser = true;
+    if (selectedUsers.length > 0) {
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      const hasMatchingUser = accountEstimates.some(est => {
+        const salesperson = est.salesperson?.trim();
+        const estimator = est.estimator?.trim();
+        return selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
+      });
+      matchesUser = hasMatchingUser;
+    }
+    
+    return matchesSearch && matchesType && matchesSegment && matchesUser;
   });
 
   // Debug logging for segment and status filtering
@@ -598,6 +693,12 @@ export default function Accounts() {
                 <SelectItem value="D">Segment D (Project Only)</SelectItem>
               </SelectContent>
             </Select>
+            <UserFilter
+              users={usersWithCounts}
+              selectedUsers={selectedUsers}
+              onSelectionChange={setSelectedUsers}
+              placeholder="Filter by User"
+            />
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48">
                 <ArrowUpDown className="w-4 h-4 mr-2" />
@@ -716,13 +817,42 @@ export default function Accounts() {
                           )}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="flex items-center gap-2">
-                            {neglectStatus.days !== null && neglectStatus.days > 30 && (
-                              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              {neglectStatus.days !== null && neglectStatus.days > 30 && (
+                                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                              )}
+                              <span className={`text-sm font-medium ${neglectStatus.color}`}>
+                                {neglectStatus.label}
+                              </span>
+                            </div>
+                            {/* User role badges when filtered */}
+                            {selectedUsers.length > 0 && accountUserRoles[account.id] && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {selectedUsers.map(userName => {
+                                  const roles = accountUserRoles[account.id]?.[userName];
+                                  if (!roles || roles.length === 0) return null;
+                                  return (
+                                    <Badge
+                                      key={userName}
+                                      variant="outline"
+                                      className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                                    >
+                                      {userName}
+                                      {roles.includes('salesperson') && roles.includes('estimator') && (
+                                        <span className="ml-1">(S, E)</span>
+                                      )}
+                                      {roles.includes('salesperson') && !roles.includes('estimator') && (
+                                        <span className="ml-1">(S)</span>
+                                      )}
+                                      {roles.includes('estimator') && !roles.includes('salesperson') && (
+                                        <span className="ml-1">(E)</span>
+                                      )}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
                             )}
-                            <span className={`text-sm font-medium ${neglectStatus.color}`}>
-                              {neglectStatus.label}
-                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
@@ -815,6 +945,33 @@ export default function Accounts() {
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
                           {account.revenue_segment}
                         </Badge>
+                      )}
+                      {/* User role badges when filtered */}
+                      {selectedUsers.length > 0 && accountUserRoles[account.id] && (
+                        <>
+                          {selectedUsers.map(userName => {
+                            const roles = accountUserRoles[account.id]?.[userName];
+                            if (!roles || roles.length === 0) return null;
+                            return (
+                              <Badge
+                                key={userName}
+                                variant="outline"
+                                className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                              >
+                                {userName}
+                                {roles.includes('salesperson') && roles.includes('estimator') && (
+                                  <span className="ml-1 text-xs">(Salesperson, Estimator)</span>
+                                )}
+                                {roles.includes('salesperson') && !roles.includes('estimator') && (
+                                  <span className="ml-1 text-xs">(Salesperson)</span>
+                                )}
+                                {roles.includes('estimator') && !roles.includes('salesperson') && (
+                                  <span className="ml-1 text-xs">(Estimator)</span>
+                                )}
+                              </Badge>
+                            );
+                          })}
+                        </>
                       )}
                     </div>
 
@@ -916,6 +1073,12 @@ export default function Accounts() {
                     <SelectItem value="D">Segment D</SelectItem>
                   </SelectContent>
                 </Select>
+                <UserFilter
+                  users={usersWithCounts}
+                  selectedUsers={selectedUsers}
+                  onSelectionChange={setSelectedUsers}
+                  placeholder="Filter by User"
+                />
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-48">
                     <ArrowUpDown className="w-4 h-4 mr-2" />

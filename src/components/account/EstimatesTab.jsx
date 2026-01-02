@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { FileText, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { UserFilter } from '@/components/UserFilter';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -64,6 +65,33 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   // Initialize with all divisions expanded, including Uncategorized
   const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DIVISION_CATEGORIES, 'Uncategorized']));
   const [filterDepartment, setFilterDepartment] = useState('all');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+
+  // Extract unique users from estimates with counts
+  const usersWithCounts = useMemo(() => {
+    const userMap = new Map();
+    
+    estimates.forEach(est => {
+      if (est.salesperson && est.salesperson.trim()) {
+        const name = est.salesperson.trim();
+        if (!userMap.has(name)) {
+          userMap.set(name, { name, count: 0 });
+        }
+        userMap.get(name).count++;
+      }
+      
+      if (est.estimator && est.estimator.trim()) {
+        const name = est.estimator.trim();
+        if (!userMap.has(name)) {
+          userMap.set(name, { name, count: 0 });
+        }
+        userMap.get(name).count++;
+      }
+    });
+    
+    return Array.from(userMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [estimates]);
 
   // Get available years from estimates
   const availableYears = useMemo(() => {
@@ -77,7 +105,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     return Array.from(years).sort((a, b) => b - a); // Sort newest first
   }, [estimates]);
 
-  // Filter by status and year
+  // Filter by status, year, and user
   const statusFilteredEstimates = useMemo(() => {
     const filtered = estimates.filter(est => {
       // Normalize status: treat pending and any non-won as lost
@@ -88,6 +116,14 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       if (filterYear !== 'all' && est.estimate_date) {
         const year = new Date(est.estimate_date).getFullYear();
         if (year.toString() !== filterYear) return false;
+      }
+      
+      // User filter: if users are selected, only show estimates where those users are salesperson or estimator
+      if (selectedUsers.length > 0) {
+        const salesperson = est.salesperson?.trim();
+        const estimator = est.estimator?.trim();
+        const hasMatchingUser = selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
+        if (!hasMatchingUser) return false;
       }
       
       return true;
@@ -101,7 +137,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     });
     
     return filtered;
-  }, [estimates, filterStatus, filterYear]);
+  }, [estimates, filterStatus, filterYear, selectedUsers]);
 
   // Group estimates by department
   const estimatesByDepartment = useMemo(() => {
@@ -259,6 +295,12 @@ export default function EstimatesTab({ estimates = [], accountId }) {
               <SelectItem value="lost">Lost</SelectItem>
             </SelectContent>
           </Select>
+          <UserFilter
+            users={usersWithCounts}
+            selectedUsers={selectedUsers}
+            onSelectionChange={setSelectedUsers}
+            placeholder="Filter by User"
+          />
         </div>
       </div>
 
@@ -387,10 +429,45 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                               </div>
                             </td>
                             <td className="px-2 sm:px-4 py-3 sm:py-4">
-                              <p className="text-sm text-slate-900 dark:text-[#ffffff]">{estimate.project_name || estimate.description || '—'}</p>
-                              {estimate.notes && (
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{estimate.notes}</p>
-                              )}
+                              <div className="space-y-1">
+                                <p className="text-sm text-slate-900 dark:text-[#ffffff]">{estimate.project_name || estimate.description || '—'}</p>
+                                {estimate.notes && (
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{estimate.notes}</p>
+                                )}
+                                {/* User role badges when filtered */}
+                                {selectedUsers.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {selectedUsers.map(userName => {
+                                      const isSalesperson = estimate.salesperson?.trim() === userName;
+                                      const isEstimator = estimate.estimator?.trim() === userName;
+                                      if (!isSalesperson && !isEstimator) return null;
+                                      
+                                      const roles = [];
+                                      if (isSalesperson) roles.push('salesperson');
+                                      if (isEstimator) roles.push('estimator');
+                                      
+                                      return (
+                                        <Badge
+                                          key={userName}
+                                          variant="outline"
+                                          className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                                        >
+                                          {userName}
+                                          {roles.includes('salesperson') && roles.includes('estimator') && (
+                                            <span className="ml-1">(Salesperson, Estimator)</span>
+                                          )}
+                                          {roles.includes('salesperson') && !roles.includes('estimator') && (
+                                            <span className="ml-1">(Salesperson)</span>
+                                          )}
+                                          {roles.includes('estimator') && !roles.includes('salesperson') && (
+                                            <span className="ml-1">(Estimator)</span>
+                                          )}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-4 text-right">
                               <div className="flex items-center justify-end gap-1">

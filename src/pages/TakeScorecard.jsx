@@ -299,20 +299,10 @@ export default function TakeScorecard() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading scorecard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 dark:border-slate-100 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading scorecard...</p>
         </div>
       </div>
-    );
-  }
-
-  // Check if account exists
-  // Loading state
-  if (templateLoading || accountLoading) {
-    return (
-      <Card className="p-12 text-center">
-        <p className="text-slate-600">Loading scorecard...</p>
-      </Card>
     );
   }
 
@@ -320,8 +310,8 @@ export default function TakeScorecard() {
   if (templateError) {
     return (
       <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">ICP Template Not Found</h3>
-        <p className="text-slate-600 mb-4">{templateError.message || 'Please create an ICP template on the Scoring page.'}</p>
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-1">ICP Template Not Found</h3>
+        <p className="text-slate-600 dark:text-slate-400 mb-4">{templateError.message || 'Please create an ICP template on the Scoring page.'}</p>
         <div className="flex gap-2 justify-center">
           <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
             <Button variant="outline">Back to Account</Button>
@@ -337,8 +327,8 @@ export default function TakeScorecard() {
   if (accountError || !account) {
     return (
       <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Account not found</h3>
-        <p className="text-slate-600 mb-4">Unable to load the account</p>
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-1">Account not found</h3>
+        <p className="text-slate-600 dark:text-slate-400 mb-4">Unable to load the account</p>
         <Link to={createPageUrl('Accounts')}>
           <Button>Back to Accounts</Button>
         </Link>
@@ -349,8 +339,8 @@ export default function TakeScorecard() {
   if (!activeTemplate) {
     return (
       <Card className="p-12 text-center">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">ICP Template Not Found</h3>
-        <p className="text-slate-600 mb-4">Please create an ICP template on the Scoring page.</p>
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-1">ICP Template Not Found</h3>
+        <p className="text-slate-600 dark:text-slate-400 mb-4">Please create an ICP template on the Scoring page.</p>
         <div className="flex gap-2 justify-center">
           <Link to={createPageUrl(`AccountDetail?id=${accountId}`)}>
             <Button variant="outline">Back to Account</Button>
@@ -404,10 +394,10 @@ export default function TakeScorecard() {
         </Link>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">{activeTemplate?.name || 'Custom Scorecard'}</h1>
-            <p className="text-slate-600 mt-1">For: {account.name}</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{activeTemplate?.name || 'Custom Scorecard'}</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">For: {account.name}</p>
             {activeTemplate?.description && (
-              <p className="text-sm text-slate-600 mt-2">{activeTemplate.description}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{activeTemplate.description}</p>
             )}
           </div>
           <div className="text-right">
@@ -432,8 +422,8 @@ export default function TakeScorecard() {
         <CardContent className="p-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">Progress</span>
-              <span className="font-medium text-slate-900">{Math.round(progress)}%</span>
+              <span className="text-slate-600 dark:text-slate-400">Progress</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
@@ -444,14 +434,14 @@ export default function TakeScorecard() {
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {/* Header Row - Table Style */}
-          <div className="grid grid-cols-12 gap-2 p-4 bg-slate-50 border-b border-slate-200 font-semibold text-sm">
+          <div className="grid grid-cols-12 gap-2 p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 font-semibold text-sm text-slate-900 dark:text-slate-100">
             <div className="col-span-4">Scorecard</div>
             <div className="col-span-6">Data</div>
             <div className="col-span-2 text-right">Score</div>
           </div>
 
           {/* Date and Score Summary */}
-          <div className="grid grid-cols-12 gap-2 p-4 border-b border-slate-200 bg-white">
+          <div className="grid grid-cols-12 gap-2 p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
             <div className="col-span-4 font-medium">Date:</div>
             <div className="col-span-6">{format(new Date(scorecardDate), 'MMMM d, yyyy')}</div>
             <div className="col-span-2 text-right font-bold text-lg">
@@ -462,7 +452,7 @@ export default function TakeScorecard() {
           {/* Questions grouped by section */}
           {Object.keys(questionsBySection).length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-slate-600 mb-4">
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
                 No questions found in this ICP template. Please add questions on the Scoring page.
               </p>
               <div className="flex gap-2 justify-center">
@@ -481,15 +471,15 @@ export default function TakeScorecard() {
             const sectionAnswered = questions.every(q => answers[q.originalIndex] !== undefined);
             
             return (
-              <div key={section} className="border-b border-slate-200">
+              <div key={section} className="border-b border-slate-200 dark:border-slate-700">
                 {/* Section Header */}
-                <div className="grid grid-cols-12 gap-2 p-4 bg-slate-100 font-semibold text-slate-900">
+                <div className="grid grid-cols-12 gap-2 p-4 bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-slate-100">
                   <div className="col-span-10">{section}</div>
                   <div className="col-span-2 text-right">
                     {sectionAnswered ? (
                       <span className="font-bold">{sectionScore}</span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </div>
                 </div>
@@ -505,12 +495,12 @@ export default function TakeScorecard() {
                   return (
                     <div 
                       key={questionIndex} 
-                      className={`grid grid-cols-12 gap-2 p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                        isAnswered ? 'bg-emerald-50/30' : ''
+                      className={`grid grid-cols-12 gap-2 p-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
+                        isAnswered ? 'bg-emerald-50/30 dark:bg-emerald-900/20' : ''
                       }`}
                     >
                       {/* Question Text */}
-                      <div className="col-span-4 text-sm font-medium text-slate-900">
+                      <div className="col-span-4 text-sm font-medium text-slate-900 dark:text-slate-100">
                         {question.question_text}
                       </div>
 
@@ -554,8 +544,8 @@ export default function TakeScorecard() {
                                   />
                                   <Label
                                     htmlFor={`q${questionIndex}-${option.value}`}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-lg border-2 border-slate-200 bg-white hover:bg-slate-50 peer-data-[state=checked]:border-emerald-600 peer-data-[state=checked]:bg-emerald-50 cursor-pointer transition-all text-sm font-medium ${
-                                      isAnswered && answer === option.value ? 'border-emerald-600 bg-emerald-50' : ''
+                                    className={`flex items-center justify-center w-10 h-10 rounded-lg border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 peer-data-[state=checked]:border-emerald-600 dark:peer-data-[state=checked]:border-emerald-500 peer-data-[state=checked]:bg-emerald-50 dark:peer-data-[state=checked]:bg-emerald-900/30 cursor-pointer transition-all text-sm font-medium text-slate-900 dark:text-slate-100 ${
+                                      isAnswered && answer === option.value ? 'border-emerald-600 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30' : ''
                                     }`}
                                   >
                                     {option.label}
@@ -570,9 +560,9 @@ export default function TakeScorecard() {
                       {/* Score Display */}
                       <div className="col-span-2 text-right">
                         {isAnswered ? (
-                          <span className="font-medium text-slate-900">{weightedScore}</span>
+                          <span className="font-medium text-slate-900 dark:text-slate-100">{weightedScore}</span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400 dark:text-slate-500">—</span>
                         )}
                       </div>
                     </div>
@@ -580,13 +570,13 @@ export default function TakeScorecard() {
                 })}
 
                 {/* Section Sub-total */}
-                <div className="grid grid-cols-12 gap-2 p-4 bg-slate-50 font-semibold border-t-2 border-slate-300">
+                <div className="grid grid-cols-12 gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 font-semibold border-t-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100">
                   <div className="col-span-10">Sub-total</div>
                   <div className="col-span-2 text-right">
                     {sectionAnswered ? (
                       <span className="font-bold text-lg">{sectionScore}</span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400 dark:text-slate-500">—</span>
                     )}
                   </div>
                 </div>
@@ -597,26 +587,26 @@ export default function TakeScorecard() {
           )}
 
           {/* Total Score and Pass/Fail */}
-          <div className="grid grid-cols-12 gap-2 p-6 bg-gradient-to-r from-slate-50 to-white border-t-4 border-slate-900">
+          <div className="grid grid-cols-12 gap-2 p-6 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-t-4 border-slate-900 dark:border-slate-100">
             <div className="col-span-10">
-              <div className="text-lg font-bold text-slate-900">Total Score</div>
-              <div className="text-sm text-slate-600 mt-1">
+              <div className="text-lg font-bold text-slate-900 dark:text-slate-100">Total Score</div>
+              <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                 Pass Threshold: {passThreshold} / 100
               </div>
             </div>
             <div className="col-span-2 text-right">
-              <div className="text-3xl font-bold mb-2">
+              <div className="text-3xl font-bold mb-2 text-slate-900 dark:text-slate-100">
                 {scoreData.total > 0 ? scoreData.total : '—'}
               </div>
-              <div className="text-sm text-slate-500">
+              <div className="text-sm text-slate-500 dark:text-slate-400">
                 ({scoreData.normalized}% normalized)
               </div>
               {isComplete && (
                 <Badge 
                   className={`text-sm px-3 py-1 ${
                     scoreData.is_pass 
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                      : 'bg-red-100 text-red-800 border-red-200'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700' 
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700'
                   }`}
                 >
                   {scoreData.is_pass ? (
@@ -638,17 +628,17 @@ export default function TakeScorecard() {
       </Card>
 
       {/* Submit Button */}
-      <Card className="sticky bottom-6 border-slate-300 shadow-lg">
+      <Card className="sticky bottom-6 border-slate-300 dark:border-slate-700 shadow-lg">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {isComplete 
                   ? 'All questions answered! Ready to submit.' 
                   : `${totalQuestions - answeredCount} question${totalQuestions - answeredCount === 1 ? '' : 's'} remaining`}
               </p>
               {isComplete && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Score: {scoreData.normalized}/100 • {scoreData.is_pass ? 'PASS' : 'FAIL'} (threshold: {passThreshold})
                 </p>
               )}
@@ -667,7 +657,7 @@ export default function TakeScorecard() {
                 size="lg"
                 disabled={!isComplete}
                 onClick={handleSubmit}
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
               >
                 <Check className="w-5 h-5 mr-2" />
                 Submit Scorecard

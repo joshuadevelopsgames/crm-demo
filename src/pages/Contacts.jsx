@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,11 +39,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
+import { UserFilter } from '@/components/UserFilter';
+import { useUser } from '@/contexts/UserContext';
 
 export default function Contacts() {
   const navigate = useNavigate();
+  const { user, isLoading: userLoading } = useUser();
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [sortBy, setSortBy] = useState('name'); // 'name' or 'account'
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -61,13 +65,111 @@ export default function Contacts() {
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts'],
-    queryFn: () => base44.entities.Contact.list()
+    queryFn: () => base44.entities.Contact.list(),
+    enabled: !userLoading && !!user
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => base44.entities.Account.list(),
+    enabled: !userLoading && !!user
   });
+
+  // Fetch estimates to extract users and filter contacts
+  const { data: allEstimates = [] } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    enabled: !userLoading && !!user
+  });
+
+  // Extract unique users from estimates with counts (for contacts, count contacts whose accounts have estimates)
+  const usersWithCounts = useMemo(() => {
+    const userMap = new Map();
+    const accountIdsWithUser = new Map(); // Map of userName -> Set of accountIds
+    
+    allEstimates.forEach(est => {
+      const accountId = est.account_id;
+      if (!accountId) return;
+      
+      if (est.salesperson && est.salesperson.trim()) {
+        const name = est.salesperson.trim();
+        if (!accountIdsWithUser.has(name)) {
+          accountIdsWithUser.set(name, new Set());
+        }
+        accountIdsWithUser.get(name).add(accountId);
+      }
+      
+      if (est.estimator && est.estimator.trim()) {
+        const name = est.estimator.trim();
+        if (!accountIdsWithUser.has(name)) {
+          accountIdsWithUser.set(name, new Set());
+        }
+        accountIdsWithUser.get(name).add(accountId);
+      }
+    });
+    
+    // Count contacts per user (contacts whose accounts have estimates with that user)
+    accountIdsWithUser.forEach((accountIds, userName) => {
+      const contactCount = contacts.filter(c => 
+        c.account_id && accountIds.has(c.account_id)
+      ).length;
+      
+      if (contactCount > 0) {
+        userMap.set(userName, {
+          name: userName,
+          count: contactCount
+        });
+      }
+    });
+    
+    return Array.from(userMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEstimates, contacts]);
+
+  // Map of account_id to user roles (for displaying role badges on contacts)
+  const accountUserRoles = useMemo(() => {
+    const roleMap = {};
+    
+    allEstimates.forEach(est => {
+      if (!est.account_id) return;
+      const accountId = est.account_id;
+      
+      if (!roleMap[accountId]) {
+        roleMap[accountId] = {};
+      }
+      
+      if (est.salesperson && est.salesperson.trim()) {
+        const name = est.salesperson.trim();
+        if (!roleMap[accountId][name]) {
+          roleMap[accountId][name] = new Set();
+        }
+        roleMap[accountId][name].add('salesperson');
+      }
+      
+      if (est.estimator && est.estimator.trim()) {
+        const name = est.estimator.trim();
+        if (!roleMap[accountId][name]) {
+          roleMap[accountId][name] = new Set();
+        }
+        roleMap[accountId][name].add('estimator');
+      }
+    });
+    
+    const result = {};
+    Object.keys(roleMap).forEach(accountId => {
+      result[accountId] = {};
+      Object.keys(roleMap[accountId]).forEach(userName => {
+        result[accountId][userName] = Array.from(roleMap[accountId][userName]);
+      });
+    });
+    
+    return result;
+  }, [allEstimates]);
 
   const createContactMutation = useMutation({
     mutationFn: (data) => base44.entities.Contact.create(data),
@@ -116,7 +218,19 @@ export default function Contacts() {
     const matchesAccount = filterAccount === 'all' || 
       contact.account_id === filterAccount;
     
-    return matchesName && matchesAccount;
+    // User filter: if users are selected, only show contacts whose accounts have estimates with those users
+    let matchesUser = true;
+    if (selectedUsers.length > 0 && contact.account_id) {
+      const accountEstimates = allEstimates.filter(est => est.account_id === contact.account_id);
+      const hasMatchingUser = accountEstimates.some(est => {
+        const salesperson = est.salesperson?.trim();
+        const estimator = est.estimator?.trim();
+        return selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
+      });
+      matchesUser = hasMatchingUser;
+    }
+    
+    return matchesName && matchesAccount && matchesUser;
   });
 
   // Sort contacts
@@ -208,6 +322,12 @@ export default function Contacts() {
                     ))}
                 </SelectContent>
               </Select>
+              <UserFilter
+                users={usersWithCounts}
+                selectedUsers={selectedUsers}
+                onSelectionChange={setSelectedUsers}
+                placeholder="Filter by User"
+              />
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Sort by" />
@@ -384,14 +504,43 @@ export default function Contacts() {
 
                       {/* Account Link */}
                       {contact.account_id && (
-                        <Link 
-                          to={createPageUrl(`AccountDetail?id=${contact.account_id}`)}
-                          className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-blue-600 hover:text-blue-800'} transition-colors`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Building2 className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">{contact.account_name || 'View Account'}</span>
-                        </Link>
+                        <div className="space-y-2">
+                          <Link 
+                            to={createPageUrl(`AccountDetail?id=${contact.account_id}`)}
+                            className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-blue-600 hover:text-blue-800'} transition-colors`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Building2 className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{contact.account_name || 'View Account'}</span>
+                          </Link>
+                          {/* User role badges when filtered */}
+                          {selectedUsers.length > 0 && accountUserRoles[contact.account_id] && (
+                            <div className="flex flex-wrap gap-1">
+                              {selectedUsers.map(userName => {
+                                const roles = accountUserRoles[contact.account_id]?.[userName];
+                                if (!roles || roles.length === 0) return null;
+                                return (
+                                  <Badge
+                                    key={userName}
+                                    variant="outline"
+                                    className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                                  >
+                                    {userName}
+                                    {roles.includes('salesperson') && roles.includes('estimator') && (
+                                      <span className="ml-1">(Salesperson, Estimator)</span>
+                                    )}
+                                    {roles.includes('salesperson') && !roles.includes('estimator') && (
+                                      <span className="ml-1">(Salesperson)</span>
+                                    )}
+                                    {roles.includes('estimator') && !roles.includes('salesperson') && (
+                                      <span className="ml-1">(Estimator)</span>
+                                    )}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* Contact Info */}
@@ -494,6 +643,12 @@ export default function Contacts() {
                     ))}
                 </SelectContent>
               </Select>
+              <UserFilter
+                users={usersWithCounts}
+                selectedUsers={selectedUsers}
+                onSelectionChange={setSelectedUsers}
+                placeholder="Filter by User"
+              />
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Sort by" />
@@ -670,14 +825,43 @@ export default function Contacts() {
 
                       {/* Account Link */}
                       {contact.account_id && (
-                        <Link 
-                          to={createPageUrl(`AccountDetail?id=${contact.account_id}`)}
-                          className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-blue-600 hover:text-blue-800'} transition-colors`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Building2 className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">{contact.account_name || 'View Account'}</span>
-                        </Link>
+                        <div className="space-y-2">
+                          <Link 
+                            to={createPageUrl(`AccountDetail?id=${contact.account_id}`)}
+                            className={`flex items-center gap-2 text-sm ${isArchived ? 'text-slate-400 hover:text-slate-600' : 'text-blue-600 hover:text-blue-800'} transition-colors`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Building2 className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{contact.account_name || 'View Account'}</span>
+                          </Link>
+                          {/* User role badges when filtered */}
+                          {selectedUsers.length > 0 && accountUserRoles[contact.account_id] && (
+                            <div className="flex flex-wrap gap-1">
+                              {selectedUsers.map(userName => {
+                                const roles = accountUserRoles[contact.account_id]?.[userName];
+                                if (!roles || roles.length === 0) return null;
+                                return (
+                                  <Badge
+                                    key={userName}
+                                    variant="outline"
+                                    className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                                  >
+                                    {userName}
+                                    {roles.includes('salesperson') && roles.includes('estimator') && (
+                                      <span className="ml-1">(Salesperson, Estimator)</span>
+                                    )}
+                                    {roles.includes('salesperson') && !roles.includes('estimator') && (
+                                      <span className="ml-1">(Salesperson)</span>
+                                    )}
+                                    {roles.includes('estimator') && !roles.includes('salesperson') && (
+                                      <span className="ml-1">(Estimator)</span>
+                                    )}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       {/* Contact Info */}
