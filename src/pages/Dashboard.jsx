@@ -59,28 +59,49 @@ export default function Dashboard() {
     // Update account statuses (at_risk) based on renewal dates
     // Triggers will automatically update notifications when account.status changes
     const checkAndUpdateAccountStatuses = async (force = false) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:61',message:'checkAndUpdateAccountStatuses called',data:{force,timeSinceLastCheck:Date.now()-lastStatusCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
       try {
         // Skip if we just ran recently (unless forced)
         const timeSinceLastCheck = Date.now() - lastStatusCheck;
         if (!force && timeSinceLastCheck < STATUS_CHECK_INTERVAL) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:65',message:'Skipping status check - too soon',data:{timeSinceLastCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+          // #endregion
           return;
         }
         
         // Get current user
         const currentUser = await base44.auth.me();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:70',message:'Got current user',data:{hasUser:!!currentUser,hasId:!!currentUser?.id,userId:currentUser?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
         if (!currentUser?.id) {
           console.warn('No current user, skipping account status check');
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:72',message:'No current user - skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+          // #endregion
           return;
         }
         
         // Only update account statuses - triggers handle notification updates
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:77',message:'About to call createRenewalNotifications',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
         await createRenewalNotifications();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:78',message:'createRenewalNotifications completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
         // Invalidate queries to refresh accounts (notifications are auto-updated by triggers)
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
         queryClient.invalidateQueries({ queryKey: ['notifications'] }); // Refresh to get trigger-updated notifications
         lastStatusCheck = Date.now();
       } catch (error) {
         console.error('Error checking/updating account statuses:', error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:83',message:'Error in checkAndUpdateAccountStatuses',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+        // #endregion
       }
     };
     
@@ -630,6 +651,12 @@ export default function Dashboard() {
             <CardContent>
               <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
+                {/* #region agent log */}
+                {(() => {
+                  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:633',message:'Render at-risk accounts',data:{atRiskRenewalsLength:atRiskRenewals.length,accountsLength:accounts.length,estimatesLength:estimates.length,firstFiveAccountIds:atRiskRenewals.slice(0,5).map(a=>a.id),firstFiveAccountNames:atRiskRenewals.slice(0,5).map(a=>a.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                  return null;
+                })()}
+                {/* #endregion */}
                 {atRiskRenewals.slice(0, 5).map(account => {
                   const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
                   return (

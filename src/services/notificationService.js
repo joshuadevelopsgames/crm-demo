@@ -490,6 +490,9 @@ export async function createEndOfYearNotification() {
  */
 export async function createRenewalNotifications() {
   console.log('🔄 Starting renewal notification creation (trigger-based approach)...');
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:491',message:'createRenewalNotifications called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+  // #endregion
   
   try {
     // First, update account statuses based on renewal dates
@@ -584,6 +587,25 @@ export async function createRenewalNotifications() {
         }
       } else if (shouldBeAtRisk && isCurrentlyAtRisk) {
         atRiskAlreadyCount++;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:585',message:'Account already at_risk - trigger may not fire',data:{accountId:account.id,accountName:account.name,status:account.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        // CRITICAL: Accounts that are already at_risk won't trigger the notification update
+        // because the trigger only fires on UPDATE. We need to manually trigger notification
+        // update for these accounts to ensure notifications are created.
+        // Force a no-op update to trigger the notification update
+        try {
+          // Update with same status to trigger the notification update trigger
+          await base44.entities.Account.update(account.id, { status: 'at_risk' });
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:593',message:'Forced update to trigger notification for already at_risk account',data:{accountId:account.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+          // #endregion
+        } catch (error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:596',message:'Failed to force update for already at_risk account',data:{accountId:account.id,error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+          // #endregion
+          console.error(`❌ Error forcing update for already at_risk account ${account.name}:`, error);
+        }
       } else if (isCurrentlyAtRisk && daysUntilRenewal > 180) {
         // Only remove from at_risk if renewal is more than 6 months away (not urgent yet)
         // Keep at_risk if renewal passed (daysUntilRenewal < 0) - those are URGENT
@@ -602,6 +624,9 @@ export async function createRenewalNotifications() {
     console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
     console.log(`📊 Accounts with estimates: ${accountsWithEstimates}, with contract_end: ${accountsWithContractEnd}, with renewal date: ${accountsWithRenewalDate}`);
     console.log(`📊 Notifications maintained automatically by database triggers`);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:601',message:'createRenewalNotifications complete',data:{atRiskUpdatedCount,atRiskAlreadyCount,accountsWithEstimates,accountsWithContractEnd,accountsWithRenewalDate,totalAtRisk:atRiskUpdatedCount+atRiskAlreadyCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }

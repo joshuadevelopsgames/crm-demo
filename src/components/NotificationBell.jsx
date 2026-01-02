@@ -143,6 +143,11 @@ export default function NotificationBell() {
           ? (bulkNotificationsResponse.data?.notifications || [])
           : [];
         
+        // #region agent log
+        const renewalReminders = bulkNotifications.filter(n => n.type === 'renewal_reminder');
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:142',message:'Bulk notifications fetched',data:{success:bulkNotificationsResponse.success,totalBulkNotifications:bulkNotifications.length,renewalReminderCount:renewalReminders.length,neglectedAccountCount:bulkNotifications.filter(n=>n.type==='neglected_account').length,renewalReminderAccountIds:renewalReminders.map(n=>n.related_account_id).slice(0,10),error:bulkNotificationsResponse.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+        // #endregion
+        
         // Log if bulk notifications fetch failed
         if (!bulkNotificationsResponse.success) {
           console.error(`❌ Failed to fetch bulk notifications:`, bulkNotificationsResponse.error);
