@@ -48,8 +48,14 @@ import toast from 'react-hot-toast';
 
 export default function Accounts() {
   // Use test mode to trigger re-render when test mode changes
-  const { isTestMode } = useTestMode();
+  const { isTestMode, getCurrentYear } = useTestMode();
   const navigate = useNavigate();
+  
+  // Debug: Log test mode status
+  useEffect(() => {
+    const currentYear = getCurrentYear();
+    console.log('[Accounts] Test mode active:', isTestMode, 'Current year:', currentYear);
+  }, [isTestMode, getCurrentYear]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -148,8 +154,26 @@ export default function Accounts() {
         grouped[est.account_id].push(est);
       }
     });
+    
+    // Debug: Log estimate grouping when test mode is active
+    if (isTestMode) {
+      console.log('[Accounts] Grouped estimates:', {
+        totalEstimates: allEstimates.length,
+        accountsWithEstimates: Object.keys(grouped).length,
+        sampleEstimates: allEstimates.slice(0, 5).map(est => ({
+          id: est.id,
+          account_id: est.account_id,
+          status: est.status,
+          contract_start: est.contract_start,
+          contract_end: est.contract_end,
+          estimate_date: est.estimate_date,
+          total_price_with_tax: est.total_price_with_tax
+        }))
+      });
+    }
+    
     return grouped;
-  }, [allEstimates]);
+  }, [allEstimates, isTestMode]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
