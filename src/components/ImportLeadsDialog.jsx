@@ -57,6 +57,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 
 export default function ImportLeadsDialog({ open, onClose }) {
   // File 1: Contacts Export
@@ -94,6 +100,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
   // Validation and comparison state
   const [validationResults, setValidationResults] = useState(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState('overview');
   const [existingData, setExistingData] = useState({
     accounts: [],
     contacts: [],
@@ -792,6 +799,19 @@ export default function ImportLeadsDialog({ open, onClose }) {
             }));
             
             console.log(`📝 Processing estimates chunk ${chunkNum}/${totalChunks} (${chunk.length} estimates)...`);
+            
+            // Debug: Log sample estimates to verify contract_end is included
+            if (chunkNum === 1) {
+              const wonEstimates = chunk.filter(e => e.status === 'won');
+              if (wonEstimates.length > 0) {
+                console.log(`🔍 Sample won estimates from chunk:`, wonEstimates.slice(0, 3).map(e => ({
+                  id: e.lmn_estimate_id,
+                  status: e.status,
+                  hasContractEnd: !!e.contract_end,
+                  contractEnd: e.contract_end
+                })));
+              }
+            }
             
             const response = await fetch('/api/data/estimates', {
               method: 'POST',
@@ -1799,53 +1819,594 @@ export default function ImportLeadsDialog({ open, onClose }) {
               {/* Validation Results */}
               {validationResults && importStatus === 'ready' && (
                 <Card className="p-4 border-slate-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5 text-amber-600" />
-                      <h3 className="font-semibold text-slate-900">Data Validation Results</h3>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowValidation(!showValidation)}
-                    >
-                      {showValidation ? 'Hide Details' : 'Show Details'}
-                    </Button>
+                  <div className="flex items-center gap-2 mb-4">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <h3 className="font-semibold text-slate-900">Data Validation Results</h3>
                   </div>
 
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-2xl font-bold text-blue-600">
-                        {validationResults.accounts.new.length + validationResults.contacts.new.length + 
-                         validationResults.estimates.new.length + validationResults.jobsites.new.length}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">New Records</p>
+                  {/* Summary Stats - Clickable Tabs */}
+                  <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <TabsTrigger 
+                        value="overview" 
+                        className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer data-[state=active]:bg-slate-100 data-[state=active]:border-slate-300"
+                      >
+                        <p className="text-2xl font-bold text-slate-600">
+                          {validationResults.accounts.new.length + validationResults.contacts.new.length + 
+                           validationResults.estimates.new.length + validationResults.jobsites.new.length +
+                           validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
+                           validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">Total Records</p>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="new" 
+                        className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 cursor-pointer data-[state=active]:bg-blue-100 data-[state=active]:border-blue-300"
+                      >
+                        <p className="text-2xl font-bold text-blue-600">
+                          {validationResults.accounts.new.length + validationResults.contacts.new.length + 
+                           validationResults.estimates.new.length + validationResults.jobsites.new.length}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">New Records</p>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="updated" 
+                        className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200 hover:bg-amber-100 cursor-pointer data-[state=active]:bg-amber-100 data-[state=active]:border-amber-300"
+                      >
+                        <p className="text-2xl font-bold text-amber-600">
+                          {validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
+                           validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">Will Be Updated</p>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="orphaned" 
+                        className="text-center p-3 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 cursor-pointer data-[state=active]:bg-red-100 data-[state=active]:border-red-300"
+                      >
+                        <p className="text-2xl font-bold text-red-600">
+                          {validationResults.accounts.orphaned.length + validationResults.contacts.orphaned.length + 
+                           validationResults.estimates.orphaned.length + validationResults.jobsites.orphaned.length}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">Orphaned (Not in Sheets)</p>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="warnings" 
+                        className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 cursor-pointer data-[state=active]:bg-orange-100 data-[state=active]:border-orange-300"
+                      >
+                        <p className="text-2xl font-bold text-orange-600">
+                          {validationResults.warnings.length + validationResults.errors.length}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">Warnings/Errors</p>
+                      </TabsTrigger>
                     </div>
-                    <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200">
-                      <p className="text-2xl font-bold text-amber-600">
-                        {validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
-                         validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">Will Be Updated</p>
-                    </div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-2xl font-bold text-red-600">
-                        {validationResults.accounts.orphaned.length + validationResults.contacts.orphaned.length + 
-                         validationResults.estimates.orphaned.length + validationResults.jobsites.orphaned.length}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">Orphaned (Not in Sheets)</p>
-                    </div>
-                    <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-                      <p className="text-2xl font-bold text-slate-600">
-                        {validationResults.warnings.length + validationResults.errors.length}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">Warnings/Errors</p>
-                    </div>
-                  </div>
 
-                  {/* Detailed Results */}
-                  {showValidation && (
+                    {/* Tab Content */}
+                    <TabsContent value="overview" className="mt-4">
+                      <div className="space-y-4">
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                          <h4 className="font-semibold text-slate-900 mb-3">Overview</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">New Records</p>
+                              <p className="text-2xl font-bold text-blue-600">
+                                {validationResults.accounts.new.length + validationResults.contacts.new.length + 
+                                 validationResults.estimates.new.length + validationResults.jobsites.new.length}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {validationResults.accounts.new.length} accounts, {validationResults.contacts.new.length} contacts, {validationResults.estimates.new.length} estimates, {validationResults.jobsites.new.length} jobsites
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">Will Be Updated</p>
+                              <p className="text-2xl font-bold text-amber-600">
+                                {validationResults.accounts.updated.length + validationResults.contacts.updated.length + 
+                                 validationResults.estimates.updated.length + validationResults.jobsites.updated.length}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {validationResults.accounts.updated.length} accounts, {validationResults.contacts.updated.length} contacts, {validationResults.estimates.updated.length} estimates, {validationResults.jobsites.updated.length} jobsites
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">Orphaned</p>
+                              <p className="text-2xl font-bold text-red-600">
+                                {validationResults.accounts.orphaned.length + validationResults.contacts.orphaned.length + 
+                                 validationResults.estimates.orphaned.length + validationResults.jobsites.orphaned.length}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {validationResults.accounts.orphaned.length} accounts, {validationResults.contacts.orphaned.length} contacts, {validationResults.estimates.orphaned.length} estimates, {validationResults.jobsites.orphaned.length} jobsites
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">Warnings/Errors</p>
+                              <p className="text-2xl font-bold text-orange-600">
+                                {validationResults.warnings.length + validationResults.errors.length}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {validationResults.errors.length} errors, {validationResults.warnings.length} warnings
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="new" className="mt-4">
+                      <div className="space-y-4">
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <h4 className="font-semibold text-blue-900 mb-3">New Records to be Created</h4>
+                          <p className="text-sm text-blue-800 mb-4">
+                            These records don't exist in your database and will be created during import.
+                          </p>
+                          
+                          {validationResults.accounts.new.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-blue-900 mb-2">
+                                New Accounts ({validationResults.accounts.new.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.accounts.new.map(acc => (
+                                  <div key={acc.lmn_crm_id || acc.id} className="bg-white p-3 rounded border border-blue-200">
+                                    <p className="font-medium text-blue-900">{acc.name}</p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      ID: {acc.lmn_crm_id || acc.id}
+                                      {acc.phone && ` • ${acc.phone}`}
+                                      {acc.email && ` • ${acc.email}`}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.contacts.new.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-blue-900 mb-2">
+                                New Contacts ({validationResults.contacts.new.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.contacts.new.map(contact => (
+                                  <div key={contact.lmn_contact_id || contact.id} className="bg-white p-3 rounded border border-blue-200">
+                                    <p className="font-medium text-blue-900">
+                                      {contact.first_name} {contact.last_name}
+                                    </p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      ID: {contact.lmn_contact_id || contact.id}
+                                      {contact.phone && ` • ${contact.phone}`}
+                                      {contact.email && ` • ${contact.email}`}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.estimates.new.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-blue-900 mb-2">
+                                New Estimates ({validationResults.estimates.new.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.estimates.new.map(est => (
+                                  <div key={est.lmn_estimate_id || est.id} className="bg-white p-3 rounded border border-blue-200">
+                                    <p className="font-medium text-blue-900">
+                                      {est.estimate_number || est.lmn_estimate_id}
+                                    </p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      {est.contact_name || 'Unknown'}
+                                      {est.total_price_with_tax ? ` • $${est.total_price_with_tax.toLocaleString()}` : ''}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.jobsites.new.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-blue-900 mb-2">
+                                New Jobsites ({validationResults.jobsites.new.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.jobsites.new.map(jobsite => (
+                                  <div key={jobsite.lmn_jobsite_id || jobsite.id} className="bg-white p-3 rounded border border-blue-200">
+                                    <p className="font-medium text-blue-900">
+                                      {jobsite.name || jobsite.lmn_jobsite_id}
+                                    </p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      ID: {jobsite.lmn_jobsite_id || jobsite.id}
+                                      {jobsite.address && ` • ${jobsite.address}`}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {(validationResults.accounts.new.length === 0 && 
+                            validationResults.contacts.new.length === 0 && 
+                            validationResults.estimates.new.length === 0 && 
+                            validationResults.jobsites.new.length === 0) && (
+                            <p className="text-sm text-blue-700 italic">No new records to be created.</p>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="updated" className="mt-4">
+                      <div className="space-y-4">
+                        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                          <h4 className="font-semibold text-amber-900 mb-3">Records to be Updated</h4>
+                          <p className="text-sm text-amber-800 mb-4">
+                            These records exist in your database and will be updated with new values from the import sheets.
+                          </p>
+                          
+                          {validationResults.accounts.updated.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-amber-900 mb-2">
+                                Accounts ({validationResults.accounts.updated.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.accounts.updated.map((item, idx) => (
+                                  <div key={idx} className="bg-white p-3 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">{item.account.name}</p>
+                                    <div className="mt-2 space-y-1">
+                                      {item.differences.map((diff, dIdx) => (
+                                        <p key={dIdx} className="text-xs text-amber-700">
+                                          • <span className="font-medium">{diff.field}:</span> "{diff.existing}" → "{diff.imported}"
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.contacts.updated.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-amber-900 mb-2">
+                                Contacts ({validationResults.contacts.updated.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.contacts.updated.map((item, idx) => (
+                                  <div key={idx} className="bg-white p-3 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">
+                                      {item.contact.first_name} {item.contact.last_name}
+                                    </p>
+                                    <div className="mt-2 space-y-1">
+                                      {item.differences.map((diff, dIdx) => (
+                                        <p key={dIdx} className="text-xs text-amber-700">
+                                          • <span className="font-medium">{diff.field}:</span> "{diff.existing}" → "{diff.imported}"
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.estimates.updated.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-amber-900 mb-2">
+                                Estimates ({validationResults.estimates.updated.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.estimates.updated.map((item, idx) => (
+                                  <div key={idx} className="bg-white p-3 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">
+                                      {item.estimate.estimate_number || item.estimate.lmn_estimate_id}
+                                    </p>
+                                    <div className="mt-2 space-y-1">
+                                      {item.differences.map((diff, dIdx) => (
+                                        <p key={dIdx} className="text-xs text-amber-700">
+                                          • <span className="font-medium">{diff.field}:</span> "{diff.existing}" → "{diff.imported}"
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {validationResults.jobsites.updated.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-amber-900 mb-2">
+                                Jobsites ({validationResults.jobsites.updated.length})
+                              </p>
+                              <div className="max-h-64 overflow-y-auto space-y-2">
+                                {validationResults.jobsites.updated.map((item, idx) => (
+                                  <div key={idx} className="bg-white p-3 rounded border border-amber-200">
+                                    <p className="font-medium text-amber-900">
+                                      {item.jobsite.name || item.jobsite.lmn_jobsite_id}
+                                    </p>
+                                    <div className="mt-2 space-y-1">
+                                      {item.differences.map((diff, dIdx) => (
+                                        <p key={dIdx} className="text-xs text-amber-700">
+                                          • <span className="font-medium">{diff.field}:</span> "{diff.existing}" → "{diff.imported}"
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {(validationResults.accounts.updated.length === 0 && 
+                            validationResults.contacts.updated.length === 0 && 
+                            validationResults.estimates.updated.length === 0 && 
+                            validationResults.jobsites.updated.length === 0) && (
+                            <p className="text-sm text-amber-700 italic">No records to be updated.</p>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="orphaned" className="mt-4">
+                      <div className="space-y-4">
+                        {(validationResults.accounts.orphaned.length > 0 || 
+                          validationResults.contacts.orphaned.length > 0 || 
+                          validationResults.estimates.orphaned.length > 0 || 
+                          validationResults.jobsites.orphaned.length > 0) && (
+                          <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-red-900">⚠️ Orphaned Records</h4>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDeleteAllOrphaned}
+                                className="text-red-700 border-red-300 hover:bg-red-100"
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Delete All Orphaned
+                              </Button>
+                            </div>
+                            <p className="text-sm text-red-800 mb-4">
+                              These records exist in your database but are NOT in the import sheets. 
+                              You can delete them if they're inconsistent or no longer needed.
+                            </p>
+                            
+                            {validationResults.estimates.orphaned.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-red-900 mb-2">
+                                  Orphaned Estimates ({validationResults.estimates.orphaned.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.estimates.orphaned.map(est => (
+                                    <div key={est.id} className="bg-white p-3 rounded border border-red-200 flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-red-900">
+                                            {est.estimate_number || est.lmn_estimate_id}
+                                          </p>
+                                          {est._source && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {est._source === 'previous_import' ? 'Previous Import' : 
+                                               est._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-red-700 mt-1">
+                                          {est.contact_name || 'Unknown'} 
+                                          {est.total_price_with_tax ? ` • $${est.total_price_with_tax.toLocaleString()}` : ''}
+                                        </p>
+                                        {est._sourceNote && (
+                                          <div className="mt-1 flex items-start gap-1">
+                                            <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-red-600 italic">{est._sourceNote}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteOrphaned('estimate', est.id)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {validationResults.accounts.orphaned.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-red-900 mb-2">
+                                  Orphaned Accounts ({validationResults.accounts.orphaned.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.accounts.orphaned.map(acc => (
+                                    <div key={acc.id} className="bg-white p-3 rounded border border-red-200 flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-red-900">{acc.name}</p>
+                                          {acc._source && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {acc._source === 'previous_import' ? 'Previous Import' : 
+                                               acc._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-red-700 mt-1">
+                                          ID: {acc.lmn_crm_id || acc.id}
+                                        </p>
+                                        {acc._sourceNote && (
+                                          <div className="mt-1 flex items-start gap-1">
+                                            <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-red-600 italic">{acc._sourceNote}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteOrphaned('account', acc.id)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {validationResults.contacts.orphaned.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-red-900 mb-2">
+                                  Orphaned Contacts ({validationResults.contacts.orphaned.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.contacts.orphaned.map(contact => (
+                                    <div key={contact.id} className="bg-white p-3 rounded border border-red-200 flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-red-900">
+                                            {contact.first_name} {contact.last_name}
+                                          </p>
+                                          {contact._source && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {contact._source === 'previous_import' ? 'Previous Import' : 
+                                               contact._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-red-700 mt-1">
+                                          ID: {contact.lmn_contact_id || contact.id}
+                                        </p>
+                                        {contact._sourceNote && (
+                                          <div className="mt-1 flex items-start gap-1">
+                                            <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-red-600 italic">{contact._sourceNote}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteOrphaned('contact', contact.id)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {validationResults.jobsites.orphaned.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-red-900 mb-2">
+                                  Orphaned Jobsites ({validationResults.jobsites.orphaned.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.jobsites.orphaned.map(jobsite => (
+                                    <div key={jobsite.id} className="bg-white p-3 rounded border border-red-200 flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-red-900">
+                                            {jobsite.name || jobsite.lmn_jobsite_id}
+                                          </p>
+                                          {jobsite._source && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {jobsite._source === 'previous_import' ? 'Previous Import' : 
+                                               jobsite._source === 'possibly_mock' ? 'Possibly Mock' : 'Unknown'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-red-700 mt-1">
+                                          ID: {jobsite.lmn_jobsite_id || jobsite.id}
+                                        </p>
+                                        {jobsite._sourceNote && (
+                                          <div className="mt-1 flex items-start gap-1">
+                                            <Info className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-red-600 italic">{jobsite._sourceNote}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteOrphaned('jobsite', jobsite.id)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-100 flex-shrink-0"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {(validationResults.accounts.orphaned.length === 0 && 
+                          validationResults.contacts.orphaned.length === 0 && 
+                          validationResults.estimates.orphaned.length === 0 && 
+                          validationResults.jobsites.orphaned.length === 0) && (
+                          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <p className="text-sm text-slate-600">No orphaned records found.</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="warnings" className="mt-4">
+                      <div className="space-y-4">
+                        {(validationResults.warnings.length > 0 || validationResults.errors.length > 0) && (
+                          <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                            <h4 className="font-semibold text-orange-900 mb-3">⚠️ Warnings & Errors</h4>
+                            
+                            {validationResults.errors.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-red-900 mb-2">
+                                  Errors ({validationResults.errors.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.errors.map((err, idx) => (
+                                    <div key={idx} className="bg-white p-3 rounded border border-red-200">
+                                      <p className="text-sm text-red-800">
+                                        ❌ {err.message || err}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {validationResults.warnings.length > 0 && (
+                              <div className="mb-4">
+                                <p className="text-sm font-semibold text-orange-900 mb-2">
+                                  Warnings ({validationResults.warnings.length})
+                                </p>
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                  {validationResults.warnings.map((warn, idx) => (
+                                    <div key={idx} className="bg-white p-3 rounded border border-orange-200">
+                                      <p className="text-sm text-orange-800">
+                                        ⚠️ {warn.message || warn}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {(validationResults.warnings.length === 0 && validationResults.errors.length === 0) && (
+                          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <p className="text-sm text-slate-600">No warnings or errors found.</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Legacy Detailed Results - Hidden, kept for reference */}
+                  {false && showValidation && (
                     <div className="space-y-4 mt-4 pt-4 border-t border-slate-200">
                       {/* Orphaned Records Warning */}
                       {(validationResults.accounts.orphaned.length > 0 || 

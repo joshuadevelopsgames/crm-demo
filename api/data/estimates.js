@@ -231,6 +231,16 @@ export default async function handler(req, res) {
             }
             seenInBatch.add(lookupValue);
             
+            // Debug: Log contract_end for first few estimates to diagnose missing dates
+            if (seenInBatch.size <= 3 && estimate.status === 'won') {
+              console.log(`🔍 Sample estimate ${lookupValue}:`, {
+                hasContractEnd: !!estimate.contract_end,
+                contractEnd: estimate.contract_end,
+                status: estimate.status,
+                account_id: estimate.account_id
+              });
+            }
+            
             // Remove id if it's not a valid UUID - let Supabase generate it
             // Also remove internal tracking fields and fields that don't exist in the schema
             const { id, account_id, contact_id, _is_orphaned, _link_method, ...estimateWithoutIds } = estimate;
@@ -238,6 +248,15 @@ export default async function handler(req, res) {
               ...estimateWithoutIds,
               updated_at: new Date().toISOString()
             };
+            
+            // Debug: Verify contract_end is in estimateData
+            if (seenInBatch.size <= 3 && estimate.status === 'won') {
+              console.log(`🔍 estimateData for ${lookupValue}:`, {
+                hasContractEnd: !!estimateData.contract_end,
+                contractEnd: estimateData.contract_end,
+                status: estimateData.status
+              });
+            }
             
             // Include id if provided (should be from import)
             if (id) {
