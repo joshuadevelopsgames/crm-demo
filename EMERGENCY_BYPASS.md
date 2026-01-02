@@ -2,7 +2,7 @@
 
 ## Emergency Codeword
 
-**`DEPLOY_EMERGENCY_2024`**
+**`FLASH25`**
 
 ## How to Use
 
@@ -19,7 +19,7 @@ This script will:
 
 ### Option 2: Manual Bypass
 ```bash
-PRODUCTION_BYPASS=DEPLOY_EMERGENCY_2024 git push production main
+PRODUCTION_BYPASS=FLASH25 git push production main
 ```
 
 ## ⚠️ Important Notes

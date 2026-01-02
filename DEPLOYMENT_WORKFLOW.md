@@ -152,10 +152,10 @@ This script will:
 
 ### Option 2: Manual Bypass
 ```bash
-PRODUCTION_BYPASS=DEPLOY_EMERGENCY_2024 git push production main
+PRODUCTION_BYPASS=FLASH25 git push production main
 ```
 
-**Emergency Codeword:** `DEPLOY_EMERGENCY_2024`
+**Emergency Codeword:** `FLASH25`
 
 ⚠️ **Use sparingly!** This bypasses all safety checks. Only use in true emergencies.
 

@@ -27,7 +27,7 @@ echo "Enter the emergency codeword:"
 read -s codeword
 echo ""
 
-if [ "$codeword" != "DEPLOY_EMERGENCY_2024" ]; then
+if [ "$codeword" != "FLASH25" ]; then
     echo "❌ Invalid codeword. Emergency push cancelled."
     exit 1
 fi
@@ -42,7 +42,7 @@ fi
 
 echo ""
 echo "🚀 Pushing to production with emergency bypass..."
-PRODUCTION_BYPASS="DEPLOY_EMERGENCY_2024" git push production main
+PRODUCTION_BYPASS="FLASH25" git push production main
 
 echo ""
 echo "✅ Emergency push complete!"
