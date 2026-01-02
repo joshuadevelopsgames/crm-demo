@@ -733,45 +733,11 @@ export default function NotificationBell() {
           unreadCount = count;
         }
         
-        // Debug: log account IDs if count doesn't match
-        if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
-          console.log(`🔔 Unread count mismatch: ${unreadNotifications.length} unread notifications, ${unreadCount} unique accounts`);
-          console.log(`🔔 Account IDs:`, Array.from(uniqueUnreadAccountIds).slice(0, 10));
-          console.log(`🔔 All account IDs (with duplicates):`, unreadAccountIds.slice(0, 20));
-        }
-        
-        // Debug logging for renewal reminders and neglected accounts
-        if (notifications.length > 0) {
-          const typeLabel = type === 'renewal_reminder' ? 'Renewal reminder' : 'Neglected account';
-          console.log(`🔔 ${typeLabel} group: ${notifications.length} notifications (${activeNotificationsOnly.length} after snooze filter), ${count} unique accounts, ${unreadNotifications.length} unread notifications, ${unreadCount} unique unread accounts`);
-          console.log(`🔔 Display values: count=${count}, unreadCount=${unreadCount} (should be used for badge and text)`);
-          console.log(`🔔 VERIFY: unreadCount should be ${unreadCount}, not ${unreadNotifications.length}`);
-          console.log(`🔔 CRITICAL: The badge should show ${count} and text should show "${unreadCount} unread notifications"`);
-          
-          // For neglected accounts, show detailed breakdown
-          if (type === 'neglected_account') {
-            console.log(`🔔 Neglected account breakdown: ${notifications.length} total, ${activeNotificationsOnly.length} after snooze, ${count} unique accounts (badge), ${unreadCount} unique unread accounts (text)`);
-            if (notifications.length !== activeNotificationsOnly.length) {
-              console.warn(`⚠️ WARNING: ${notifications.length - activeNotificationsOnly.length} notifications were filtered as snoozed`);
-            }
-            if (count !== unreadCount && unreadNotifications.length === activeNotificationsOnly.length) {
-              console.warn(`⚠️ WARNING: All ${activeNotificationsOnly.length} notifications are unread, but count (${count}) != unreadCount (${unreadCount})`);
-            }
-          }
-          
-          // Log the actual account IDs to verify uniqueness
-          if (unreadNotifications.length > unreadCount) {
-            console.warn(`⚠️ WARNING: ${unreadNotifications.length} unread notifications but only ${unreadCount} unique accounts - this suggests duplicates`);
-            const accountIdCounts = {};
-            unreadAccountIds.forEach(id => {
-              accountIdCounts[id] = (accountIdCounts[id] || 0) + 1;
-            });
-            const duplicates = Object.entries(accountIdCounts).filter(([id, count]) => count > 1);
-            if (duplicates.length > 0) {
-              console.warn(`⚠️ Found ${duplicates.length} accounts with multiple notifications:`, duplicates.slice(0, 5));
-            }
-          }
-        }
+        // Debug logging disabled to reduce console noise
+        // Uncomment if needed for debugging:
+        // if (unreadNotifications.length !== unreadCount && unreadNotifications.length > 0) {
+        //   console.log(`🔔 Unread count mismatch: ${unreadNotifications.length} unread notifications, ${unreadCount} unique accounts`);
+        // }
       }
       
       const group = {
@@ -781,24 +747,7 @@ export default function NotificationBell() {
         unreadCount
       };
       
-      // Additional debug for renewal reminders and neglected accounts
-      if ((type === 'renewal_reminder' || type === 'neglected_account') && notifications.length > 0) {
-        console.log(`🔔 Final group object for ${type}:`, {
-          notificationsCount: group.notifications.length,
-          count: group.count,
-          unreadCount: group.unreadCount,
-          unreadNotificationsCount: group.notifications.filter(n => !n.is_read).length,
-          expectedUnreadCount: unreadCount // Should match group.unreadCount
-        });
-        
-        // CRITICAL CHECK: Verify unreadCount is correct
-        if (group.unreadCount !== unreadCount) {
-          console.error(`❌ ERROR: group.unreadCount (${group.unreadCount}) doesn't match calculated unreadCount (${unreadCount})`);
-        }
-        if (group.unreadCount === group.notifications.filter(n => !n.is_read).length && group.unreadCount > group.count) {
-          console.error(`❌ ERROR: unreadCount (${group.unreadCount}) equals total unread notifications but should equal unique accounts (${group.count})`);
-        }
-      }
+      // Debug logging disabled to reduce console noise
       
       return group;
     });

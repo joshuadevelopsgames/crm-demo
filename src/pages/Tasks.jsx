@@ -1580,18 +1580,27 @@ export default function Tasks() {
               {/* Tabs for Details, Comments, Attachments */}
               <Tabs
                 value={taskDialogTab}
-                onValueChange={setTaskDialogTab}
+                onValueChange={(value) => {
+                  // Prevent switching to comments tab when it's hidden
+                  if (value === 'comments' && !(editingTask || viewingTask)) {
+                    return;
+                  }
+                  setTaskDialogTab(value);
+                }}
                 className="w-full"
               >
-                <TabsList className={`grid w-full ${editingTask || viewingTask ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="details">Details</TabsTrigger>
                   <TabsTrigger
                     value="comments"
-                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'invisible pointer-events-none' : ''}`}
-                    tabIndex={!(editingTask || viewingTask) ? -1 : undefined}
+                    className={`flex items-center gap-2 ${!(editingTask || viewingTask) ? 'opacity-0 pointer-events-none w-0 p-0 m-0 overflow-hidden' : ''}`}
+                    disabled={!(editingTask || viewingTask)}
+                    style={!(editingTask || viewingTask) ? { minWidth: 0, width: 0, padding: 0, margin: 0 } : undefined}
                   >
                     <MessageSquare className="w-4 h-4" />
-                    Comments ({taskComments.length})
+                    <span className={!(editingTask || viewingTask) ? 'hidden' : ''}>
+                      Comments ({taskComments.length})
+                    </span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="attachments"
