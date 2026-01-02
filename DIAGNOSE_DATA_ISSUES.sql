@@ -50,25 +50,32 @@ GROUP BY status
 ORDER BY count DESC;
 
 -- 4. Check accounts with renewal dates (needed for at-risk accounts)
+-- Renewal dates are calculated from won estimates with contract_end dates
 SELECT 
   'Accounts With Renewal Dates' as check_type,
   COUNT(DISTINCT a.id) as accounts_with_renewal_dates,
-  COUNT(DISTINCT a.id) FILTER (WHERE a.calculated_renewal_date IS NOT NULL) as accounts_with_calculated_renewal,
+  COUNT(DISTINCT a.id) FILTER (WHERE a.renewal_date IS NOT NULL) as accounts_with_stored_renewal,
   COUNT(DISTINCT a.id) as total_accounts
 FROM accounts a
-LEFT JOIN estimates e ON e.account_id = a.id
+INNER JOIN estimates e ON e.account_id = a.id
 WHERE e.status = 'won' AND e.contract_end IS NOT NULL;
 
 -- 5. Check at-risk accounts (renewal within 180 days or past due)
+-- At-risk accounts are those with won estimates that have contract_end within 180 days
 SELECT 
   'At-Risk Accounts Check' as check_type,
-  COUNT(*) FILTER (WHERE 
-    calculated_renewal_date IS NOT NULL 
-    AND calculated_renewal_date <= CURRENT_DATE + INTERVAL '180 days'
-    AND archived = false
+  COUNT(DISTINCT a.id) FILTER (WHERE 
+    a.archived = false
+    AND EXISTS (
+      SELECT 1 FROM estimates e2
+      WHERE e2.account_id = a.id
+      AND e2.status = 'won'
+      AND e2.contract_end IS NOT NULL
+      AND e2.contract_end <= CURRENT_DATE + INTERVAL '180 days'
+    )
   ) as at_risk_count,
   COUNT(*) FILTER (WHERE archived = false) as active_accounts
-FROM accounts;
+FROM accounts a;
 
 -- 6. Check revenue segments (needed for revenue display)
 SELECT 
@@ -103,11 +110,12 @@ SELECT
   'Sample At-Risk Accounts' as check_type,
   a.id,
   a.name,
-  a.calculated_renewal_date,
+  a.renewal_date as stored_renewal_date,
   a.status,
   a.revenue_segment,
   COUNT(e.id) FILTER (WHERE e.status = 'won') as won_estimates_count,
-  MAX(e.contract_end) FILTER (WHERE e.status = 'won') as latest_contract_end
+  MAX(e.contract_end) FILTER (WHERE e.status = 'won') as latest_contract_end,
+  MAX(e.contract_end) FILTER (WHERE e.status = 'won') - CURRENT_DATE as days_until_renewal
 FROM accounts a
 LEFT JOIN estimates e ON e.account_id = a.id
 WHERE a.archived = false
@@ -117,7 +125,8 @@ WHERE a.archived = false
     AND e2.status = 'won' 
     AND e2.contract_end IS NOT NULL
   )
-GROUP BY a.id, a.name, a.calculated_renewal_date, a.status, a.revenue_segment
+GROUP BY a.id, a.name, a.renewal_date, a.status, a.revenue_segment
 HAVING MAX(e.contract_end) FILTER (WHERE e.status = 'won') <= CURRENT_DATE + INTERVAL '180 days'
+ORDER BY MAX(e.contract_end) FILTER (WHERE e.status = 'won')
 LIMIT 10;
 
