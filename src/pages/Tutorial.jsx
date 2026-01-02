@@ -313,14 +313,14 @@ const tutorialSteps = [
             <Tag className="w-5 h-5 text-pink-500 mt-0.5" />
             <div>
               <p className="font-semibold">Labels & Categories</p>
-              <p className="text-sm text-slate-600">Organize tasks with custom labels and categories</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Organize tasks with custom labels and categories</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Calendar className="w-5 h-5 text-indigo-500 mt-0.5" />
             <div>
               <p className="font-semibold">Due Dates & Times</p>
-              <p className="text-sm text-slate-600">Set specific due dates and times for precise scheduling</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Set specific due dates and times for precise scheduling</p>
             </div>
           </div>
         </div>
@@ -355,28 +355,28 @@ const tutorialSteps = [
             <GitBranch className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="font-semibold">Create Template Sequences</p>
-              <p className="text-sm text-slate-600">Build reusable sequence templates with multiple steps</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Build reusable sequence templates with multiple steps</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <ListTodo className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Automatic Task Creation</p>
-              <p className="text-sm text-slate-600">When you enroll an account, tasks are created automatically from sequence steps</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">When you enroll an account, tasks are created automatically from sequence steps</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Lock className="w-5 h-5 text-orange-500 mt-0.5" />
             <div>
               <p className="font-semibold">Ordered & Blocked</p>
-              <p className="text-sm text-slate-600">Tasks are ordered and blocked - next task unlocks when previous completes</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Tasks are ordered and blocked - next task unlocks when previous completes</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Calendar className="w-5 h-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-semibold">Smart Scheduling</p>
-              <p className="text-sm text-slate-600">Due dates calculated from step delays (e.g., "3 days after previous")</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Due dates calculated from step delays (e.g., "3 days after previous")</p>
             </div>
           </div>
         </div>
@@ -412,28 +412,28 @@ const tutorialSteps = [
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Linked to Accounts</p>
-              <p className="text-sm text-slate-600">Every contact belongs to an account</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Every contact belongs to an account</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Contact Information</p>
-              <p className="text-sm text-slate-600">Email, phone, LinkedIn, title, and role</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Email, phone, LinkedIn, title, and role</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Roles & Preferences</p>
-              <p className="text-sm text-slate-600">Track decision makers, influencers, and contact preferences</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Track decision makers, influencers, and contact preferences</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">View All Contacts</p>
-              <p className="text-sm text-slate-600">See all contacts across all accounts in one place</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">See all contacts across all accounts in one place</p>
             </div>
           </div>
         </div>
@@ -459,28 +459,28 @@ const tutorialSteps = [
             <Bell className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="font-semibold">Task Reminders</p>
-              <p className="text-sm text-slate-600">Notifications for upcoming and overdue tasks</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Notifications for upcoming and overdue tasks</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Bell className="w-5 h-5 text-orange-500 mt-0.5" />
             <div>
               <p className="font-semibold">Renewal Reminders</p>
-              <p className="text-sm text-slate-600">Alerts for accounts with renewals coming up (6 months ahead)</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Alerts for accounts with renewals coming up (6 months ahead)</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Bell className="w-5 h-5 text-red-500 mt-0.5" />
             <div>
               <p className="font-semibold">Neglected Accounts</p>
-              <p className="text-sm text-slate-600">Warnings for accounts with no interaction in 90+ days</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Warnings for accounts with no interaction in 90+ days</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Snooze Notifications</p>
-              <p className="text-sm text-slate-600">Temporarily hide notifications you're not ready to act on</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Temporarily hide notifications you're not ready to act on</p>
             </div>
           </div>
         </div>
@@ -502,28 +502,28 @@ const tutorialSteps = [
             <BarChart3 className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="font-semibold">Win/Loss Report</p>
-              <p className="text-sm text-slate-600">Track win rates, total value, and performance by year</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Track win rates, total value, and performance by year</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Building2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Department Report</p>
-              <p className="text-sm text-slate-600">Analyze performance by department or division</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Analyze performance by department or division</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <TrendingUp className="w-5 h-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-semibold">Account Performance</p>
-              <p className="text-sm text-slate-600">See which accounts are performing best</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">See which accounts are performing best</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <FileText className="w-5 h-5 text-orange-500 mt-0.5" />
             <div>
               <p className="font-semibold">Export Options</p>
-              <p className="text-sm text-slate-600">Export to XLSX or PDF for sharing and analysis</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Export to XLSX or PDF for sharing and analysis</p>
             </div>
           </div>
         </div>
@@ -549,21 +549,21 @@ const tutorialSteps = [
             <Bell className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="font-semibold">Notification Preferences</p>
-              <p className="text-sm text-slate-600">Control email notifications, task reminders, and system announcements</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Control email notifications, task reminders, and system announcements</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Settings className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Display Preferences</p>
-              <p className="text-sm text-slate-600">Customize how information is displayed</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Customize how information is displayed</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <FileText className="w-5 h-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-semibold">End of Year Reports</p>
-              <p className="text-sm text-slate-600">Access and manage annual reports</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Access and manage annual reports</p>
             </div>
           </div>
         </div>
@@ -586,21 +586,21 @@ const tutorialSteps = [
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Automatic Sync</p>
-              <p className="text-sm text-slate-600">Data loads when you open the CRM</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Data loads when you open the CRM</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Scorecard Export</p>
-              <p className="text-sm text-slate-600">CSV exports match your Google Sheet format</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">CSV exports match your Google Sheet format</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">All Tabs Supported</p>
-              <p className="text-sm text-slate-600">Scorecard, Contacts, Insights, Notes, Cadence, Lookup Legend</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Scorecard, Contacts, Insights, Notes, Cadence, Lookup Legend</p>
             </div>
           </div>
         </div>
@@ -621,7 +621,7 @@ const tutorialSteps = [
         </div>
         <div>
           <p className="text-lg font-semibold mb-2">Congratulations!</p>
-          <p className="text-slate-600">You now know the basics of your CRM system.</p>
+          <p className="text-slate-600 dark:text-slate-400">You now know the basics of your CRM system.</p>
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
           <p className="font-semibold mb-2 text-blue-900 dark:text-blue-200">Next Steps:</p>
