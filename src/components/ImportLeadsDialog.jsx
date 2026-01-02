@@ -238,30 +238,70 @@ export default function ImportLeadsDialog({ open, onClose }) {
   };
 
   // Fetch existing data from database for comparison
+  // Handles pagination to get ALL records, not just the first page
   const fetchExistingData = async () => {
     try {
       // Add timeout to prevent hanging
-      const timeout = 30000; // 30 seconds
+      const timeout = 60000; // 60 seconds (increased for pagination)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       try {
-        const [accountsRes, contactsRes, estimatesRes, jobsitesRes] = await Promise.all([
+        // Fetch accounts and contacts (these APIs handle pagination internally)
+        const [accountsRes, contactsRes] = await Promise.all([
           fetch('/api/data/accounts', { signal: controller.signal }),
-          fetch('/api/data/contacts', { signal: controller.signal }),
-          fetch('/api/data/estimates', { signal: controller.signal }),
-          fetch('/api/data/jobsites', { signal: controller.signal })
+          fetch('/api/data/contacts', { signal: controller.signal })
         ]);
-
-        clearTimeout(timeoutId);
 
         const accounts = accountsRes.ok ? (await accountsRes.json()).data || [] : [];
         const contacts = contactsRes.ok ? (await contactsRes.json()).data || [] : [];
-        const estimates = estimatesRes.ok ? (await estimatesRes.json()).data || [] : [];
-        const jobsites = jobsitesRes.ok ? (await jobsitesRes.json()).data || [] : [];
 
-        setExistingData({ accounts, contacts, estimates, jobsites });
-        return { accounts, contacts, estimates, jobsites };
+        // Fetch estimates with pagination (API returns up to 1000 per page)
+        let allEstimates = [];
+        let estimatesPage = 0;
+        const estimatesPageSize = 1000;
+        let hasMoreEstimates = true;
+
+        while (hasMoreEstimates) {
+          const estimatesRes = await fetch(`/api/data/estimates?page=${estimatesPage}&pageSize=${estimatesPageSize}`, { signal: controller.signal });
+          if (!estimatesRes.ok) break;
+          
+          const estimatesData = await estimatesRes.json();
+          if (estimatesData.data && estimatesData.data.length > 0) {
+            allEstimates = allEstimates.concat(estimatesData.data);
+            hasMoreEstimates = estimatesData.data.length === estimatesPageSize;
+            estimatesPage++;
+          } else {
+            hasMoreEstimates = false;
+          }
+        }
+
+        // Fetch jobsites with pagination
+        let allJobsites = [];
+        let jobsitesPage = 0;
+        const jobsitesPageSize = 1000;
+        let hasMoreJobsites = true;
+
+        while (hasMoreJobsites) {
+          const jobsitesRes = await fetch(`/api/data/jobsites?page=${jobsitesPage}&pageSize=${jobsitesPageSize}`, { signal: controller.signal });
+          if (!jobsitesRes.ok) break;
+          
+          const jobsitesData = await jobsitesRes.json();
+          if (jobsitesData.data && jobsitesData.data.length > 0) {
+            allJobsites = allJobsites.concat(jobsitesData.data);
+            hasMoreJobsites = jobsitesData.data.length === jobsitesPageSize;
+            jobsitesPage++;
+          } else {
+            hasMoreJobsites = false;
+          }
+        }
+
+        clearTimeout(timeoutId);
+
+        console.log(`✅ Fetched existing data: ${accounts.length} accounts, ${contacts.length} contacts, ${allEstimates.length} estimates, ${allJobsites.length} jobsites`);
+
+        setExistingData({ accounts, contacts, estimates: allEstimates, jobsites: allJobsites });
+        return { accounts, contacts, estimates: allEstimates, jobsites: allJobsites };
       } catch (fetchErr) {
         clearTimeout(timeoutId);
         if (fetchErr.name === 'AbortError') {

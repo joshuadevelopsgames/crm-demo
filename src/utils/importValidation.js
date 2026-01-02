@@ -186,20 +186,32 @@ export function compareWithExisting(
   existingEstimates.forEach(est => {
     // Try multiple lookup keys for estimates
     if (est.lmn_estimate_id) {
-      // Store with original case
-      existingEstimatesMap.set(est.lmn_estimate_id, est);
+      // Normalize to string and store with original case
+      const lmnId = String(est.lmn_estimate_id);
+      existingEstimatesMap.set(lmnId, est);
       // Also store with uppercase for case-insensitive matching
-      existingEstimatesMap.set(est.lmn_estimate_id.toUpperCase(), est);
+      existingEstimatesMap.set(lmnId.toUpperCase(), est);
+      // Also store with lowercase
+      existingEstimatesMap.set(lmnId.toLowerCase(), est);
     }
     // Also try estimate_number as fallback
     if (est.estimate_number) {
-      existingEstimatesMap.set(est.estimate_number, est);
-      existingEstimatesMap.set(est.estimate_number.toUpperCase(), est);
+      const estNum = String(est.estimate_number);
+      existingEstimatesMap.set(estNum, est);
+      existingEstimatesMap.set(estNum.toUpperCase(), est);
+      existingEstimatesMap.set(estNum.toLowerCase(), est);
     }
     if (est.id) {
-      existingEstimatesMap.set(est.id, est);
+      existingEstimatesMap.set(String(est.id), est);
     }
   });
+  
+  // Debug: Log map size and sample keys
+  if (existingEstimates.length > 0) {
+    console.log(`[compareWithExisting] Built estimates map with ${existingEstimatesMap.size} entries from ${existingEstimates.length} estimates`);
+    const sampleKeys = Array.from(existingEstimatesMap.keys()).slice(0, 5);
+    console.log(`[compareWithExisting] Sample estimate map keys:`, sampleKeys);
+  }
 
   const existingJobsitesMap = new Map();
   existingJobsites.forEach(jobsite => {
@@ -314,13 +326,18 @@ export function compareWithExisting(
   // Compare Estimates
   if (importedData.estimates) {
     importedData.estimates.forEach(importedEstimate => {
-      // Try multiple lookup strategies
-      const lookupId = importedEstimate.lmn_estimate_id || importedEstimate.estimate_number || importedEstimate.id;
+      // Try multiple lookup strategies - normalize to string
+      const lookupId = String(importedEstimate.lmn_estimate_id || importedEstimate.estimate_number || importedEstimate.id || '');
       let existing = existingEstimatesMap.get(lookupId);
       
       // Try uppercase if not found (case-insensitive matching)
       if (!existing && lookupId) {
         existing = existingEstimatesMap.get(lookupId.toUpperCase());
+      }
+      
+      // Try lowercase if still not found
+      if (!existing && lookupId) {
+        existing = existingEstimatesMap.get(lookupId.toLowerCase());
       }
       
       // Try with "EST" prefix if it's missing
@@ -335,20 +352,31 @@ export function compareWithExisting(
         if (!existing) {
           existing = existingEstimatesMap.get(withoutPrefix.toUpperCase());
         }
+        if (!existing) {
+          existing = existingEstimatesMap.get(withoutPrefix.toLowerCase());
+        }
       }
 
       // Debug: Log first few estimates that aren't found
       if (!existing && comparison.estimates.new.length < 5) {
         console.log('[compareWithExisting] Estimate not found in database:', {
           lookupId,
+          lookupIdType: typeof lookupId,
           lmn_estimate_id: importedEstimate.lmn_estimate_id,
+          lmn_estimate_idType: typeof importedEstimate.lmn_estimate_id,
           estimate_number: importedEstimate.estimate_number,
+          estimate_numberType: typeof importedEstimate.estimate_number,
           id: importedEstimate.id,
           existingEstimatesCount: existingEstimates.length,
+          mapSize: existingEstimatesMap.size,
+          mapHasLookupId: existingEstimatesMap.has(lookupId),
+          mapHasUppercase: existingEstimatesMap.has(lookupId.toUpperCase()),
           sampleExistingIds: existingEstimates.slice(0, 10).map(e => ({
             id: e.id,
             lmn_estimate_id: e.lmn_estimate_id,
+            lmn_estimate_idType: typeof e.lmn_estimate_id,
             estimate_number: e.estimate_number,
+            estimate_numberType: typeof e.estimate_number,
             hasLmnId: !!e.lmn_estimate_id,
             hasEstimateNumber: !!e.estimate_number
           }))
