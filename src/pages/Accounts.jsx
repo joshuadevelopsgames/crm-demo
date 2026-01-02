@@ -159,14 +159,25 @@ export default function Accounts() {
   // Extract unique users from estimates with counts
   const usersWithCounts = useMemo(() => {
     const userMap = new Map();
+    let estimatesWithUsers = 0;
+    let estimatesWithoutUsers = 0;
     
     allEstimates.forEach(est => {
       // Count accounts per user (salesperson or estimator)
       const accountId = est.account_id;
       if (!accountId) return;
       
+      const hasSalesperson = est.salesperson && est.salesperson.trim();
+      const hasEstimator = est.estimator && est.estimator.trim();
+      
+      if (hasSalesperson || hasEstimator) {
+        estimatesWithUsers++;
+      } else {
+        estimatesWithoutUsers++;
+      }
+      
       // Track salesperson
-      if (est.salesperson && est.salesperson.trim()) {
+      if (hasSalesperson) {
         const name = est.salesperson.trim();
         if (!userMap.has(name)) {
           userMap.set(name, { name, accounts: new Set(), roles: new Set() });
@@ -176,7 +187,7 @@ export default function Accounts() {
       }
       
       // Track estimator
-      if (est.estimator && est.estimator.trim()) {
+      if (hasEstimator) {
         const name = est.estimator.trim();
         if (!userMap.has(name)) {
           userMap.set(name, { name, accounts: new Set(), roles: new Set() });
@@ -185,6 +196,21 @@ export default function Accounts() {
         userMap.get(name).roles.add('estimator');
       }
     });
+    
+    // Debug logging
+    if (userMap.size === 0 && allEstimates.length > 0) {
+      console.warn('[Accounts] No users found in estimates:', {
+        totalEstimates: allEstimates.length,
+        estimatesWithUsers,
+        estimatesWithoutUsers,
+        sampleEstimates: allEstimates.slice(0, 5).map(e => ({
+          id: e.id,
+          salesperson: e.salesperson,
+          estimator: e.estimator,
+          account_id: e.account_id
+        }))
+      });
+    }
     
     // Convert to array and sort by name
     return Array.from(userMap.values())
@@ -697,7 +723,7 @@ export default function Accounts() {
               users={usersWithCounts}
               selectedUsers={selectedUsers}
               onSelectionChange={setSelectedUsers}
-              placeholder="Filter by User"
+              placeholder="User"
             />
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48">

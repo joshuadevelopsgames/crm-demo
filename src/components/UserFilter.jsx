@@ -89,11 +89,11 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       <Button
         ref={triggerRef}
         variant="outline"
-        className="w-48 justify-between"
+        className="w-40 h-9 justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="truncate">{displayText}</span>
-        <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", isOpen && "rotate-180")} />
+        <span className={cn("truncate", selectedUsers.length === 0 && "text-muted-foreground")}>{displayText}</span>
+        <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform shrink-0", isOpen && "rotate-180")} />
       </Button>
 
       {isOpen && createPortal(
@@ -129,25 +129,31 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
               )}
             </div>
             <div className="space-y-1">
-              {users.map((user) => {
-                const isSelected = selectedUsers.includes(user.name);
-                return (
-                  <div
-                    key={user.name}
-                    className="flex items-center gap-2 p-2 rounded-sm hover:bg-accent cursor-pointer"
-                    onClick={() => handleToggleUser(user.name)}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleUser(user.name)}
-                    />
-                    <span className="flex-1 text-sm">{user.name}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {user.count}
-                    </Badge>
-                  </div>
-                );
-              })}
+              {users.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No users found. Users are extracted from estimates with salesperson or estimator fields.
+                </div>
+              ) : (
+                users.map((user) => {
+                  const isSelected = selectedUsers.includes(user.name);
+                  return (
+                    <div
+                      key={user.name}
+                      className="flex items-center gap-2 p-2 rounded-sm hover:bg-accent cursor-pointer"
+                      onClick={() => handleToggleUser(user.name)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleUser(user.name)}
+                      />
+                      <span className="flex-1 text-sm">{user.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {user.count}
+                      </Badge>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>,
