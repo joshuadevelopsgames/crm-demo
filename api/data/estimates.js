@@ -130,6 +130,15 @@ export default async function handler(req, res) {
           estimateData.contact_id = null;
         }
         
+        // Always preserve contract_start and contract_end from incoming data, even if they're null
+        // This ensures contract dates are properly saved during import
+        if (estimate.contract_start !== undefined) {
+          estimateData.contract_start = estimate.contract_start;
+        }
+        if (estimate.contract_end !== undefined) {
+          estimateData.contract_end = estimate.contract_end;
+        }
+        
         // Include id if provided (should be from import)
         if (id) {
           estimateData.id = id;
@@ -285,8 +294,11 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
-            // Always preserve contract_end from incoming data, even if it's null
-            // This ensures contract_end dates are properly saved during import
+            // Always preserve contract_start and contract_end from incoming data, even if they're null
+            // This ensures contract dates are properly saved during import
+            if (estimate.contract_start !== undefined) {
+              estimateData.contract_start = estimate.contract_start;
+            }
             if (estimate.contract_end !== undefined) {
               estimateData.contract_end = estimate.contract_end;
             }
