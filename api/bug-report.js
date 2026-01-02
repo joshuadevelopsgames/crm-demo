@@ -188,17 +188,31 @@ ${bugReport.consoleLogs.map(log =>
         } else {
           console.log(`✅ Found user profile: ${profile.id} (${profile.email})`);
           
-          // Create notification
+          // Create notification with full bug report data stored as JSON
           const notificationTitle = '🐛 New Bug Report';
           const notificationMessage = bugReport.description.length > 100 
             ? bugReport.description.substring(0, 100) + '...'
             : bugReport.description;
 
+          // Store full bug report data as JSON in message field (for full debugging info)
+          // Format: Short preview + JSON data
+          const fullBugReportData = {
+            description: bugReport.description,
+            userEmail: bugReport.userEmail,
+            selectedElement: bugReport.selectedElement,
+            consoleLogs: bugReport.consoleLogs,
+            userInfo: bugReport.userInfo
+          };
+          
+          // Store as: "Preview text\n\n---FULL_DATA---\n{JSON}"
+          const messageWithData = `${notificationMessage}\n\n---FULL_DATA---\n${JSON.stringify(fullBugReportData, null, 2)}`;
+
           console.log('📝 Creating notification:', {
             user_id: profile.id,
             type: 'bug_report',
             title: notificationTitle,
-            message: notificationMessage.substring(0, 50) + '...'
+            messagePreview: notificationMessage.substring(0, 50) + '...',
+            hasFullData: true
           });
 
           const { data: notificationData, error: notificationInsertError } = await supabase
@@ -207,7 +221,7 @@ ${bugReport.consoleLogs.map(log =>
               user_id: profile.id,
               type: 'bug_report',
               title: notificationTitle,
-              message: notificationMessage,
+              message: messageWithData,
               is_read: false,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
@@ -369,7 +383,7 @@ async function sendViaResend(recipientEmail, subject, body) {
 
     const contentType = response.headers.get('content-type');
     const isJson = contentType && contentType.includes('application/json');
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       let errorDetails;

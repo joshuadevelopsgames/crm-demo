@@ -1286,51 +1286,124 @@ export default function NotificationBell() {
 
       {/* Bug Report Details Dialog */}
       <Dialog open={bugReportDialogOpen} onOpenChange={setBugReportDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bug className="w-5 h-5 text-red-600" />
               Bug Report Details
             </DialogTitle>
             <DialogDescription>
-              Full details of the bug report
+              Full debugging information from the bug report
             </DialogDescription>
           </DialogHeader>
-          {selectedBugReport && (
-            <div className="space-y-4 py-4">
-              <div>
-                <Label className="text-sm font-semibold">Title</Label>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                  {selectedBugReport.title}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-semibold">Description</Label>
-                <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
-                    {selectedBugReport.message}
+          {selectedBugReport && (() => {
+            // Parse full bug report data from message
+            let bugReportData = null;
+            let messagePreview = selectedBugReport.message;
+            
+            if (selectedBugReport.message && selectedBugReport.message.includes('---FULL_DATA---')) {
+              const parts = selectedBugReport.message.split('---FULL_DATA---\n');
+              messagePreview = parts[0].trim();
+              try {
+                bugReportData = JSON.parse(parts[1] || '{}');
+              } catch (e) {
+                console.error('Error parsing bug report data:', e);
+              }
+            }
+            
+            return (
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label className="text-sm font-semibold">Reported At</Label>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                    {format(new Date(selectedBugReport.created_at), 'PPpp')}
                   </p>
                 </div>
+
+                <div>
+                  <Label className="text-sm font-semibold">Description</Label>
+                  <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                      {bugReportData?.description || messagePreview}
+                    </p>
+                  </div>
+                </div>
+
+                {bugReportData?.userEmail && bugReportData.userEmail !== 'Not provided' && (
+                  <div>
+                    <Label className="text-sm font-semibold">Reporter Email</Label>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                      {bugReportData.userEmail}
+                    </p>
+                  </div>
+                )}
+
+                {bugReportData?.userInfo && (
+                  <div>
+                    <Label className="text-sm font-semibold">User Information</Label>
+                    <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+                        <p><strong>URL:</strong> {bugReportData.userInfo.url || 'Unknown'}</p>
+                        <p><strong>User Agent:</strong> {bugReportData.userInfo.userAgent || 'Unknown'}</p>
+                        <p><strong>Viewport:</strong> {bugReportData.userInfo.viewport?.width || 'Unknown'}x{bugReportData.userInfo.viewport?.height || 'Unknown'}</p>
+                        <p><strong>Timestamp:</strong> {bugReportData.userInfo.timestamp ? format(new Date(bugReportData.userInfo.timestamp), 'PPpp') : 'Unknown'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {bugReportData?.selectedElement && (
+                  <div>
+                    <Label className="text-sm font-semibold">Selected Element</Label>
+                    <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                        <p><strong>Tag:</strong> {bugReportData.selectedElement.tagName || 'N/A'}</p>
+                        <p><strong>ID:</strong> {bugReportData.selectedElement.id || 'None'}</p>
+                        <p><strong>Class:</strong> {bugReportData.selectedElement.className || 'None'}</p>
+                        <p><strong>XPath:</strong> {bugReportData.selectedElement.xpath || 'N/A'}</p>
+                        {bugReportData.selectedElement.textContent && (
+                          <p><strong>Text Content:</strong> {bugReportData.selectedElement.textContent.substring(0, 200)}{bugReportData.selectedElement.textContent.length > 200 ? '...' : ''}</p>
+                        )}
+                      </div>
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
+                          View Full Element Details (JSON)
+                        </summary>
+                        <pre className="mt-2 p-2 bg-slate-100 dark:bg-slate-900 text-xs overflow-x-auto rounded">
+                          {JSON.stringify(bugReportData.selectedElement, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  </div>
+                )}
+
+                {bugReportData?.consoleLogs && bugReportData.consoleLogs.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-semibold">Console Logs ({bugReportData.consoleLogs.length} entries)</Label>
+                    <div className="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg max-h-96 overflow-y-auto">
+                      <pre className="text-xs text-slate-700 dark:text-slate-200 font-mono whitespace-pre-wrap">
+                        {bugReportData.consoleLogs.map(log => 
+                          `[${log.timestamp}] [${log.type.toUpperCase()}] ${log.message}`
+                        ).join('\n')}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setBugReportDialogOpen(false);
+                      setSelectedBugReport(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label className="text-sm font-semibold">Reported At</Label>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                  {format(new Date(selectedBugReport.created_at), 'PPpp')}
-                </p>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setBugReportDialogOpen(false);
-                    setSelectedBugReport(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

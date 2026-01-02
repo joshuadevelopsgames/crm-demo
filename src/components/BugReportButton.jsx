@@ -305,7 +305,7 @@ export default function BugReportButton() {
           toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
         }
       } else {
-        toast.success('✓ Bug report sent successfully!');
+      toast.success('✓ Bug report sent successfully!');
       }
       
       console.log('✅ Bug report submitted:', {
