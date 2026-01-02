@@ -276,8 +276,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <ThemeProvider>
-          <UserProvider>
+        <UserProvider>
+          <ThemeProvider>
             <TestModeProvider>
               <TutorialProvider>
               <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
@@ -300,8 +300,8 @@ function App() {
               </div>
               </TutorialProvider>
             </TestModeProvider>
-          </UserProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </UserProvider>
       </Router>
     </QueryClientProvider>
   );
