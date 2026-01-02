@@ -31,8 +31,8 @@ const findFile = (filename) => {
 const files = {
   estimates: findFile('Estimates List.xlsx'),
   contacts: findFile('Contacts Export.xlsx'),
-  leads: findFile('Leads List.xlsx'),
-  jobsites: findFile('Jobsite Export.xlsx')
+  leads: findFile('Leads List.xlsx') || findFile('Leads.xlsx') || findFile('Leads (2).xlsx'),
+  jobsites: findFile('Jobsite Export.xlsx') || findFile('Jobsite Export (1).xlsx')
 };
 
 console.log('🔍 Checking all parser fields...\n');
