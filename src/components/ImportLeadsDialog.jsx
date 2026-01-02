@@ -1284,7 +1284,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Import from LMN</DialogTitle>
-          <p className="text-slate-600 text-sm mt-1">
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
             Upload LMN export files to import accounts, contacts, estimates, and jobsites
           </p>
         </DialogHeader>
@@ -1295,8 +1295,8 @@ export default function ImportLeadsDialog({ open, onClose }) {
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <RefreshCw className="w-12 h-12 text-blue-600 animate-spin" />
               <div className="text-center">
-                <p className="text-lg font-semibold text-slate-900">Validating Data...</p>
-                <p className="text-sm text-slate-600 mt-2">Comparing imported data with existing records</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">Validating Data...</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Comparing imported data with existing records</p>
               </div>
             </div>
           )}
@@ -1306,17 +1306,17 @@ export default function ImportLeadsDialog({ open, onClose }) {
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <RefreshCw className="w-12 h-12 text-emerald-600 animate-spin" />
               <div className="text-center w-full max-w-md">
-                <p className="text-lg font-semibold text-slate-900">Importing Data...</p>
-                <p className="text-sm text-slate-600 mt-2">{importProgress.currentStep}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">Importing Data...</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{importProgress.currentStep}</p>
                 <div className="mt-4 space-y-2">
                   <Progress value={(importProgress.completedSteps / importProgress.totalSteps) * 100} className="w-full" />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Step {importProgress.completedSteps} of {importProgress.totalSteps}
                   </p>
                 </div>
-                <p className="text-xs text-amber-600 mt-4 font-medium">
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-4 font-medium">
                 </p>
-                <p className="text-xs text-slate-500 mt-2">Please wait while we import your data</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Please wait while we import your data</p>
               </div>
             </div>
           )}
@@ -1325,10 +1325,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
           {importStatus === 'idle' || importStatus === 'ready' ? (
             <>
               {/* Instructions */}
-              <Card className="p-4 bg-blue-50 border-blue-200">
+              <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800 dark:text-blue-200">
                     <p className="font-semibold mb-1">Required files (XLSX):</p>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li><strong>Contacts Export</strong> - Has CRM IDs, Contact IDs, Tags, Archived status</li>
@@ -1349,21 +1349,21 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   onDragLeave={handleContactsDragLeave}
                   onDrop={handleContactsDrop}
                   className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    contactsDragging ? 'border-blue-500 bg-blue-50' : 
-                    contactsFile ? 'border-emerald-500 bg-emerald-50' : 
-                    'border-slate-300 bg-slate-50'
+                    contactsDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
+                    contactsFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
+                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
                     {contactsFile ? (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <FileCheck className="w-6 h-6 text-emerald-600" />
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                          <FileCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-emerald-900">File 1 Uploaded ✓</p>
-                          <p className="text-sm text-emerald-700 mt-1">{contactsFile.name}</p>
-                          <p className="text-xs text-slate-600 mt-2">
+                          <p className="font-semibold text-emerald-900 dark:text-emerald-200">File 1 Uploaded ✓</p>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">{contactsFile.name}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                             {contactsData?.stats.accountsFound} accounts, {contactsData?.stats.contactsFound} contacts
                           </p>
                         </div>
@@ -1382,12 +1382,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       </>
                     ) : (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Upload className="w-6 h-6 text-blue-600" />
+                        <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">File 1: Contacts Export</p>
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="font-semibold text-slate-900 dark:text-white">File 1: Contacts Export</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
                         </div>
@@ -1414,10 +1414,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
                             Choose File
                           </label>
                         </Button>
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                           Has: CRM ID, Contact ID, Tags, Archived
                         </p>
                       </>
@@ -1431,21 +1431,21 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   onDragLeave={handleLeadsDragLeave}
                   onDrop={handleLeadsDrop}
                   className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    leadsDragging ? 'border-blue-500 bg-blue-50' : 
-                    leadsFile ? 'border-emerald-500 bg-emerald-50' : 
-                    'border-slate-300 bg-slate-50'
+                    leadsDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
+                    leadsFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
+                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
                     {leadsFile ? (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <FileCheck className="w-6 h-6 text-emerald-600" />
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                          <FileCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-emerald-900">File 2 Uploaded ✓</p>
-                          <p className="text-sm text-emerald-700 mt-1">{leadsFile.name}</p>
-                          <p className="text-xs text-slate-600 mt-2">
+                          <p className="font-semibold text-emerald-900 dark:text-emerald-200">File 2 Uploaded ✓</p>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">{leadsFile.name}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                             {leadsData?.stats.contactsFound} contacts with preferences
                           </p>
                         </div>
@@ -1464,12 +1464,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       </>
                     ) : (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Upload className="w-6 h-6 text-purple-600" />
+                        <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">File 2: Leads List</p>
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="font-semibold text-slate-900 dark:text-white">File 2: Leads List</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
                         </div>
@@ -1496,10 +1496,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
                             Choose File
                           </label>
                         </Button>
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                           Has: Position, Do Not Email/Mail/Call
                         </p>
                       </>
@@ -1513,21 +1513,21 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   onDragLeave={handleEstimatesDragLeave}
                   onDrop={handleEstimatesDrop}
                   className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    estimatesDragging ? 'border-blue-500 bg-blue-50' : 
-                    estimatesFile ? 'border-emerald-500 bg-emerald-50' : 
-                    'border-slate-300 bg-slate-50'
+                    estimatesDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
+                    estimatesFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
+                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
                     {estimatesFile ? (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <FileCheck className="w-6 h-6 text-emerald-600" />
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                          <FileCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-emerald-900">File 3 Uploaded ✓</p>
-                          <p className="text-sm text-emerald-700 mt-1">{estimatesFile.name}</p>
-                          <p className="text-xs text-slate-600 mt-2">
+                          <p className="font-semibold text-emerald-900 dark:text-emerald-200">File 3 Uploaded ✓</p>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">{estimatesFile.name}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                             {estimatesData?.stats.total} estimates
                           </p>
                         </div>
@@ -1547,13 +1547,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       </>
                     ) : (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                          <Upload className="w-6 h-6 text-amber-600" />
+                        <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">File 3: Estimates List</p>
-                          <p className="text-xs text-red-600 font-semibold">(Required)</p>
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="font-semibold text-slate-900 dark:text-white">File 3: Estimates List</p>
+                          <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
                         </div>
@@ -1580,10 +1580,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
                             Choose File
                           </label>
                         </Button>
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                           Has: Estimate ID, Date, Status, Pricing
                         </p>
                       </>
@@ -1597,21 +1597,21 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   onDragLeave={handleJobsitesDragLeave}
                   onDrop={handleJobsitesDrop}
                   className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    jobsitesDragging ? 'border-blue-500 bg-blue-50' : 
-                    jobsitesFile ? 'border-emerald-500 bg-emerald-50' : 
-                    'border-slate-300 bg-slate-50'
+                    jobsitesDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
+                    jobsitesFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
+                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
                     {jobsitesFile ? (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <FileCheck className="w-6 h-6 text-emerald-600" />
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                          <FileCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-emerald-900">File 4 Uploaded ✓</p>
-                          <p className="text-sm text-emerald-700 mt-1">{jobsitesFile.name}</p>
-                          <p className="text-xs text-slate-600 mt-2">
+                          <p className="font-semibold text-emerald-900 dark:text-emerald-200">File 4 Uploaded ✓</p>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">{jobsitesFile.name}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
                             {jobsitesData?.stats.total} jobsites
                           </p>
                         </div>
@@ -1631,13 +1631,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       </>
                     ) : (
                       <>
-                        <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
-                          <Upload className="w-6 h-6 text-teal-600" />
+                        <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">File 4: Jobsite Export</p>
-                          <p className="text-xs text-red-600 font-semibold">(Required)</p>
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="font-semibold text-slate-900 dark:text-white">File 4: Jobsite Export</p>
+                          <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
                         </div>
@@ -1664,10 +1664,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
                             Choose File
                           </label>
                         </Button>
-                        <p className="text-xs text-slate-500 mt-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                           Has: Jobsite ID, Address, Contact links
                         </p>
                       </>
@@ -1678,13 +1678,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
               {/* Merge Status */}
               {allFilesUploaded && mergedData && (
-                <Card className="p-6 border-emerald-200 bg-emerald-50">
+                <Card className="p-6 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30">
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                      <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                       <div>
-                        <p className="font-semibold text-emerald-900">Files Merged Successfully!</p>
-                        <p className="text-sm text-emerald-800 mt-1">
+                        <p className="font-semibold text-emerald-900 dark:text-emerald-200">Files Merged Successfully!</p>
+                        <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
                           Ready to import {mergedData.stats.totalAccounts} accounts and {mergedData.stats.totalContacts} contacts
                           {mergedData.estimates && mergedData.estimates.length > 0 && `, ${mergedData.estimates.length} estimates`}
                           {mergedData.jobsites && mergedData.jobsites.length > 0 && `, ${mergedData.jobsites.length} jobsites`}
@@ -1694,39 +1694,39 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                     {/* Merge Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-white p-3 rounded border border-emerald-200">
-                        <p className="text-2xl font-bold text-slate-900">{mergedData.stats.totalAccounts}</p>
-                        <p className="text-xs text-slate-600 mt-1">Accounts</p>
+                      <div className="bg-white dark:bg-slate-800 p-3 rounded border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{mergedData.stats.totalAccounts}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Accounts</p>
                       </div>
-                      <div className="bg-white p-3 rounded border border-emerald-200">
-                        <p className="text-2xl font-bold text-slate-900">{mergedData.stats.totalContacts}</p>
-                        <p className="text-xs text-slate-600 mt-1">Contacts</p>
+                      <div className="bg-white dark:bg-slate-800 p-3 rounded border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{mergedData.stats.totalContacts}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Contacts</p>
                       </div>
                       {mergedData.estimates && mergedData.estimates.length > 0 && (
-                        <div className="bg-white p-3 rounded border border-amber-200">
-                          <p className="text-2xl font-bold text-amber-600">{mergedData.estimates.length}</p>
-                          <p className="text-xs text-slate-600 mt-1">Estimates</p>
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded border border-amber-200 dark:border-amber-800">
+                          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{mergedData.estimates.length}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Estimates</p>
                         </div>
                       )}
                       {mergedData.jobsites && mergedData.jobsites.length > 0 && (
-                        <div className="bg-white p-3 rounded border border-teal-200">
-                          <p className="text-2xl font-bold text-teal-600">{mergedData.jobsites.length}</p>
-                          <p className="text-xs text-slate-600 mt-1">Jobsites</p>
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded border border-teal-200 dark:border-teal-800">
+                          <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{mergedData.jobsites.length}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Jobsites</p>
                         </div>
                       )}
                       {(!mergedData.estimates || mergedData.estimates.length === 0) && 
                        (!mergedData.jobsites || mergedData.jobsites.length === 0) && (
-                        <div className="bg-white p-3 rounded border border-emerald-200">
-                          <p className="text-2xl font-bold text-emerald-600">{mergedData.stats.matchRate}%</p>
-                          <p className="text-xs text-slate-600 mt-1">Match Rate</p>
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded border border-emerald-200 dark:border-emerald-800">
+                          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{mergedData.stats.matchRate}%</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Match Rate</p>
                         </div>
                       )}
                     </div>
 
-                    <div className="text-xs text-emerald-800">
+                    <div className="text-xs text-emerald-800 dark:text-emerald-200">
                       <p>✓ {mergedData.stats.matchedContacts} contacts matched between files</p>
                       {mergedData.stats.unmatchedContacts > 0 && (
-                        <p className="text-amber-700 mt-1">
+                        <p className="text-amber-700 dark:text-amber-400 mt-1">
                           ⚠ {mergedData.stats.unmatchedContacts} contacts only in Contacts Export (will use base data)
                         </p>
                       )}
@@ -1736,49 +1736,49 @@ export default function ImportLeadsDialog({ open, onClose }) {
                     {mergedData.stats.estimateLinking && mergedData.stats.estimateLinking.total > 0 && (
                       <div className={`mt-4 p-3 rounded border ${
                         mergedData.stats.estimateLinking.orphaned > 0 
-                          ? 'bg-amber-50 border-amber-200' 
-                          : 'bg-emerald-50 border-emerald-200'
+                          ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' 
+                          : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'
                       }`}>
                         <div className="flex items-start gap-2">
                           {mergedData.stats.estimateLinking.orphaned > 0 ? (
-                            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           ) : (
-                            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                           )}
                           <div className="flex-1">
                             <p className={`font-semibold text-sm ${
-                              mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-900' : 'text-emerald-900'
+                              mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-900 dark:text-amber-200' : 'text-emerald-900 dark:text-emerald-200'
                             }`}>
                               Estimate Linking: {mergedData.stats.estimateLinking.linkRate}% linked to accounts
                             </p>
                             <div className="text-xs mt-1 space-y-0.5">
                               {mergedData.stats.estimateLinking.linkedByContactId > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByContactId} by Contact ID (most reliable)
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.linkedByEmail > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByEmail} by Email → Contact
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.linkedByPhone > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByPhone} by Phone → Contact
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.linkedByCrmTags > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByCrmTags} by CRM Tags
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.linkedByAddress > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByAddress} by Address
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.linkedByNameMatch > 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.estimateLinking.linkedByNameMatch} by Name Match (fuzzy)
                                 </p>
                               )}
@@ -1788,12 +1788,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                                mergedData.stats.estimateLinking.linkedByCrmTags === 0 &&
                                mergedData.stats.estimateLinking.linkedByAddress === 0 &&
                                mergedData.stats.estimateLinking.linkedByNameMatch === 0 && (
-                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.estimateLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • 0 by Contact ID (most reliable)
                                 </p>
                               )}
                               {mergedData.stats.estimateLinking.orphaned > 0 && (
-                                <p className="text-amber-700 font-medium">
+                                <p className="text-amber-700 dark:text-amber-400 font-medium">
                                   ⚠ {mergedData.stats.estimateLinking.orphaned} estimates not linked to any account
                                 </p>
                               )}
@@ -1807,39 +1807,39 @@ export default function ImportLeadsDialog({ open, onClose }) {
                     {mergedData.stats.jobsiteLinking && mergedData.stats.jobsiteLinking.total > 0 && (
                       <div className={`mt-2 p-3 rounded border ${
                         mergedData.stats.jobsiteLinking.orphaned > 0 
-                          ? 'bg-amber-50 border-amber-200' 
-                          : 'bg-emerald-50 border-emerald-200'
+                          ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' 
+                          : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'
                       }`}>
                         <div className="flex items-start gap-2">
                           {mergedData.stats.jobsiteLinking.orphaned > 0 ? (
-                            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           ) : (
-                            <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                           )}
                           <div className="flex-1">
                             <p className={`font-semibold text-sm ${
-                              mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-900' : 'text-emerald-900'
+                              mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-900 dark:text-amber-200' : 'text-emerald-900 dark:text-emerald-200'
                             }`}>
                               Jobsite Linking: {mergedData.stats.jobsiteLinking.linkRate}% linked to accounts
                             </p>
                             <div className="text-xs mt-1 space-y-0.5">
                               {mergedData.stats.jobsiteLinking.linkedByContactId > 0 && (
-                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.jobsiteLinking.linkedByContactId} by Contact ID (most reliable)
                                 </p>
                               )}
                               {mergedData.stats.jobsiteLinking.linkedByAddress > 0 && (
-                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.jobsiteLinking.linkedByAddress} by Address
                                 </p>
                               )}
                               {mergedData.stats.jobsiteLinking.linkedByJobsiteName > 0 && (
-                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.jobsiteLinking.linkedByJobsiteName} by Jobsite Name
                                 </p>
                               )}
                               {mergedData.stats.jobsiteLinking.linkedByNameMatch > 0 && (
-                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • {mergedData.stats.jobsiteLinking.linkedByNameMatch} by Name Match (fuzzy)
                                 </p>
                               )}
@@ -1847,12 +1847,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
                                mergedData.stats.jobsiteLinking.linkedByAddress === 0 &&
                                mergedData.stats.jobsiteLinking.linkedByJobsiteName === 0 &&
                                mergedData.stats.jobsiteLinking.linkedByNameMatch === 0 && (
-                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800' : 'text-emerald-800'}>
+                                <p className={mergedData.stats.jobsiteLinking.orphaned > 0 ? 'text-amber-800 dark:text-amber-200' : 'text-emerald-800 dark:text-emerald-200'}>
                                   • 0 by Contact ID
                                 </p>
                               )}
                               {mergedData.stats.jobsiteLinking.orphaned > 0 && (
-                                <p className="text-amber-700 font-medium">
+                                <p className="text-amber-700 dark:text-amber-400 font-medium">
                                   ⚠ {mergedData.stats.jobsiteLinking.orphaned} jobsites not linked to any account
                                 </p>
                               )}
@@ -1864,14 +1864,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                     {/* Orphaned Jobsites Details and Manual Linking */}
                     {mergedData.orphanedJobsites && mergedData.orphanedJobsites.length > 0 && (
-                      <div className="mt-4 p-4 rounded border bg-amber-50 border-amber-200">
+                      <div className="mt-4 p-4 rounded border bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
                         <div className="flex items-start gap-2 mb-3">
-                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
-                            <p className="font-semibold text-sm text-amber-900">
+                            <p className="font-semibold text-sm text-amber-900 dark:text-amber-200">
                               Orphaned Jobsites - Manual Linking Required
                             </p>
-                            <p className="text-xs text-amber-800 mt-1">
+                            <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
                               The following jobsites couldn't be automatically linked. Please select an account for each.
                             </p>
                           </div>
@@ -1888,13 +1888,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
                             const selectValue = selectedAccountId || '__unlink__';
                             
                             return (
-                              <Card key={jobsite.lmn_jobsite_id} className={`p-3 border ${isLinked ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-white'}`}>
+                              <Card key={jobsite.lmn_jobsite_id} className={`p-3 border ${isLinked ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30' : 'border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800'}`}>
                                 <div className="space-y-2">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1 space-y-1">
                                       <div className="flex items-center gap-2">
-                                        <MapPin className="w-4 h-4 text-slate-500" />
-                                        <p className="font-medium text-sm text-slate-900">
+                                        <MapPin className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                        <p className="font-medium text-sm text-slate-900 dark:text-white">
                                           {jobsite.name || 'Unnamed Jobsite'}
                                         </p>
                                         {isLinked && (

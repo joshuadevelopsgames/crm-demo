@@ -45,7 +45,7 @@ const tutorialSteps = [
             <CardContent className="p-4 text-center">
               <Building2 className="w-8 h-8 mx-auto mb-2 text-blue-500" />
               <p className="font-semibold">Accounts</p>
-              <p className="text-sm text-slate-500">Track companies</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Track companies</p>
             </CardContent>
           </Card>
           <Card>
@@ -85,8 +85,8 @@ const tutorialSteps = [
           <li><strong>Alerts</strong> - Neglected accounts, upcoming renewals, overdue tasks</li>
           <li><strong>Active Sequences</strong> - Automated outreach in progress</li>
         </ul>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Click on alerts to jump directly to accounts or tasks that need attention.</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Click on alerts to jump directly to accounts or tasks that need attention.</p>
         </div>
       </div>
     ),
@@ -107,7 +107,7 @@ const tutorialSteps = [
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Search & Filter</p>
-              <p className="text-sm text-slate-600">Find accounts by name, type, status, or revenue segment</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Find accounts by name, type, status, or revenue segment</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -144,7 +144,7 @@ const tutorialSteps = [
             <CardContent className="p-3">
               <MessageSquare className="w-5 h-5 mb-2 text-blue-500" />
               <p className="font-semibold text-sm">Interactions</p>
-              <p className="text-xs text-slate-500">Timeline of all touchpoints</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Timeline of all touchpoints</p>
             </CardContent>
           </Card>
           <Card>
@@ -186,16 +186,16 @@ const tutorialSteps = [
     content: (
       <div className="space-y-4">
         <p>Scorecards help you objectively evaluate accounts at any stage:</p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm font-semibold mb-2">For Prospects:</p>
-          <p className="text-sm">Score potential clients before they become customers to prioritize your outreach (revenue not required yet).</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+          <p className="text-sm font-semibold mb-2 text-blue-900 dark:text-blue-200">For Prospects:</p>
+          <p className="text-sm text-blue-800 dark:text-blue-200">Score potential clients before they become customers to prioritize your outreach (revenue not required yet).</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-          <p className="text-sm font-semibold mb-2">For Customers:</p>
-          <p className="text-sm">Track ongoing account health with scorecards that include revenue data.</p>
+        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+          <p className="text-sm font-semibold mb-2 text-green-900 dark:text-green-200">For Customers:</p>
+          <p className="text-sm text-green-800 dark:text-green-200">Track ongoing account health with scorecards that include revenue data.</p>
         </div>
         <div className="space-y-3">
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
             <p className="font-semibold mb-2">How It Works:</p>
             <ol className="list-decimal list-inside space-y-1 text-sm">
               <li>Complete a scorecard with weighted questions</li>
@@ -206,7 +206,7 @@ const tutorialSteps = [
           </div>
           <div className="flex items-start gap-3">
             <Badge variant="outline" className="mt-1">Sections</Badge>
-            <p className="text-sm">Questions grouped by category (e.g., "Corporate Demographics")</p>
+            <p className="text-sm text-slate-700 dark:text-slate-300">Questions grouped by category (e.g., "Corporate Demographics")</p>
           </div>
           <div className="flex items-start gap-3">
             <Badge variant="outline" className="mt-1">Sub-totals</Badge>
@@ -285,7 +285,7 @@ const tutorialSteps = [
             <Paperclip className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="font-semibold">Attachments</p>
-              <p className="text-sm text-slate-600">Upload files, images, and documents to tasks</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Upload files, images, and documents to tasks</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -698,69 +698,13 @@ export default function Tutorial() {
     navigate('/dashboard');
   };
 
-  // Force white background on mount and clean up on unmount
-  // Hooks must be called before any early returns
-  useEffect(() => {
-    // Store original styles
-    const originalBodyBg = document.body.style.backgroundColor;
-    const originalHtmlBg = document.documentElement.style.backgroundColor;
-    const root = document.getElementById('root');
-    const originalRootBg = root ? root.style.backgroundColor : '';
-    
-    // Apply tutorial page styles
-    document.body.style.backgroundColor = '#ffffff';
-    document.documentElement.style.backgroundColor = '#ffffff';
-    if (root) {
-      root.style.backgroundColor = '#ffffff';
-    }
-    
-    // Clean up on unmount - restore original styles
-    return () => {
-      document.body.style.backgroundColor = originalBodyBg;
-      document.documentElement.style.backgroundColor = originalHtmlBg;
-      if (root) {
-        root.style.backgroundColor = originalRootBg;
-      }
-      // Remove any style tags we added
-      const styleTag = document.getElementById('tutorial-page-styles');
-      if (styleTag) {
-        styleTag.remove();
-      }
-    };
-  }, []);
-
-  // Inject styles only when this component is mounted
-  useEffect(() => {
-    // Create or update style tag with unique ID
-    let styleTag = document.getElementById('tutorial-page-styles');
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = 'tutorial-page-styles';
-      document.head.appendChild(styleTag);
-    }
-    styleTag.textContent = `
-      body { background-color: #ffffff !important; background-image: none !important; }
-      html { background-color: #ffffff !important; background-image: none !important; }
-      #root { background-color: #ffffff !important; background-image: none !important; }
-      #root > div { background-color: #ffffff !important; background-image: none !important; }
-      .bg-gradient-to-r { display: none !important; }
-    `;
-    
-    // Clean up on unmount
-    return () => {
-      const tag = document.getElementById('tutorial-page-styles');
-      if (tag) {
-        tag.remove();
-      }
-    };
-  }, []);
+  // Remove forced white background - let dark mode work naturally
 
   return (
     <>
       <div 
-        className="min-h-screen p-4" 
+        className="min-h-screen p-4 bg-white dark:bg-slate-950" 
         style={{ 
-          backgroundColor: '#ffffff',
           minHeight: '100vh',
           width: '100%',
           position: 'fixed',
@@ -772,12 +716,12 @@ export default function Tutorial() {
           zIndex: 1
         }}
       >
-        <div className="max-w-4xl mx-auto" style={{ backgroundColor: '#ffffff' }}>
+        <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Interactive Tutorial</h1>
-            <p className="text-slate-600 mt-1">Learn how to use your CRM system</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Learn how to use your CRM system</p>
           </div>
           <Button variant="ghost" onClick={handleSkip}>
             <X className="w-4 h-4 mr-2" />
@@ -788,10 +732,10 @@ export default function Tutorial() {
         {/* Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Step {safeStep + 1} of {tutorialSteps.length}
             </span>
-            <span className="text-sm text-slate-500">{Math.round(progress)}% Complete</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{Math.round(progress)}% Complete</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
@@ -849,10 +793,10 @@ export default function Tutorial() {
                 }}
                 className={`w-2 h-2 rounded-full transition-colors ${
                   index === safeStep
-                    ? 'bg-blue-600'
+                    ? 'bg-blue-600 dark:bg-blue-500'
                     : index < safeStep
-                    ? 'bg-green-500'
-                    : 'bg-slate-300'
+                    ? 'bg-green-500 dark:bg-green-600'
+                    : 'bg-slate-300 dark:bg-slate-600'
                 }`}
                 aria-label={`Go to step ${index + 1}`}
               />
