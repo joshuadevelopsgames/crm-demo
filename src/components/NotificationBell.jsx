@@ -593,6 +593,50 @@ export default function NotificationBell() {
     }, {});
   }, [sortedNotifications, currentUserId]);
 
+  // Extract priority from bug report notification (must be defined before useMemo that uses it)
+  const getBugReportPriority = (notification) => {
+    if (notification.type !== 'bug_report') return null;
+    
+    try {
+      if (notification.message && notification.message.includes('---FULL_DATA---')) {
+        const parts = notification.message.split('---FULL_DATA---\n');
+        if (parts[1]) {
+          const bugReportData = JSON.parse(parts[1]);
+          return bugReportData.priority || 'medium';
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing bug report priority:', e);
+    }
+    
+    return 'medium'; // Default
+  };
+
+  // Get priority badge styling for bug reports (must be defined before useMemo that uses it)
+  const getPriorityBadge = (priorityValue) => {
+    const priorityLabels = {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical'
+    };
+    const priorityStyles = {
+      low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+      medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
+      high: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700',
+      critical: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
+    };
+    const priority = priorityValue || 'medium';
+    const label = priorityLabels[priority] || 'Medium';
+    const style = priorityStyles[priority] || priorityStyles.medium;
+    
+    return (
+      <Badge className={`${style} border text-xs font-semibold px-2 py-0.5`}>
+        {label}
+      </Badge>
+    );
+  };
+
   // Convert grouped object to array of groups
   // Use useMemo to ensure recalculation when snoozes change
   // Note: groupedNotifications already filters by current user, so notifications here are already filtered
@@ -1040,49 +1084,6 @@ export default function NotificationBell() {
     }
   };
 
-  // Get priority badge styling for bug reports
-  const getPriorityBadge = (priorityValue) => {
-    const priorityLabels = {
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High',
-      critical: 'Critical'
-    };
-    const priorityStyles = {
-      low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
-      medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
-      high: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700',
-      critical: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
-    };
-    const priority = priorityValue || 'medium';
-    const label = priorityLabels[priority] || 'Medium';
-    const style = priorityStyles[priority] || priorityStyles.medium;
-    
-    return (
-      <Badge className={`${style} border text-xs font-semibold px-2 py-0.5`}>
-        {label}
-      </Badge>
-    );
-  };
-
-  // Extract priority from bug report notification
-  const getBugReportPriority = (notification) => {
-    if (notification.type !== 'bug_report') return null;
-    
-    try {
-      if (notification.message && notification.message.includes('---FULL_DATA---')) {
-        const parts = notification.message.split('---FULL_DATA---\n');
-        if (parts[1]) {
-          const bugReportData = JSON.parse(parts[1]);
-          return bugReportData.priority || 'medium';
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing bug report priority:', e);
-    }
-    
-    return 'medium'; // Default
-  };
 
   return (
     <div className="relative">
