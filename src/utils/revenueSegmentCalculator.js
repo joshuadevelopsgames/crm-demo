@@ -76,6 +76,17 @@ function getEstimateYearData(estimate, currentYear) {
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   
+  // Debug: Log when we can't find dates
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && !contractStart && !contractEnd && !estimateDate) {
+    console.log('[getEstimateYearData] No dates found for estimate:', {
+      id: estimate.id,
+      contract_start: estimate.contract_start,
+      contract_end: estimate.contract_end,
+      estimate_date: estimate.estimate_date,
+      allKeys: Object.keys(estimate).filter(k => k.includes('date') || k.includes('Date') || k.includes('start') || k.includes('end') || k.includes('Start') || k.includes('End'))
+    });
+  }
+  
   // Use total_price_with_tax consistently
   const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
   if (totalPrice === 0) return null;
@@ -250,7 +261,7 @@ export function getAccountRevenue(account, estimates = []) {
         // Log all estimates to see what we have
         estimates.forEach(est => {
           const yearData = getEstimateYearData(est, currentYear);
-          console.log(`  Estimate ${est.id}: status=${est.status}, appliesTo${currentYear}=${yearData?.appliesToCurrentYear}, contractStart=${est.contract_start}, contractEnd=${est.contract_end}`);
+          console.log(`  Estimate ${est.id}: status=${est.status}, appliesTo${currentYear}=${yearData?.appliesToCurrentYear}, contractStart=${est.contract_start}, contractEnd=${est.contract_end}, estimate_date=${est.estimate_date}, created_date=${est.created_date}`);
         });
       }
     }
