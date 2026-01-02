@@ -77,9 +77,33 @@ function getEstimateYearData(estimate, currentYear) {
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
-  // Use total_price_with_tax consistently
-  const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
+  // Use total_price_with_tax consistently, fallback to total_price if missing
+  const totalPrice = parseFloat(estimate.total_price_with_tax) || parseFloat(estimate.total_price) || 0;
   if (totalPrice === 0) return null;
+  
+  // Debug logging for test mode
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && currentYear === 2025) {
+    const debugInfo = {
+      estimateId: estimate.id || estimate.lmn_estimate_id,
+      currentYear,
+      contractStartRaw: estimate.contract_start,
+      contractStartParsed: contractStart ? contractStart.getFullYear() : null,
+      contractEndRaw: estimate.contract_end,
+      contractEndParsed: contractEnd ? contractEnd.getFullYear() : null,
+      estimateDateRaw: estimate.estimate_date,
+      estimateDateParsed: estimateDate ? estimateDate.getFullYear() : null,
+      totalPrice,
+      hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
+      hasContractEnd: !!contractEnd && !isNaN(contractEnd.getTime()),
+      hasEstimateDate: !!estimateDate && !isNaN(estimateDate.getTime())
+    };
+    // Only log first few to avoid spam
+    if (!window.__estimateYearDataDebugCount) window.__estimateYearDataDebugCount = 0;
+    if (window.__estimateYearDataDebugCount < 10) {
+      console.log('[getEstimateYearData] Debug:', debugInfo);
+      window.__estimateYearDataDebugCount++;
+    }
+  }
   
   // Case 1: Both contract_start and contract_end exist
   // Use contract-year allocation logic
