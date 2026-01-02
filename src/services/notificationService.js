@@ -541,6 +541,11 @@ export async function createRenewalNotifications() {
       }
       
       const renewalDate = calculateRenewalDate(accountEstimates);
+      // #region agent log
+      if (accountEstimates.length > 0) {
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:543',message:'Renewal date calculated in service',data:{accountId:account.id,accountName:account.name,renewalDate:renewalDate?.toISOString()||null,hasRenewalDate:!!renewalDate,estimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      }
+      // #endregion
       
       if (!renewalDate) continue;
       
@@ -554,13 +559,27 @@ export async function createRenewalNotifications() {
       // Account should NOT be at_risk only if renewal is > 180 days away
       const shouldBeAtRisk = daysUntilRenewal <= 180; // Include past renewals (negative days)
       const isCurrentlyAtRisk = account.status === 'at_risk';
+      // #region agent log
+      if (shouldBeAtRisk || isCurrentlyAtRisk) {
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:555',message:'At-risk status check',data:{accountId:account.id,accountName:account.name,daysUntilRenewal,shouldBeAtRisk,isCurrentlyAtRisk,willUpdate:shouldBeAtRisk&&!isCurrentlyAtRisk&&account.status!=='churned'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      }
+      // #endregion
       
       if (shouldBeAtRisk && !isCurrentlyAtRisk && account.status !== 'churned') {
         try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:558',message:'Updating account to at_risk',data:{accountId:account.id,accountName:account.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           await base44.entities.Account.update(account.id, { status: 'at_risk' });
           atRiskUpdatedCount++;
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:560',message:'Account updated to at_risk success',data:{accountId:account.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           // Trigger will automatically update notifications for this account
         } catch (error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:564',message:'Account update to at_risk failed',data:{accountId:account.id,error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           console.error(`❌ Error updating account status for ${account.name}:`, error);
         }
       } else if (shouldBeAtRisk && isCurrentlyAtRisk) {

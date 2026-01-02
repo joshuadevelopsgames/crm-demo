@@ -114,14 +114,14 @@ const tutorialSteps = [
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Organization Score</p>
-              <p className="text-sm text-slate-600">0-100 score helps prioritize accounts</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">0-100 score helps prioritize accounts</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Click to View Details</p>
-              <p className="text-sm text-slate-600">See full account information, interactions, contacts, and more</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">See full account information, interactions, contacts, and more</p>
             </div>
           </div>
         </div>
@@ -196,8 +196,8 @@ const tutorialSteps = [
         </div>
         <div className="space-y-3">
           <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-            <p className="font-semibold mb-2">How It Works:</p>
-            <ol className="list-decimal list-inside space-y-1 text-sm">
+            <p className="font-semibold mb-2 text-purple-900 dark:text-purple-200">How It Works:</p>
+            <ol className="list-decimal list-inside space-y-1 text-sm text-purple-800 dark:text-purple-200">
               <li>Complete a scorecard with weighted questions</li>
               <li>Get a score (0-100) based on your answers</li>
               <li>See Pass/Fail status based on threshold</li>
@@ -239,15 +239,15 @@ const tutorialSteps = [
             <Badge>Note</Badge>
             <Badge>LinkedIn</Badge>
           </div>
-          <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
+          <ul className="list-disc list-inside space-y-1 ml-4 text-sm text-slate-700 dark:text-slate-300">
             <li>Log interactions with date, type, and notes</li>
             <li>Track sentiment (positive, neutral, negative)</li>
             <li>Link to contacts involved</li>
             <li>View chronological timeline</li>
           </ul>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Regular interaction logging helps identify neglected accounts on the Dashboard.</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Regular interaction logging helps identify neglected accounts on the Dashboard.</p>
         </div>
       </div>
     )
@@ -292,21 +292,21 @@ const tutorialSteps = [
             <MessageCircle className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-semibold">Comments</p>
-              <p className="text-sm text-slate-600">Add comments and collaborate on tasks</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Add comments and collaborate on tasks</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Repeat className="w-5 h-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-semibold">Recurring Tasks</p>
-              <p className="text-sm text-slate-600">Set tasks to repeat daily, weekly, monthly, or yearly</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Set tasks to repeat daily, weekly, monthly, or yearly</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <Lock className="w-5 h-5 text-orange-500 mt-0.5" />
             <div>
               <p className="font-semibold">Task Blocking</p>
-              <p className="text-sm text-slate-600">Tasks from sequences are automatically blocked until previous tasks complete</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Tasks from sequences are automatically blocked until previous tasks complete</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -324,8 +324,8 @@ const tutorialSteps = [
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Tasks can be linked to accounts and contacts for better context. Use drag-and-drop to reorder tasks!</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Tasks can be linked to accounts and contacts for better context. Use drag-and-drop to reorder tasks!</p>
         </div>
       </div>
     ),
@@ -341,9 +341,9 @@ const tutorialSteps = [
     content: (
       <div className="space-y-4">
         <p>Sequences automate your outreach and create task lists automatically:</p>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-          <p className="font-semibold mb-2">Example Sequence:</p>
-          <ol className="list-decimal list-inside space-y-1 text-sm">
+        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+          <p className="font-semibold mb-2 text-green-900 dark:text-green-200">Example Sequence:</p>
+          <ol className="list-decimal list-inside space-y-1 text-sm text-green-800 dark:text-green-200">
             <li>Day 0: Initial email</li>
             <li>Day 3: Follow-up call</li>
             <li>Day 7: LinkedIn connection</li>
@@ -390,8 +390,8 @@ const tutorialSteps = [
             <Badge>General</Badge>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Create a template sequence, then enroll accounts. Tasks will appear on your Tasks page in the correct order!</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Create a template sequence, then enroll accounts. Tasks will appear on your Tasks page in the correct order!</p>
         </div>
       </div>
     ),
@@ -437,8 +437,8 @@ const tutorialSteps = [
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Contacts can be linked to interactions and tasks for better tracking.</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Contacts can be linked to interactions and tasks for better tracking.</p>
         </div>
       </div>
     ),
@@ -484,8 +484,8 @@ const tutorialSteps = [
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Click the bell icon in the top navigation to see all your notifications. Mark as read or snooze as needed.</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Click the bell icon in the top navigation to see all your notifications. Mark as read or snooze as needed.</p>
         </div>
       </div>
     )
@@ -527,8 +527,8 @@ const tutorialSteps = [
             </div>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>💡 Tip:</strong> Filter reports by year, account, or department to get specific insights.</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200"><strong>💡 Tip:</strong> Filter reports by year, account, or department to get specific insights.</p>
         </div>
       </div>
     ),
@@ -604,8 +604,8 @@ const tutorialSteps = [
             </div>
           </div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-          <p className="text-sm"><strong>📝 Note:</strong> Make sure your Google Sheet is set to "Anyone with the link can view" for the CRM to access it.</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200"><strong>📝 Note:</strong> Make sure your Google Sheet is set to "Anyone with the link can view" for the CRM to access it.</p>
         </div>
       </div>
     )
@@ -623,9 +623,9 @@ const tutorialSteps = [
           <p className="text-lg font-semibold mb-2">Congratulations!</p>
           <p className="text-slate-600">You now know the basics of your CRM system.</p>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
-          <p className="font-semibold mb-2">Next Steps:</p>
-          <ol className="list-decimal list-inside space-y-1 text-sm text-left">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
+          <p className="font-semibold mb-2 text-blue-900 dark:text-blue-200">Next Steps:</p>
+          <ol className="list-decimal list-inside space-y-1 text-sm text-left text-blue-800 dark:text-blue-200">
             <li>Explore the Dashboard to see your data and alerts</li>
             <li>Click on an account to see the detail view with all tabs</li>
             <li>Complete your first scorecard to rate an account</li>

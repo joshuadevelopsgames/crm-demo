@@ -217,3 +217,4 @@ WHERE event_object_table = 'accounts'
   AND trigger_name = 'trg_accounts_update_notifications';
 
 
+

@@ -69,3 +69,4 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 -- Expected result: delete_rule should be 'CASCADE' or 'SET NULL'
 -- This means snoozes are only deleted if the account is deleted, NOT when the account is updated
 
+

@@ -96,7 +96,7 @@ export default function Login() {
         hasSession: !!data.session
       });
 
-      toast.success('Successfully logged in!', { duration: 3000 });
+      toast.success('Successfully logged in!', { duration: 2000 });
       navigate('/dashboard');
     } catch (error) {
       console.error('❌ Login exception:', error);

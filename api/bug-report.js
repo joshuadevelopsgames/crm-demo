@@ -1,6 +1,6 @@
 /**
  * API endpoint for sending bug reports via email
- * Supports multiple email services: Resend, SendGrid, or SMTP via Nodemailer
+ * Supports multiple email services: Resend or SMTP via Nodemailer
  * Also creates a notification for the admin user
  */
 
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
 
     // Get email configuration from environment variables
     const recipientEmail = process.env.BUG_REPORT_EMAIL || 'jrsschroeder@gmail.com';
-    const emailService = process.env.EMAIL_SERVICE || 'resend'; // 'resend', 'sendgrid', or 'smtp'
+    const emailService = process.env.EMAIL_SERVICE || 'resend'; // 'resend' or 'smtp'
 
     // Format the bug report email
     const emailSubject = `🐛 Bug Report - ${new Date().toLocaleString()}`;
@@ -128,8 +128,6 @@ ${bugReport.consoleLogs.map(log =>
       
       if (emailService === 'resend') {
         emailSent = await sendViaResend(recipientEmail, emailSubject, emailBody);
-      } else if (emailService === 'sendgrid') {
-        emailSent = await sendViaSendGrid(recipientEmail, emailSubject, emailBody);
       } else if (emailService === 'smtp') {
         emailSent = await sendViaSMTP(recipientEmail, emailSubject, emailBody);
       } else {
@@ -428,60 +426,6 @@ async function sendViaResend(recipientEmail, subject, body) {
     console.error('❌ Error sending via Resend:', error.message || error);
     // Re-throw to preserve error message
     throw error;
-  }
-}
-
-// Send email via SendGrid
-async function sendViaSendGrid(recipientEmail, subject, body) {
-  const sendGridApiKey = process.env.SENDGRID_API_KEY;
-  
-  if (!sendGridApiKey) {
-    console.error('❌ SendGrid API key not configured (SENDGRID_API_KEY missing)');
-    return false;
-  }
-
-  try {
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com';
-    console.log(`📧 Sending email via SendGrid from ${fromEmail} to ${recipientEmail}`);
-    
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sendGridApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{
-          to: [{ email: recipientEmail }],
-        }],
-        from: {
-          email: fromEmail,
-        },
-        subject: subject,
-        content: [
-          {
-            type: 'text/plain',
-            value: body,
-          },
-          {
-            type: 'text/html',
-            value: body.replace(/\n/g, '<br>').replace(/```/g, '<pre>').replace(/```/g, '</pre>'),
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ SendGrid API error:', response.status, errorText);
-      return false;
-    }
-
-    console.log('✅ Email sent via SendGrid');
-    return true;
-  } catch (error) {
-    console.error('❌ Error sending via SendGrid:', error.message || error);
-    return false;
   }
 }
 
