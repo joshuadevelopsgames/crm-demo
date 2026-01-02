@@ -217,3 +217,4 @@ SELECT
 FROM pg_proc
 WHERE proname = 'trigger_update_notifications_on_account_change';
 
+

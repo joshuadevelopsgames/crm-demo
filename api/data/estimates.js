@@ -285,12 +285,13 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
+            // Always preserve contract_end from incoming data, even if it's null
+            // This ensures contract_end dates are properly saved during import
+            if (estimate.contract_end !== undefined) {
+              estimateData.contract_end = estimate.contract_end;
+            }
+            
             if (existingMap.has(lookupValue)) {
-              // For updates, ensure contract_end is included if it exists in the incoming data
-              // This prevents contract_end from being lost during updates
-              if (estimate.contract_end && !estimateData.contract_end) {
-                estimateData.contract_end = estimate.contract_end;
-              }
               toUpdate.push({ id: existingMap.get(lookupValue), data: estimateData });
             } else {
               estimateData.created_at = new Date().toISOString();

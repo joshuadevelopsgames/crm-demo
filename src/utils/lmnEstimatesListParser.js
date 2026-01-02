@@ -25,13 +25,14 @@ export function parseEstimatesList(csvTextOrRows) {
     }
 
     // Map column indices
+    // Use trim() to handle any whitespace issues in column headers
     const colMap = {
-      estimateType: headers.findIndex(h => h === 'Estimate Type'),
-      estimateId: headers.findIndex(h => h === 'Estimate ID'),
-      estimateDate: headers.findIndex(h => h === 'Estimate Date'),
-      estimateCloseDate: headers.findIndex(h => h === 'Estimate Close Date'),
-      contractStart: headers.findIndex(h => h === 'Contract Start'),
-      contractEnd: headers.findIndex(h => h === 'Contract End'),
+      estimateType: headers.findIndex(h => h?.trim() === 'Estimate Type'),
+      estimateId: headers.findIndex(h => h?.trim() === 'Estimate ID'),
+      estimateDate: headers.findIndex(h => h?.trim() === 'Estimate Date'),
+      estimateCloseDate: headers.findIndex(h => h?.trim() === 'Estimate Close Date'),
+      contractStart: headers.findIndex(h => h?.trim() === 'Contract Start'),
+      contractEnd: headers.findIndex(h => h?.trim() === 'Contract End'),
       projectName: headers.findIndex(h => h === 'Project Name'),
       version: headers.findIndex(h => h === 'Version'),
       contactName: headers.findIndex(h => h === 'Contact Name'),
@@ -78,6 +79,11 @@ export function parseEstimatesList(csvTextOrRows) {
     const estimates = [];
     const errors = [];
     const seenEstimateIds = new Set(); // Track duplicate IDs
+    
+    // Warn if Contract End column is not found
+    if (colMap.contractEnd === -1) {
+      errors.push('WARNING: "Contract End" column not found in file. Contract end dates will not be imported.');
+    }
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];

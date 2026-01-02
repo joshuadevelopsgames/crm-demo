@@ -22,11 +22,17 @@ if (existsSync(envPath)) {
   });
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+// Try multiple possible env variable names
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+  console.error('Error: SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY must be set');
+  console.error('Current env vars:', {
+    hasSUPABASE_URL: !!process.env.SUPABASE_URL,
+    hasVITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+    hasSUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  });
   process.exit(1);
 }
 

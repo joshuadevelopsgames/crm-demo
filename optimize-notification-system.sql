@@ -291,3 +291,4 @@ COMMENT ON FUNCTION trigger_update_notifications_on_account_change IS
 COMMENT ON FUNCTION trigger_update_notifications_on_estimate_change IS 
   'Trigger function that updates notifications when estimate data changes (affects renewal dates).';
 
+

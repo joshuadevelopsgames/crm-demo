@@ -15,3 +15,4 @@ CREATE INDEX IF NOT EXISTS idx_profiles_notification_preferences_gin
 -- Add comment
 COMMENT ON COLUMN profiles.notification_preferences IS 'User preferences for notifications stored as JSONB: email_notifications, task_reminders, system_announcements';
 
+
