@@ -99,7 +99,7 @@ function parseCSVLine(line) {
  */
 export function parseCurrency(str) {
   if (!str) return 0;
-  const cleaned = str.toString().replace(/[\$,]/g, '');
+  const cleaned = str.toString().replace(/[$,\s]/g, '');
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
 }

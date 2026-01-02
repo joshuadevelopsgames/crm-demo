@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications, snoozeNotification } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
@@ -8,7 +8,6 @@ import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
 import SnoozeDialog from '@/components/SnoozeDialog';

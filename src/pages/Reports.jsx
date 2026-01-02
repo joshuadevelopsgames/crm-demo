@@ -573,7 +573,7 @@ export default function Reports() {
   
   useEffect(() => {
     // #region agent log
-    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:629',message:'INSIDE yearEstimates useEffect START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{}); } catch(e) {}
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:629',message:'INSIDE yearEstimates useEffect START',data:{selectedYear,availableOfficialYearsType:typeof availableOfficialYears,availableOfficialYearsLength:availableOfficialYears?.length,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataLength:yearlyOfficialData?.length,estimatesType:typeof estimates,estimatesLength:estimates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'B'})}).catch(()=>{}); } catch(_e) { /* Debug logging - intentionally empty */ }
     // #endregion
     
     // Defensive checks - ensure all dependencies are arrays before accessing
@@ -591,7 +591,7 @@ export default function Reports() {
     const selectedYearNum = typeof selectedYear === 'string' ? parseInt(selectedYear) : selectedYear;
     const hasOfficialDataForYear = availableOfficialYears.includes(selectedYearNum);
     // #region agent log
-    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:645',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{}); } catch(e) {}
+    try { fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.jsx:645',message:'INSIDE yearEstimates BEFORE accessing yearlyOfficialData.length',data:{selectedYearNum,hasOfficialDataForYear,yearlyOfficialDataType:typeof yearlyOfficialData,yearlyOfficialDataIsArray:Array.isArray(yearlyOfficialData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A'})}).catch(()=>{}); } catch(_e) { /* Debug logging - intentionally empty */ }
     // #endregion
     const useOfficialData = hasOfficialDataForYear && (yearlyOfficialData?.length || 0) > 0;
     

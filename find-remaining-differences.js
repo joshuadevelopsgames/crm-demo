@@ -187,7 +187,7 @@ async function findRemainingDifferences() {
 
     // Maybe they use close_date OR estimate_date for estimates without close_date?
     const byCloseOrEstimate2025 = lmnData.filter(row => {
-      let dateToUse = row[closeDateCol] || row[estimateDateCol];
+      const dateToUse = row[closeDateCol] || row[estimateDateCol];
       if (!dateToUse) return false;
       const year = getYearFromDate(dateToUse);
       if (year !== 2025) return false;

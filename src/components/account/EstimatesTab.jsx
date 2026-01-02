@@ -79,7 +79,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
 
   // Filter by status and year
   const statusFilteredEstimates = useMemo(() => {
-    let filtered = estimates.filter(est => {
+    const filtered = estimates.filter(est => {
       // Normalize status: treat pending and any non-won as lost
       const normalizedStatus = est.status === 'won' ? 'won' : 'lost';
       

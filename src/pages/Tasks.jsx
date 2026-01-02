@@ -1206,7 +1206,7 @@ export default function Tasks() {
   };
 
   // Filter tasks based on task type and active filter
-  let filteredTasks = tasks.filter((task) => {
+  const filteredTasks = tasks.filter((task) => {
     // First filter by task type (sales/operations)
     if (taskType === 'sales' && !isSalesTask(task)) return false;
     if (taskType === 'operations' && !isOperationsTask(task)) return false;

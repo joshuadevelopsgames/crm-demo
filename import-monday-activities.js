@@ -313,7 +313,7 @@ function extractNamesFromText(text, accounts, contacts) {
   
   // If we found a contact, try to get its account_id
   let accountId = bestAccount?.id || null;
-  let contactId = bestContact?.id || null;
+  const contactId = bestContact?.id || null;
   
   // If contact has an account_id, prefer that over standalone account match
   if (bestContact?.account_id) {
@@ -339,7 +339,7 @@ async function importMondayActivities(filePath) {
   
   let totalImported = 0;
   let totalSkipped = 0;
-  let errors = [];
+  const errors = [];
   
   // Process each sheet
   for (const sheetName of workbook.SheetNames) {

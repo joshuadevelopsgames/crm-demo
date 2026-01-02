@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
 import AddInteractionDialog from './AddInteractionDialog';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 
 export default function InteractionTimeline({ interactions, contacts, accountId, contactId }) {
   const queryClient = useQueryClient();

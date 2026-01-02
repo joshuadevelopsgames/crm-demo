@@ -361,9 +361,9 @@ export default function NotificationBell() {
     }
     const currentUserIdStr = String(currentUserId).trim();
     
-    let filteredCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
-    let filteredOutCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
-    let filteredOutReasons = { noUserId: 0, noAccountId: 0, snoozed: 0, taskOverdue: 0, other: 0 };
+    const filteredCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
+    const filteredOutCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
+    const filteredOutReasons = { noUserId: 0, noAccountId: 0, snoozed: 0, taskOverdue: 0, other: 0 };
     
     const filtered = allNotifications.filter(notification => {
       // For JSONB notifications (neglected_account, renewal_reminder), they don't have user_id

@@ -130,7 +130,7 @@ function readExcelFile() {
     };
     
     const estimates = new Map();
-    let rowNum = 1;
+    const rowNum = 1;
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];

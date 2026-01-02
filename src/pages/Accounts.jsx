@@ -323,7 +323,7 @@ export default function Accounts() {
     return false;
   };
 
-  let filteredAccounts = accountsByStatus.filter(account => {
+  const filteredAccounts = accountsByStatus.filter(account => {
     const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = accountMatchesType(account, filterType);
     const matchesSegment = filterSegment === 'all' || account.revenue_segment === filterSegment;

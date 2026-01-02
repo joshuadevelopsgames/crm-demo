@@ -240,7 +240,7 @@ const base44Instance = {
     Task: {
       list: async (sort) => {
         const data = await getData('tasks');
-        let results = Array.isArray(data) ? [...data] : [];
+        const results = Array.isArray(data) ? [...data] : [];
         if (sort) {
           const desc = sort.startsWith('-');
           const sortField = desc ? sort.substring(1) : sort;

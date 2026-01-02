@@ -4,13 +4,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist && vite build",
+    "build": "npm run sync-icons && npm run lint:syntax && rm -rf dist && vite build",
+    "lint:check": "eslint src/ api/ --max-warnings 50 --quiet",
+    "lint:syntax": "eslint src/ api/ --quiet --rule 'no-unreachable: error' --rule 'no-undef: error' --rule 'no-duplicate-case: error' --rule 'no-empty: error' --rule 'no-extra-semi: error' --rule 'no-func-assign: error' --rule 'no-inner-declarations: error' --rule 'no-invalid-regexp: error' --rule 'no-irregular-whitespace: error' --rule 'no-obj-calls: error' --rule 'no-sparse-arrays: error' --rule 'no-unexpected-multiline: error' --rule 'no-unreachable-loop: error' --rule 'use-isnan: error' --rule 'valid-typeof: error' --rule 'react-hooks/rules-of-hooks: off'",
+    "prebuild": "npm run sync-icons",
     "preview": "vite preview",
     "sync-icons": "bash scripts/sync-app-icons.sh",
-    "prebuild": "npm run sync-icons",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint . || true",
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "cap:sync": "npm run build && npx cap sync",
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",
@@ -59,15 +63,21 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
     "dotenv": "^17.2.3",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^17.0.0",
     "postcss": "^8.4.32",
+    "puppeteer": "^21.6.1",
     "tailwindcss": "^3.3.6",
     "vercel": "^48.12.1",
-    "vite": "^5.0.8",
-    "puppeteer": "^21.6.1"
+    "vite": "^5.0.8"
   }
 }

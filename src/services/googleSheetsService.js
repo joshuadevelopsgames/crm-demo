@@ -617,7 +617,7 @@ async function parseContactsFromTemplate() {
   
   // Build contact data by row type
   const contactData = {};
-  for (let colIdx of contactColumns) {
+  for (const colIdx of contactColumns) {
     contactData[colIdx] = {};
   }
   
@@ -638,7 +638,7 @@ async function parseContactsFromTemplate() {
     else if (rowType.includes('mutual connections')) fieldName = 'mutual_connections';
     
     if (fieldName) {
-      for (let colIdx of contactColumns) {
+      for (const colIdx of contactColumns) {
         const value = (row[colIdx] || '').toString().trim();
         if (value) {
           contactData[colIdx][fieldName] = value;
@@ -649,7 +649,7 @@ async function parseContactsFromTemplate() {
   
   // Build contact objects
   let contactIndex = 1;
-  for (let colIdx of contactColumns) {
+  for (const colIdx of contactColumns) {
     const data = contactData[colIdx];
     if (Object.keys(data).length > 0) {
       // Try to extract name from email or title
@@ -970,7 +970,7 @@ async function parseSalesInsights() {
       { col: columnMap.obstacles, type: 'risk', yesCol: columnMap.obstacles ? columnMap.obstacles + 1 : null }
     ];
     
-    for (let category of categories) {
+    for (const category of categories) {
       if (category.col !== null && row[category.col]) {
         const yesValue = category.yesCol ? (row[category.yesCol] || '').toString().trim() : '';
         const isYes = yesValue === 'Yes' || yesValue === 'yes';
@@ -1083,8 +1083,8 @@ async function parseContactCadence() {
   const enrollments = [];
   
   // Look for quarterly contact pattern
-  let quarterlySteps = [];
-  let connectionIdeas = [];
+  const quarterlySteps = [];
+  const connectionIdeas = [];
   let inConnectionIdeas = false;
   
   for (let i = 2; i < rows.length; i++) {

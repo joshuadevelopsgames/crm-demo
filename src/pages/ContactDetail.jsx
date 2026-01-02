@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { createPageUrl } from '@/utils';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import InteractionTimeline from '../components/account/InteractionTimeline';
 import AddInteractionDialog from '../components/account/AddInteractionDialog';
 import EditContactDialog from '../components/contact/EditContactDialog';

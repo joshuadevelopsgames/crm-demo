@@ -105,7 +105,7 @@ export default function Contacts() {
   });
 
   // Then apply other filters
-  let filteredContacts = contactsByStatus.filter(contact => {
+  const filteredContacts = contactsByStatus.filter(contact => {
     // Name filter (first name or last name)
     const matchesName = filterName === '' || 
       contact.first_name?.toLowerCase().includes(filterName.toLowerCase()) ||

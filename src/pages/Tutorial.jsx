@@ -698,17 +698,8 @@ export default function Tutorial() {
     navigate('/dashboard');
   };
 
-  if (!step) {
-    return (
-      <div className="min-h-screen bg-white p-4 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg text-slate-600">Loading tutorial...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Force white background on mount and clean up on unmount
+  // Hooks must be called before any early returns
   useEffect(() => {
     // Store original styles
     const originalBodyBg = document.body.style.backgroundColor;

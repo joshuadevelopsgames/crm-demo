@@ -13,7 +13,8 @@ import {
   Edit,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Download
 } from 'lucide-react';
 import {
   Dialog,
@@ -33,7 +34,6 @@ import {
 } from "@/components/ui/select";
 import TutorialTooltip from '../components/TutorialTooltip';
 import { parseScorecardTemplateFromSheet } from '@/services/googleSheetsService';
-import { Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Scoring() {
