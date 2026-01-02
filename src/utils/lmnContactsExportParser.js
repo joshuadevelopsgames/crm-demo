@@ -27,32 +27,50 @@ export function parseContactsExport(csvTextOrRows) {
       return { accounts: new Map(), contacts: [], stats: { error: 'Invalid CSV headers' } };
     }
 
-    // Map column indices
+    // Map column indices with flexible matching
+    // Use trim() and case-insensitive matching for robustness
+    const findColumn = (exactName, ...alternatives) => {
+      const exact = headers.findIndex(h => h && h.toString().trim() === exactName);
+      if (exact >= 0) return exact;
+      // Try case-insensitive
+      const caseInsensitive = headers.findIndex(h => h && h.toString().trim().toLowerCase() === exactName.toLowerCase());
+      if (caseInsensitive >= 0) return caseInsensitive;
+      // Try alternatives
+      for (const alt of alternatives) {
+        const altMatch = headers.findIndex(h => h && h.toString().trim().toLowerCase() === alt.toLowerCase());
+        if (altMatch >= 0) return altMatch;
+      }
+      return -1;
+    };
+    
     const colMap = {
-      crmId: headers.findIndex(h => h === 'CRM ID'),
-      contactId: headers.findIndex(h => h === 'Contact ID'),
-      crmName: headers.findIndex(h => h === 'CRM Name'),
-      type: headers.findIndex(h => h === 'Type'),
-      primaryContact: headers.findIndex(h => h === 'PrimaryContact'),
-      firstName: headers.findIndex(h => h === 'First Name'),
-      lastName: headers.findIndex(h => h === 'Last Name'),
-      address1: headers.findIndex(h => h === 'Address 1'),
-      address2: headers.findIndex(h => h === 'Address 2'),
-      city: headers.findIndex(h => h === 'City'),
-      state: headers.findIndex(h => h === 'State'),
-      zip: headers.findIndex(h => h === 'Zip'),
-      country: headers.findIndex(h => h === 'Country'),
-      phone1: headers.findIndex(h => h === 'Phone 1'),
-      phone2: headers.findIndex(h => h === 'Phone 2'),
-      email1: headers.findIndex(h => h === 'Email 1'),
-      email2: headers.findIndex(h => h === 'Email 2'),
-      notes: headers.findIndex(h => h === 'Notes'),
-      tags: headers.findIndex(h => h === 'Tags'),
-      archived: headers.findIndex(h => h === 'Archived'),
-      classification: headers.findIndex(h => h === 'Classification')
+      crmId: findColumn('CRM ID', 'Crm Id', 'crm id', 'CRM_ID', 'CrmId'),
+      contactId: findColumn('Contact ID', 'Contact Id', 'contact id', 'CONTACT_ID', 'ContactId'),
+      crmName: findColumn('CRM Name', 'Crm Name', 'crm name', 'CRM_NAME', 'CrmName', 'Account Name', 'account name'),
+      type: headers.findIndex(h => h && h.toString().trim() === 'Type'),
+      primaryContact: headers.findIndex(h => h && h.toString().trim() === 'PrimaryContact'),
+      firstName: headers.findIndex(h => h && h.toString().trim() === 'First Name'),
+      lastName: headers.findIndex(h => h && h.toString().trim() === 'Last Name'),
+      address1: headers.findIndex(h => h && h.toString().trim() === 'Address 1'),
+      address2: headers.findIndex(h => h && h.toString().trim() === 'Address 2'),
+      city: headers.findIndex(h => h && h.toString().trim() === 'City'),
+      state: headers.findIndex(h => h && h.toString().trim() === 'State'),
+      zip: headers.findIndex(h => h && h.toString().trim() === 'Zip'),
+      country: headers.findIndex(h => h && h.toString().trim() === 'Country'),
+      phone1: headers.findIndex(h => h && h.toString().trim() === 'Phone 1'),
+      phone2: headers.findIndex(h => h && h.toString().trim() === 'Phone 2'),
+      email1: headers.findIndex(h => h && h.toString().trim() === 'Email 1'),
+      email2: headers.findIndex(h => h && h.toString().trim() === 'Email 2'),
+      notes: headers.findIndex(h => h && h.toString().trim() === 'Notes'),
+      tags: headers.findIndex(h => h && h.toString().trim() === 'Tags'),
+      archived: headers.findIndex(h => h && h.toString().trim() === 'Archived'),
+      classification: headers.findIndex(h => h && h.toString().trim() === 'Classification')
     };
 
     if (colMap.crmId === -1 || colMap.crmName === -1) {
+      // Log available headers for debugging
+      console.warn('⚠️ Contacts Export: Missing required columns. Available headers:', headers.filter(h => h).slice(0, 20));
+      console.warn('Looking for columns containing "crm" or "name":', headers.filter(h => h && (h.toString().toLowerCase().includes('crm') || h.toString().toLowerCase().includes('name'))).map((h, i) => `${i}: "${h}"`));
       return { 
         accounts: new Map(), 
         contacts: [], 
