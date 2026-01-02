@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -109,28 +110,31 @@ export function SimpleDropdown({
     }
   });
 
+  // Render dropdown in a portal to escape stacking contexts
+  const dropdownContent = isOpen && typeof document !== 'undefined' ? createPortal(
+    <div
+      ref={dropdownRef}
+      className={cn(
+        "fixed rounded-md border bg-popover text-popover-foreground shadow-md",
+        "animate-in fade-in-0 slide-in-from-top-2 duration-200",
+        className
+      )}
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        minWidth: `${position.width}px`,
+        zIndex: 99999, // Super high z-index to ensure it's always on top of everything
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div className="relative inline-block">
       {triggerWithClick}
-      
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          className={cn(
-            "fixed rounded-md border bg-popover text-popover-foreground shadow-md",
-            "animate-in fade-in-0 slide-in-from-top-2 duration-200",
-            className
-          )}
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-            minWidth: `${position.width}px`,
-            zIndex: 99999, // Super high z-index to ensure it's always on top of everything
-          }}
-        >
-          {children}
-        </div>
-      )}
+      {dropdownContent}
     </div>
   )
 }

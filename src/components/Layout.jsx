@@ -46,6 +46,11 @@ export default function Layout({ children, currentPageName }) {
   const queryClient = useQueryClient();
   const location = useLocation();
 
+  // Debug: Log when admin status or profile changes to help diagnose refresh issue
+  useEffect(() => {
+    console.log('[Layout] Admin status changed:', { isAdmin, hasProfile: !!profile, profileRole: profile?.role, userLoading, permsLoading });
+  }, [isAdmin, profile?.id, profile?.role, userLoading, permsLoading]);
+
   // Close mobile menu when route changes
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -171,7 +176,7 @@ export default function Layout({ children, currentPageName }) {
       
       // Disconnect Gmail
       try {
-        disconnectGmail();
+        await disconnectGmail();
       } catch (error) {
         console.error('Error disconnecting Gmail:', error);
       }

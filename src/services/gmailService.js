@@ -64,133 +64,195 @@ export async function exchangeCodeForToken(code) {
 }
 
 /**
- * Store Gmail access token
+ * Store Gmail access token (server-side)
+ * Tokens are now stored securely in Supabase, not localStorage
  */
-export function storeGmailToken(tokenData) {
-  localStorage.setItem('gmail_access_token', tokenData.access_token);
-  if (tokenData.refresh_token) {
-    localStorage.setItem('gmail_refresh_token', tokenData.refresh_token);
-  }
-  localStorage.setItem('gmail_token_expiry', String(Date.now() + (tokenData.expires_in * 1000)));
-}
-
-/**
- * Get stored Gmail access token
- */
-export function getGmailToken() {
-  return localStorage.getItem('gmail_access_token');
-}
-
-/**
- * Check if Gmail is connected
- */
-export function isGmailConnected() {
-  return !!getGmailToken();
-}
-
-/**
- * Disconnect Gmail
- */
-export function disconnectGmail() {
-  localStorage.removeItem('gmail_access_token');
-  localStorage.removeItem('gmail_refresh_token');
-  localStorage.removeItem('gmail_token_expiry');
-  localStorage.removeItem('gmail_last_sync');
-}
-
-/**
- * Get valid access token (refresh if needed)
- */
-async function getValidAccessToken() {
-  const accessToken = getGmailToken();
-  const expiry = localStorage.getItem('gmail_token_expiry');
-  const refreshToken = localStorage.getItem('gmail_refresh_token');
-
-  if (!accessToken) {
-    throw new Error('Gmail not connected');
-  }
-
-  // Check if token is expired
-  if (expiry && Date.now() > parseInt(expiry)) {
-    if (!refreshToken) {
-      throw new Error('Token expired and no refresh token available');
-    }
-    // Refresh token (should be done on backend)
-    return await refreshAccessToken(refreshToken);
-  }
-
-  return accessToken;
-}
-
-/**
- * Refresh access token
- * 
- * NOTE: This requires a backend service for security.
- */
-async function refreshAccessToken(refreshToken) {
+export async function storeGmailToken(tokenData) {
   try {
-    const response = await fetch('/api/gmail/refresh', {
+    // Get current user session
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    // Store token on server via API
+    const response = await fetch('/api/gmail/integration', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_in: tokenData.expires_in
+      })
     });
 
     if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(
-          'Backend API not found. Please set up the Gmail refresh endpoint. ' +
-          'See GMAIL_INTEGRATION_SETUP.md for instructions.'
-        );
-      }
-      throw new Error('Failed to refresh token. Please reconnect Gmail.');
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to store Gmail token');
     }
 
-    const data = await response.json();
-    storeGmailToken(data);
-    return data.access_token;
+    // Also store last sync timestamp in localStorage (non-sensitive)
+    if (tokenData.last_sync) {
+      localStorage.setItem('gmail_last_sync', String(tokenData.last_sync));
+    }
   } catch (error) {
-    console.error('Error refreshing token:', error);
+    console.error('Error storing Gmail token:', error);
     throw error;
   }
 }
 
 /**
- * Fetch emails from Gmail API
+ * Get Gmail connection status (server-side)
+ */
+export async function isGmailConnected() {
+  try {
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (!supabase) return false;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+
+    const response = await fetch('/api/gmail/integration', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+
+    if (!response.ok) return false;
+    const result = await response.json();
+    return result.success && result.connected === true;
+  } catch (error) {
+    console.error('Error checking Gmail connection:', error);
+    return false;
+  }
+}
+
+/**
+ * Disconnect Gmail (server-side)
+ */
+export async function disconnectGmail() {
+  try {
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch('/api/gmail/integration', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to disconnect Gmail');
+    }
+
+    // Clear localStorage sync timestamp
+    localStorage.removeItem('gmail_last_sync');
+  } catch (error) {
+    console.error('Error disconnecting Gmail:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get valid access token (via server proxy)
+ * Tokens are never exposed to the frontend
+ */
+async function getValidAccessToken() {
+  // Check if Gmail is connected
+  const connected = await isGmailConnected();
+  if (!connected) {
+    throw new Error('Gmail not connected');
+  }
+
+  // Token is handled server-side via proxy
+  // This function is kept for compatibility but tokens are managed by the proxy
+  return 'proxy'; // Placeholder - actual token is used server-side
+}
+
+/**
+ * Refresh access token (handled server-side)
+ * Tokens are now managed server-side, so this is a no-op
+ * The proxy endpoint handles token refresh automatically
+ */
+async function refreshAccessToken(refreshToken) {
+  // Token refresh is now handled server-side by the proxy endpoint
+  // This function is kept for compatibility but should not be called directly
+  throw new Error('Token refresh is handled server-side. Please use the proxy endpoint.');
+}
+
+/**
+ * Fetch emails from Gmail API (via secure proxy)
+ * Tokens are handled server-side and never exposed to frontend
  */
 export async function fetchGmailMessages(options = {}) {
   try {
-    const accessToken = await getValidAccessToken();
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
     const {
       maxResults = 50,
       query = '',
       pageToken = null
     } = options;
 
-    let url = `${GMAIL_API_BASE}/users/me/messages?maxResults=${maxResults}`;
+    // Build query params
+    const params = new URLSearchParams({
+      endpoint: 'users/me/messages',
+      maxResults: String(maxResults)
+    });
     if (query) {
-      url += `&q=${encodeURIComponent(query)}`;
+      params.append('q', query);
     }
     if (pageToken) {
-      url += `&pageToken=${encodeURIComponent(pageToken)}`;
+      params.append('pageToken', pageToken);
     }
 
-    const response = await fetch(url, {
+    // Use proxy endpoint (tokens handled server-side)
+    const response = await fetch(`/api/gmail/proxy?${params.toString()}`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`
+        'Authorization': `Bearer ${session.access_token}`
       }
     });
 
     if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        // Token expired, try to refresh
-        disconnectGmail();
+        await disconnectGmail();
         throw new Error('Gmail authorization expired. Please reconnect.');
       }
-      throw new Error(`Gmail API error: ${response.statusText}`);
+      throw new Error(error.error || `Gmail API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    const result = await response.json();
+    return result.data;
   } catch (error) {
     console.error('Error fetching Gmail messages:', error);
     throw error;
@@ -198,24 +260,35 @@ export async function fetchGmailMessages(options = {}) {
 }
 
 /**
- * Get full message details
+ * Get full message details (via secure proxy)
  */
 export async function getGmailMessage(messageId) {
   try {
-    const accessToken = await getValidAccessToken();
+    const { getSupabaseAuth } = await import('@/services/supabaseClient');
+    const supabase = getSupabaseAuth();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
 
-    const response = await fetch(`${GMAIL_API_BASE}/users/me/messages/${messageId}`, {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    // Use proxy endpoint
+    const response = await fetch(`/api/gmail/proxy?endpoint=users/me/messages/${messageId}`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`
+        'Authorization': `Bearer ${session.access_token}`
       }
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch message: ${response.statusText}`);
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to fetch message: ${response.statusText}`);
     }
 
-    const message = await response.json();
-    return parseGmailMessage(message);
+    const result = await response.json();
+    return parseGmailMessage(result.data);
   } catch (error) {
     console.error('Error fetching Gmail message:', error);
     throw error;

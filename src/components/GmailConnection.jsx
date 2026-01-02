@@ -23,9 +23,13 @@ export default function GmailConnection({ onSyncComplete }) {
 
   // Check connection status
   useEffect(() => {
-    setConnected(isGmailConnected());
-    const syncTime = getLastSyncTimestamp();
-    setLastSync(syncTime);
+    const checkConnection = async () => {
+      const connected = await isGmailConnected();
+      setConnected(connected);
+      const syncTime = getLastSyncTimestamp();
+      setLastSync(syncTime);
+    };
+    checkConnection();
   }, []);
 
   // Get current user email
@@ -62,12 +66,17 @@ export default function GmailConnection({ onSyncComplete }) {
     window.location.href = authUrl;
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     if (confirm('Are you sure you want to disconnect Gmail? This will stop automatic email syncing.')) {
-      disconnectGmail();
-      setConnected(false);
-      setLastSync(null);
-      toast.success('Gmail disconnected');
+      try {
+        await disconnectGmail();
+        setConnected(false);
+        setLastSync(null);
+        toast.success('Gmail disconnected');
+      } catch (error) {
+        console.error('Error disconnecting Gmail:', error);
+        toast.error('Failed to disconnect Gmail');
+      }
     }
   };
 

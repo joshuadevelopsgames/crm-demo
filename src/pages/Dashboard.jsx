@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useUser } from '@/contexts/UserContext';
 import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications, snoozeNotification } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
 import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
@@ -31,6 +32,7 @@ import { format, differenceInDays, startOfDay } from 'date-fns';
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user, isLoading: userLoading } = useUser();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
   const [snoozeNotificationType, setSnoozeNotificationType] = useState(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -165,17 +167,20 @@ export default function Dashboard() {
       fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:137',message:'Accounts loaded',data:{total:accountsList.length,atRiskStatus:atRiskAccounts.length,atRiskIds:atRiskAccounts.slice(0,5).map(a=>a.id),sampleAccounts:accountsList.slice(0,3).map(a=>({id:a.id,name:a.name,status:a.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       return accountsList;
-    }
+    },
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts'],
-    queryFn: () => base44.entities.Contact.list()
+    queryFn: () => base44.entities.Contact.list(),
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list()
+    queryFn: () => base44.entities.Task.list(),
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   // Fetch estimates to calculate renewal dates
@@ -200,7 +205,8 @@ export default function Dashboard() {
       // #endregion
       console.log('✅ Fetched estimates:', data.length, 'total estimates');
       return data;
-    }
+    },
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   const { data: sequences = [] } = useQuery({

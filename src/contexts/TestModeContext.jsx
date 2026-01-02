@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useMemo, useEffect, useState } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useState, useRef } from 'react';
 import { useUser } from './UserContext';
+import { getSupabaseAuth } from '@/services/supabaseClient';
 
 const TestModeContext = createContext(null);
 
@@ -58,7 +59,8 @@ export function getCurrentDate() {
 }
 
 export function TestModeProvider({ children }) {
-  const { user } = useUser();
+  const { user, profile } = useUser();
+  const supabase = getSupabaseAuth();
   
   // Check if user is eligible for test mode
   const isEligibleForTestMode = useMemo(() => {
@@ -70,8 +72,8 @@ export function TestModeProvider({ children }) {
     return eligibleEmails.includes(user?.email);
   }, [user?.email]);
   
-  // Load test mode preference from localStorage (preserve setting even if user not loaded yet)
-  // This ensures test mode stays on after page refresh
+  // Load test mode preference from localStorage first (for initial load before profile is fetched)
+  // Then sync with server preference when profile loads
   const [isTestModeEnabled, setIsTestModeEnabled] = useState(() => {
     try {
       const stored = localStorage.getItem('testMode2025');
@@ -80,19 +82,50 @@ export function TestModeProvider({ children }) {
       return false;
     }
   });
+
+  // Load preference from profile when it becomes available
+  useEffect(() => {
+    if (profile?.id && supabase) {
+      // Profile has test_mode_enabled preference
+      if (profile.test_mode_enabled !== null && profile.test_mode_enabled !== undefined) {
+        const serverPreference = profile.test_mode_enabled;
+        isLoadingFromServer.current = true;
+        setIsTestModeEnabled(serverPreference);
+        // Sync localStorage as fallback
+        localStorage.setItem('testMode2025', serverPreference.toString());
+        // Reset flag after a short delay
+        setTimeout(() => {
+          isLoadingFromServer.current = false;
+        }, 100);
+      }
+    }
+  }, [profile?.id, profile?.test_mode_enabled, supabase]); // Only run when profile or test_mode_enabled changes
   
   // If user loads and is not eligible, turn off test mode
   useEffect(() => {
     if (user && !isEligibleForTestMode && isTestModeEnabled) {
       console.log('[TestModeContext] User is not eligible, turning off test mode');
       setIsTestModeEnabled(false);
+      // Save to server if profile exists
+      if (profile?.id && supabase) {
+        supabase
+          .from('profiles')
+          .update({ test_mode_enabled: false })
+          .eq('id', profile.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error saving test mode preference to server:', error);
+            }
+          });
+      }
+      // Also save to localStorage as fallback
       try {
         localStorage.setItem('testMode2025', 'false');
       } catch (error) {
         console.error('Error saving test mode preference:', error);
       }
     }
-  }, [user, isEligibleForTestMode, isTestModeEnabled]);
+  }, [user, isEligibleForTestMode, isTestModeEnabled, profile?.id, supabase]);
   
   // Test year is 2025
   const testYear = 2025;
@@ -149,36 +182,57 @@ export function TestModeProvider({ children }) {
     }
   }, [getCurrentYear, getCurrentDate, isTestMode, isEligibleForTestMode, isTestModeEnabled, user?.email]);
   
+  // Save test mode preference to server (but not when loading from server)
+  useEffect(() => {
+    if (isLoadingFromServer.current) return; // Don't save if we're loading from server
+    
+    if (profile?.id && supabase && isEligibleForTestMode) {
+      // Save to server
+      supabase
+        .from('profiles')
+        .update({ test_mode_enabled: isTestModeEnabled })
+        .eq('id', profile.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error saving test mode preference to server:', error);
+          }
+        });
+    }
+    
+    // Also save to localStorage as fallback
+    try {
+      localStorage.setItem('testMode2025', isTestModeEnabled.toString());
+    } catch (error) {
+      console.error('Error saving test mode preference to localStorage:', error);
+    }
+  }, [isTestModeEnabled, profile?.id, supabase, isEligibleForTestMode]);
+
   // Toggle test mode
   const toggleTestMode = () => {
     if (!isEligibleForTestMode) return;
     const newValue = !isTestModeEnabled;
     setIsTestModeEnabled(newValue);
-    try {
-      localStorage.setItem('testMode2025', newValue.toString());
-      // Update global function immediately when toggling
-      const updatedIsTestMode = isEligibleForTestMode && newValue;
-      const updatedGetCurrentYear = () => {
-        if (updatedIsTestMode) {
-          return testYear;
-        }
-        return new Date().getFullYear();
-      };
-      const updatedGetCurrentDate = () => {
-        if (updatedIsTestMode) {
-          const now = new Date();
-          return new Date(testYear, now.getMonth(), now.getDate());
-        }
-        return new Date();
-      };
-      globalGetCurrentYear = updatedGetCurrentYear;
-      globalGetCurrentDate = updatedGetCurrentDate;
-      if (typeof window !== 'undefined') {
-        window.__testModeGetCurrentYear = updatedGetCurrentYear;
-        window.__testModeGetCurrentDate = updatedGetCurrentDate;
+    
+    // Update global function immediately when toggling
+    const updatedIsTestMode = isEligibleForTestMode && newValue;
+    const updatedGetCurrentYear = () => {
+      if (updatedIsTestMode) {
+        return testYear;
       }
-    } catch (error) {
-      console.error('Error saving test mode preference:', error);
+      return new Date().getFullYear();
+    };
+    const updatedGetCurrentDate = () => {
+      if (updatedIsTestMode) {
+        const now = new Date();
+        return new Date(testYear, now.getMonth(), now.getDate());
+      }
+      return new Date();
+    };
+    globalGetCurrentYear = updatedGetCurrentYear;
+    globalGetCurrentDate = updatedGetCurrentDate;
+    if (typeof window !== 'undefined') {
+      window.__testModeGetCurrentYear = updatedGetCurrentYear;
+      window.__testModeGetCurrentDate = updatedGetCurrentDate;
     }
   };
   

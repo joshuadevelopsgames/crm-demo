@@ -203,13 +203,15 @@ export function UserProvider({ children }) {
     supabaseConfigured: !!supabase
     });
 
-  const value = {
+  // Use useMemo to ensure value object reference stability, but still update when dependencies change
+  const value = React.useMemo(() => ({
     user,
     profile,
     isLoading,
     isAdmin,
     canManageICP: isAdmin,
-  };
+    isSystemAdmin,
+  }), [user, profile, isLoading, isAdmin, isSystemAdmin]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

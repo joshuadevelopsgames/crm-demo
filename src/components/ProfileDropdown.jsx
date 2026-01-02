@@ -60,7 +60,7 @@ export default function ProfileDropdown() {
       }
       
       try {
-        disconnectGmail();
+        await disconnectGmail();
       } catch (error) {
         console.error('Error disconnecting Gmail:', error);
       }

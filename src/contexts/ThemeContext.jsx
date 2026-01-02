@@ -1,18 +1,78 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useUser } from './UserContext';
+import { getSupabaseAuth } from '@/services/supabaseClient';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
+  const { profile, isLoading: userLoading } = useUser();
+  const supabase = getSupabaseAuth();
+  const isLoadingFromServer = useRef(false);
+  const hasInitializedFromServer = useRef(false);
+  
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage first
+    // For initial load, use localStorage if available, otherwise system preference
+    // This is just for immediate UI rendering - will be overridden by server value
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
       return saved === 'true';
     }
-    // Fallback to system preference
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  // Load preference from profile when it becomes available (only once per profile load)
+  useEffect(() => {
+    // Wait for user to finish loading before checking profile
+    if (userLoading) return;
+    
+    if (profile?.id && supabase && !hasInitializedFromServer.current) {
+      hasInitializedFromServer.current = true;
+      
+      // Profile has dark_mode preference
+      if (profile.dark_mode !== null && profile.dark_mode !== undefined) {
+        // Server has explicit preference - use it (this is the source of truth)
+        const serverPreference = profile.dark_mode;
+        isLoadingFromServer.current = true;
+        setIsDarkMode(serverPreference);
+        // Sync localStorage as fallback
+        localStorage.setItem('darkMode', serverPreference.toString());
+        setTimeout(() => {
+          isLoadingFromServer.current = false;
+        }, 100);
+      } else {
+        // Server preference is null - check if we have a localStorage value to sync
+        // This handles the case where user set preference on another device before server sync was implemented
+        const localPreference = localStorage.getItem('darkMode');
+        if (localPreference !== null) {
+          // We have a local preference but server doesn't - sync it to server
+          const localValue = localPreference === 'true';
+          isLoadingFromServer.current = true;
+          setIsDarkMode(localValue);
+          // Save to server so it syncs across devices
+          supabase
+            .from('profiles')
+            .update({ dark_mode: localValue })
+            .eq('id', profile.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error syncing dark mode preference to server:', error);
+              } else {
+                console.log('✅ Synced dark mode preference to server');
+              }
+            });
+          setTimeout(() => {
+            isLoadingFromServer.current = false;
+          }, 100);
+        }
+        // If no local preference either, use system preference (already set in useState)
+      }
+    } else if (!profile?.id && !userLoading) {
+      // User logged out - reset initialization flag
+      hasInitializedFromServer.current = false;
+    }
+  }, [profile?.id, profile?.dark_mode, supabase, userLoading]); // Include userLoading in dependencies
+
+  // Apply dark mode to DOM
   useEffect(() => {
     // Apply dark mode via data-theme attribute (preferred) and class (legacy support)
     const root = document.documentElement;
@@ -23,10 +83,28 @@ export function ThemeProvider({ children }) {
       root.setAttribute('data-theme', 'light');
       root.classList.remove('dark');
     }
-    
-    // Save to localStorage
-    localStorage.setItem('darkMode', isDarkMode.toString());
   }, [isDarkMode]);
+
+  // Save to server when preference changes (but not when loading from server)
+  useEffect(() => {
+    if (isLoadingFromServer.current) return; // Don't save if we're loading from server
+    
+    if (profile?.id && supabase) {
+      // Save to server
+      supabase
+        .from('profiles')
+        .update({ dark_mode: isDarkMode })
+        .eq('id', profile.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error saving dark mode preference to server:', error);
+          }
+        });
+    }
+    
+    // Also save to localStorage as fallback
+    localStorage.setItem('darkMode', isDarkMode.toString());
+  }, [isDarkMode, profile?.id, supabase]);
 
   const toggleDarkMode = () => {
     setIsDarkMode(prev => !prev);

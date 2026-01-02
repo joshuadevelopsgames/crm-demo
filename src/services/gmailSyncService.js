@@ -11,7 +11,8 @@ import { base44 } from '@/api/base44Client';
  * Sync Gmail emails to CRM interactions
  */
 export async function syncGmailToCRM(contacts = [], accounts = [], currentUserEmail = '') {
-  if (!isGmailConnected()) {
+  const connected = await isGmailConnected();
+  if (!connected) {
     throw new Error('Gmail is not connected. Please connect your Gmail account first.');
   }
 

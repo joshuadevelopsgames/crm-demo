@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useUser } from '@/contexts/UserContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,15 +89,19 @@ export default function Accounts() {
     }
   }, [searchParams]);
 
+  const { user, isLoading: userLoading } = useUser();
+
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => base44.entities.Account.list(),
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   // Fetch contacts to check which accounts have contacts
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts'],
-    queryFn: () => base44.entities.Contact.list()
+    queryFn: () => base44.entities.Contact.list(),
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   // Create a map of account IDs that have contacts
@@ -122,7 +127,8 @@ export default function Accounts() {
       return result.success ? (result.data || []) : [];
     },
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
-    refetchOnWindowFocus: true // Refetch when window regains focus
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   // Fetch all scorecards to check which accounts have completed ICP scorecards
@@ -133,7 +139,8 @@ export default function Accounts() {
       if (!response.ok) return [];
       const result = await response.json();
       return result.success ? (result.data || []) : [];
-    }
+    },
+    enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
   // Create a map of account IDs that have completed scorecards
