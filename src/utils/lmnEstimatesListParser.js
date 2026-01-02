@@ -166,7 +166,7 @@ export function parseEstimatesList(csvTextOrRows) {
         
         const stat = status.toLowerCase().trim();
         
-        // Explicit Won statuses
+        // Check for explicit Won statuses first (most specific)
         // Reading from LMN CSV column: "Status" only
         if (
           stat === 'email contract award' ||
@@ -175,11 +175,21 @@ export function parseEstimatesList(csvTextOrRows) {
           stat === 'work in progress' ||
           stat === 'billing complete' ||
           stat === 'contract signed' ||
+          stat === 'won' ||
+          stat === 'sold' ||
+          stat === 'completed' ||
+          stat === 'awarded' ||
+          stat === 'accepted' ||
           stat.includes('email contract award') ||
           stat.includes('verbal contract award') ||
           stat.includes('work complete') ||
           stat.includes('billing complete') ||
-          stat.includes('contract signed')
+          stat.includes('contract signed') ||
+          stat.includes('contract awarded') ||
+          stat.includes('work completed') ||
+          stat.includes('billing completed') ||
+          stat.includes('closed won') ||
+          stat.includes('sold')
         ) {
           estimateStatus = 'won';
         }
@@ -192,12 +202,15 @@ export function parseEstimatesList(csvTextOrRows) {
           stat === 'estimate on hold' ||
           stat === 'estimate lost - no reply' ||
           stat === 'estimate lost - price too high' ||
+          stat === 'lost' ||
+          stat === 'closed lost' ||
           stat.includes('estimate in progress - lost') ||
           stat.includes('review + approve - lost') ||
           stat.includes('client proposal phase - lost') ||
           stat.includes('estimate lost - no reply') ||
           stat.includes('estimate lost - price too high') ||
-          stat.includes('estimate on hold')
+          stat.includes('estimate on hold') ||
+          stat.includes('closed lost')
         ) {
           estimateStatus = 'lost';
         }
