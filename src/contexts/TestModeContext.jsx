@@ -191,7 +191,7 @@ export function TestModeProvider({ children }) {
       {children}
       {isTestMode && (
         <div 
-          className="fixed top-0 left-0 right-0 bg-amber-500 dark:bg-amber-600 text-white text-center font-semibold text-sm shadow-md flex items-center justify-center"
+          className="fixed top-0 left-0 right-0 bg-white dark:bg-amber-600 border-b border-slate-200 dark:border-amber-700 text-slate-900 dark:text-white text-center font-semibold text-sm shadow-md flex items-center justify-center"
           style={{ 
             height: '40px',
             minHeight: '40px',
@@ -205,7 +205,7 @@ export function TestModeProvider({ children }) {
           {isEligibleForTestMode && (
             <button
               onClick={toggleTestMode}
-              className="ml-4 underline hover:no-underline opacity-90 hover:opacity-100 text-white"
+              className="ml-4 underline hover:no-underline opacity-90 hover:opacity-100 text-slate-900 dark:text-white"
               type="button"
             >
               Disable
