@@ -49,10 +49,12 @@ const queryClient = new QueryClient({
 
 // Component to protect admin routes
 function AdminRoute({ children, requiredPermission }) {
-  const { isAdmin, isLoading } = useUser();
+  const { isAdmin, isLoading, profile } = useUser();
   const { permissions: userPermissions, isLoading: permsLoading } = useUserPermissions();
   
-  if (isLoading || permsLoading) {
+  // Wait for user and profile to load before checking permissions
+  // If profile isn't loaded yet, permissions will be empty and cause false redirects
+  if (isLoading || permsLoading || !profile?.id) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -72,7 +74,9 @@ function AdminRoute({ children, requiredPermission }) {
   }
   
   // Check specific permission
-  if (!userPermissions[requiredPermission]) {
+  // Only redirect if permissions object exists and the permission is explicitly false
+  // (undefined means still loading or default true, so allow access)
+  if (userPermissions && userPermissions[requiredPermission] === false) {
     return <Navigate to="/dashboard" replace />;
   }
   

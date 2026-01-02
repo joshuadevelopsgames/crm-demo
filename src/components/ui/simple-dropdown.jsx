@@ -125,7 +125,7 @@ export function SimpleDropdown({
             top: `${position.top}px`,
             left: `${position.left}px`,
             minWidth: `${position.width}px`,
-            zIndex: 60, // Above announcement bar (z-55) and nav (z-50)
+            zIndex: 100, // Above announcement bar (z-55) and nav (z-50)
           }}
         >
           {children}
