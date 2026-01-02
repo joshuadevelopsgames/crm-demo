@@ -21,6 +21,7 @@ export function UserProvider({ children }) {
       return data.session;
     },
     refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+    staleTime: 0, // Always consider stale to ensure fresh data
   });
 
   // Fetch user profile when session changes
