@@ -243,13 +243,40 @@ export function parseEstimatesList(csvTextOrRows) {
         const contractEnd = parseDate(contractEndRaw);
         
         // Debug logging for first few won estimates with contract_end
-        if (estimateId && contractEndRaw && contractEndRaw !== null && contractEndRaw !== undefined && contractEndRaw !== '') {
+        // Log to console for debugging (not just errors array)
+        if (estimateId && contractEndRaw !== null && contractEndRaw !== undefined && contractEndRaw !== '') {
           const status = row[colMap.status]?.toString().trim() || '';
           const isWon = status.toLowerCase().includes('contract') || 
                        status.toLowerCase().includes('work complete') ||
-                       status.toLowerCase().includes('billing complete');
-          if (isWon && errors.length < 3) {
-            errors.push(`DEBUG: Estimate ${estimateId} - contractEndRaw: ${contractEndRaw} (type: ${typeof contractEndRaw}), parsed: ${contractEnd}`);
+                       status.toLowerCase().includes('billing complete') ||
+                       status.toLowerCase().includes('email contract award') ||
+                       status.toLowerCase().includes('verbal contract award');
+          if (isWon) {
+            // Only log first 3 to avoid spam
+            const debugCount = errors.filter(e => e.startsWith('DEBUG:')).length;
+            if (debugCount < 3) {
+              const debugMsg = `DEBUG: Estimate ${estimateId} (${status}) - contractEndRaw: ${contractEndRaw} (type: ${typeof contractEndRaw}), parsed: ${contractEnd}`;
+              errors.push(debugMsg);
+              console.log('📅 PARSER:', debugMsg);
+            }
+          }
+        }
+        
+        // Also log if contract_end is missing for won estimates (first few)
+        if (estimateId && (!contractEndRaw || contractEndRaw === null || contractEndRaw === '')) {
+          const status = row[colMap.status]?.toString().trim() || '';
+          const isWon = status.toLowerCase().includes('contract') || 
+                       status.toLowerCase().includes('work complete') ||
+                       status.toLowerCase().includes('billing complete') ||
+                       status.toLowerCase().includes('email contract award') ||
+                       status.toLowerCase().includes('verbal contract award');
+          if (isWon) {
+            const debugCount = errors.filter(e => e.startsWith('DEBUG MISSING:')).length;
+            if (debugCount < 2) {
+              const debugMsg = `DEBUG MISSING: Estimate ${estimateId} (${status}) - contractEndRaw is null/empty, colMap.contractEnd: ${colMap.contractEnd}`;
+              errors.push(debugMsg);
+              console.warn('⚠️ PARSER:', debugMsg);
+            }
           }
         }
         
