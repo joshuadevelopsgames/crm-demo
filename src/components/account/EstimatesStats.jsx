@@ -2,8 +2,16 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, Target } from 'lucide-react';
 
+// Helper to get current year (respects test mode)
+function getCurrentYearForCalculation() {
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    return window.__testModeGetCurrentYear();
+  }
+  return new Date().getFullYear();
+}
+
 export default function EstimatesStats({ estimates = [] }) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentYearForCalculation();
   
   const thisYearEstimates = estimates.filter(e => {
     const estimateYear = new Date(e.estimate_date || e.created_date).getFullYear();

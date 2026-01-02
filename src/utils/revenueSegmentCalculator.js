@@ -138,6 +138,14 @@ function getEstimateYearData(estimate, currentYear) {
   return null;
 }
 
+// Import getCurrentYear from test mode context (will be available after TestModeProvider initializes)
+function getCurrentYearForCalculation() {
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    return window.__testModeGetCurrentYear();
+  }
+  return new Date().getFullYear();
+}
+
 /**
  * Calculate actual revenue from won estimates for the current year
  * Multi-year contracts are annualized (divided by number of years)
@@ -145,7 +153,7 @@ function getEstimateYearData(estimate, currentYear) {
  * @returns {number} - Total revenue from won estimates in current year (annualized for multi-year contracts)
  */
 export function calculateRevenueFromEstimates(estimates = []) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentYearForCalculation();
   
   return estimates
     .filter(est => {
@@ -180,7 +188,7 @@ export function getAccountRevenue(account, estimates = []) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
     
     // Check if we have won estimates that apply to the current year
-    const currentYear = new Date().getFullYear();
+    const currentYear = getCurrentYearForCalculation();
     const hasWonEstimatesForCurrentYear = estimates.some(est => {
       if (!est.status || est.status.toLowerCase() !== 'won') {
         return false;
@@ -212,7 +220,7 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
   // Check if account is project only (has "Standard" type estimates but no "Service" type estimates)
   // If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
   if (estimates && estimates.length > 0) {
-    const currentYear = new Date().getFullYear();
+    const currentYear = getCurrentYearForCalculation();
     
     // Only consider won estimates from current year for type checking
     const wonEstimates = estimates.filter(est => {

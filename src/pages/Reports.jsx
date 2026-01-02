@@ -29,9 +29,17 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
+// Helper to get current year (respects test mode)
+function getCurrentYearForCalculation() {
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    return window.__testModeGetCurrentYear();
+  }
+  return new Date().getFullYear();
+}
+
 export default function Reports() {
   const [searchParams] = useSearchParams();
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentYearForCalculation();
   const yearFromUrl = searchParams.get('year');
   const [selectedYear, setSelectedYear] = useState(yearFromUrl ? parseInt(yearFromUrl) : currentYear);
   const [selectedAccount, setSelectedAccount] = useState('all');

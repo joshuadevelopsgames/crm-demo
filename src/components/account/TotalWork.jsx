@@ -163,8 +163,16 @@ function getReadableEstimateId(estimate) {
   return 'Unknown';
 }
 
+// Helper to get current year (respects test mode)
+function getCurrentYearForCalculation() {
+  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    return window.__testModeGetCurrentYear();
+  }
+  return new Date().getFullYear();
+}
+
 export default function TotalWork({ estimates = [] }) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentYearForCalculation();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
   
@@ -250,7 +258,7 @@ export default function TotalWork({ estimates = [] }) {
     return { included, excluded };
   }, [estimates, currentYear]);
   
-  // Calculate totals
+  // Calculate totals for current year
   const totalEstimated = useMemo(() => {
     return estimatedBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [estimatedBreakdown]);
@@ -259,9 +267,31 @@ export default function TotalWork({ estimates = [] }) {
     return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [soldBreakdown]);
   
+  // Calculate all-time totals (all estimates regardless of year)
+  // Try total_price_with_tax first, fall back to total_price if not available
+  const allTimeEstimated = useMemo(() => {
+    return estimates.reduce((sum, est) => {
+      const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+      return sum + totalPrice;
+    }, 0);
+  }, [estimates]);
+  
+  const allTimeSold = useMemo(() => {
+    return estimates
+      .filter(est => est.status && est.status.toLowerCase() === 'won')
+      .reduce((sum, est) => {
+        const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+        return sum + totalPrice;
+      }, 0);
+  }, [estimates]);
+  
   // Calculate sold percentage
   const soldPercentage = totalEstimated > 0 
     ? Math.round((totalSold / totalEstimated) * 100) 
+    : 0;
+  
+  const allTimeSoldPercentage = allTimeEstimated > 0
+    ? Math.round((allTimeSold / allTimeEstimated) * 100)
     : 0;
 
   return (
@@ -277,24 +307,30 @@ export default function TotalWork({ estimates = [] }) {
       <CardContent>
         <div className="space-y-3">
           <div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">ESTIMATED</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">ESTIMATED VALUE</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-[#ffffff] mt-1">
-              ${totalEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${allTimeEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {estimatedBreakdown.included.length} estimate{estimatedBreakdown.included.length !== 1 ? 's' : ''} included
+              {estimates.length} total estimate{estimates.length !== 1 ? 's' : ''}
+              {totalEstimated !== allTimeEstimated && (
+                <span> • {estimatedBreakdown.included.length} for {currentYear}</span>
+              )}
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">SOLD</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">WON VALUE</p>
             <p className="text-2xl font-semibold text-emerald-600 mt-1">
-              ${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {totalEstimated > 0 && (
-                <span className="text-base ml-2">({soldPercentage}%)</span>
+              ${allTimeSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {allTimeEstimated > 0 && (
+                <span className="text-base ml-2">({allTimeSoldPercentage}%)</span>
               )}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {soldBreakdown.included.length} won estimate{soldBreakdown.included.length !== 1 ? 's' : ''} included
+              {estimates.filter(est => est.status && est.status.toLowerCase() === 'won').length} won estimate{estimates.filter(est => est.status && est.status.toLowerCase() === 'won').length !== 1 ? 's' : ''}
+              {totalSold !== allTimeSold && (
+                <span> • {soldBreakdown.included.length} for {currentYear}</span>
+              )}
             </p>
           </div>
           

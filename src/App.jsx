@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
+import { TestModeProvider } from './contexts/TestModeContext';
 import { useUserPermissions } from './hooks/useUserPermissions';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
@@ -273,7 +274,8 @@ function App() {
       <Router>
         <ThemeProvider>
           <UserProvider>
-            <TutorialProvider>
+            <TestModeProvider>
+              <TutorialProvider>
               <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
                 <Toaster 
                   position="top-center" 
@@ -292,7 +294,8 @@ function App() {
                 <InstallPrompt />
                 <BugReportButton />
               </div>
-            </TutorialProvider>
+              </TutorialProvider>
+            </TestModeProvider>
           </UserProvider>
         </ThemeProvider>
       </Router>
