@@ -263,7 +263,13 @@ export function parseEstimatesList(csvTextOrRows) {
         const estimateDate = parseDate(estimateDateRaw);
         const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
         
-        // Debug: Log first few estimates to see date parsing
+        // Parse contract dates
+        const contractStartRaw = colMap.contractStart >= 0 ? row[colMap.contractStart] : null;
+        const contractEndRaw = colMap.contractEnd >= 0 ? row[colMap.contractEnd] : null;
+        const contractStart = parseDate(contractStartRaw);
+        const contractEnd = parseDate(contractEndRaw);
+        
+        // Debug: Log first few estimates to see date parsing (AFTER all dates are parsed)
         if (estimates.length < 5) {
           console.log(`🔍 PARSER: Estimate ${estimateId} date parsing:`, {
             estimateId,
@@ -286,12 +292,6 @@ export function parseEstimatesList(csvTextOrRows) {
             hasContractEndColumn: colMap.contractEnd >= 0
           });
         }
-        
-        // Parse contract dates
-        const contractStartRaw = colMap.contractStart >= 0 ? row[colMap.contractStart] : null;
-        const contractEndRaw = colMap.contractEnd >= 0 ? row[colMap.contractEnd] : null;
-        const contractStart = parseDate(contractStartRaw);
-        const contractEnd = parseDate(contractEndRaw);
         
         // Debug logging for first few won estimates with contract_end
         // Log to console for debugging (not just errors array)
