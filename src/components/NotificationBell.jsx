@@ -353,10 +353,25 @@ export default function NotificationBell() {
     const neglectedAccounts = allNotifications.filter(n => n.type === 'neglected_account');
     if (renewalReminders.length > 0 || neglectedAccounts.length > 0) {
       console.log(`🔔 Before filtering: ${renewalReminders.length} renewal_reminder, ${neglectedAccounts.length} neglected_account notifications`);
+      console.log(`🔔 Sample notifications:`, {
+        renewal_reminder: renewalReminders.slice(0, 2).map(n => ({
+          id: n.id,
+          type: n.type,
+          account_id: n.related_account_id,
+          hasAccountId: !!n.related_account_id
+        })),
+        neglected_account: neglectedAccounts.slice(0, 2).map(n => ({
+          id: n.id,
+          type: n.type,
+          account_id: n.related_account_id,
+          hasAccountId: !!n.related_account_id
+        }))
+      });
     }
     
     let filteredCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
     let filteredOutCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
+    let filteredOutReasons = { noUserId: 0, noAccountId: 0, snoozed: 0, taskOverdue: 0, other: 0 };
     
     const filtered = allNotifications.filter(notification => {
       // For JSONB notifications (neglected_account, renewal_reminder), they don't have user_id
@@ -371,6 +386,7 @@ export default function NotificationBell() {
         // Task notifications need user_id check
         notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
         if (notificationUserId !== currentUserIdStr) {
+          filteredOutReasons.noUserId++;
           return false; // Not for current user
         }
       }
@@ -387,7 +403,10 @@ export default function NotificationBell() {
       // Handle null, undefined, or 'null' string values
       const accountId = notification.related_account_id;
       if (!accountId || accountId === 'null' || accountId === null || accountId === undefined) {
-        console.log(`🚫 Filtering out renewal_reminder: no account ID`);
+        filteredOutReasons.noAccountId++;
+        if (filteredOutReasons.noAccountId <= 3) {
+          console.log(`🚫 Filtering out renewal_reminder: no account ID`, notification);
+        }
         return false; // No account ID means we can't verify if it should be at-risk
       }
       
@@ -487,6 +506,10 @@ export default function NotificationBell() {
     
     const shouldShow = !isSnoozed;
     
+    if (isSnoozed) {
+      filteredOutReasons.snoozed++;
+    }
+    
     // Track filtering with detailed logging (only log first few to avoid spam)
     if (notification.type === 'renewal_reminder' || notification.type === 'neglected_account' || notification.type.startsWith('task_')) {
       const typeKey = notification.type === 'renewal_reminder' ? 'renewal_reminder' : notification.type === 'neglected_account' ? 'neglected_account' : 'task';
@@ -534,8 +557,9 @@ export default function NotificationBell() {
     }) || [];
     
     console.log(`🔔 After filtering: ${totalShown} shown (${filteredCount.renewal_reminder} renewal_reminder, ${filteredCount.neglected_account} neglected_account, ${filteredCount.task} task)`);
-    if (totalFilteredOut > 0) {
+    if (totalFilteredOut > 0 || allNotifications.length > 0) {
       console.log(`🚫 Filtered out: ${totalFilteredOut} total (${filteredOutCount.renewal_reminder} renewal_reminder, ${filteredOutCount.neglected_account} neglected_account, ${filteredOutCount.task} task)`);
+      console.log(`📊 Filter reasons:`, filteredOutReasons);
       console.log(`📊 Snooze stats: ${snoozes?.length || 0} total snoozes, ${activeSnoozes.length} active`);
       
       // Log breakdown of snoozes by type
