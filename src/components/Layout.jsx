@@ -39,9 +39,9 @@ export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
   const { isTutorialMode, exitTutorial } = useTutorial();
-  const { isAdmin } = useUser();
+  const { isAdmin, isLoading: userLoading } = useUser();
   const { isTestMode } = useTestMode();
-  const { permissions: userPermissions } = useUserPermissions();
+  const { permissions: userPermissions, isLoading: permsLoading } = useUserPermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -100,14 +100,19 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Announcements', path: 'Announcements', icon: Megaphone, permission: null }, // Always visible for admins
   ];
 
+  // Wait for user and permissions to load before determining admin navigation
+  // This prevents admin nav from not showing on initial login due to race conditions
+  const isUserDataReady = !userLoading && !permsLoading;
+
   // Filter navigation items based on permissions
   const visibleRegularNav = regularNavigation.filter(item => 
     !item.permission || userPermissions[item.permission] === true
   );
 
   // Only show admin navigation if user is actually an admin
-  // Then filter admin items based on permissions
-  const visibleAdminNav = isAdmin 
+  // Wait for user data to be ready to avoid false negatives on initial load
+  // This ensures admin nav appears immediately when user data loads, without requiring a refresh
+  const visibleAdminNav = isUserDataReady && isAdmin
     ? adminNavigation.filter(item => 
         !item.permission || userPermissions[item.permission] === true
       )
