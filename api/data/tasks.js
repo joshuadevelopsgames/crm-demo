@@ -204,6 +204,21 @@ export default async function handler(req, res) {
       // Delete task by ID from Supabase
       const { id } = req.query;
       
+      // First, delete all notifications related to this task
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('related_task_id', id);
+      
+      if (notificationError) {
+        console.error('Error deleting task notifications:', notificationError);
+        // Continue with task deletion even if notification deletion fails
+        // (notifications might not exist, or there might be a schema issue)
+      } else {
+        console.log(`✅ Deleted notifications for task ${id}`);
+      }
+      
+      // Then delete the task
       const { error } = await supabase
         .from('tasks')
         .delete()

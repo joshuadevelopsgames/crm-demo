@@ -134,7 +134,17 @@ export default function Dashboard() {
   
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: async () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:135',message:'Fetching accounts',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      const accountsList = await base44.entities.Account.list();
+      // #region agent log
+      const atRiskAccounts = accountsList.filter(a => a.status === 'at_risk');
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:137',message:'Accounts loaded',data:{total:accountsList.length,atRiskStatus:atRiskAccounts.length,atRiskIds:atRiskAccounts.slice(0,5).map(a=>a.id),sampleAccounts:accountsList.slice(0,3).map(a=>({id:a.id,name:a.name,status:a.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      return accountsList;
+    }
   });
 
   const { data: contacts = [] } = useQuery({
@@ -162,6 +172,11 @@ export default function Dashboard() {
         return [];
       }
       const data = result.data || [];
+      // #region agent log
+      const wonEstimates = data.filter(e => e.status?.toLowerCase() === 'won');
+      const wonWithContractEnd = wonEstimates.filter(e => e.contract_end);
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:164',message:'Estimates loaded',data:{total:data.length,wonCount:wonEstimates.length,wonWithContractEndCount:wonWithContractEnd.length,sampleWonWithEnd:wonWithContractEnd.slice(0,3).map(e=>({id:e.id,account_id:e.account_id,status:e.status,contract_end:e.contract_end}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.log('✅ Fetched estimates:', data.length, 'total estimates');
       return data;
     }
