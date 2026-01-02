@@ -315,7 +315,7 @@ export function compareWithExisting(
   if (importedData.estimates) {
     importedData.estimates.forEach(importedEstimate => {
       // Try multiple lookup strategies
-      let lookupId = importedEstimate.lmn_estimate_id || importedEstimate.estimate_number || importedEstimate.id;
+      const lookupId = importedEstimate.lmn_estimate_id || importedEstimate.estimate_number || importedEstimate.id;
       let existing = existingEstimatesMap.get(lookupId);
       
       // Try uppercase if not found (case-insensitive matching)
@@ -397,7 +397,7 @@ export function compareWithExisting(
   // Compare Jobsites
   if (importedData.jobsites) {
     importedData.jobsites.forEach(importedJobsite => {
-      let lookupId = importedJobsite.lmn_jobsite_id || importedJobsite.id;
+      const lookupId = importedJobsite.lmn_jobsite_id || importedJobsite.id;
       let existing = existingJobsitesMap.get(lookupId);
       
       // Try as string if not found
