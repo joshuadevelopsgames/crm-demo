@@ -112,6 +112,7 @@ if (!result || !result.estimates) {
 
 console.log(`Total estimates parsed: ${result.estimates.length}`);
 console.log(`Errors: ${result.errors ? result.errors.length : 0}`);
+console.log(`Stats:`, JSON.stringify(result.stats, null, 2));
 
 if (result.errors && result.errors.length > 0) {
   console.log('\n⚠️  Parser Errors (first 10):');
