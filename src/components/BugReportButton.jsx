@@ -13,6 +13,13 @@ import {
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import toast from 'react-hot-toast';
 
 export default function BugReportButton() {
@@ -22,6 +29,7 @@ export default function BugReportButton() {
   const [selectedElement, setSelectedElement] = useState(null);
   const [description, setDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [priority, setPriority] = useState('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const consoleLogRef = useRef([]);
   const originalConsoleRef = useRef(null);
@@ -220,6 +228,7 @@ export default function BugReportButton() {
     setSelectedElement(null);
     setDescription('');
     setUserEmail('');
+    setPriority('medium');
     consoleLogRef.current = [];
   };
 
@@ -264,6 +273,7 @@ export default function BugReportButton() {
       const bugReport = {
         description,
         userEmail: userEmail || 'Not provided',
+        priority,
         selectedElement,
         consoleLogs: currentLogs,
         userInfo,
@@ -444,6 +454,24 @@ export default function BugReportButton() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label htmlFor="priority" className="text-sm font-medium mb-2 block">
+                Priority
+              </label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger id="priority" className="w-full">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Description */}

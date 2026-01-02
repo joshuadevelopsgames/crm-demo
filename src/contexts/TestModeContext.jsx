@@ -9,7 +9,7 @@ function initializeGlobalGetCurrentYear() {
   try {
     const stored = localStorage.getItem('testMode2025');
     if (stored === 'true') {
-      // Check if user is eligible (jrsschroeder@gmail.com)
+      // Check if user is eligible (jrsschroeder@gmail.com, jon@lecm.ca, blake@lecm.ca)
       // Note: We can't check user email here since UserContext isn't available yet
       // So we'll check it in the provider and update accordingly
       return () => 2025; // Test mode year
@@ -60,9 +60,14 @@ export function getCurrentDate() {
 export function TestModeProvider({ children }) {
   const { user } = useUser();
   
-  // Check if user is eligible for test mode (jrsschroeder@gmail.com)
+  // Check if user is eligible for test mode
   const isEligibleForTestMode = useMemo(() => {
-    return user?.email === 'jrsschroeder@gmail.com';
+    const eligibleEmails = [
+      'jrsschroeder@gmail.com',
+      'jon@lecm.ca',
+      'blake@lecm.ca'
+    ];
+    return eligibleEmails.includes(user?.email);
   }, [user?.email]);
   
   // Load test mode preference from localStorage (preserve setting even if user not loaded yet)

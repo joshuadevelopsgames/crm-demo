@@ -71,9 +71,28 @@ export default async function handler(req, res) {
     const emailService = process.env.EMAIL_SERVICE || 'resend'; // 'resend' or 'smtp'
 
     // Format the bug report email
-    const emailSubject = `🐛 Bug Report - ${new Date().toLocaleString()}`;
+    const priority = bugReport.priority || 'medium';
+    const priorityLabels = {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical'
+    };
+    const priorityLabel = priorityLabels[priority] || 'Medium';
+    const priorityEmoji = {
+      low: '🟢',
+      medium: '🟡',
+      high: '🟠',
+      critical: '🔴'
+    };
+    const priorityEmojiIcon = priorityEmoji[priority] || '🟡';
+    
+    const emailSubject = `${priorityEmojiIcon} Bug Report [${priorityLabel.toUpperCase()}] - ${new Date().toLocaleString()}`;
     
     let emailBody = `# Bug Report
+
+## Priority
+**${priorityEmojiIcon} ${priorityLabel.toUpperCase()}**
 
 ## Description
 ${bugReport.description}
@@ -198,6 +217,7 @@ ${bugReport.consoleLogs.map(log =>
           const fullBugReportData = {
             description: bugReport.description,
             userEmail: bugReport.userEmail,
+            priority: bugReport.priority || 'medium',
             selectedElement: bugReport.selectedElement,
             consoleLogs: bugReport.consoleLogs,
             userInfo: bugReport.userInfo

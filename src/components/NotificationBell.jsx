@@ -603,8 +603,19 @@ export default function NotificationBell() {
     
     return Object.entries(groupedNotifications).map(([type, notifications]) => {
       // Sort notifications within each group by newest first, then unread status
+      // For bug reports, also sort by priority (critical > high > medium > low)
       const sortedGroupNotifications = [...notifications].sort((a, b) => {
-        // First, sort by creation date (newest first)
+        // For bug reports, prioritize by priority level first
+        if (type === 'bug_report') {
+          const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+          const priorityA = priorityOrder[getBugReportPriority(a)] || 2;
+          const priorityB = priorityOrder[getBugReportPriority(b)] || 2;
+          if (priorityA !== priorityB) {
+            return priorityB - priorityA; // Higher priority first
+          }
+        }
+        
+        // Then sort by creation date (newest first)
         const dateA = new Date(a.created_at || a.scheduled_for || 0);
         const dateB = new Date(b.created_at || b.scheduled_for || 0);
         const dateDiff = dateB - dateA; // Newest first
@@ -1029,6 +1040,50 @@ export default function NotificationBell() {
     }
   };
 
+  // Get priority badge styling for bug reports
+  const getPriorityBadge = (priorityValue) => {
+    const priorityLabels = {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      critical: 'Critical'
+    };
+    const priorityStyles = {
+      low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+      medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
+      high: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700',
+      critical: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
+    };
+    const priority = priorityValue || 'medium';
+    const label = priorityLabels[priority] || 'Medium';
+    const style = priorityStyles[priority] || priorityStyles.medium;
+    
+    return (
+      <Badge className={`${style} border text-xs font-semibold px-2 py-0.5`}>
+        {label}
+      </Badge>
+    );
+  };
+
+  // Extract priority from bug report notification
+  const getBugReportPriority = (notification) => {
+    if (notification.type !== 'bug_report') return null;
+    
+    try {
+      if (notification.message && notification.message.includes('---FULL_DATA---')) {
+        const parts = notification.message.split('---FULL_DATA---\n');
+        if (parts[1]) {
+          const bugReportData = JSON.parse(parts[1]);
+          return bugReportData.priority || 'medium';
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing bug report priority:', e);
+    }
+    
+    return 'medium'; // Default
+  };
+
   return (
     <div className="relative">
       <Button
@@ -1140,6 +1195,7 @@ export default function NotificationBell() {
                                   <h4 className={`text-sm font-medium ${group.unreadCount > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-text-muted'}`}>
                                     {hasMultiple ? groupName : group.notifications[0]?.title || groupName}
                                   </h4>
+                                  {!hasMultiple && group.notifications[0]?.type === 'bug_report' && getPriorityBadge(getBugReportPriority(group.notifications[0]))}
                                   {hasMultiple && (
                                     <Badge variant="secondary" className="text-xs">
                                       {/* For renewal reminders and neglected accounts, show unread count (accounts with unread notifications) */}
@@ -1238,9 +1294,12 @@ export default function NotificationBell() {
                                   onClick={() => handleNotificationClick(notification)}
                                 >
                                   <div className="flex items-start justify-between gap-2">
-                                    <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-text-muted'}`}>
-                                      {notification.title}
-                                    </h4>
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <h4 className={`text-sm font-medium ${!notification.is_read ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-text-muted'}`}>
+                                        {notification.title}
+                                      </h4>
+                                      {notification.type === 'bug_report' && getPriorityBadge(getBugReportPriority(notification))}
+                                    </div>
                                     <div className="flex items-center gap-2">
                                       {!notification.is_read && (
                                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5" />
@@ -1327,11 +1386,14 @@ export default function NotificationBell() {
             
             return (
               <div className="space-y-4 py-4">
-                <div>
-                  <Label className="text-sm font-semibold">Reported At</Label>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                    {format(new Date(selectedBugReport.created_at), 'PPpp')}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-semibold">Reported At</Label>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                      {format(new Date(selectedBugReport.created_at), 'PPpp')}
+                    </p>
+                  </div>
+                  {bugReportData?.priority && getPriorityBadge(bugReportData.priority)}
                 </div>
 
                 <div>
