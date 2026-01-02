@@ -111,14 +111,18 @@ export default function Accounts() {
   }, [contacts]);
 
   // Fetch all estimates to calculate actual revenue from won estimates
+  // Include current year in query key so it refetches when test mode changes
+  const currentYear = getCurrentYear();
   const { data: allEstimates = [] } = useQuery({
-    queryKey: ['estimates'],
+    queryKey: ['estimates', currentYear], // Include year so it refetches when test mode changes
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
       if (!response.ok) return [];
       const result = await response.json();
       return result.success ? (result.data || []) : [];
-    }
+    },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    refetchOnWindowFocus: true // Refetch when window regains focus
   });
 
   // Fetch all scorecards to check which accounts have completed ICP scorecards
