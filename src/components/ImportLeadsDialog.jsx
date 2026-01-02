@@ -970,9 +970,12 @@ export default function ImportLeadsDialog({ open, onClose }) {
       if (missingDateEstimates.length > 0) {
         const estimateIds = missingDateEstimates.slice(0, 5).map(ir => ir.estimate.lmn_estimate_id || ir.estimate.id).join(', ');
         const moreCount = missingDateEstimates.length > 5 ? ` and ${missingDateEstimates.length - 5} more` : '';
-        toast.warning(
+        toast(
           `⚠️ ${missingDateEstimates.length} estimate${missingDateEstimates.length !== 1 ? 's' : ''} missing estimate_date${missingDateEstimates.length > 1 ? 's' : ''}: ${estimateIds}${moreCount}. Revenue calculation may be affected.`,
-          { duration: 8000 }
+          { 
+            duration: 8000,
+            icon: '⚠️'
+          }
         );
         console.warn(`⚠️ ${missingDateEstimates.length} estimates missing estimate_date:`, missingDateEstimates.map(ir => ir.estimate.lmn_estimate_id || ir.estimate.id));
       }

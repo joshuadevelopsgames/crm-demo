@@ -300,7 +300,10 @@ export default function BugReportButton() {
           console.error('❌ Email error:', result.emailError);
           toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
         } else if (!result.emailSent) {
-          toast.warning('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { duration: 8000 });
+          toast('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { 
+            duration: 8000,
+            icon: '⚠️'
+          });
         } else {
           toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
         }
