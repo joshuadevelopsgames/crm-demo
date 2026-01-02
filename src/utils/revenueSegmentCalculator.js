@@ -172,13 +172,23 @@ export function calculateRevenueFromEstimates(estimates = []) {
  * @returns {number} - Account total revenue from current year (annualized for multi-year contracts)
  */
 export function getAccountRevenue(account, estimates = []) {
-  // If estimates are provided, always use the calculated revenue (even if 0)
-  // This ensures we use actual current year totals, not outdated annual_revenue
+  // If estimates are provided, calculate revenue from them
   if (estimates && estimates.length > 0) {
-    return calculateRevenueFromEstimates(estimates);
+    const calculatedRevenue = calculateRevenueFromEstimates(estimates);
+    // If we have won estimates with revenue, use that (even if 0)
+    // But if we have estimates but no won estimates, fall back to annual_revenue
+    const hasWonEstimates = estimates.some(est => 
+      est.status && est.status.toLowerCase() === 'won'
+    );
+    
+    if (hasWonEstimates) {
+      // We have won estimates, use calculated revenue (even if 0)
+      return calculatedRevenue;
+    }
+    // We have estimates but none are won, fall back to annual_revenue
   }
   
-  // Only fall back to annual_revenue if we have no estimates at all
+  // Fall back to annual_revenue if no estimates or no won estimates
   const annualRevenue = account?.annual_revenue || 0;
   return typeof annualRevenue === 'number' ? annualRevenue : parseFloat(annualRevenue) || 0;
 }
