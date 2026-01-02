@@ -216,21 +216,37 @@ export function compareWithExisting(
   const existingJobsitesMap = new Map();
   existingJobsites.forEach(jobsite => {
     if (jobsite.lmn_jobsite_id) {
-      // Store with original value
-      existingJobsitesMap.set(jobsite.lmn_jobsite_id, jobsite);
-      // Also store as string and number for flexible matching
-      existingJobsitesMap.set(String(jobsite.lmn_jobsite_id), jobsite);
-      if (typeof jobsite.lmn_jobsite_id === 'string') {
-        const numId = parseInt(jobsite.lmn_jobsite_id, 10);
-        if (!isNaN(numId)) {
-          existingJobsitesMap.set(numId, jobsite);
-        }
+      // Normalize to string and store with multiple formats for flexible matching
+      const jobsiteIdStr = String(jobsite.lmn_jobsite_id);
+      existingJobsitesMap.set(jobsiteIdStr, jobsite);
+      // Also try as number if it's a numeric string
+      const numId = parseInt(jobsiteIdStr, 10);
+      if (!isNaN(numId)) {
+        existingJobsitesMap.set(numId, jobsite);
       }
     }
     if (jobsite.id) {
-      existingJobsitesMap.set(jobsite.id, jobsite);
+      existingJobsitesMap.set(String(jobsite.id), jobsite);
     }
   });
+  
+  // Debug: Log map size and sample keys
+  if (existingJobsites.length > 0) {
+    console.log(`[compareWithExisting] Built jobsites map with ${existingJobsitesMap.size} entries from ${existingJobsites.length} jobsites`);
+    const sampleKeys = Array.from(existingJobsitesMap.keys()).slice(0, 10);
+    console.log(`[compareWithExisting] Sample jobsite map keys:`, sampleKeys);
+    // Check if any of the problematic IDs are in the map
+    const problematicIds = ['9906807', '6347524', '3948460', '5567721', '9471049'];
+    problematicIds.forEach(id => {
+      const hasString = existingJobsitesMap.has(id);
+      const hasNumber = existingJobsitesMap.has(parseInt(id, 10));
+      if (hasString || hasNumber) {
+        console.log(`[compareWithExisting] ✅ Found problematic jobsite ${id} in map (as string: ${hasString}, as number: ${hasNumber})`);
+      } else {
+        console.log(`[compareWithExisting] ❌ Problematic jobsite ${id} NOT in map`);
+      }
+    });
+  }
 
   // Compare Accounts
   if (importedData.accounts) {
@@ -471,6 +487,20 @@ export function compareWithExisting(
           return dbJobsiteId === lookupStr || dbJobsiteId === String(parseInt(lookupStr, 10)) || String(parseInt(dbJobsiteId, 10)) === lookupStr;
         });
         
+        // Try all possible lookup variations
+        const lookupVariations = [
+          lookupId,
+          String(lookupId),
+          parseInt(String(lookupId), 10),
+          lookupId.toString(),
+          String(parseInt(lookupId, 10))
+        ].filter(v => v !== null && v !== undefined && !isNaN(v));
+        
+        const mapChecks = {};
+        lookupVariations.forEach(variant => {
+          mapChecks[`has_${variant}_(${typeof variant})`] = existingJobsitesMap.has(variant);
+        });
+        
         console.log('[compareWithExisting] Jobsite not found in database:', {
           lookupId,
           lookupIdType: typeof lookupId,
@@ -480,16 +510,14 @@ export function compareWithExisting(
           name: importedJobsite.name,
           existingJobsitesCount: existingJobsites.length,
           mapSize: existingJobsitesMap.size,
-          mapHasLookupId: existingJobsitesMap.has(lookupId),
-          mapHasString: existingJobsitesMap.has(String(lookupId)),
-          mapHasNumber: typeof lookupId === 'string' ? existingJobsitesMap.has(parseInt(lookupId, 10)) : existingJobsitesMap.has(String(lookupId)),
+          mapChecks,
           foundInDbButNotInMap: foundInDb ? {
             id: foundInDb.id,
             lmn_jobsite_id: foundInDb.lmn_jobsite_id,
             lmn_jobsite_idType: typeof foundInDb.lmn_jobsite_id,
             name: foundInDb.name
           } : null,
-          sampleMapKeys: Array.from(existingJobsitesMap.keys()).slice(0, 10),
+          sampleMapKeys: Array.from(existingJobsitesMap.keys()).slice(0, 20),
           sampleExistingIds: existingJobsites.slice(0, 10).map(j => ({
             id: j.id,
             lmn_jobsite_id: j.lmn_jobsite_id,
