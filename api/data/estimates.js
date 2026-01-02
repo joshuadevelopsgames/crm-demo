@@ -241,11 +241,14 @@ export default async function handler(req, res) {
             seenInBatch.add(lookupValue);
             
             // Debug: Log contract_end for first few estimates to diagnose missing dates
-            if (seenInBatch.size <= 3 && estimate.status === 'won') {
-              console.log(`🔍 Sample estimate ${lookupValue}:`, {
+            if (seenInBatch.size <= 5) {
+              console.log(`🔍 API: Sample estimate ${lookupValue}:`, {
+                status: estimate.status,
                 hasContractEnd: !!estimate.contract_end,
                 contractEnd: estimate.contract_end,
-                status: estimate.status,
+                contractEndType: typeof estimate.contract_end,
+                hasContractStart: !!estimate.contract_start,
+                contractStart: estimate.contract_start,
                 account_id: estimate.account_id
               });
             }
@@ -259,11 +262,14 @@ export default async function handler(req, res) {
             };
             
             // Debug: Verify contract_end is in estimateData
-            if (seenInBatch.size <= 3 && estimate.status === 'won') {
-              console.log(`🔍 estimateData for ${lookupValue}:`, {
+            if (seenInBatch.size <= 5) {
+              console.log(`🔍 API: estimateData for ${lookupValue}:`, {
+                status: estimateData.status,
                 hasContractEnd: !!estimateData.contract_end,
                 contractEnd: estimateData.contract_end,
-                status: estimateData.status
+                contractEndType: typeof estimateData.contract_end,
+                hasContractStart: !!estimateData.contract_start,
+                contractStart: estimateData.contract_start
               });
             }
             

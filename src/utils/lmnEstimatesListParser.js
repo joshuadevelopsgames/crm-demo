@@ -83,6 +83,10 @@ export function parseEstimatesList(csvTextOrRows) {
     // Warn if Contract End column is not found
     if (colMap.contractEnd === -1) {
       errors.push('WARNING: "Contract End" column not found in file. Contract end dates will not be imported.');
+      console.warn('⚠️ PARSER: "Contract End" column not found in Excel file headers');
+      console.warn('Available headers:', headers.filter(h => h).slice(0, 20));
+    } else {
+      console.log(`✅ PARSER: "Contract End" column found at index ${colMap.contractEnd}`);
     }
     
     for (let i = 1; i < rows.length; i++) {
@@ -232,6 +236,23 @@ export function parseEstimatesList(csvTextOrRows) {
         const estimateDate = parseDate(row[colMap.estimateDate]);
         const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
         
+        // Parse contract dates
+        const contractStartRaw = colMap.contractStart >= 0 ? row[colMap.contractStart] : null;
+        const contractEndRaw = colMap.contractEnd >= 0 ? row[colMap.contractEnd] : null;
+        const contractStart = parseDate(contractStartRaw);
+        const contractEnd = parseDate(contractEndRaw);
+        
+        // Debug logging for first few won estimates with contract_end
+        if (estimateId && contractEndRaw && contractEndRaw !== null && contractEndRaw !== undefined && contractEndRaw !== '') {
+          const status = row[colMap.status]?.toString().trim() || '';
+          const isWon = status.toLowerCase().includes('contract') || 
+                       status.toLowerCase().includes('work complete') ||
+                       status.toLowerCase().includes('billing complete');
+          if (isWon && errors.length < 3) {
+            errors.push(`DEBUG: Estimate ${estimateId} - contractEndRaw: ${contractEndRaw} (type: ${typeof contractEndRaw}), parsed: ${contractEnd}`);
+          }
+        }
+        
         // Keep estimate_date and estimate_close_date separate
         // Reports logic will use close_date if available, otherwise estimate_date
         // This allows estimates to be counted in the year they closed (if closed) 
@@ -244,8 +265,8 @@ export function parseEstimatesList(csvTextOrRows) {
           estimate_number: estimateId,
           estimate_date: estimateDate,
           estimate_close_date: estimateCloseDate,
-          contract_start: parseDate(row[colMap.contractStart]),
-          contract_end: parseDate(row[colMap.contractEnd]),
+          contract_start: contractStart,
+          contract_end: contractEnd,
           project_name: row[colMap.projectName]?.toString().trim() || '',
           version: row[colMap.version]?.toString().trim() || '',
           contact_name: row[colMap.contactName]?.toString().trim() || '',
