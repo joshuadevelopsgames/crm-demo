@@ -275,7 +275,18 @@ function App() {
           <UserProvider>
             <TutorialProvider>
               <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
-                <Toaster position="top-center" />
+                <Toaster 
+                  position="top-center" 
+                  toastOptions={{
+                    duration: 3000,
+                    success: {
+                      duration: 3000,
+                    },
+                    error: {
+                      duration: 4000,
+                    },
+                  }}
+                />
                 <TutorialBar />
                 <AppContent />
                 <InstallPrompt />

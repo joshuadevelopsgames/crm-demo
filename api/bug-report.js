@@ -140,12 +140,19 @@ ${bugReport.consoleLogs.map(log =>
       if (emailSent) {
         console.log('✅ Email sent successfully');
       } else {
-        emailError = 'Failed to send email via any configured service';
+        emailError = `Failed to send email via ${emailService}. Check logs for details.`;
         console.error('❌', emailError);
+        console.error('❌ Email service configuration:', {
+          service: emailService,
+          hasResendKey: !!process.env.RESEND_API_KEY,
+          hasResendFrom: !!process.env.RESEND_FROM_EMAIL,
+          recipientEmail
+        });
       }
     } catch (error) {
-      emailError = error.message;
+      emailError = error.message || 'Unknown error occurred';
       console.error('❌ Error sending email:', error);
+      console.error('❌ Error stack:', error.stack);
     }
 
     // Create notification for admin user (jrsschroeder@gmail.com)
@@ -224,12 +231,26 @@ ${bugReport.consoleLogs.map(log =>
     // Return success if either email or notification succeeded
     // Log warnings if one failed
     if (!emailSent && !notificationCreated) {
+      console.error('❌ CRITICAL: Both email and notification failed:', {
+        emailError,
+        notificationError,
+        emailService,
+        recipientEmail,
+        envCheck: {
+          hasResendKey: !!process.env.RESEND_API_KEY,
+          hasResendFrom: !!process.env.RESEND_FROM_EMAIL,
+          hasSupabaseUrl: !!process.env.SUPABASE_URL,
+          hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+        }
+      });
       return res.status(500).json({ 
         success: false,
         error: 'Failed to send bug report. Email and notification creation both failed.',
         details: {
           emailError,
-          notificationError
+          notificationError,
+          emailService,
+          recipientEmail
         }
       });
     }
@@ -243,13 +264,26 @@ ${bugReport.consoleLogs.map(log =>
       warnings.push('Notification could not be created (check Supabase configuration)');
     }
 
-    return res.status(200).json({ 
+    const responseData = { 
       success: true,
       message: 'Bug report processed successfully',
-      warnings: warnings.length > 0 ? warnings : undefined,
       emailSent,
       notificationCreated
+    };
+    
+    if (warnings.length > 0) {
+      responseData.warnings = warnings;
+      console.warn('⚠️ Bug report sent with warnings:', warnings);
+    }
+    
+    console.log('✅ Bug report processed:', {
+      emailSent,
+      notificationCreated,
+      recipientEmail,
+      emailService
     });
+    
+    return res.status(200).json(responseData);
 
   } catch (error) {
     console.error('Error processing bug report:', error);
@@ -308,14 +342,45 @@ async function sendViaResend(recipientEmail, subject, body) {
       }),
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Resend API error:', response.status, errorText);
+      let errorDetails;
+      try {
+        errorDetails = isJson ? JSON.parse(errorText) : { message: errorText };
+      } catch (e) {
+        errorDetails = { message: errorText };
+      }
+      console.error('❌ Resend API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorDetails,
+        fromEmail,
+        recipientEmail
+      });
       return false;
     }
 
-    const result = await response.json();
-    console.log('✅ Email sent via Resend:', result.id || 'success');
+    let result;
+    try {
+      result = isJson ? await response.json() : { id: 'success' };
+    } catch (e) {
+      console.warn('⚠️ Could not parse Resend response as JSON, assuming success');
+      result = { id: 'success' };
+    }
+    
+    if (result.error) {
+      console.error('❌ Resend API returned error:', result.error);
+      return false;
+    }
+    
+    console.log('✅ Email sent via Resend:', {
+      id: result.id || 'success',
+      fromEmail,
+      recipientEmail
+    });
     return true;
   } catch (error) {
     console.error('❌ Error sending via Resend:', error.message || error);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { createPageUrl } from '../utils';
 import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
@@ -96,7 +96,7 @@ export default function Login() {
         hasSession: !!data.session
       });
 
-      toast.success('Successfully logged in!');
+      toast.success('Successfully logged in!', { duration: 3000 });
       navigate('/dashboard');
     } catch (error) {
       console.error('❌ Login exception:', error);
@@ -138,7 +138,6 @@ export default function Login() {
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         margin: 'auto'
       }}>
-        <Toaster position="top-center" />
         
         {/* Logo and Title */}
         <div style={{ textAlign: 'center', marginBottom: (isPWA || isMobile) ? '24px' : '32px' }}>

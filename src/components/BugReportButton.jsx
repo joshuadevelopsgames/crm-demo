@@ -279,14 +279,34 @@ export default function BugReportButton() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to send bug report');
+        const errorMessage = result.error || 'Failed to send bug report';
+        const details = result.details ? `\n\nDetails: ${JSON.stringify(result.details, null, 2)}` : '';
+        console.error('❌ Bug report API error:', {
+          status: response.status,
+          error: errorMessage,
+          details: result.details
+        });
+        throw new Error(errorMessage + details);
       }
 
-      toast.success('✓ Bug report sent successfully!');
+      // Check for warnings (e.g., email failed but notification succeeded)
+      if (result.warnings && result.warnings.length > 0) {
+        console.warn('⚠️ Bug report sent with warnings:', result.warnings);
+        toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
+      } else {
+        toast.success('✓ Bug report sent successfully!');
+      }
+      
+      console.log('✅ Bug report submitted:', {
+        emailSent: result.emailSent,
+        notificationCreated: result.notificationCreated
+      });
+      
       handleClose();
     } catch (error) {
-      console.error('Error submitting bug report:', error);
-      toast.error(`Failed to send bug report: ${error.message}`);
+      console.error('❌ Error submitting bug report:', error);
+      const errorMessage = error.message || 'Failed to send bug report';
+      toast.error(`Failed to send bug report: ${errorMessage}`, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
