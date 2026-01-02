@@ -157,16 +157,31 @@ export default function Accounts() {
     
     // Debug: Log estimate grouping when test mode is active
     if (isTestMode) {
+      const wonEstimates = allEstimates.filter(e => e.status?.toLowerCase() === 'won');
       console.log('[Accounts] Grouped estimates:', {
         totalEstimates: allEstimates.length,
+        wonEstimates: wonEstimates.length,
         accountsWithEstimates: Object.keys(grouped).length,
-        sampleEstimates: allEstimates.slice(0, 5).map(est => ({
+        sampleEstimates: allEstimates.slice(0, 10).map(est => ({
           id: est.id,
           account_id: est.account_id,
           status: est.status,
           contract_start: est.contract_start,
           contract_end: est.contract_end,
           estimate_date: est.estimate_date,
+          created_date: est.created_date,
+          total_price_with_tax: est.total_price_with_tax,
+          total_price: est.total_price,
+          allDateFields: Object.keys(est).filter(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('start') || k.toLowerCase().includes('end'))
+        })),
+        sampleWonEstimates: wonEstimates.slice(0, 5).map(est => ({
+          id: est.id,
+          account_id: est.account_id,
+          status: est.status,
+          contract_start: est.contract_start,
+          contract_end: est.contract_end,
+          estimate_date: est.estimate_date,
+          created_date: est.created_date,
           total_price_with_tax: est.total_price_with_tax
         }))
       });
@@ -704,23 +719,28 @@ export default function Accounts() {
                             const estimates = estimatesByAccountId[account.id] || [];
                             const revenue = getAccountRevenue(account, estimates);
                             
-                            // Debug logging for first few accounts
-                            if (isTestMode && account.name && account.name.includes('Valard')) {
-                              console.log('[Accounts Table] Revenue calculation:', {
-                                accountName: account.name,
-                                accountId: account.id,
-                                estimatesCount: estimates.length,
-                                wonEstimates: estimates.filter(e => e.status?.toLowerCase() === 'won').length,
-                                revenue,
-                                currentYear: getCurrentYear(),
-                                sampleEstimate: estimates[0] ? {
-                                  id: estimates[0].id,
-                                  status: estimates[0].status,
-                                  contract_start: estimates[0].contract_start,
-                                  contract_end: estimates[0].contract_end,
-                                  estimate_date: estimates[0].estimate_date
-                                } : null
-                              });
+                            // Debug logging for test mode - log first 5 accounts
+                            if (isTestMode) {
+                              const accountIndex = filteredAccounts.findIndex(a => a.id === account.id);
+                              if (accountIndex < 5) {
+                                console.log(`[Accounts Table Row ${accountIndex}]`, {
+                                  accountName: account.name,
+                                  accountId: account.id,
+                                  estimatesCount: estimates.length,
+                                  wonEstimates: estimates.filter(e => e.status?.toLowerCase() === 'won').length,
+                                  revenue,
+                                  currentYear: getCurrentYear(),
+                                  sampleEstimates: estimates.slice(0, 3).map(est => ({
+                                    id: est.id,
+                                    status: est.status,
+                                    contract_start: est.contract_start,
+                                    contract_end: est.contract_end,
+                                    estimate_date: est.estimate_date,
+                                    created_date: est.created_date,
+                                    total_price_with_tax: est.total_price_with_tax
+                                  }))
+                                });
+                              }
                             }
                             
                             return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
