@@ -112,9 +112,29 @@ export default function AnnouncementBanner() {
   };
 
   // Filter out dismissed announcements
+  // Convert both to strings for comparison (handles UUID vs string mismatches)
   const visibleAnnouncements = announcements.filter(
-    a => !dismissedAnnouncements.includes(a.id)
+    a => !dismissedAnnouncements.some(dismissedId => String(dismissedId) === String(a.id))
   );
+
+  // Debug: Log if announcements are being filtered out
+  useEffect(() => {
+    if (announcements.length > 0) {
+      const dismissed = announcements.filter(a => dismissedAnnouncements.includes(a.id));
+      if (dismissed.length > 0) {
+        console.log(`AnnouncementBanner: ${dismissed.length} announcement(s) dismissed:`, dismissed.map(a => ({ id: a.id, title: a.title })));
+        console.log('AnnouncementBanner: To clear dismissed announcements, run: localStorage.removeItem("dismissedAnnouncements")');
+      }
+      if (visibleAnnouncements.length === 0 && announcements.length > 0) {
+        console.warn('AnnouncementBanner: All announcements are dismissed!', {
+          total: announcements.length,
+          dismissed: dismissedAnnouncements,
+          announcementIds: announcements.map(a => a.id)
+        });
+      }
+      console.log(`AnnouncementBanner: ${visibleAnnouncements.length} visible out of ${announcements.length} total announcements`);
+    }
+  }, [announcements, visibleAnnouncements, dismissedAnnouncements]);
 
   // Debug logging
   useEffect(() => {

@@ -128,14 +128,19 @@ export default async function handler(req, res) {
 
       // Filter out expired announcements manually (since we're using service role key)
       const activeAnnouncements = (announcements || []).filter(announcement => {
-        if (!announcement.is_active) return false;
+        if (!announcement.is_active) {
+          console.log(`Filtered out inactive announcement: ${announcement.id} - ${announcement.title}`);
+          return false;
+        }
         if (announcement.expires_at && new Date(announcement.expires_at) <= new Date(now)) {
+          console.log(`Filtered out expired announcement: ${announcement.id} - ${announcement.title} (expired: ${announcement.expires_at})`);
           return false;
         }
         return true;
       });
 
-      console.log(`Fetched ${activeAnnouncements.length} active announcements for user ${user.id}`);
+      console.log(`API: Fetched ${announcements?.length || 0} total, ${activeAnnouncements.length} active announcements for user ${user.id}`);
+      console.log(`API: Active announcement IDs:`, activeAnnouncements.map(a => a.id));
 
       return res.status(200).json({
         success: true,
@@ -159,10 +164,19 @@ export default async function handler(req, res) {
         const { id, ...dataWithoutId } = data;
         const announcementData = { 
           ...dataWithoutId,
-          created_by: user.id,
+          created_by: user.id, // This should be a UUID from Supabase auth
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+        
+        // Ensure created_by is a valid UUID format
+        if (!announcementData.created_by || typeof announcementData.created_by !== 'string') {
+          console.error('Invalid created_by value:', announcementData.created_by);
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid user ID'
+          });
+        }
         
         // Convert empty strings to null for date fields
         if (announcementData.expires_at === '' || announcementData.expires_at === null || announcementData.expires_at === undefined) {
