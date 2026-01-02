@@ -66,7 +66,6 @@ export default function EditAccountDialog({ open, onClose, account }) {
         account_type: account.account_type || 'prospect',
         status: account.status || 'active',
         revenue_segment: account.revenue_segment || 'C',
-        annual_revenue: account.annual_revenue || '',
         industry: account.industry || '',
         website: account.website || '',
         phone: account.phone || '',
@@ -81,42 +80,30 @@ export default function EditAccountDialog({ open, onClose, account }) {
     }
   }, [account]);
   
-  // Auto-calculate revenue segment when annual revenue changes
+  // Auto-calculate revenue segment based on won estimates
   useEffect(() => {
-    if (autoCalculateSegment && formData.annual_revenue && allAccounts.length > 0) {
-      const enteredRevenue = parseFloat(formData.annual_revenue);
-      if (!isNaN(enteredRevenue) && enteredRevenue > 0) {
-        // Group estimates by account_id for revenue calculation
-        const estimatesByAccountId = {};
-        allEstimates.forEach(est => {
-          if (est.account_id) {
-            if (!estimatesByAccountId[est.account_id]) {
-              estimatesByAccountId[est.account_id] = [];
-            }
-            estimatesByAccountId[est.account_id].push(est);
+    if (autoCalculateSegment && account?.id && allAccounts.length > 0 && accountEstimates.length >= 0) {
+      // Group estimates by account_id for revenue calculation
+      const estimatesByAccountId = {};
+      allEstimates.forEach(est => {
+        if (est.account_id) {
+          if (!estimatesByAccountId[est.account_id]) {
+            estimatesByAccountId[est.account_id] = [];
           }
-        });
-        
-        // For the account being edited, use entered revenue value
-        // For all other accounts, use actual revenue from won estimates
-        const currentAccountRevenue = account?.id 
-          ? getAccountRevenue(account, estimatesByAccountId[account.id] || accountEstimates)
-          : 0;
-        
-        // Calculate total revenue using estimates for all accounts
-        const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId);
-        // Adjust: subtract current account's actual revenue, add entered revenue
-        const adjustedTotal = totalRevenue - currentAccountRevenue + enteredRevenue;
-        
-        if (adjustedTotal > 0) {
-          // Use entered revenue for this account's segment calculation
-          const tempAccount = { annual_revenue: enteredRevenue };
-          const segment = calculateRevenueSegment(tempAccount, adjustedTotal);
-          setFormData(prev => ({ ...prev, revenue_segment: segment }));
+          estimatesByAccountId[est.account_id].push(est);
         }
+      });
+      
+      // Calculate total revenue using estimates for all accounts
+      const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId);
+      
+      if (totalRevenue > 0) {
+        // Calculate segment based on actual revenue from won estimates
+        const segment = calculateRevenueSegment(account, totalRevenue, accountEstimates);
+        setFormData(prev => ({ ...prev, revenue_segment: segment }));
       }
     }
-  }, [formData.annual_revenue, autoCalculateSegment, allAccounts, allEstimates, account, accountEstimates]);
+  }, [autoCalculateSegment, allAccounts, allEstimates, account, accountEstimates]);
 
   const updateAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.update(account.id, data),
@@ -129,8 +116,8 @@ export default function EditAccountDialog({ open, onClose, account }) {
 
   const handleSubmit = () => {
     const updateData = {
-      ...formData,
-      annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null
+      ...formData
+      // annual_revenue is calculated automatically from won estimates, not manually entered
     };
     // If setting to N/A, also clear last_interaction_date
     if (updateData.icp_status === 'na') {
@@ -201,24 +188,6 @@ export default function EditAccountDialog({ open, onClose, account }) {
               {isImported && (
                 <p className="text-xs text-slate-500 mt-1">This field is managed by import.</p>
               )}
-            </div>
-            <div>
-              <Label>Annual Revenue</Label>
-              <Input
-                type="number"
-                value={formData.annual_revenue}
-                onChange={(e) => setFormData({ ...formData, annual_revenue: e.target.value })}
-                placeholder="Enter annual revenue"
-                disabled={isImported}
-                className={isImported ? 'bg-slate-50 cursor-not-allowed' : ''}
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                {isImported ? (
-                  'This field is managed by import.'
-                ) : (
-                  'Segment will auto-calculate based on rolling 12-month average: A (≥15%), B (5-15%), C (0-5%), D (Project Only)'
-                )}
-              </p>
             </div>
             <div>
               <Label>Revenue Segment</Label>

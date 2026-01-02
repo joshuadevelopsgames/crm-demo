@@ -172,25 +172,33 @@ export function calculateRevenueFromEstimates(estimates = []) {
  * @returns {number} - Account total revenue from current year (annualized for multi-year contracts)
  */
 export function getAccountRevenue(account, estimates = []) {
-  // If estimates are provided, calculate revenue from them
+  // Revenue should only come from won estimates for the current year
+  // If there are no won estimates, return 0 (which will display as "-" in the UI)
+  // Do NOT fall back to annual_revenue - that's a separate field for segment calculation
+  
   if (estimates && estimates.length > 0) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
-    // If we have won estimates with revenue, use that (even if 0)
-    // But if we have estimates but no won estimates, fall back to annual_revenue
-    const hasWonEstimates = estimates.some(est => 
-      est.status && est.status.toLowerCase() === 'won'
-    );
     
-    if (hasWonEstimates) {
-      // We have won estimates, use calculated revenue (even if 0)
+    // Check if we have won estimates that apply to the current year
+    const currentYear = new Date().getFullYear();
+    const hasWonEstimatesForCurrentYear = estimates.some(est => {
+      if (!est.status || est.status.toLowerCase() !== 'won') {
+        return false;
+      }
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+    
+    if (hasWonEstimatesForCurrentYear) {
+      // We have won estimates that apply to current year, return calculated revenue
+      // (even if 0, because that's the actual revenue from won estimates)
       return calculatedRevenue;
     }
-    // We have estimates but none are won, fall back to annual_revenue
   }
   
-  // Fall back to annual_revenue if no estimates or no won estimates
-  const annualRevenue = account?.annual_revenue || 0;
-  return typeof annualRevenue === 'number' ? annualRevenue : parseFloat(annualRevenue) || 0;
+  // No won estimates for current year - return 0 (will display as "-" in UI)
+  // annual_revenue is a separate field used for segment calculation, not for displaying revenue
+  return 0;
 }
 
 /**
@@ -232,7 +240,22 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     }
   }
   
-  const accountRevenue = getAccountRevenue(account, estimates);
+  // For segment calculation, use revenue from won estimates
+  // Note: annual_revenue should be calculated from won estimates automatically, not manually entered
+  // If annual_revenue exists, it should match revenue from won estimates
+  let accountRevenue = getAccountRevenue(account, estimates);
+  
+  // Legacy fallback: if no revenue from won estimates but annual_revenue exists, use it
+  // This handles cases where annual_revenue was manually set before we made it calculated-only
+  // In the future, annual_revenue should always be calculated from won estimates
+  if (accountRevenue <= 0 && account?.annual_revenue) {
+    const annualRevenue = typeof account.annual_revenue === 'number' 
+      ? account.annual_revenue 
+      : parseFloat(account.annual_revenue) || 0;
+    if (annualRevenue > 0) {
+      accountRevenue = annualRevenue;
+    }
+  }
   
   if (accountRevenue <= 0 || !totalRevenue || totalRevenue <= 0) {
     return 'C'; // Default to C if no revenue data
@@ -263,7 +286,20 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
   return accounts.reduce((total, account) => {
     const estimates = estimatesByAccountId[account.id] || [];
-    const revenue = getAccountRevenue(account, estimates);
+    let revenue = getAccountRevenue(account, estimates);
+    
+    // Legacy fallback: include annual_revenue if no revenue from won estimates
+    // Note: annual_revenue should be calculated from won estimates automatically
+    // This handles legacy data where annual_revenue might have been manually set
+    if (revenue <= 0 && account?.annual_revenue) {
+      const annualRevenue = typeof account.annual_revenue === 'number' 
+        ? account.annual_revenue 
+        : parseFloat(account.annual_revenue) || 0;
+      if (annualRevenue > 0) {
+        revenue = annualRevenue;
+      }
+    }
+    
     return total + revenue;
   }, 0);
 }

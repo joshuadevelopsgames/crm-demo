@@ -161,43 +161,16 @@ export default function Accounts() {
     account_type: 'prospect',
     revenue_segment: 'C',
     status: 'active',
-    annual_revenue: '',
     industry: '',
     notes: ''
   });
 
-  // Auto-calculate revenue segment when annual revenue changes
-  useEffect(() => {
-    if (newAccount.annual_revenue) {
-      const revenue = parseFloat(newAccount.annual_revenue);
-      if (!isNaN(revenue) && revenue > 0) {
-        // Group estimates by account_id for revenue calculation
-        const estimatesByAccountId = {};
-        allEstimates.forEach(est => {
-          if (est.account_id) {
-            if (!estimatesByAccountId[est.account_id]) {
-              estimatesByAccountId[est.account_id] = [];
-            }
-            estimatesByAccountId[est.account_id].push(est);
-          }
-        });
-        
-        const totalRevenue = calculateTotalRevenue(accounts, estimatesByAccountId);
-        const adjustedTotal = totalRevenue + revenue; // Include new account's revenue
-        
-        // For new account, use the entered revenue value
-        const tempAccount = { annual_revenue: revenue };
-        const segment = calculateRevenueSegment(tempAccount, adjustedTotal);
-        setNewAccount(prev => ({ ...prev, revenue_segment: segment }));
-      }
-    }
-  }, [newAccount.annual_revenue, accounts, allEstimates]);
-
   const handleCreateAccount = () => {
     // Ensure account has a segment before creating (default to C if not set)
+    // annual_revenue will be calculated automatically from won estimates
     const accountData = {
       ...newAccount,
-      annual_revenue: newAccount.annual_revenue ? parseFloat(newAccount.annual_revenue) : null,
+      annual_revenue: null, // Will be calculated from won estimates
       revenue_segment: newAccount.revenue_segment || 'C'
     };
     createAccountMutation.mutate(accountData);
