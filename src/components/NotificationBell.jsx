@@ -345,28 +345,35 @@ export default function NotificationBell() {
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
   // Also ensure we only show notifications for the current user
   const activeNotifications = useMemo(() => {
-    if (!currentUserId) return [];
+    if (!currentUserId) {
+      console.log(`🔔 Filtering skipped: no currentUserId`);
+      return [];
+    }
     const currentUserIdStr = String(currentUserId).trim();
     
-    // Debug: Log renewal reminder notifications before filtering
-    const renewalReminders = allNotifications.filter(n => n.type === 'renewal_reminder');
-    const neglectedAccounts = allNotifications.filter(n => n.type === 'neglected_account');
-    if (renewalReminders.length > 0 || neglectedAccounts.length > 0) {
-      console.log(`🔔 Before filtering: ${renewalReminders.length} renewal_reminder, ${neglectedAccounts.length} neglected_account notifications`);
-      console.log(`🔔 Sample notifications:`, {
-        renewal_reminder: renewalReminders.slice(0, 2).map(n => ({
-          id: n.id,
-          type: n.type,
-          account_id: n.related_account_id,
-          hasAccountId: !!n.related_account_id
-        })),
-        neglected_account: neglectedAccounts.slice(0, 2).map(n => ({
-          id: n.id,
-          type: n.type,
-          account_id: n.related_account_id,
-          hasAccountId: !!n.related_account_id
-        }))
-      });
+    // Debug: Always log when we have notifications
+    if (allNotifications.length > 0) {
+      const renewalReminders = allNotifications.filter(n => n.type === 'renewal_reminder');
+      const neglectedAccounts = allNotifications.filter(n => n.type === 'neglected_account');
+      console.log(`🔔 Before filtering: ${allNotifications.length} total (${renewalReminders.length} renewal_reminder, ${neglectedAccounts.length} neglected_account, ${allNotifications.length - renewalReminders.length - neglectedAccounts.length} other)`);
+      if (renewalReminders.length > 0 || neglectedAccounts.length > 0) {
+        console.log(`🔔 Sample notifications:`, {
+          renewal_reminder: renewalReminders.slice(0, 2).map(n => ({
+            id: n.id,
+            type: n.type,
+            account_id: n.related_account_id,
+            hasAccountId: !!n.related_account_id
+          })),
+          neglected_account: neglectedAccounts.slice(0, 2).map(n => ({
+            id: n.id,
+            type: n.type,
+            account_id: n.related_account_id,
+            hasAccountId: !!n.related_account_id
+          }))
+        });
+      }
+    } else {
+      console.log(`🔔 Filtering: allNotifications is empty (length: ${allNotifications.length})`);
     }
     
     let filteredCount = { renewal_reminder: 0, neglected_account: 0, task: 0 };
@@ -556,11 +563,13 @@ export default function NotificationBell() {
       return !isNaN(until.getTime()) && until > now;
     }) || [];
     
-    console.log(`🔔 After filtering: ${totalShown} shown (${filteredCount.renewal_reminder} renewal_reminder, ${filteredCount.neglected_account} neglected_account, ${filteredCount.task} task)`);
-    if (totalFilteredOut > 0 || allNotifications.length > 0) {
-      console.log(`🚫 Filtered out: ${totalFilteredOut} total (${filteredOutCount.renewal_reminder} renewal_reminder, ${filteredOutCount.neglected_account} neglected_account, ${filteredOutCount.task} task)`);
-      console.log(`📊 Filter reasons:`, filteredOutReasons);
-      console.log(`📊 Snooze stats: ${snoozes?.length || 0} total snoozes, ${activeSnoozes.length} active`);
+    // Always log filtering results if we had notifications
+    if (allNotifications.length > 0) {
+      console.log(`🔔 After filtering: ${totalShown} shown (${filteredCount.renewal_reminder} renewal_reminder, ${filteredCount.neglected_account} neglected_account, ${filteredCount.task} task) out of ${allNotifications.length} total`);
+      if (totalFilteredOut > 0) {
+        console.log(`🚫 Filtered out: ${totalFilteredOut} total (${filteredOutCount.renewal_reminder} renewal_reminder, ${filteredOutCount.neglected_account} neglected_account, ${filteredOutCount.task} task)`);
+        console.log(`📊 Filter reasons:`, filteredOutReasons);
+        console.log(`📊 Snooze stats: ${snoozes?.length || 0} total snoozes, ${activeSnoozes.length} active`);
       
       // Log breakdown of snoozes by type
       const snoozesByType = {};
@@ -577,6 +586,12 @@ export default function NotificationBell() {
       if (Object.keys(snoozesByType).length > 0) {
         console.log(`📊 Snoozes by type:`, snoozesByType);
       }
+      } else {
+        console.log(`✅ No notifications filtered out - all ${allNotifications.length} shown`);
+      }
+    } else {
+      // No notifications to filter
+      console.log(`🔔 After filtering: 0 shown (no notifications loaded yet)`);
     }
     
     // Debug: Log if ALL notifications were filtered (this indicates a problem)
