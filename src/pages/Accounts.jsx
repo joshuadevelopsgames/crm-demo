@@ -331,6 +331,39 @@ export default function Accounts() {
     return matchesSearch && matchesType && matchesSegment;
   });
 
+  // Debug logging for segment and status filtering
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const segmentCounts = {};
+      const statusCounts = {};
+      accounts.forEach(acc => {
+        const segment = acc.revenue_segment || 'null';
+        const status = acc.status || 'null';
+        segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      console.log('📊 Accounts Data Debug:', {
+        totalAccounts: accounts.length,
+        activeAccounts: accountsByStatus.length,
+        filteredAccounts: filteredAccounts.length,
+        filterSegment,
+        filterType,
+        statusFilter,
+        segmentCounts,
+        statusCounts,
+        accountsWithSegmentB: accounts.filter(a => a.revenue_segment === 'B').length,
+        accountsWithAtRiskStatus: accounts.filter(a => a.status === 'at_risk').length,
+        sampleAccounts: accounts.slice(0, 5).map(a => ({
+          name: a.name,
+          revenue_segment: a.revenue_segment,
+          status: a.status,
+          archived: a.archived
+        }))
+      });
+    }
+  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter]);
+
   filteredAccounts.sort((a, b) => {
     if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
     if (sortBy === 'score') {
