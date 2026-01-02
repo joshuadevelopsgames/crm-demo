@@ -11,13 +11,14 @@ export function ThemeProvider({ children }) {
   const hasInitializedFromServer = useRef(false);
   
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // For initial load, use localStorage if available, otherwise system preference
+    // For initial load, use localStorage if available, otherwise default to light mode
     // This is just for immediate UI rendering - will be overridden by server value
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
       return saved === 'true';
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Default to light mode (false) instead of system preference
+    return false;
   });
 
   // Load preference from profile when it becomes available (only once per profile load)
@@ -63,8 +64,28 @@ export function ThemeProvider({ children }) {
           setTimeout(() => {
             isLoadingFromServer.current = false;
           }, 100);
+        } else {
+          // No server preference and no local preference - default to light mode and save to server
+          const defaultLightMode = false;
+          isLoadingFromServer.current = true;
+          setIsDarkMode(defaultLightMode);
+          localStorage.setItem('darkMode', defaultLightMode.toString());
+          // Save default to server so it's consistent across devices
+          supabase
+            .from('profiles')
+            .update({ dark_mode: defaultLightMode })
+            .eq('id', profile.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error saving default dark mode preference to server:', error);
+              } else {
+                console.log('✅ Saved default light mode preference to server');
+              }
+            });
+          setTimeout(() => {
+            isLoadingFromServer.current = false;
+          }, 100);
         }
-        // If no local preference either, use system preference (already set in useState)
       }
     } else if (!profile?.id && !userLoading) {
       // User logged out - reset initialization flag

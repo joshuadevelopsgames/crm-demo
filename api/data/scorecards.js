@@ -107,10 +107,19 @@ export default async function handler(req, res) {
         // Create new scorecard response in Supabase
         const scorecardData = {
           ...data,
-          template_version_id: data.template_version_id || data.template_id, // Store version ID
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+        
+        // Only include template_version_id if provided (column may not exist in all databases)
+        // Try to use template_version_id if provided, otherwise fall back to template_id
+        if (data.template_version_id !== undefined && data.template_version_id !== null) {
+          scorecardData.template_version_id = data.template_version_id;
+        } else if (data.template_id !== undefined && data.template_id !== null) {
+          // Only set template_version_id if we have a template_id (column may not exist)
+          // We'll try to insert it, but if it fails due to missing column, we'll retry without it
+          scorecardData.template_version_id = data.template_id;
+        }
         
         // Validate account_id is provided and is a non-empty string
         if (scorecardData.account_id && typeof scorecardData.account_id !== 'string') {
@@ -120,11 +129,24 @@ export default async function handler(req, res) {
           });
         }
         
-        const { data: created, error } = await supabase
+        let { data: created, error } = await supabase
           .from('scorecard_responses')
           .insert(scorecardData)
           .select()
           .single();
+        
+        // If error is due to missing template_version_id column, retry without it
+        if (error && error.message && error.message.includes('template_version_id')) {
+          console.warn('⚠️ template_version_id column not found, retrying without it');
+          delete scorecardData.template_version_id;
+          const retryResult = await supabase
+            .from('scorecard_responses')
+            .insert(scorecardData)
+            .select()
+            .single();
+          created = retryResult.data;
+          error = retryResult.error;
+        }
         
         if (error) {
           console.error('Supabase error:', error);

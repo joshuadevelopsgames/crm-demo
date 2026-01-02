@@ -90,10 +90,9 @@ export default function TakeScorecard() {
       
       // Create scorecard response with section breakdown
       // Store template_version_id to track which version of the ICP was used
-      const scorecardResponse = await base44.entities.ScorecardResponse.create({
+      const scorecardData = {
         account_id: accountId,
         template_id: activeTemplate?.id || null,
-        template_version_id: activeTemplate?.id || null, // Store the version ID
         template_name: activeTemplate?.name || 'ICP Scorecard',
         responses: data.responses || [],
         section_scores: data.section_scores || {},
@@ -104,7 +103,14 @@ export default function TakeScorecard() {
         completed_by: user.email,
         completed_date: new Date().toISOString(),
         scorecard_type: 'manual'
-      });
+      };
+      
+      // Only include template_version_id if we have a template ID (column may not exist in all databases)
+      if (activeTemplate?.id) {
+        scorecardData.template_version_id = activeTemplate.id;
+      }
+      
+      const scorecardResponse = await base44.entities.ScorecardResponse.create(scorecardData);
       console.log('✅ Scorecard response created:', scorecardResponse);
 
       // Update account with the score from this scorecard

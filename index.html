@@ -284,9 +284,9 @@
         }
         
         // Set body background immediately (respect dark mode)
+        // Default to light mode, only use dark if explicitly set
         const savedDarkMode = localStorage.getItem('darkMode');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
+        const isDarkMode = savedDarkMode === 'true'; // Only true if explicitly set to 'true'
         const bgColor = isDarkMode ? 'hsl(222, 22%, 8%)' : '#ffffff';
         
         if (document.body) {
@@ -296,7 +296,7 @@
           document.documentElement.style.backgroundColor = bgColor;
         }
         
-        // Update loading screen background to match dark mode (only if dark mode is active)
+        // Update loading screen background - only dark if dark mode is explicitly enabled
         if (loadingScreen) {
           if (isDarkMode) {
             loadingScreen.style.backgroundColor = bgColor;
@@ -305,7 +305,7 @@
           }
         }
         
-        console.log('✅ Background set to', isDarkMode ? 'dark' : 'white');
+        console.log('✅ Background set to', isDarkMode ? 'dark' : 'light (default)');
         
         // Ensure root is visible
         if (root) {
