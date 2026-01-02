@@ -61,6 +61,7 @@ export function getCurrentDate() {
 export function TestModeProvider({ children }) {
   const { user, profile } = useUser();
   const supabase = getSupabaseAuth();
+  const isLoadingFromServer = useRef(false);
   
   // Check if user is eligible for test mode
   const isEligibleForTestMode = useMemo(() => {
