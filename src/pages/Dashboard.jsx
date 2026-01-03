@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useUser } from '@/contexts/UserContext';
 import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications, snoozeNotification } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
-import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
+import { calculateRenewalDate, getDaysUntilRenewal } from '@/utils/renewalDateCalculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { formatDateString } from '@/utils/dateFormatter';
-import { getDaysUntilRenewal } from '@/utils/renewalDateCalculator';
 
 export default function Dashboard() {
   const navigate = useNavigate();
