@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -321,10 +321,7 @@ export default function Dashboard() {
     
     return {
       neglected_account: uniqueNeglectedAccountIds.size,
-      renewal_reminder: uniqueRenewalReminderAccountIds.size,
-      // Store the account IDs so we can filter the dashboard lists to match notifications
-      renewal_reminder_account_ids: uniqueRenewalReminderAccountIds,
-      neglected_account_ids: uniqueNeglectedAccountIds
+      renewal_reminder: uniqueRenewalReminderAccountIds.size
     };
   }, [allNotificationsRaw, notificationSnoozes]);
 
@@ -388,12 +385,6 @@ export default function Dashboard() {
       };
     })
     .filter(Boolean) // Remove null entries
-    // IMPORTANT: Filter to only include accounts that have renewal_reminder notifications
-    // This ensures the dashboard list matches the notification bell
-    .filter(account => {
-      const accountIdStr = String(account.id).trim();
-      return notificationCounts.renewal_reminder_account_ids?.has(accountIdStr) ?? false;
-    })
     .sort((a, b) => {
       // Sort by days until renewal (soonest first, including past renewals)
       const daysA = getDaysUntilRenewal(a.calculated_renewal_date);
@@ -497,9 +488,7 @@ export default function Dashboard() {
   }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts, atRiskRenewals.length]);
   
   // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
-  // IMPORTANT: Filter to only show accounts that have neglected_account notifications
-  // This ensures the dashboard list matches what's shown in the notification bell
-  const allNeglectedAccounts = accounts.filter(account => {
+  const neglectedAccounts = accounts.filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
     
@@ -527,13 +516,6 @@ export default function Dashboard() {
     const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
     const daysSince = differenceInDays(today, lastInteractionDate);
     return daysSince > thresholdDays;
-  });
-
-  // Filter to only include accounts that have neglected_account notifications
-  // This ensures the dashboard list matches the notification bell
-  const neglectedAccounts = allNeglectedAccounts.filter(account => {
-    const accountIdStr = String(account.id).trim();
-    return notificationCounts.neglected_account_ids?.has(accountIdStr) ?? false;
   });
   
   // Debug logging for neglected accounts calculation
@@ -651,7 +633,7 @@ export default function Dashboard() {
     },
     {
       title: 'At Risk Accounts',
-      value: notificationCounts.renewal_reminder,
+      value: atRiskRenewals.length,
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
@@ -750,7 +732,7 @@ export default function Dashboard() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
-                    {notificationCounts.renewal_reminder}
+                    {atRiskRenewals.length}
                   </Badge>
                   {atRiskRenewals.length > 5 && (
                     <Button
@@ -843,7 +825,7 @@ export default function Dashboard() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                    {notificationCounts.neglected_account}
+                    {neglectedAccounts.length}
                   </Badge>
                   {notificationCounts.neglected_account > 5 && (
                     <Button
