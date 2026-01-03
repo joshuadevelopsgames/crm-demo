@@ -325,8 +325,17 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     if (status.includes('lost')) return false;
     
     // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
-    if (soldOnly && !isWonStatus(estimate)) {
-      return false;
+    // HYPOTHESIS: LMN may count ALL non-lost estimates as "sold" (not just explicitly won statuses)
+    // Testing this by counting all non-lost estimates as sold
+    if (soldOnly) {
+      // Exclude lost estimates
+      if (status.includes('lost')) {
+        return false;
+      }
+      // Count all non-lost estimates as "sold" (this is the hypothesis we're testing)
+      // If this matches 1,057, then LMN's definition of "sold" is simply "not lost"
+      // If not, we'll revert and look for other patterns
+      return true; // All non-lost estimates are considered "sold"
     }
     
     // Business logic for year filtering:
