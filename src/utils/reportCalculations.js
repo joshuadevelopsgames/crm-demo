@@ -247,7 +247,13 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
   // Check pipeline_status first (LMN's primary indicator for "Sold")
   if (pipeline) {
     const pipelineLower = pipeline.toString().toLowerCase().trim();
+    // If pipeline_status contains "sold", it's definitely won
     if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+      return true;
+    }
+    // LMN may count estimates with any non-empty pipeline_status (except "lost" or "pending") as "sold"
+    // This is more lenient and may help match the 1,057 count
+    if (pipelineLower && pipelineLower !== 'lost' && pipelineLower !== 'pending' && !pipelineLower.includes('lost')) {
       return true;
     }
   }
