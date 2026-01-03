@@ -499,7 +499,12 @@ export default function Reports() {
     // Use salesPerformanceMode=true and soldOnly=true to match LMN's "Estimates Sold" logic
     // This uses estimate_close_date when available, but falls back to estimate_date
     // LMN includes exclude_stats and zero price estimates in their "Estimates Sold" count
-    return filterEstimatesByYear(estimates, selectedYear, true, true);
+    const won = filterEstimatesByYear(estimates, selectedYear, true, true);
+    // Debug: Log the count to verify it matches LMN's 1,057 for 2025
+    if (selectedYear === 2025) {
+      console.log(`[Reports] Year 2025 Won Estimates (soldOnly=true): ${won.length} (expected: 1,057)`);
+    }
+    return won;
   }, [estimates, selectedYear]);
   
   // Apply account and department filters to year estimates
@@ -521,7 +526,7 @@ export default function Reports() {
 
   // Apply account and department filters to year WON estimates (for "Estimates Sold" count)
   const filteredYearWonEstimates = useMemo(() => {
-    return yearWonEstimates.filter(estimate => {
+    const filtered = yearWonEstimates.filter(estimate => {
       // Filter by account (if estimate has account_id)
       if (selectedAccount !== 'all' && estimate.account_id && estimate.account_id !== selectedAccount) {
         return false;
@@ -534,7 +539,12 @@ export default function Reports() {
 
       return true;
     });
-  }, [yearWonEstimates, selectedAccount, selectedDepartment]);
+    // Debug: Log the filtered count
+    if (selectedYear === 2025 && selectedAccount === 'all' && selectedDepartment === 'all') {
+      console.log(`[Reports] Filtered Year 2025 Won Estimates (All Accounts/Departments): ${filtered.length} (expected: 1,057)`);
+    }
+    return filtered;
+  }, [yearWonEstimates, selectedAccount, selectedDepartment, selectedYear]);
 
   // Calculate basic stats (use filteredYearEstimates - already filtered by year and account/department)
   const stats = useMemo(() => {
