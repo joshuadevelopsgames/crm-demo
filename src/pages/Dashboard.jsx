@@ -321,7 +321,10 @@ export default function Dashboard() {
     
     return {
       neglected_account: uniqueNeglectedAccountIds.size,
-      renewal_reminder: uniqueRenewalReminderAccountIds.size
+      renewal_reminder: uniqueRenewalReminderAccountIds.size,
+      // Store the account IDs so we can filter the dashboard lists to match notifications
+      renewal_reminder_account_ids: uniqueRenewalReminderAccountIds,
+      neglected_account_ids: uniqueNeglectedAccountIds
     };
   }, [allNotificationsRaw, notificationSnoozes]);
 
@@ -385,6 +388,12 @@ export default function Dashboard() {
       };
     })
     .filter(Boolean) // Remove null entries
+    // IMPORTANT: Filter to only include accounts that have renewal_reminder notifications
+    // This ensures the dashboard list matches the notification bell
+    .filter(account => {
+      const accountIdStr = String(account.id).trim();
+      return notificationCounts.renewal_reminder_account_ids?.has(accountIdStr) ?? false;
+    })
     .sort((a, b) => {
       // Sort by days until renewal (soonest first, including past renewals)
       const daysA = getDaysUntilRenewal(a.calculated_renewal_date);
@@ -488,7 +497,9 @@ export default function Dashboard() {
   }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts, atRiskRenewals.length]);
   
   // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
-  const neglectedAccounts = accounts.filter(account => {
+  // IMPORTANT: Filter to only show accounts that have neglected_account notifications
+  // This ensures the dashboard list matches what's shown in the notification bell
+  const allNeglectedAccounts = accounts.filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
     
@@ -516,6 +527,13 @@ export default function Dashboard() {
     const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
     const daysSince = differenceInDays(today, lastInteractionDate);
     return daysSince > thresholdDays;
+  });
+
+  // Filter to only include accounts that have neglected_account notifications
+  // This ensures the dashboard list matches the notification bell
+  const neglectedAccounts = allNeglectedAccounts.filter(account => {
+    const accountIdStr = String(account.id).trim();
+    return notificationCounts.neglected_account_ids?.has(accountIdStr) ?? false;
   });
   
   // Debug logging for neglected accounts calculation
