@@ -504,24 +504,53 @@ export default function Reports() {
     if (selectedYear === 2025) {
       console.log(`[Reports] Year 2025 Won Estimates (soldOnly=true): ${won.length} (expected: 1,057)`);
       
-      // Find estimates that pass year filter but fail won status check
+      // Find ALL estimates that pass year filter (including won, lost, pending)
       const all2025 = filterEstimatesByYear(estimates, selectedYear, true, false); // All estimates (won, lost, pending)
-      const notWon = all2025.filter(e => !isWonStatus(e) && !e.status?.toLowerCase().includes('lost'));
+      console.log(`[Reports] Year 2025 Total Estimates (all statuses): ${all2025.length}`);
+      
+      // Find estimates that pass year filter but are NOT recognized as won
+      const notWon = all2025.filter(e => {
+        const isLost = e.status?.toLowerCase().includes('lost');
+        const isWon = isWonStatus(e);
+        return !isLost && !isWon; // Not lost, but also not won
+      });
+      
+      console.log(`[Reports] Year 2025 Estimates NOT recognized as won (and not lost): ${notWon.length}`);
       
       if (notWon.length > 0) {
         // Group by status/pipeline_status to see patterns
         const statusGroups = {};
         notWon.forEach(est => {
-          const key = `${est.status || 'null'}|${est.pipeline_status || 'null'}`;
+          const statusKey = est.status || 'null';
+          const pipelineKey = est.pipeline_status || 'null';
+          const key = `${statusKey}|${pipelineKey}`;
           if (!statusGroups[key]) {
-            statusGroups[key] = { status: est.status, pipeline_status: est.pipeline_status, count: 0 };
+            statusGroups[key] = { 
+              status: statusKey, 
+              pipeline_status: pipelineKey, 
+              count: 0,
+              sample_ids: []
+            };
           }
           statusGroups[key].count++;
+          if (statusGroups[key].sample_ids.length < 3) {
+            statusGroups[key].sample_ids.push(est.lmn_estimate_id || est.id || 'unknown');
+          }
         });
         
-        console.log(`[Reports] ${notWon.length} estimates with 2025 dates are NOT recognized as won:`);
-        console.table(Object.values(statusGroups).sort((a, b) => b.count - a.count));
+        const groupsArray = Object.values(statusGroups).sort((a, b) => b.count - a.count);
+        console.log(`[Reports] Status patterns of ${notWon.length} estimates NOT recognized as won:`);
+        console.table(groupsArray.map(g => ({
+          status: g.status,
+          pipeline_status: g.pipeline_status,
+          count: g.count,
+          sample_ids: g.sample_ids.join(', ')
+        })));
       }
+      
+      // Also check: what if we count ALL non-lost estimates as won?
+      const allNonLost = all2025.filter(e => !e.status?.toLowerCase().includes('lost'));
+      console.log(`[Reports] Year 2025 Non-Lost Estimates: ${allNonLost.length} (if we count all non-lost as won)`);
     }
     return won;
   }, [estimates, selectedYear]);
