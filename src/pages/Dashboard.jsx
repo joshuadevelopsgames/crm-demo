@@ -231,6 +231,100 @@ export default function Dashboard() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // Fetch notifications to get accurate counts that match the notification bell
+  // This ensures the dashboard badge counts always match the notification bell counts
+  const { data: allNotificationsRaw = [] } = useQuery({
+    queryKey: ['notifications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      try {
+        const currentUserIdStr = String(user.id).trim();
+        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
+          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
+            .then(async r => {
+              const json = await r.json();
+              return r.ok ? json : { success: false, error: json.error || 'Unknown error' };
+            })
+            .catch(error => ({ success: false, error: error.message })),
+          base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
+        ]);
+        
+        const bulkNotifications = bulkNotificationsResponse.success 
+          ? (bulkNotificationsResponse.data?.notifications || [])
+          : [];
+        
+        return [...bulkNotifications, ...taskNotifications];
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
+      }
+    },
+    enabled: !userLoading && !!user,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Process notifications to get counts that match the notification bell
+  // This ensures dashboard badge counts always match notification bell counts
+  const notificationCounts = useMemo(() => {
+    if (!allNotificationsRaw || allNotificationsRaw.length === 0) {
+      return { neglected_account: 0, renewal_reminder: 0 };
+    }
+    
+    const now = new Date();
+    
+    // Filter out snoozed notifications (same logic as NotificationBell)
+    const activeNotifications = allNotificationsRaw.filter(notification => {
+      // Check if this notification is snoozed
+      if (!notificationSnoozes || !Array.isArray(notificationSnoozes)) {
+        return true; // If snoozes not loaded, include all
+      }
+      
+      const isSnoozed = notificationSnoozes.some(snooze => {
+        // Type must match
+        if (snooze.notification_type !== notification.type) return false;
+        
+        // Check if snooze is still active
+        const snoozedUntil = new Date(snooze.snoozed_until);
+        if (snoozedUntil <= now) return false; // Snooze expired
+        
+        // Check account ID match - handle null, undefined, and string comparisons
+        const snoozeAccountId = snooze.related_account_id ? String(snooze.related_account_id).trim() : null;
+        const notifAccountId = notification.related_account_id ? String(notification.related_account_id).trim() : null;
+        
+        // Both null/empty means match (general snooze for this type)
+        if (!snoozeAccountId && !notifAccountId) return true;
+        
+        // One is null, one isn't - no match
+        if (!snoozeAccountId || !notifAccountId) return false;
+        
+        // Both have values - compare as strings
+        return snoozeAccountId === notifAccountId;
+      });
+      
+      return !isSnoozed;
+    });
+    
+    // Count unique accounts for neglected_account and renewal_reminder (same logic as NotificationBell)
+    const neglectedAccountIds = activeNotifications
+      .filter(n => n.type === 'neglected_account')
+      .map(n => n.related_account_id)
+      .filter(id => id && id !== 'null' && id !== null)
+      .map(id => String(id).trim());
+    const uniqueNeglectedAccountIds = new Set(neglectedAccountIds);
+    
+    const renewalReminderAccountIds = activeNotifications
+      .filter(n => n.type === 'renewal_reminder')
+      .map(n => n.related_account_id)
+      .filter(id => id && id !== 'null' && id !== null)
+      .map(id => String(id).trim());
+    const uniqueRenewalReminderAccountIds = new Set(renewalReminderAccountIds);
+    
+    return {
+      neglected_account: uniqueNeglectedAccountIds.size,
+      renewal_reminder: uniqueRenewalReminderAccountIds.size
+    };
+  }, [allNotificationsRaw, notificationSnoozes]);
+
   // Calculate metrics
   // Active accounts = all non-archived accounts (matches Accounts page logic)
   const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
@@ -539,7 +633,7 @@ export default function Dashboard() {
     },
     {
       title: 'At Risk Accounts',
-      value: atRiskAccounts,
+      value: notificationCounts.renewal_reminder,
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
@@ -638,7 +732,7 @@ export default function Dashboard() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
-                    {atRiskRenewals.length}
+                    {notificationCounts.renewal_reminder}
                   </Badge>
                   {atRiskRenewals.length > 5 && (
                     <Button
@@ -731,9 +825,9 @@ export default function Dashboard() {
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                    {neglectedAccounts.length}
+                    {notificationCounts.neglected_account}
                   </Badge>
-                  {neglectedAccounts.length > 5 && (
+                  {notificationCounts.neglected_account > 5 && (
                     <Button
                       variant="ghost"
                       size="sm"
