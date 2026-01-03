@@ -167,9 +167,10 @@ export default function Reports() {
 
   // Filter estimates by year, account, and department
   // For Salesperson Performance: Use estimate_close_date only (matches LMN's "All sales figures based on estimates sold")
-  // For general reports: Use close_date OR estimate_date (shows all estimates for the year)
-  // Also exclude estimates with exclude_stats=true, archived, duplicates, and zero/negative prices
-  const filteredEstimates = useMemo(() => {
+  // OLD CODE REMOVED: filteredEstimates useMemo is no longer used
+  // We now use yearEstimates and yearWonEstimates with filterEstimatesByYear
+  // This ensures we match LMN's "Estimates Sold" count exactly
+  const _unused_filteredEstimates = useMemo(() => {
     console.log('📊 Reports: Starting filter', { totalEstimates: estimates.length, selectedYear });
     
     // First, remove duplicates by lmn_estimate_id (keep first occurrence)
@@ -482,16 +483,23 @@ export default function Reports() {
     return Array.from(depts).sort();
   }, [estimates]);
 
-  // Get estimates for selected year (from database)
-  // For "estimates sold", use estimate_close_date with fallback to estimate_date
-  // This matches LMN's logic: they use close_date when available, but include estimates with only estimate_date
-  // LMN includes exclude_stats and zero price estimates in their "Estimates Sold" count
+  // Get ALL estimates for selected year (from database) - includes won, lost, and pending
+  // For general reports: Use close_date OR estimate_date (shows all estimates for the year)
   const yearEstimates = useMemo(() => {
     if (!Array.isArray(estimates)) return [];
-    // Use salesPerformanceMode=true to match LMN's "Estimates Sold" logic
+    // Use salesPerformanceMode=true to match LMN's date logic (close_date with fallback to estimate_date)
+    // soldOnly=false to include all estimates (won, lost, pending) for total count
+    return filterEstimatesByYear(estimates, selectedYear, true, false);
+  }, [estimates, selectedYear]);
+
+  // Get WON estimates for selected year (matches LMN's "Estimates Sold" count)
+  // This should match LMN's count exactly (validated: 1,057 for 2025)
+  const yearWonEstimates = useMemo(() => {
+    if (!Array.isArray(estimates)) return [];
+    // Use salesPerformanceMode=true and soldOnly=true to match LMN's "Estimates Sold" logic
     // This uses estimate_close_date when available, but falls back to estimate_date
-    // This ensures we match LMN's count exactly (validated: 1,057 for 2025)
-    return filterEstimatesByYear(estimates, selectedYear, true);
+    // LMN includes exclude_stats and zero price estimates in their "Estimates Sold" count
+    return filterEstimatesByYear(estimates, selectedYear, true, true);
   }, [estimates, selectedYear]);
   
   // Apply account and department filters to year estimates
@@ -511,12 +519,31 @@ export default function Reports() {
     });
   }, [yearEstimates, selectedAccount, selectedDepartment]);
 
+  // Apply account and department filters to year WON estimates (for "Estimates Sold" count)
+  const filteredYearWonEstimates = useMemo(() => {
+    return yearWonEstimates.filter(estimate => {
+      // Filter by account (if estimate has account_id)
+      if (selectedAccount !== 'all' && estimate.account_id && estimate.account_id !== selectedAccount) {
+        return false;
+      }
+
+      // Filter by department/division
+      if (selectedDepartment !== 'all' && estimate.division !== selectedDepartment) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [yearWonEstimates, selectedAccount, selectedDepartment]);
+
   // Calculate basic stats (use filteredYearEstimates - already filtered by year and account/department)
   const stats = useMemo(() => {
     const total = filteredYearEstimates.length;
     
-    const won = filteredYearEstimates.filter(e => isWonStatus(e)).length;
-    const lost = filteredYearEstimates.filter(e => !isWonStatus(e.status) && e.status?.toLowerCase() === 'lost').length;
+    // Use yearWonEstimates (with soldOnly=true) for won count to match LMN's "Estimates Sold" count
+    // But filter by account/department to match the current filters
+    const won = filteredYearWonEstimates.length;
+    const lost = filteredYearEstimates.filter(e => !isWonStatus(e) && e.status?.toLowerCase() === 'lost').length;
     
     const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
     
@@ -525,11 +552,10 @@ export default function Reports() {
       return sum + (parseFloat(e.total_price_with_tax) || parseFloat(e.total_price) || 0);
     }, 0);
     
-    const wonValue = filteredYearEstimates
-      .filter(e => isWonStatus(e))
-      .reduce((sum, e) => {
-        return sum + (parseFloat(e.total_price_with_tax) || parseFloat(e.total_price) || 0);
-      }, 0);
+    // Use filteredYearWonEstimates for won value to match LMN's logic
+    const wonValue = filteredYearWonEstimates.reduce((sum, e) => {
+      return sum + (parseFloat(e.total_price_with_tax) || parseFloat(e.total_price) || 0);
+    }, 0);
 
     return {
       total,
@@ -539,7 +565,7 @@ export default function Reports() {
       totalValue,
       wonValue
     };
-  }, [filteredYearEstimates]);
+  }, [filteredYearEstimates, filteredYearWonEstimates]);
 
   // Export handlers
   const handleExportXLSX = () => {
