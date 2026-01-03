@@ -26,6 +26,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 
 export default function WinLossTest() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,7 +179,7 @@ export default function WinLossTest() {
     }
 
     // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.estimate_date) - new Date(a.estimate_date));
+    filtered.sort((a, b) => getDateStringTimestamp(b.estimate_date) - getDateStringTimestamp(a.estimate_date));
 
     return filtered;
   }, [filterStatus, estimates]);
@@ -424,7 +425,7 @@ export default function WinLossTest() {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Calendar className="w-4 h-4" />
-                        {format(new Date(estimate.estimate_date), 'MMM d, yyyy')}
+                        {formatDateString(estimate.estimate_date, 'MMM d, yyyy')}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -444,7 +445,7 @@ export default function WinLossTest() {
                       </Badge>
                       {estimate.status === 'won' && estimate.won_date && (
                         <p className="text-xs text-slate-500 mt-1">
-                          Won: {format(new Date(estimate.won_date), 'MMM d')}
+                          Won: {formatDateString(estimate.won_date, 'MMM d')}
                         </p>
                       )}
                       {estimate.status === 'lost' && estimate.lost_reason && (

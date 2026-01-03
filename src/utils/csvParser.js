@@ -107,7 +107,7 @@ export function parseCurrency(str) {
 /**
  * Parse date string
  * Handles MM/DD/YYYY format from the CSV
- * LMN dates are always in UTC, so we parse them as UTC to avoid timezone conversion issues
+ * Returns date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
  */
 export function parseDate(dateStr) {
   if (!dateStr) return null;
@@ -118,30 +118,25 @@ export function parseDate(dateStr) {
       const month = parseInt(parts[0]);
       const day = parseInt(parts[1]);
       const year = parseInt(parts[2]);
-      // Create date in UTC to avoid timezone shifts
-      return new Date(Date.UTC(year, month - 1, day));
+      // Return date-only string (YYYY-MM-DD)
+      const monthPadded = String(month).padStart(2, '0');
+      const dayPadded = String(day).padStart(2, '0');
+      return `${year}-${monthPadded}-${dayPadded}`;
     }
     // Try parsing as ISO string or other format
-    // If it's already YYYY-MM-DD, parse as UTC
+    // If it's already YYYY-MM-DD, return as-is
     const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (isoMatch) {
-      const year = parseInt(isoMatch[1]);
-      const month = parseInt(isoMatch[2]);
-      const day = parseInt(isoMatch[3]);
-      return new Date(Date.UTC(year, month - 1, day));
+      return isoMatch[0]; // Return date-only string
     }
-    // Try parsing as date string, but treat as UTC
+    // Try parsing as date string and extract date components
     const parsed = new Date(dateStr);
     if (!isNaN(parsed.getTime())) {
-      // If it doesn't have timezone info, assume UTC
-      if (!dateStr.includes('T') && !dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
-        // Extract components and create UTC date
-        const year = parsed.getUTCFullYear();
-        const month = parsed.getUTCMonth();
-        const day = parsed.getUTCDate();
-        return new Date(Date.UTC(year, month, day));
-      }
-      return parsed;
+      // Extract date components directly (no timezone conversion)
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`; // Date-only string
     }
     return null;
   } catch (e) {
@@ -221,26 +216,18 @@ export function processEstimateData(rawData) {
       return;
     }
     
-    // Extract UTC date components to avoid timezone conversion when converting to string
-    const formatUTCDate = (date) => {
-      if (!date) return null;
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
+    // parseDate now returns date-only strings (YYYY-MM-DD), so use directly
     estimates.push({
       id: row['Estimate ID'] || `est-${index}`,
       account_name: row['Contact Name'].trim(),
       estimate_number: row['Estimate ID'] || '',
-      estimate_date: formatUTCDate(estimateDate),
-      close_date: formatUTCDate(closeDate),
+      estimate_date: estimateDate, // Already a date-only string (YYYY-MM-DD)
+      close_date: closeDate, // Already a date-only string (YYYY-MM-DD)
       description: row['Project Name'] || 'No description',
       total_amount: totalPrice,
       status: status,
-      won_date: status === 'won' && closeDate ? formatUTCDate(closeDate) : null,
-      lost_date: status === 'lost' && closeDate ? formatUTCDate(closeDate) : null,
+      won_date: status === 'won' && closeDate ? closeDate : null, // Already a date-only string
+      lost_date: status === 'lost' && closeDate ? closeDate : null, // Already a date-only string
       salesperson: row['Salesperson'] || '',
       estimator: row['Estimator'] || '',
       division: row['Division'] || '',

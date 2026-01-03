@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
@@ -185,8 +186,8 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                   <tbody>
                                     {accountEstimates
                                       .sort((a, b) => {
-                                        const dateA = new Date(a.estimate_close_date || a.estimate_date || 0);
-                                        const dateB = new Date(b.estimate_close_date || b.estimate_date || 0);
+                                        const dateA = getDateStringTimestamp(a.estimate_close_date || a.estimate_date);
+                                        const dateB = getDateStringTimestamp(b.estimate_close_date || b.estimate_date);
                                         return dateB - dateA;
                                       })
                                       .map((estimate) => (
@@ -195,12 +196,12 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                           <td className="p-2 text-slate-600">{estimate.project_name || 'N/A'}</td>
                                           <td className="p-2 text-slate-600">
                                             {estimate.estimate_date 
-                                              ? format(new Date(estimate.estimate_date), 'MMM d, yyyy')
+                                              ? formatDateString(estimate.estimate_date, 'MMM d, yyyy')
                                               : 'N/A'}
                                           </td>
                                           <td className="p-2 text-slate-600">
                                             {estimate.estimate_close_date 
-                                              ? format(new Date(estimate.estimate_close_date), 'MMM d, yyyy')
+                                              ? formatDateString(estimate.estimate_close_date, 'MMM d, yyyy')
                                               : 'N/A'}
                                           </td>
                                           <td className="p-2 text-right text-slate-600">

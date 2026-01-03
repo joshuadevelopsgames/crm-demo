@@ -8,10 +8,12 @@
  * - If no won estimates with contract_end, return null
  */
 
+import { isWonStatus } from './reportCalculations.js';
+
 /**
  * Calculate renewal date for an account based on its won estimates
  * @param {Array} estimates - All estimates for the account
- * @returns {Date|null} - The latest contract_end date from won estimates, or null
+ * @returns {string|null} - The latest contract_end date as date-only string (YYYY-MM-DD), or null
  */
 export function calculateRenewalDate(estimates = []) {
   if (!estimates || estimates.length === 0) {
@@ -19,64 +21,86 @@ export function calculateRenewalDate(estimates = []) {
   }
 
   // Filter to only won estimates with valid contract_end dates
+  // Use isWonStatus to match all won statuses (Contract Signed, Work Complete, etc.)
+  
   const wonEstimatesWithEndDate = estimates
     .filter(est => {
-      // Must be won status (case-insensitive)
-      if (!est.status || est.status.toLowerCase() !== 'won') return false;
+      // Use isWonStatus to match all won statuses
+      if (!isWonStatus(est.status)) return false;
       
-      // Must have contract_end date
+      // Must have contract_end date (as string YYYY-MM-DD or Date object)
       if (!est.contract_end) return false;
       
-      // Must be a valid date
-      const endDate = new Date(est.contract_end);
-      return !isNaN(endDate.getTime());
+      return true;
     })
-    .map(est => ({
-      ...est,
-      contract_end_date: new Date(est.contract_end)
-    }));
+    .map(est => {
+      // Extract date string from contract_end (could be string or Date object)
+      let dateStr = est.contract_end;
+      if (dateStr instanceof Date) {
+        // If it's a Date object, extract date components directly
+        const year = dateStr.getFullYear();
+        const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+        const day = String(dateStr.getDate()).padStart(2, '0');
+        dateStr = `${year}-${month}-${day}`;
+      } else if (typeof dateStr === 'string') {
+        // If it's already a string, extract YYYY-MM-DD part
+        const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          dateStr = match[0];
+        }
+      }
+      return {
+        ...est,
+        contract_end_date_str: dateStr
+      };
+    });
 
   if (wonEstimatesWithEndDate.length === 0) {
     return null;
   }
 
-  // Find the latest contract_end date
-  const latestEndDate = wonEstimatesWithEndDate.reduce((latest, est) => {
-    return est.contract_end_date > latest ? est.contract_end_date : latest;
-  }, wonEstimatesWithEndDate[0].contract_end_date);
+  // Find the latest contract_end date (compare as strings YYYY-MM-DD)
+  const latestEndDateStr = wonEstimatesWithEndDate.reduce((latest, est) => {
+    return est.contract_end_date_str > latest ? est.contract_end_date_str : latest;
+  }, wonEstimatesWithEndDate[0].contract_end_date_str);
+  
   // #region agent log
   // Only log when we actually find a renewal date (successful case)
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:48',message:'Renewal date calculated successfully',data:{renewalDate:latestEndDate.toISOString(),estimatesCount:estimates.length,wonWithEndCount:wonEstimatesWithEndDate.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renewalDateCalculator.js:48',message:'Renewal date calculated successfully',data:{renewalDate:latestEndDateStr,estimatesCount:estimates.length,wonWithEndCount:wonEstimatesWithEndDate.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
 
-  return latestEndDate;
+  return latestEndDateStr; // Return date-only string (YYYY-MM-DD)
 }
 
 /**
  * Calculate renewal date and return as ISO string
  * @param {Array} estimates - All estimates for the account
- * @returns {string|null} - ISO string of renewal date, or null
+ * @returns {string|null} - Date-only string (YYYY-MM-DD) of renewal date, or null
  */
 export function calculateRenewalDateISO(estimates = []) {
-  const renewalDate = calculateRenewalDate(estimates);
-  return renewalDate ? renewalDate.toISOString() : null;
+  // calculateRenewalDate now returns date-only strings, so just return it
+  return calculateRenewalDate(estimates);
 }
 
 /**
  * Get days until renewal
- * @param {Date|string} renewalDate - Renewal date
+ * @param {string} renewalDate - Renewal date as date-only string (YYYY-MM-DD)
  * @returns {number|null} - Days until renewal (positive = future, negative = past), or null if no date
  */
 export function getDaysUntilRenewal(renewalDate) {
   if (!renewalDate) return null;
   
-  const renewal = new Date(renewalDate);
+  // Parse date string (YYYY-MM-DD) directly without timezone conversion
+  const dateMatch = renewalDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!dateMatch) return null;
+  
+  const [, year, month, day] = dateMatch;
+  const renewal = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   if (isNaN(renewal.getTime())) return null;
   
   // Always use actual current date for renewal calculations (not test mode)
   // Renewal dates are about real business operations, not test data
   const today = new Date();
-  
   today.setHours(0, 0, 0, 0);
   renewal.setHours(0, 0, 0, 0);
   

@@ -28,6 +28,8 @@ import {
   Upload
 } from 'lucide-react';
 import { format, differenceInDays, startOfDay } from 'date-fns';
+import { formatDateString } from '@/utils/dateFormatter';
+import { getDaysUntilRenewal } from '@/utils/renewalDateCalculator';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -265,16 +267,16 @@ export default function Dashboard() {
       
       if (!renewalDate) return null;
       
-      // Always use actual current date for at-risk calculations (not test mode)
-      // At-risk accounts are about real business operations, not test data
-      const today = new Date();
-      const daysUntil = differenceInDays(new Date(renewalDate), today);
+      // Calculate days until renewal using date string (no timezone conversion)
+      const daysUntil = getDaysUntilRenewal(renewalDate);
+      if (daysUntil === null) return null;
+      
       // #region agent log
       // Only log accounts that should be at-risk or are already at-risk
       if (daysUntil <= 180 || account.status === 'at_risk') {
         const wonEstimates = accountEstimates.filter(e => e.status?.toLowerCase() === 'won');
         const wonWithEnd = wonEstimates.filter(e => e.contract_end);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:229',message:'At-risk account analysis',data:{accountId:account.id,accountName:account.name,accountStatus:account.status,renewalDate:renewalDate.toISOString(),daysUntil,shouldBeAtRisk:daysUntil<=180,totalEstimates:accountEstimates.length,wonWithEndCount:wonWithEnd.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:229',message:'At-risk account analysis',data:{accountId:account.id,accountName:account.name,accountStatus:account.status,renewalDate:renewalDate,daysUntil,shouldBeAtRisk:daysUntil<=180,totalEstimates:accountEstimates.length,wonWithEndCount:wonWithEnd.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       }
       // #endregion
       
@@ -285,16 +287,15 @@ export default function Dashboard() {
       
       return {
         ...account,
-        renewal_date: renewalDate.toISOString(),
-        calculated_renewal_date: renewalDate
+        renewal_date: renewalDate, // Date-only string (YYYY-MM-DD)
+        calculated_renewal_date: renewalDate // Date-only string (YYYY-MM-DD)
       };
     })
     .filter(Boolean) // Remove null entries
     .sort((a, b) => {
       // Sort by days until renewal (soonest first, including past renewals)
-      const today = new Date();
-      const daysA = differenceInDays(new Date(a.calculated_renewal_date), today);
-      const daysB = differenceInDays(new Date(b.calculated_renewal_date), today);
+      const daysA = getDaysUntilRenewal(a.calculated_renewal_date);
+      const daysB = getDaysUntilRenewal(b.calculated_renewal_date);
       return daysA - daysB;
     });
 
@@ -366,7 +367,7 @@ export default function Dashboard() {
         atRiskRenewals: atRiskRenewals.map(acc => ({
           name: acc.name,
           renewalDate: acc.calculated_renewal_date,
-          daysUntil: differenceInDays(new Date(acc.calculated_renewal_date), new Date())
+          daysUntil: getDaysUntilRenewal(acc.calculated_renewal_date)
         }))
       });
     }
@@ -663,8 +664,8 @@ export default function Dashboard() {
                   return null;
                 })()}
                 {/* #endregion */}
-                {atRiskRenewals.slice(0, 5).map(account => {
-                  const daysUntil = differenceInDays(new Date(account.calculated_renewal_date), new Date());
+                  {atRiskRenewals.slice(0, 5).map(account => {
+                  const daysUntil = getDaysUntilRenewal(account.calculated_renewal_date);
                   return (
                     <div
                       key={account.id}
@@ -676,7 +677,7 @@ export default function Dashboard() {
                       >
                         <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
                         <p className="text-xs text-slate-500 dark:text-text-muted">
-                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {format(new Date(account.calculated_renewal_date), 'MMM d, yyyy')}
+                          Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {formatDateString(account.calculated_renewal_date, 'MMM d, yyyy')}
                         </p>
                       </Link>
                       <Button

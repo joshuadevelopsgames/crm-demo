@@ -139,31 +139,31 @@ export function parseEstimatesList(csvTextOrRows) {
         seenEstimateIds.add(estimateId);
 
         // Parse dates (Excel serial dates or ISO strings)
-        // LMN dates are always in UTC, so we need to parse them as UTC to avoid timezone conversion issues
+        // Return date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
         const parseDate = (value) => {
           if (!value) return null;
           // If it's an Excel serial date (number)
           if (typeof value === 'number') {
             // Excel epoch is 1900-01-01, but Excel has a bug where 1900 is treated as leap year
             // Excel epoch: December 30, 1899 (day 0 in Excel)
-            // Convert Excel serial number to UTC date components directly
-            const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // UTC: Dec 30, 1899
+            // Convert Excel serial number to date components
+            // Use local date calculation to preserve the date as-is without timezone conversion
+            const excelEpoch = new Date(1899, 11, 30); // Local date: Dec 30, 1899
             const date = new Date(excelEpoch.getTime() + (value - 1) * 24 * 60 * 60 * 1000);
-            // Return as ISO timestamp with timezone (timestamptz format for database)
-            // Use UTC midnight to avoid timezone issues
-            const year = date.getUTCFullYear();
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp for timestamptz
+            // Extract date components directly (no timezone conversion)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`; // Date-only string (YYYY-MM-DD)
           }
           // Try parsing as date string
           if (typeof value === 'string') {
             const trimmed = value.trim();
             
-            // If it's already in YYYY-MM-DD format, convert to ISO timestamp
+            // If it's already in YYYY-MM-DD format, return as-is
             const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (isoMatch) {
-              return `${isoMatch[0]}T00:00:00Z`; // Convert to ISO timestamp
+              return isoMatch[0]; // Return date-only string
             }
             
             // Handle MM/DD/YYYY format (common in Excel exports)
@@ -172,33 +172,23 @@ export function parseEstimatesList(csvTextOrRows) {
               const [, month, day, year] = mmddyyyyMatch;
               const monthPadded = String(month).padStart(2, '0');
               const dayPadded = String(day).padStart(2, '0');
-              // Create date in UTC to avoid timezone issues
-              const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-              if (!isNaN(date.getTime())) {
-                return `${year}-${monthPadded}-${dayPadded}T00:00:00Z`;
-              }
+              return `${year}-${monthPadded}-${dayPadded}`; // Date-only string
             }
             
-            // Try parsing as UTC date string
-            // If the string includes timezone info, parse it as UTC
+            // If the string includes timezone info, extract date part only
             if (trimmed.includes('T') || trimmed.includes('Z') || trimmed.includes('+') || (trimmed.includes('-') && trimmed.match(/^\d{4}-\d{2}-\d{2}/))) {
-              const parsed = new Date(trimmed);
-              if (!isNaN(parsed.getTime())) {
-                // Extract UTC date components and return as ISO timestamp
-                const year = parsed.getUTCFullYear();
-                const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(parsed.getUTCDate()).padStart(2, '0');
-                return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp
+              const dateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (dateMatch) {
+                return dateMatch[0]; // Return date-only part
               }
             } else {
-              // Try parsing as a simple date string (assume UTC)
-              // Try MM/DD/YYYY first (most common in Excel)
+              // Try parsing as a simple date string and extract date components
               const parsed = new Date(trimmed);
               if (!isNaN(parsed.getTime())) {
-                const year = parsed.getUTCFullYear();
-                const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(parsed.getUTCDate()).padStart(2, '0');
-                return `${year}-${month}-${day}T00:00:00Z`; // Full ISO timestamp
+                const year = parsed.getFullYear();
+                const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                const day = String(parsed.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`; // Date-only string
               }
             }
           }

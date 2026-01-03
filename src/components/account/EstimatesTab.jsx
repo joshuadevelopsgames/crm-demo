@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { FileText, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Target, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
 
 // Exact division categories from Google Sheet
@@ -98,8 +99,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     const years = new Set();
     estimates.forEach(est => {
       if (est.estimate_date) {
-        const year = new Date(est.estimate_date).getFullYear();
-        years.add(year);
+        const year = getYearFromDateString(est.estimate_date);
+        if (year) years.add(year);
       }
     });
     return Array.from(years).sort((a, b) => b - a); // Sort newest first
@@ -114,8 +115,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       if (filterStatus !== 'all' && normalizedStatus !== filterStatus) return false;
       
       if (filterYear !== 'all' && est.estimate_date) {
-        const year = new Date(est.estimate_date).getFullYear();
-        if (year.toString() !== filterYear) return false;
+        const year = getYearFromDateString(est.estimate_date);
+        if (year && year.toString() !== filterYear) return false;
       }
       
       // User filter: if users are selected, only show estimates where those users are salesperson or estimator
@@ -131,8 +132,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     
     // Sort by date (newest first)
     filtered.sort((a, b) => {
-      const dateA = a.estimate_date ? new Date(a.estimate_date).getTime() : 0;
-      const dateB = b.estimate_date ? new Date(b.estimate_date).getTime() : 0;
+      const dateA = getDateStringTimestamp(a.estimate_date);
+      const dateB = getDateStringTimestamp(b.estimate_date);
       return dateB - dateA; // Newest first
     });
     
@@ -154,8 +155,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     // Sort estimates within each department by date (newest first)
     Object.keys(grouped).forEach(dept => {
       grouped[dept].sort((a, b) => {
-        const dateA = a.estimate_date ? new Date(a.estimate_date).getTime() : 0;
-        const dateB = b.estimate_date ? new Date(b.estimate_date).getTime() : 0;
+        const dateA = getDateStringTimestamp(a.estimate_date);
+        const dateB = getDateStringTimestamp(b.estimate_date);
         return dateB - dateA; // Newest first
       });
     });
@@ -425,7 +426,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                             <td className="px-2 sm:px-4 py-3 sm:py-4">
                               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                 <Calendar className="w-4 h-4" />
-                                {estimate.estimate_date ? format(new Date(estimate.estimate_date), 'MMM d, yyyy') : '—'}
+                                {estimate.estimate_date ? formatDateString(estimate.estimate_date, 'MMM d, yyyy') : '—'}
                               </div>
                             </td>
                             <td className="px-2 sm:px-4 py-3 sm:py-4">
