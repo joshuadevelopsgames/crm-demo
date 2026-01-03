@@ -319,10 +319,14 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     // Exclude archived estimates (LMN excludes archived)
     if (estimate.archived) return false;
     
-    // LMN-Compatible Rule: Exclude estimates with "Lost" status
-    // Even if they have a close_date, LMN excludes "Lost" statuses from sales performance reports
     const status = (estimate.status || '').toString().toLowerCase().trim();
-    if (status.includes('lost')) return false;
+    
+    // LMN-Compatible Rule: Exclude estimates with "Lost" status ONLY when soldOnly=true
+    // For "Estimates Sold" reports, LMN excludes "Lost" statuses
+    // But for general reports (soldOnly=false), we should include all estimates (won, lost, pending)
+    if (soldOnly && status.includes('lost')) {
+      return false;
+    }
     
     // Business logic for year filtering (MUST happen before soldOnly check):
     let dateToUse = null;
