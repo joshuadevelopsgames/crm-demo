@@ -324,21 +324,7 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     const status = (estimate.status || '').toString().toLowerCase().trim();
     if (status.includes('lost')) return false;
     
-    // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
-    // HYPOTHESIS: LMN may count ALL non-lost estimates as "sold" (not just explicitly won statuses)
-    // Testing this by counting all non-lost estimates as sold
-    if (soldOnly) {
-      // Exclude lost estimates
-      if (status.includes('lost')) {
-        return false;
-      }
-      // Count all non-lost estimates as "sold" (this is the hypothesis we're testing)
-      // If this matches 1,057, then LMN's definition of "sold" is simply "not lost"
-      // If not, we'll revert and look for other patterns
-      return true; // All non-lost estimates are considered "sold"
-    }
-    
-    // Business logic for year filtering:
+    // Business logic for year filtering (MUST happen before soldOnly check):
     let dateToUse = null;
     
     if (salesPerformanceMode) {
@@ -384,7 +370,21 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
       return false;
     }
     
-    return estimateYear === year;
+    // Year filter: Only include estimates for the specified year
+    if (estimateYear !== year) return false;
+    
+    // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
+    // HYPOTHESIS: LMN may count ALL non-lost estimates as "sold" (not just explicitly won statuses)
+    // Testing this by counting all non-lost estimates as sold (after year filtering)
+    if (soldOnly) {
+      // Count all non-lost estimates as "sold" (this is the hypothesis we're testing)
+      // If this matches 1,057, then LMN's definition of "sold" is simply "not lost"
+      // If not, we'll revert and look for other patterns
+      return true; // All non-lost estimates for this year are considered "sold"
+    }
+    
+    // If soldOnly is false, include all estimates (won, lost, pending) for this year
+    return true;
   });
 }
 
