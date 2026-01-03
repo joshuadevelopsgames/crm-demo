@@ -247,13 +247,7 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
   // Check pipeline_status first (LMN's primary indicator for "Sold")
   if (pipeline) {
     const pipelineLower = pipeline.toString().toLowerCase().trim();
-    // If pipeline_status contains "sold", it's definitely won
     if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
-      return true;
-    }
-    // LMN may count estimates with any non-empty pipeline_status (except "lost" or "pending") as "sold"
-    // This is more lenient and may help match the 1,057 count
-    if (pipelineLower && pipelineLower !== 'lost' && pipelineLower !== 'pending' && !pipelineLower.includes('lost')) {
       return true;
     }
   }
@@ -332,21 +326,6 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     
     // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
     if (soldOnly && !isWonStatus(estimate)) {
-      // Debug: Log estimates that pass year filter but fail won status check (for 2025)
-      if (year === 2025) {
-        const dateStr = String(estimate.estimate_close_date || estimate.estimate_date || '');
-        if (dateStr.length >= 4 && dateStr.substring(0, 4) === '2025') {
-          console.log('[filterEstimatesByYear] Estimate filtered out (not won):', {
-            id: estimate.id || estimate.lmn_estimate_id,
-            status: estimate.status,
-            pipeline_status: estimate.pipeline_status,
-            estimate_date: estimate.estimate_date,
-            estimate_close_date: estimate.estimate_close_date,
-            archived: estimate.archived,
-            exclude_stats: estimate.exclude_stats
-          });
-        }
-      }
       return false;
     }
     

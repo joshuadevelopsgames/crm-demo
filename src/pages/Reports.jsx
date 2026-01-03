@@ -500,9 +500,28 @@ export default function Reports() {
     // This uses estimate_close_date when available, but falls back to estimate_date
     // LMN includes exclude_stats and zero price estimates in their "Estimates Sold" count
     const won = filterEstimatesByYear(estimates, selectedYear, true, true);
-    // Debug: Log the count to verify it matches LMN's 1,057 for 2025
+    // Debug: Log the count and analyze missing estimates for 2025
     if (selectedYear === 2025) {
       console.log(`[Reports] Year 2025 Won Estimates (soldOnly=true): ${won.length} (expected: 1,057)`);
+      
+      // Find estimates that pass year filter but fail won status check
+      const all2025 = filterEstimatesByYear(estimates, selectedYear, true, false); // All estimates (won, lost, pending)
+      const notWon = all2025.filter(e => !isWonStatus(e) && !e.status?.toLowerCase().includes('lost'));
+      
+      if (notWon.length > 0) {
+        // Group by status/pipeline_status to see patterns
+        const statusGroups = {};
+        notWon.forEach(est => {
+          const key = `${est.status || 'null'}|${est.pipeline_status || 'null'}`;
+          if (!statusGroups[key]) {
+            statusGroups[key] = { status: est.status, pipeline_status: est.pipeline_status, count: 0 };
+          }
+          statusGroups[key].count++;
+        });
+        
+        console.log(`[Reports] ${notWon.length} estimates with 2025 dates are NOT recognized as won:`);
+        console.table(Object.values(statusGroups).sort((a, b) => b.count - a.count));
+      }
     }
     return won;
   }, [estimates, selectedYear]);
