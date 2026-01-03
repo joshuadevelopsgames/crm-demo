@@ -864,37 +864,41 @@ export default function NotificationBell() {
           }
         }
         
-        // Normalize account IDs to strings for proper Set deduplication
-        // Trust the server's notifications - don't filter based on client-side calculations
-        // The server created these notifications, so they're valid
-        const allAccountIds = activeNotificationsOnly
-          .map(n => n.related_account_id)
-          .filter(id => id && id !== 'null' && id !== null)
-          .map(id => String(id).trim());
-        
-        // Count unique accounts from notifications (server is source of truth)
-        const uniqueAccountIds = new Set(allAccountIds);
-        count = uniqueAccountIds.size;
-        
-        // For unread count, use the EXACT SAME logic as count, but only for unread notifications
-        // This ensures consistency - if count works, unreadCount will work the same way
-        const unreadNotifications = activeNotificationsOnly.filter(n => !n.is_read);
-        
-        // Use EXACT same pattern as count calculation above
-        // Trust the server's notifications - don't filter based on client-side calculations
-        const unreadAccountIds = unreadNotifications
-          .map(n => n.related_account_id)
-          .filter(id => id && id !== 'null' && id !== null)
-          .map(id => String(id).trim()); // Same normalization as count
-        
-        // Count unique unread accounts from notifications (server is source of truth)
-        const uniqueUnreadAccountIds = new Set(unreadAccountIds);
-        unreadCount = uniqueUnreadAccountIds.size;
-        
-        // Safety: if calculation somehow fails, fall back to count (all accounts have unread)
-        if (unreadCount > count) {
-          console.warn(`⚠️ unreadCount (${unreadCount}) > count (${count}), using count instead`);
-          unreadCount = count;
+        // For renewal_reminder and neglected_account, use dashboard calculation instead of counting notifications
+        // This ensures notification bell counts match dashboard counts
+        if (type === 'renewal_reminder') {
+          count = dashboardCounts.atRisk;
+          // For unread count, use the same as count (all matching accounts are considered unread)
+          unreadCount = dashboardCounts.atRisk;
+        } else if (type === 'neglected_account') {
+          count = dashboardCounts.neglected;
+          // For unread count, use the same as count (all matching accounts are considered unread)
+          unreadCount = dashboardCounts.neglected;
+        } else {
+          // For other types, count unique accounts from notifications
+          const allAccountIds = activeNotificationsOnly
+            .map(n => n.related_account_id)
+            .filter(id => id && id !== 'null' && id !== null)
+            .map(id => String(id).trim());
+          
+          const uniqueAccountIds = new Set(allAccountIds);
+          count = uniqueAccountIds.size;
+          
+          // For unread count, use the EXACT SAME logic as count, but only for unread notifications
+          const unreadNotifications = activeNotificationsOnly.filter(n => !n.is_read);
+          const unreadAccountIds = unreadNotifications
+            .map(n => n.related_account_id)
+            .filter(id => id && id !== 'null' && id !== null)
+            .map(id => String(id).trim());
+          
+          const uniqueUnreadAccountIds = new Set(unreadAccountIds);
+          unreadCount = uniqueUnreadAccountIds.size;
+          
+          // Safety: if calculation somehow fails, fall back to count
+          if (unreadCount > count) {
+            console.warn(`⚠️ unreadCount (${unreadCount}) > count (${count}), using count instead`);
+            unreadCount = count;
+          }
         }
         
         // Debug logging disabled to reduce console noise
