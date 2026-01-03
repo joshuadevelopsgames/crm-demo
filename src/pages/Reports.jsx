@@ -508,6 +508,29 @@ export default function Reports() {
       const all2025 = filterEstimatesByYear(estimates, selectedYear, true, false); // All estimates (won, lost, pending)
       console.log(`[Reports] Year 2025 Total Estimates (all statuses): ${all2025.length}`);
       
+      // Debug: Check how many estimates have 2025 in estimate_date (without filtering by status)
+      const estimatesWith2025Date = estimates.filter(e => {
+        if (!e.estimate_date && !e.estimate_close_date) return false;
+        const dateStr = String(e.estimate_close_date || e.estimate_date || '');
+        if (dateStr.length >= 4) {
+          return dateStr.substring(0, 4) === '2025';
+        }
+        return false;
+      });
+      console.log(`[Reports] Estimates with 2025 in estimate_date or estimate_close_date: ${estimatesWith2025Date.length}`);
+      
+      // Check how many are archived
+      const archived2025 = estimatesWith2025Date.filter(e => e.archived);
+      console.log(`[Reports] Archived estimates with 2025 dates: ${archived2025.length}`);
+      
+      // Check how many have "Lost" status
+      const lost2025 = estimatesWith2025Date.filter(e => e.status?.toLowerCase().includes('lost'));
+      console.log(`[Reports] Lost estimates with 2025 dates: ${lost2025.length}`);
+      
+      // Check how many are non-archived, non-lost
+      const nonArchivedNonLost2025 = estimatesWith2025Date.filter(e => !e.archived && !e.status?.toLowerCase().includes('lost'));
+      console.log(`[Reports] Non-archived, non-lost estimates with 2025 dates: ${nonArchivedNonLost2025.length} (this should match 1,057 if LMN counts all non-lost as sold)`);
+      
       // Find estimates that pass year filter but are NOT recognized as won
       const notWon = all2025.filter(e => {
         const isLost = e.status?.toLowerCase().includes('lost');
