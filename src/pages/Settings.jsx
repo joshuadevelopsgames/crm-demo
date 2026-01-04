@@ -22,7 +22,8 @@ import {
   Loader2,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -43,6 +44,7 @@ export default function Settings() {
   const [taskReminders, setTaskReminders] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
+  const [isRefreshingCache, setIsRefreshingCache] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -279,6 +281,56 @@ export default function Settings() {
     }
   };
 
+  const handleRefreshCache = async () => {
+    if (!supabase || !user) {
+      toast.error('Not authenticated');
+      return;
+    }
+
+    setIsRefreshingCache(true);
+    
+    try {
+      toast.loading('Refreshing notification cache...', { id: 'refresh-cache-toast' });
+      
+      // Get session token for API call
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error('No session token available. Please log out and log back in.');
+      }
+
+      const response = await fetch('/api/admin/refresh-cache', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to refresh cache');
+      }
+
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['at-risk-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      
+      toast.success(
+        `✓ Cache refreshed! ${result.data.atRiskCount} at-risk accounts, ${result.data.neglectedCount} neglected accounts.`,
+        { id: 'refresh-cache-toast', duration: 5000 }
+      );
+    } catch (error) {
+      console.error('Cache refresh error:', error);
+      toast.error(
+        `Cache refresh failed: ${error.message || 'Unknown error'}`,
+        { id: 'refresh-cache-toast', duration: 5000 }
+      );
+    } finally {
+      setIsRefreshingCache(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -497,15 +549,57 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Data Export - Admin Only */}
+      {/* Admin Tools */}
       {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5" />
-              Data Export
-            </CardTitle>
-          </CardHeader>
+        <>
+          {/* Cache Refresh - Admin Only */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                System Cache
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Manually refresh the notification cache for at-risk accounts and neglected accounts. 
+                  The cache is normally refreshed automatically every 5 minutes by a background job.
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Use this if you need to see updated at-risk accounts immediately after data changes.
+                </p>
+              </div>
+              
+              <Button
+                onClick={handleRefreshCache}
+                disabled={isRefreshingCache}
+                variant="outline"
+                className="border-slate-300 disabled:opacity-50"
+              >
+                {isRefreshingCache ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Notification Cache
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Data Export - Admin Only */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="w-5 h-5" />
+                Data Export
+              </CardTitle>
+            </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -555,6 +649,7 @@ export default function Settings() {
             </p>
           </CardContent>
         </Card>
+        </>
       )}
 
       {/* End of Year Reports */}
