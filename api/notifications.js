@@ -43,7 +43,26 @@ export default async function handler(req, res) {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:42',message:'API handler entry',data:{method:req.method,type:req.query?.type,hasUserId:!!req.query?.user_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
-    const supabase = getSupabaseClient();
+    
+    let supabase;
+    try {
+      supabase = getSupabaseClient();
+    } catch (clientError) {
+      console.error('Error creating Supabase client:', clientError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to initialize database connection',
+        details: clientError.message
+      });
+    }
+    
+    if (!supabase) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Supabase client is null. Check environment variables.'
+      });
+    }
+    
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:45',message:'Supabase client created',data:{hasClient:!!supabase,hasUrl:!!process.env.SUPABASE_URL,hasKey:!!process.env.SUPABASE_SERVICE_ROLE_KEY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
@@ -65,7 +84,7 @@ export default async function handler(req, res) {
       // #endregion
       if (error) {
         // If table doesn't exist (PGRST116 = no rows, but other codes might indicate missing table)
-        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist') || error.code === 'PGRST204') {
           // Table doesn't exist or cache is empty - return empty array
           console.warn('notification_cache table not found or empty, returning empty array');
           return res.json({ 
@@ -75,8 +94,17 @@ export default async function handler(req, res) {
             message: 'Cache not available. Background job will create it shortly.'
           });
         }
-        console.error('Error fetching at-risk accounts cache:', error);
-        return res.status(500).json({ success: false, error: error.message });
+        console.error('Error fetching at-risk accounts cache:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        return res.status(500).json({ 
+          success: false, 
+          error: error.message || 'Failed to fetch at-risk accounts cache',
+          code: error.code
+        });
       }
       
       if (!cache || new Date(cache.expires_at) < new Date()) {
@@ -152,12 +180,21 @@ export default async function handler(req, res) {
       // #endregion
       if (error) {
         // If table doesn't exist
-        if (error.message?.includes('relation') || error.message?.includes('does not exist') || error.code === 'PGRST204') {
-          console.warn('duplicate_at_risk_estimates table not found, returning empty array');
+        if (error.message?.includes('relation') || error.message?.includes('does not exist') || error.code === 'PGRST204' || error.code === 'PGRST116') {
+          console.warn('duplicate_at_risk_estimates table not found or empty, returning empty array');
           return res.json({ success: true, data: [] });
         }
-        console.error('Error fetching duplicate estimates:', error);
-        return res.status(500).json({ success: false, error: error.message });
+        console.error('Error fetching duplicate estimates:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        return res.status(500).json({ 
+          success: false, 
+          error: error.message || 'Failed to fetch duplicate estimates',
+          code: error.code
+        });
       }
       
       return res.json({ success: true, data: duplicates || [] });
