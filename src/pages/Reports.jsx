@@ -28,7 +28,7 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
-import { getCurrentYear } from '@/contexts/TestModeContext';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 // Helper to get current year (respects test mode)
 function getCurrentYearForCalculation() {

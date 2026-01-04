@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { TutorialProvider } from './contexts/TutorialContext';
 import { UserProvider, useUser } from './contexts/UserContext';
-import { TestModeProvider } from './contexts/TestModeContext';
+import { YearSelectorProvider } from './contexts/YearSelectorContext';
 import { useUserPermissions } from './hooks/useUserPermissions';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
@@ -282,7 +282,7 @@ function App() {
       <Router>
         <UserProvider>
           <ThemeProvider>
-            <TestModeProvider>
+            <YearSelectorProvider>
               <TutorialProvider>
               <div style={{ minHeight: '100vh' }} className="bg-white dark:bg-slate-950">
                 <Toaster 
@@ -303,7 +303,7 @@ function App() {
                 <BugReportButton />
               </div>
               </TutorialProvider>
-            </TestModeProvider>
+            </YearSelectorProvider>
           </ThemeProvider>
         </UserProvider>
       </Router>

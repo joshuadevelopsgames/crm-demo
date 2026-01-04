@@ -14,6 +14,14 @@ import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ICPManagementPanel from '../components/ICPManagementPanel';
 import {
   Building2,
@@ -653,13 +661,27 @@ export default function Dashboard() {
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-foreground">Dashboard</h1>
           <p className="text-slate-600 dark:text-text-muted mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
         </div>
-        <Button 
-          onClick={() => setIsImportDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          Import from LMN
-        </Button>
+        <div className="flex items-center gap-3">
+          <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue>{selectedYear}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            onClick={() => setIsImportDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Import from LMN
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}

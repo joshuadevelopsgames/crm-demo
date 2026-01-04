@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentYear } from '@/contexts/TestModeContext';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 

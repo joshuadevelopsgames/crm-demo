@@ -39,12 +39,28 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UserFilter } from '@/components/UserFilter';
 import { useUser } from '@/contexts/UserContext';
 
 export default function Contacts() {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useUser();
+  const { selectedYear, setYear } = useYearSelector();
+  
+  // Generate year options (current year ± 5 years)
+  const baseYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let i = -5; i <= 5; i++) {
+    yearOptions.push(baseYear + i);
+  }
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -264,13 +280,27 @@ export default function Contacts() {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Contacts</h1>
             <p className="text-slate-600 mt-1">{filteredContacts.length} total contacts</p>
           </div>
-          <Button 
-            onClick={() => setIsImportDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Import from LMN
-          </Button>
+          <div className="flex items-center gap-3">
+            <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue>{selectedYear}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={() => setIsImportDialogOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import from LMN
+            </Button>
+          </div>
         </div>
       </TutorialTooltip>
 
