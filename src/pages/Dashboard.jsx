@@ -378,13 +378,15 @@ export default function Dashboard() {
 
   // Calculate metrics
   // Active accounts = all non-archived accounts (matches Accounts page logic)
-  const activeAccounts = accounts.filter(a => a.status !== 'archived' && a.archived !== true).length;
-  const archivedAccounts = accounts.filter(a => a.status === 'archived' || a.archived === true).length;
-  const totalAccounts = accounts.length;
+  const accountsArray = Array.isArray(accounts) ? accounts : [];
+  const tasksArray = Array.isArray(tasks) ? tasks : [];
+  const activeAccounts = accountsArray.filter(a => a.status !== 'archived' && a.archived !== true).length;
+  const archivedAccounts = accountsArray.filter(a => a.status === 'archived' || a.archived === true).length;
+  const totalAccounts = accountsArray.length;
   // Calculate at-risk accounts based on renewal dates (not just status)
   // This ensures the count matches what's actually shown in the dashboard
   // Note: atRiskRenewals is calculated below, so we'll use that length
-  const myTasks = tasks.filter(t => t.status !== 'completed').length;
+  const myTasks = tasksArray.filter(t => t.status !== 'completed').length;
   
   // At-risk accounts from the unified API
   // The cache is automatically maintained by background job every 5 minutes
@@ -462,7 +464,7 @@ export default function Dashboard() {
   }, [totalAccounts, activeAccounts, archivedAccounts, atRiskAccounts, atRiskRenewals.length]);
   
   // Neglected accounts (A/B segments: 30+ days, others: 90+ days, not snoozed, not N/A)
-  const neglectedAccounts = accounts.filter(account => {
+  const neglectedAccounts = (Array.isArray(accounts) ? accounts : []).filter(account => {
     // Skip archived accounts
     if (account.archived) return false;
     
@@ -470,7 +472,8 @@ export default function Dashboard() {
     if (account.icp_status === 'na') return false;
     
     // Skip if 'neglected_account' notification is snoozed for this account
-    const isSnoozed = notificationSnoozes.some(snooze => 
+    const snoozes = Array.isArray(notificationSnoozes) ? notificationSnoozes : [];
+    const isSnoozed = snoozes.some(snooze => 
       snooze.notification_type === 'neglected_account' &&
       snooze.related_account_id === account.id &&
       new Date(snooze.snoozed_until) > new Date()
@@ -953,7 +956,7 @@ export default function Dashboard() {
           <CardContent>
             <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Accounts in sequences</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {sequences.filter(s => s.status === 'active').slice(0, 5).map(enrollment => {
+              {(Array.isArray(sequencesRaw) ? sequencesRaw : []).filter(s => s.status === 'active').slice(0, 5).map(enrollment => {
                 const account = accounts.find(a => a.id === enrollment.account_id);
                 return (
                   <div
@@ -969,7 +972,7 @@ export default function Dashboard() {
                   </div>
                 );
               })}
-              {sequences.filter(s => s.status === 'active').length === 0 && (
+              {(Array.isArray(sequencesRaw) ? sequencesRaw : []).filter(s => s.status === 'active').length === 0 && (
                 <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No active sequences</p>
               )}
             </div>
