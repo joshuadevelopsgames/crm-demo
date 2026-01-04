@@ -47,12 +47,9 @@ export default function Dashboard() {
     });
   }, []);
 
-  // Force fresh notification fetch on page load (not cached)
-  useEffect(() => {
-    // Invalidate notifications query to force fresh fetch on page load
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    console.log('🔄 Dashboard: Invalidated notifications cache on page load');
-  }, [queryClient]);
+  // Note: Removed forced invalidation of notifications query
+  // This was causing notifications to disappear when navigating to Dashboard
+  // The notifications query will refetch naturally when needed based on staleTime
 
   // OPTIMIZED: Notifications are maintained by database triggers
   // On page load, we just fetch the pre-built list - no expensive recalculation!
