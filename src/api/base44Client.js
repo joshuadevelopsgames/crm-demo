@@ -818,7 +818,13 @@ const base44Instance = {
         });
         const result = await response.json();
         if (result.success) return result.data;
-        throw new Error(result.error || 'Failed to create notification');
+        // Create error object with response details for better error handling
+        const error = new Error(result.error || 'Failed to create notification');
+        error.response = result;
+        error.status = response.status;
+        error.code = result.code;
+        error.details = result.details;
+        throw error;
       },
       update: async (id, data) => {
         const response = await fetch('/api/data/notifications', {
