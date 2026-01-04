@@ -23,7 +23,8 @@ import {
   List,
   Upload,
   Archive,
-  RefreshCw
+  RefreshCw,
+  BellOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import {
@@ -47,6 +48,8 @@ import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegmen
 import { useTestMode } from '@/contexts/TestModeContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
+import SnoozeDialog from '@/components/SnoozeDialog';
+import { snoozeNotification } from '@/services/notificationService';
 
 export default function Accounts() {
   // Use test mode to trigger re-render when test mode changes
@@ -76,6 +79,7 @@ export default function Accounts() {
   }); // 'list' or 'card'
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
   const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
+  const [snoozeAccount, setSnoozeAccount] = useState(null);
   
   const queryClient = useQueryClient();
 
@@ -155,6 +159,33 @@ export default function Accounts() {
     });
     return accountIds;
   }, [allScorecards]);
+
+  // Fetch at-risk accounts from notification_cache (per spec R31, R32)
+  const { data: atRiskAccountsData = [] } = useQuery({
+    queryKey: ['at-risk-accounts'],
+    queryFn: async () => {
+      const response = await fetch('/api/notifications?type=at-risk-accounts');
+      if (!response.ok) {
+        console.error('❌ Failed to fetch at-risk accounts:', response.status, response.statusText);
+        return [];
+      }
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    enabled: !userLoading && !!user && statusFilter === 'at_risk' // Only fetch when filtering for at-risk
+  });
+
+  // Fetch notification snoozes (needed for at-risk accounts)
+  const { data: notificationSnoozes = [] } = useQuery({
+    queryKey: ['notificationSnoozes'],
+    queryFn: async () => {
+      const response = await fetch('/api/data/notificationSnoozes');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    enabled: !userLoading && !!user && statusFilter === 'at_risk'
+  });
 
   // Extract unique users from estimates with counts
   const usersWithCounts = useMemo(() => {
@@ -381,23 +412,85 @@ export default function Accounts() {
     }
   };
 
-  // Filter by archived status first
-  const accountsByStatus = accounts.filter(account => {
-    const isArchived = account.status === 'archived' || account.archived === true;
+  // Handle snooze for at-risk accounts
+  const handleSnooze = async (account, duration, unit) => {
+    const now = new Date();
+    let snoozedUntil;
     
-    // If statusFilter is set (from URL), filter by that status
-    if (statusFilter) {
-      if (statusFilter === 'archived') {
-        return isArchived;
-      } else {
-        // Filter by specific status (e.g., 'at_risk')
-        return !isArchived && account.status === statusFilter;
-      }
+    switch (unit) {
+      case 'days':
+        snoozedUntil = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+        break;
+      case 'weeks':
+        snoozedUntil = new Date(now.getTime() + duration * 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'months':
+        snoozedUntil = new Date(now.getFullYear(), now.getMonth() + duration, now.getDate());
+        break;
+      case 'years':
+        snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
+        break;
+      default:
+        return;
     }
     
-    // Otherwise use activeTab logic
-    return activeTab === 'archived' ? isArchived : !isArchived;
-  });
+    try {
+      await snoozeNotification('at-risk-account', account.id, snoozedUntil);
+      queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
+      queryClient.invalidateQueries({ queryKey: ['at-risk-accounts'] });
+      setSnoozeAccount(null);
+      toast.success('✓ Account snoozed');
+    } catch (error) {
+      console.error('Error snoozing notification:', error);
+      toast.error('Failed to snooze account');
+    }
+  };
+
+  // Filter by archived status first
+  // When filtering for at-risk, use notification_cache instead of account.status (per spec R31, R32)
+  const accountsByStatus = useMemo(() => {
+    if (statusFilter === 'at_risk') {
+      // Use notification_cache to determine at-risk accounts (per spec R31, R32)
+      const atRiskAccountIds = new Set(atRiskAccountsData.map(record => record.account_id));
+      
+      // Filter out snoozed accounts
+      const snoozedAccountIds = new Set(
+        notificationSnoozes
+          .filter(snooze => 
+            snooze.notification_type === 'at-risk-account' &&
+            new Date(snooze.snoozed_until) > new Date()
+          )
+          .map(snooze => snooze.related_account_id)
+      );
+      
+      return accounts.filter(account => {
+        const isArchived = account.status === 'archived' || account.archived === true;
+        if (isArchived) return false;
+        
+        const isAtRisk = atRiskAccountIds.has(account.id);
+        const isSnoozed = snoozedAccountIds.has(account.id);
+        
+        return isAtRisk && !isSnoozed;
+      });
+    }
+    
+    return accounts.filter(account => {
+      const isArchived = account.status === 'archived' || account.archived === true;
+      
+      // If statusFilter is set (from URL), filter by that status
+      if (statusFilter) {
+        if (statusFilter === 'archived') {
+          return isArchived;
+        } else {
+          // Filter by specific status (e.g., other statuses)
+          return !isArchived && account.status === statusFilter;
+        }
+      }
+      
+      // Otherwise use activeTab logic
+      return activeTab === 'archived' ? isArchived : !isArchived;
+    });
+  }, [accounts, statusFilter, atRiskAccountsData, notificationSnoozes]);
 
   // Then apply other filters and sort
   // Map tags to account types for filtering:
@@ -649,15 +742,15 @@ export default function Accounts() {
         <TabsContent value="active" className="mt-0 space-y-4">
       {/* Status Filter Banner */}
       {statusFilter && (
-        <Card className="bg-amber-50 border-amber-200">
+        <Card className={statusFilter === 'at_risk' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-                <span className="font-medium text-amber-900">
+                <AlertCircle className={`w-5 h-5 ${statusFilter === 'at_risk' ? 'text-red-600' : 'text-amber-600'}`} />
+                <span className={`font-medium ${statusFilter === 'at_risk' ? 'text-red-900' : 'text-amber-900'}`}>
                   Showing {statusFilter === 'at_risk' ? 'At Risk' : statusFilter} accounts
                 </span>
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                <Badge variant="secondary" className={statusFilter === 'at_risk' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}>
                   {accountsByStatus.length}
                 </Badge>
               </div>
@@ -668,7 +761,7 @@ export default function Accounts() {
                   setStatusFilter(null);
                   setSearchParams({});
                 }}
-                className="text-amber-700 hover:text-amber-900"
+                className={statusFilter === 'at_risk' ? 'text-red-700 hover:text-red-900' : 'text-amber-700 hover:text-amber-900'}
               >
                 Clear Filter
               </Button>
@@ -794,11 +887,25 @@ export default function Accounts() {
                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
                       Revenue
                     </th>
+                    {statusFilter === 'at_risk' && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                        Renewal
+                      </th>
+                    )}
+                    {statusFilter === 'at_risk' && (
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                   {filteredAccounts.map((account) => {
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
+                    // Get at-risk data for this account
+                    const atRiskData = statusFilter === 'at_risk' 
+                      ? atRiskAccountsData.find(record => record.account_id === account.id)
+                      : null;
                     return (
                       <tr 
                         key={account.id} 
@@ -913,6 +1020,40 @@ export default function Accounts() {
                             return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
                           })()}
                         </td>
+                        {statusFilter === 'at_risk' && (
+                          <td className="px-4 py-4">
+                            {atRiskData ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                                  {atRiskData.renewal_date ? format(new Date(atRiskData.renewal_date), 'MMM d, yyyy') : '-'}
+                                </span>
+                                {atRiskData.days_until_renewal !== null && atRiskData.days_until_renewal !== undefined && (
+                                  <span className="text-xs text-slate-500">
+                                    {atRiskData.days_until_renewal} days
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-slate-400">-</span>
+                            )}
+                          </td>
+                        )}
+                        {statusFilter === 'at_risk' && (
+                          <td className="px-6 py-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSnoozeAccount(account);
+                              }}
+                              className="text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/20"
+                            >
+                              <BellOff className="w-4 h-4 mr-1" />
+                              Snooze
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -931,10 +1072,15 @@ export default function Accounts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAccounts.map((account) => {
             const neglectStatus = getNeglectStatus(account.last_interaction_date);
-                const isArchived = account.status === 'archived' || account.archived === true;
+            const isArchived = account.status === 'archived' || account.archived === true;
+            // Get at-risk data for this account
+            const atRiskData = statusFilter === 'at_risk' 
+              ? atRiskAccountsData.find(record => record.account_id === account.id)
+              : null;
             return (
-              <Link key={account.id} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
-                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
+              <div key={account.id} className="relative">
+              <Link to={createPageUrl(`AccountDetail?id=${account.id}`)}>
+                  <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''} ${statusFilter === 'at_risk' ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20' : ''}`}>
                   <div className="space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between">
@@ -1032,6 +1178,26 @@ export default function Accounts() {
                       })()}
                     </div>
 
+                    {/* Renewal Date (for at-risk accounts) */}
+                    {statusFilter === 'at_risk' && atRiskData && (
+                      <div className={`pt-3 border-t ${isArchived ? 'border-slate-200' : 'border-slate-100'}`}>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Renewal date:</span>
+                          <span className={`font-medium ${isArchived ? 'text-slate-400' : 'text-red-700 dark:text-red-400'}`}>
+                            {atRiskData.renewal_date ? format(new Date(atRiskData.renewal_date), 'MMM d, yyyy') : '-'}
+                          </span>
+                        </div>
+                        {atRiskData.days_until_renewal !== null && atRiskData.days_until_renewal !== undefined && (
+                          <div className="flex items-center justify-between text-sm mt-1">
+                            <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Days until:</span>
+                            <span className={`font-medium ${isArchived ? 'text-slate-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {atRiskData.days_until_renewal} days
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Warnings */}
                       {neglectStatus.days > 30 && !isArchived && (
                       <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -1042,6 +1208,23 @@ export default function Accounts() {
                   </div>
                 </Card>
               </Link>
+              {statusFilter === 'at_risk' && (
+                <div className="absolute top-4 right-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSnoozeAccount(account);
+                    }}
+                    className="text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/20"
+                  >
+                    <BellOff className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
             );
           })}
         </div>
@@ -1351,6 +1534,17 @@ export default function Accounts() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Snooze Dialog for at-risk accounts */}
+      {snoozeAccount && (
+        <SnoozeDialog
+          account={snoozeAccount}
+          notificationType="at-risk-account"
+          open={!!snoozeAccount}
+          onOpenChange={(open) => !open && setSnoozeAccount(null)}
+          onSnooze={handleSnooze}
+        />
+      )}
     </div>
   );
 }
