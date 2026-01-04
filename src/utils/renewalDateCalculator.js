@@ -179,9 +179,8 @@ export function hasAnyEstimateExpiringSoon(estimates = [], daysThreshold = 180) 
       return null;
     }
 
-    // Find the estimate expiring soonest (could be past, present, or future within threshold)
-    // Include past renewals (negative days) as they're urgent
-    const expiringEstimates = wonEstimatesWithEndDate.filter(est => est.days_until <= daysThreshold);
+    // Find the estimate expiring soonest (0-daysThreshold days, excluding past due per R6, R6a)
+    const expiringEstimates = wonEstimatesWithEndDate.filter(est => est.days_until <= daysThreshold && est.days_until >= 0);
     
     if (expiringEstimates.length === 0) {
       return null;

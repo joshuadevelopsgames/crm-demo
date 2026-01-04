@@ -55,8 +55,8 @@ BEGIN
     BEGIN
       days_until := (estimate_record.contract_end_date - CURRENT_DATE);
       
-      -- If this estimate is expiring within threshold, use it
-      IF days_until <= days_threshold THEN
+      -- If this estimate is expiring within threshold (0-180 days, excluding past due per R6, R6a), use it
+      IF days_until <= days_threshold AND days_until >= 0 THEN
         IF soonest_renewal IS NULL OR days_until < soonest_days THEN
           soonest_renewal := estimate_record.contract_end_date;
           soonest_days := days_until;

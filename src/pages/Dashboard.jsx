@@ -445,7 +445,7 @@ export default function Dashboard() {
       })
       .filter(Boolean) // Remove null entries
       .sort((a, b) => {
-        // Sort by days until renewal (soonest first, including past renewals)
+        // Sort by days until renewal (soonest first, 0-180 days only per R16)
         const daysA = a.days_until_renewal ?? 999;
         const daysB = b.days_until_renewal ?? 999;
         return daysA - daysB;

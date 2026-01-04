@@ -353,11 +353,11 @@ export default function NotificationBell() {
           const renewalDateStart = startOfDay(renewalDateObj);
           const daysUntilRenewal = differenceInDays(renewalDateStart, today);
           // Account should be at_risk if:
-          // 1. Renewal is coming up (0-180 days in future) - proactive renewal
-          // 2. Renewal has passed (daysUntilRenewal < 0) - URGENT: contract expired, needs immediate attention
-          // Account should NOT be at_risk only if renewal is > 180 days away
-          // This matches the server logic in notificationService.js
-          if (daysUntilRenewal <= 180) {
+          // Renewal is coming up (0-180 days in future) - proactive renewal (per R6, R6a)
+          // Past due renewals are excluded per spec R6a
+          // Account should NOT be at_risk if renewal is > 180 days away or < 0 days (past due)
+          // This matches the server logic in atRiskCalculator.js
+          if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
             atRiskSet.add(account.id);
           }
         }
@@ -413,8 +413,8 @@ export default function NotificationBell() {
         const daysUntil = getDaysUntilRenewal(renewalDate);
         if (daysUntil === null) return;
 
-        // Include if renewal is within 6 months (180 days) OR has passed
-        if (daysUntil <= 180) {
+        // Include if renewal is within 6 months (0-180 days, excluding past due per R6, R6a)
+        if (daysUntil >= 0 && daysUntil <= 180) {
           atRiskCount++;
         }
       });

@@ -6,7 +6,7 @@
  * - Duplicate estimate detection (flags multiple at-risk estimates with same dept + address)
  * 
  * Logic:
- * - Won estimates expiring <= 180 days = at risk
+ * - Won estimates expiring 0-180 days = at risk (excludes past due per R6a)
  * - BUT if there's a newer won estimate (same dept + address) with contract_end > 180 days, NOT at risk (already renewed)
  * - Multiple at-risk estimates with same dept + address = potential bad data (duplicate)
  */
@@ -124,8 +124,8 @@ export function calculateAtRiskAccounts(accounts, estimates, snoozes = []) {
         
         const daysUntil = differenceInDays(renewalDate, today);
         
-        // Include estimates expiring within threshold (including past due)
-        return daysUntil <= DAYS_THRESHOLD;
+        // Include estimates expiring within threshold (0-180 days, excluding past due per R6, R6a)
+        return daysUntil <= DAYS_THRESHOLD && daysUntil >= 0;
       } catch (error) {
         console.error(`Error processing estimate ${est.id} for at-risk check:`, error);
         return false;
