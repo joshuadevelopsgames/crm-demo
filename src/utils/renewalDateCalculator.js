@@ -124,3 +124,83 @@ export function isRenewalWithinDays(renewalDate, days = 180) {
   return daysUntil >= 0 && daysUntil <= days;
 }
 
+/**
+ * Check if account has ANY estimates expiring within the threshold
+ * This is more accurate than just checking the latest renewal date,
+ * as an account should be at-risk if ANY contract is expiring soon.
+ * @param {Array} estimates - All estimates for the account
+ * @param {number} daysThreshold - Number of days threshold (default: 180 for 6 months)
+ * @returns {Object|null} - Returns the soonest expiring estimate info, or null if none are expiring
+ */
+export function hasAnyEstimateExpiringSoon(estimates = [], daysThreshold = 180) {
+  if (!estimates || estimates.length === 0) {
+    return null;
+  }
+
+  try {
+    // Filter to only won estimates with valid contract_end dates
+    const wonEstimatesWithEndDate = estimates
+      .filter(est => {
+        if (!isWonStatus(est.status)) return false;
+        if (!est.contract_end) return false;
+        return true;
+      })
+      .map(est => {
+        // Extract date string from contract_end
+        let dateStr = est.contract_end;
+        if (dateStr instanceof Date) {
+          const year = dateStr.getFullYear();
+          const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+          const day = String(dateStr.getDate()).padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
+        } else if (typeof dateStr === 'string') {
+          const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            dateStr = match[0];
+          } else {
+            return null; // Invalid date format
+          }
+        } else {
+          return null; // Invalid type
+        }
+
+        const daysUntil = getDaysUntilRenewal(dateStr);
+        if (daysUntil === null) return null;
+
+        return {
+          ...est,
+          contract_end_date_str: dateStr,
+          days_until: daysUntil
+        };
+      })
+      .filter(Boolean); // Remove null entries
+
+    if (wonEstimatesWithEndDate.length === 0) {
+      return null;
+    }
+
+    // Find the estimate expiring soonest (could be past, present, or future within threshold)
+    // Include past renewals (negative days) as they're urgent
+    const expiringEstimates = wonEstimatesWithEndDate.filter(est => est.days_until <= daysThreshold);
+    
+    if (expiringEstimates.length === 0) {
+      return null;
+    }
+
+    // Return the soonest expiring estimate (lowest days_until, including negative)
+    const soonest = expiringEstimates.reduce((soonest, est) => {
+      return est.days_until < soonest.days_until ? est : soonest;
+    }, expiringEstimates[0]);
+
+    return {
+      renewalDate: soonest.contract_end_date_str,
+      daysUntil: soonest.days_until,
+      estimateId: soonest.id,
+      estimateNumber: soonest.estimate_number || soonest.lmn_estimate_id
+    };
+  } catch (error) {
+    console.error('Error checking for expiring estimates:', error);
+    return null;
+  }
+}
+

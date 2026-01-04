@@ -11,6 +11,7 @@ import { createPageUrl } from '../utils';
 import { Capacitor } from '@capacitor/core';
 import { snoozeNotification } from '@/services/notificationService';
 import { useUser } from '@/contexts/UserContext';
+import { getSupabaseClient } from '@/services/supabaseClient';
 import toast from 'react-hot-toast';
 import {
   Dialog,
@@ -63,174 +64,166 @@ export default function NotificationBell() {
   const currentUser = contextUser || profile || fallbackUser;
   const currentUserId = currentUser?.id;
 
-  // Fetch notifications for current user from both sources:
-  // 1. JSONB user_notification_states (bulk notifications: neglected_account, renewal_reminder)
-  // 2. Individual notifications table (task notifications: task_assigned, task_overdue, etc.)
-  const { data: allNotificationsRaw = [], refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
+  // Fetch notifications using unified API
+  const { data: notificationsData, refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notifications', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) {
         console.log('🔔 NotificationBell: No current user ID', { hasContextUser: !!contextUser, hasProfile: !!profile, userLoading });
-        return [];
+        return { atRiskAccounts: [], neglectedAccounts: [], taskNotifications: [], systemNotifications: [], duplicateEstimates: [] };
       }
       try {
         const currentUserIdStr = String(currentUser.id).trim();
-        // Debug logging removed
         
-        // Fetch from both sources in parallel
-        // Optionally refresh notifications on page load (once per session)
-        const shouldRefresh = !sessionStorage.getItem(`notifications_refreshed_${currentUserIdStr}`);
-        const refreshPromise = shouldRefresh 
-          ? fetch('/api/data/userNotificationStates', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'refresh',
-                data: { user_id: currentUserIdStr }
-              })
-            }).then(async r => {
-              const json = await r.json();
-              if (r.ok && json.success) {
-                sessionStorage.setItem(`notifications_refreshed_${currentUserIdStr}`, 'true');
-                console.log('✅ Refreshed notifications on page load');
-                return json;
-              }
-              // If refresh fails, fall back to regular fetch
-              console.warn('⚠️ Refresh failed, falling back to regular fetch:', json.error);
-              return fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
-                .then(async r => {
-                  const json = await r.json();
-                  if (!r.ok) {
-                    return { success: false, error: json.error || 'Unknown error' };
-                  }
-                  return json;
-                });
-            }).catch(error => {
-              console.error('❌ Error refreshing notifications:', error);
-              // Fall back to regular fetch
-              return fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
-                .then(async r => {
-                  const json = await r.json();
-                  if (!r.ok) {
-                    return { success: false, error: json.error || 'Unknown error' };
-                  }
-                  return json;
-                });
-            })
-          : fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
-              .then(async r => {
-                const json = await r.json();
-                if (!r.ok) {
-                  console.error(`❌ Error fetching userNotificationStates: ${r.status}`, json);
-                  return { success: false, error: json.error || 'Unknown error' };
-                }
-                return json;
-              })
-              .catch(error => {
-                console.error('❌ Error fetching userNotificationStates:', error);
-                return { success: false, error: error.message };
-              });
+        // Fetch all notifications from unified API
+        const response = await fetch(`/api/notifications?type=all&user_id=${encodeURIComponent(currentUserIdStr)}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.status}`);
+        }
+        const result = await response.json();
         
-        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
-          // Fetch bulk notifications from JSONB table (with optional refresh)
-          refreshPromise,
-          // Fetch task notifications from individual rows
-          base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
-        ]);
-        
-        // Extract bulk notifications from JSONB
-        const bulkNotifications = bulkNotificationsResponse.success 
-          ? (bulkNotificationsResponse.data?.notifications || [])
-          : [];
-        
-        // #region agent log
-        const renewalReminders = bulkNotifications.filter(n => n.type === 'renewal_reminder');
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NotificationBell.jsx:142',message:'Bulk notifications fetched',data:{success:bulkNotificationsResponse.success,totalBulkNotifications:bulkNotifications.length,renewalReminderCount:renewalReminders.length,neglectedAccountCount:bulkNotifications.filter(n=>n.type==='neglected_account').length,renewalReminderAccountIds:renewalReminders.map(n=>n.related_account_id).slice(0,10),error:bulkNotificationsResponse.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-        // #endregion
-        
-        // Log if bulk notifications fetch failed
-        if (!bulkNotificationsResponse.success) {
-          console.error(`❌ Failed to fetch bulk notifications:`, bulkNotificationsResponse.error);
+        if (!result.success) {
+          console.error('❌ Failed to fetch notifications:', result.error);
+          return { atRiskAccounts: [], neglectedAccounts: [], taskNotifications: [], systemNotifications: [], duplicateEstimates: [] };
         }
         
-        // Log if no bulk notifications found (might be expected if none exist)
-        if (bulkNotifications.length === 0 && bulkNotificationsResponse.success) {
-          console.log(`⚠️ No bulk notifications found in user_notification_states for user ${currentUserIdStr}. Run updateAllUserNotificationStates() to populate.`);
-        } else if (bulkNotifications.length > 0) {
-          console.log(`✅ Found ${bulkNotifications.length} bulk notifications:`, {
-            neglected: bulkNotifications.filter(n => n.type === 'neglected_account').length,
-            renewal: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
-            sample: bulkNotifications.slice(0, 3).map(n => ({ type: n.type, account: n.related_account_id, title: n.title }))
-          });
-        }
+        // Convert at-risk and neglected accounts to notification format
+        const atRiskNotifications = (result.data.atRiskAccounts || []).map(account => ({
+          id: `at_risk_${account.account_id}`,
+          type: 'renewal_reminder',
+          title: `At Risk: ${account.account_name}`,
+          message: `Renewal in ${account.days_until_renewal} day${account.days_until_renewal !== 1 ? 's' : ''}`,
+          related_account_id: account.account_id,
+          is_read: false,
+          created_at: new Date().toISOString(),
+          has_duplicates: account.has_duplicates,
+          duplicate_estimates: account.duplicate_estimates
+        }));
         
-        // Filter task notifications (only task-related types)
-        const taskNotificationsFiltered = taskNotifications.filter(n => 
-          ['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder'].includes(n.type)
-        );
+        const neglectedNotifications = (result.data.neglectedAccounts || []).map(account => ({
+          id: `neglected_${account.account_id}`,
+          type: 'neglected_account',
+          title: `Neglected Account: ${account.account_name}`,
+          message: account.days_since_interaction 
+            ? `No contact in ${account.days_since_interaction} days`
+            : 'No interactions logged',
+          related_account_id: account.account_id,
+          is_read: false,
+          created_at: new Date().toISOString()
+        }));
         
-        // Get other notifications (bug_report, end_of_year_analysis, etc.) - not task-related and not bulk
-        const otherNotifications = taskNotifications.filter(n => 
-          !['task_assigned', 'task_overdue', 'task_due_today', 'task_reminder', 'neglected_account', 'renewal_reminder'].includes(n.type)
-        );
+        // Convert duplicate estimates to notifications
+        const duplicateNotifications = (result.data.duplicateEstimates || []).map(dup => ({
+          id: `duplicate_${dup.id}`,
+          type: 'duplicate_at_risk_estimates',
+          title: `Duplicate At-Risk Estimates: ${dup.account_name}`,
+          message: `Account has ${dup.estimate_ids?.length || 0} at-risk estimates with same department and address`,
+          related_account_id: dup.account_id,
+          is_read: false,
+          created_at: dup.detected_at || new Date().toISOString(),
+          metadata: dup
+        }));
         
-        // Debug: Log bug_report notifications
-        const bugReportNotifications = otherNotifications.filter(n => n.type === 'bug_report');
-        if (bugReportNotifications.length > 0) {
-          console.log(`🔔 Found ${bugReportNotifications.length} bug_report notifications:`, bugReportNotifications.map(n => ({
-            id: n.id,
-            user_id: n.user_id,
-            title: n.title,
-            type: n.type
-          })));
-        }
-        
-        // Combine all sources
-        const allNotifications = [...bulkNotifications, ...taskNotificationsFiltered, ...otherNotifications];
+        // Combine all notifications
+        const allNotifications = [
+          ...atRiskNotifications,
+          ...neglectedNotifications,
+          ...result.data.taskNotifications || [],
+          ...result.data.systemNotifications || [],
+          ...duplicateNotifications
+        ];
         
         // Sort by created_at descending (newest first)
         allNotifications.sort((a, b) => {
-          const dateA = new Date(a.created_at || a.scheduled_for || 0);
-          const dateB = new Date(b.created_at || b.scheduled_for || 0);
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
           return dateB - dateA;
         });
         
-        const taskOverdueCount = taskNotificationsFiltered.filter(n => n.type === 'task_overdue').length;
-        // Debug logging removed
-        if (false) {
-          console.log(`🔔 NotificationBell: Fetched ${allNotifications.length} total notifications for user ${currentUser.id}`, {
-            bulkNotifications: bulkNotifications.length,
-            taskNotifications: taskNotificationsFiltered.length,
-            renewalReminders: bulkNotifications.filter(n => n.type === 'renewal_reminder').length,
-            neglectedAccounts: bulkNotifications.filter(n => n.type === 'neglected_account').length,
-            taskOverdue: taskOverdueCount,
-            taskDueToday: taskNotificationsFiltered.filter(n => n.type === 'task_due_today').length,
-            taskReminder: taskNotificationsFiltered.filter(n => n.type === 'task_reminder').length,
-            taskAssigned: taskNotificationsFiltered.filter(n => n.type === 'task_assigned').length,
-            unread: allNotifications.filter(n => !n.is_read).length
-          });
-          
-          if (taskOverdueCount > 0) {
-            const taskOverdueNotifications = taskNotificationsFiltered.filter(n => n.type === 'task_overdue');
-            console.log(`🔔 Task overdue notifications found:`, taskOverdueNotifications.map(n => ({ id: n.id, user_id: n.user_id, task_id: n.related_task_id, title: n.title })));
-          }
-        }
-        
-        return allNotifications;
+        return {
+          notifications: allNotifications,
+          atRiskAccounts: result.data.atRiskAccounts || [],
+          neglectedAccounts: result.data.neglectedAccounts || [],
+          duplicateEstimates: result.data.duplicateEstimates || []
+        };
       } catch (error) {
         console.error('🔔 NotificationBell: Error fetching notifications:', error);
-        return [];
+        return { notifications: [], atRiskAccounts: [], neglectedAccounts: [], duplicateEstimates: [] };
       }
     },
-    enabled: !!currentUser?.id && !userLoading, // Wait for user to load before fetching
-    // Optimize caching to reduce Supabase egress:
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes (prevents unnecessary refetches)
-    cacheTime: 10 * 60 * 1000, // Keep cached data for 10 minutes
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes (reduced from 30s to save egress)
-    refetchOnMount: false, // Use cached data on mount (respects staleTime)
-    refetchOnWindowFocus: false, // Don't refetch on window focus (saves egress)
-    refetchOnReconnect: true, // Only refetch on reconnect (network recovery)
+    enabled: !!currentUser?.id && !userLoading,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   });
+  
+  // Set up Supabase Realtime subscriptions for instant updates
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    
+    // Subscribe to cache updates (at-risk, neglected)
+    const cacheChannel = supabase
+      .channel('notification-cache')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notification_cache'
+      }, () => {
+        console.log('🔔 Cache updated, invalidating notifications query');
+        queryClient.invalidateQueries(['notifications', currentUser.id]);
+      });
+    
+    // Subscribe to new task notifications
+    const taskChannel = supabase
+      .channel(`notifications:${currentUser.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${currentUser.id}`
+      }, (payload) => {
+        console.log('🔔 New notification received:', payload.new);
+        // Optimistically add to UI
+        queryClient.setQueryData(['notifications', currentUser.id], (old) => {
+          if (!old || !old.notifications) return old;
+          return {
+            ...old,
+            notifications: [payload.new, ...old.notifications]
+          };
+        });
+      });
+    
+    // Subscribe to duplicate estimates
+    const duplicateChannel = supabase
+      .channel('duplicate-estimates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'duplicate_at_risk_estimates'
+      }, () => {
+        console.log('🔔 New duplicate estimate detected, invalidating notifications');
+        queryClient.invalidateQueries(['notifications', currentUser.id]);
+      });
+    
+    cacheChannel.subscribe();
+    taskChannel.subscribe();
+    duplicateChannel.subscribe();
+    
+    return () => {
+      supabase.removeChannel(cacheChannel);
+      supabase.removeChannel(taskChannel);
+      supabase.removeChannel(duplicateChannel);
+    };
+  }, [currentUser?.id, queryClient]);
+  
+  // Extract notifications from data
+  const allNotificationsRaw = notificationsData?.notifications || [];
 
   // Safety check: Filter out any notifications that don't match current user (defensive programming)
   // This ensures we never show notifications from other users, even if the API returns them

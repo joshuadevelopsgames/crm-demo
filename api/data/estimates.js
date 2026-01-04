@@ -5,6 +5,19 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+// Import at-risk calculator (using dynamic import for server-side compatibility)
+async function calculateAtRiskAccountsForImport(accounts, estimates, snoozes) {
+  try {
+    // Dynamic import for server-side compatibility
+    const { calculateAtRiskAccounts } = await import('../../src/utils/atRiskCalculator.js');
+    return calculateAtRiskAccounts(accounts, estimates, snoozes);
+  } catch (error) {
+    console.error('Error importing atRiskCalculator:', error);
+    // Fallback: return empty duplicates if import fails
+    return { atRiskAccounts: [], duplicateEstimates: [] };
+  }
+}
+
 function getSupabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -368,11 +381,84 @@ export default async function handler(req, res) {
           }
         }
         
+        // Check for duplicate at-risk estimates after import
+        let duplicateWarnings = null;
+        try {
+          // Fetch all accounts and estimates to check for duplicates
+          const [accountsRes, estimatesRes, snoozesRes] = await Promise.all([
+            supabase.from('accounts').select('*').eq('archived', false),
+            supabase.from('estimates').select('*').eq('archived', false),
+            supabase.from('notification_snoozes').select('*')
+          ]);
+          
+          if (accountsRes.data && estimatesRes.data) {
+            const { duplicateEstimates } = await calculateAtRiskAccountsForImport(
+              accountsRes.data,
+              estimatesRes.data,
+              snoozesRes.data || []
+            );
+            
+            if (duplicateEstimates.length > 0) {
+              duplicateWarnings = {
+                duplicateEstimates: duplicateEstimates.length,
+                message: `⚠️ Found ${duplicateEstimates.length} account(s) with duplicate at-risk estimates (same department and address). Please review.`
+              };
+              
+              // Create notifications for duplicate estimates
+              const { data: users } = await supabase.from('profiles').select('id');
+              if (users && users.length > 0) {
+                const notifications = [];
+                const now = new Date().toISOString();
+                
+                for (const dup of duplicateEstimates) {
+                  for (const user of users) {
+                    // Check if notification already exists
+                    const { data: existing } = await supabase
+                      .from('notifications')
+                      .select('id')
+                      .eq('user_id', user.id)
+                      .eq('type', 'duplicate_at_risk_estimates')
+                      .eq('related_account_id', dup.account_id)
+                      .eq('is_read', false)
+                      .maybeSingle();
+                    
+                    if (existing) continue;
+                    
+                    notifications.push({
+                      user_id: user.id,
+                      type: 'duplicate_at_risk_estimates',
+                      title: 'Duplicate At-Risk Estimates Detected',
+                      message: `Account "${dup.account_name}" has ${dup.estimates.length} at-risk estimates with the same department and address. Please review.`,
+                      related_account_id: dup.account_id,
+                      metadata: JSON.stringify({
+                        estimate_ids: dup.estimates.map(e => e.id),
+                        estimate_numbers: dup.estimates.map(e => e.estimate_number),
+                        division: dup.estimates[0]?.division,
+                        address: dup.estimates[0]?.address
+                      }),
+                      is_read: false,
+                      created_at: now
+                    });
+                  }
+                }
+                
+                if (notifications.length > 0) {
+                  await supabase.from('notifications').insert(notifications);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for duplicate estimates after import:', error);
+          // Don't fail the import if duplicate check fails
+        }
+        
         return res.status(200).json({
           success: true,
           created,
           updated,
-          total: estimates.length
+          total: estimates.length,
+          warnings: duplicateWarnings
         });
       }
       

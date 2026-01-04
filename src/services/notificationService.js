@@ -1,6 +1,6 @@
 import { base44 } from '@/api/base44Client';
 import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format } from 'date-fns';
-import { calculateRenewalDate } from '@/utils/renewalDateCalculator';
+import { calculateRenewalDate, hasAnyEstimateExpiringSoon } from '@/utils/renewalDateCalculator';
 
 /**
  * Parse assigned users from comma-separated string
@@ -489,144 +489,52 @@ export async function createEndOfYearNotification() {
  * This function only updates account statuses - triggers handle notification updates
  */
 export async function createRenewalNotifications() {
-  console.log('🔄 Starting renewal notification creation (trigger-based approach)...');
+  console.log('🔄 Starting renewal notification creation (at_risk_accounts table approach)...');
   // #region agent log
   fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:491',message:'createRenewalNotifications called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
   // #endregion
   
   try {
-    // First, update account statuses based on renewal dates
-    // The database triggers will automatically update notifications when accounts change
-    const accounts = await base44.entities.Account.list();
+    // Sync all at-risk accounts using the database function
+    // This will check all accounts, add/remove from at_risk_accounts table,
+    // and respect snoozes. The triggers will automatically update notifications.
+    const syncResponse = await fetch('/api/data/atRiskAccounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_all' })
+    });
     
-    // Use the API endpoint to get estimates with contract_end field (more reliable than base44.list())
-    const estimatesResponse = await fetch('/api/data/estimates');
-    let estimates = [];
-    if (estimatesResponse.ok) {
-      const result = await estimatesResponse.json();
+    if (syncResponse.ok) {
+      const result = await syncResponse.json();
       if (result.success) {
-        estimates = result.data || [];
-        console.log(`✅ Fetched ${estimates.length} estimates with contract_end dates`);
+        const { added_count, removed_count, updated_count } = result.data || {};
+        console.log(`✅ At-risk accounts synced: ${added_count || 0} added, ${removed_count || 0} removed, ${updated_count || 0} updated`);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:601',message:'createRenewalNotifications complete',data:{added_count,removed_count,updated_count},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
       } else {
-        console.warn('⚠️ Estimates API returned error, falling back to base44:', result.error);
-        estimates = await base44.entities.Estimate.list();
+        console.error('⚠️ Sync returned error:', result.error);
       }
     } else {
-      console.warn('⚠️ Failed to fetch estimates from API, falling back to base44');
-      estimates = await base44.entities.Estimate.list();
+      console.error('⚠️ Failed to sync at-risk accounts:', await syncResponse.text());
     }
     
-    // Always use actual current date for at-risk calculations (not test mode)
-    // At-risk accounts are about real business operations, not test data
-    const today = startOfDay(new Date());
+    // Also check for expired snoozes and restore accounts
+    const snoozeResponse = await fetch('/api/data/atRiskAccounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'check_expired_snoozes' })
+    });
     
-    let atRiskUpdatedCount = 0;
-    let atRiskAlreadyCount = 0;
-    
-    // Update account statuses based on renewal dates
-    // When we update account.status, the trigger will automatically update notifications
-    let accountsWithEstimates = 0;
-    let accountsWithContractEnd = 0;
-    let accountsWithRenewalDate = 0;
-    
-    for (const account of accounts) {
-      if (account.archived) continue;
-      
-      const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      if (accountEstimates.length > 0) {
-        accountsWithEstimates++;
-        const wonEstimatesWithEnd = accountEstimates.filter(est => 
-          est.status && est.status.toLowerCase() === 'won' && est.contract_end
-        );
-        if (wonEstimatesWithEnd.length > 0) {
-          accountsWithContractEnd++;
-        }
-      }
-      
-      const renewalDate = calculateRenewalDate(accountEstimates);
-      // #region agent log
-      if (accountEstimates.length > 0) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:543',message:'Renewal date calculated in service',data:{accountId:account.id,accountName:account.name,renewalDate:renewalDate?.toISOString()||null,hasRenewalDate:!!renewalDate,estimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      }
-      // #endregion
-      
-      if (!renewalDate) continue;
-      
-      accountsWithRenewalDate++;
-      
-      const renewalDateStart = startOfDay(renewalDate);
-      const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-      // Account should be at_risk if:
-      // 1. Renewal is coming up (0-180 days in future) - proactive renewal
-      // 2. Renewal has passed (daysUntilRenewal < 0) - URGENT: contract expired, needs immediate attention
-      // Account should NOT be at_risk only if renewal is > 180 days away
-      const shouldBeAtRisk = daysUntilRenewal <= 180; // Include past renewals (negative days)
-      const isCurrentlyAtRisk = account.status === 'at_risk';
-      // #region agent log
-      if (shouldBeAtRisk || isCurrentlyAtRisk) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:555',message:'At-risk status check',data:{accountId:account.id,accountName:account.name,daysUntilRenewal,shouldBeAtRisk,isCurrentlyAtRisk,willUpdate:shouldBeAtRisk&&!isCurrentlyAtRisk&&account.status!=='churned'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      }
-      // #endregion
-      
-      if (shouldBeAtRisk && !isCurrentlyAtRisk && account.status !== 'churned') {
-        try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:558',message:'Updating account to at_risk',data:{accountId:account.id,accountName:account.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          await base44.entities.Account.update(account.id, { status: 'at_risk' });
-          atRiskUpdatedCount++;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:560',message:'Account updated to at_risk success',data:{accountId:account.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          // Trigger will automatically update notifications for this account
-        } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:564',message:'Account update to at_risk failed',data:{accountId:account.id,error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          console.error(`❌ Error updating account status for ${account.name}:`, error);
-        }
-      } else if (shouldBeAtRisk && isCurrentlyAtRisk) {
-        atRiskAlreadyCount++;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:585',message:'Account already at_risk - trigger may not fire',data:{accountId:account.id,accountName:account.name,status:account.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-        // #endregion
-        // CRITICAL: Accounts that are already at_risk won't trigger the notification update
-        // because the trigger only fires on UPDATE. We need to manually trigger notification
-        // update for these accounts to ensure notifications are created.
-        // Force a no-op update to trigger the notification update
-        try {
-          // Update with same status to trigger the notification update trigger
-          await base44.entities.Account.update(account.id, { status: 'at_risk' });
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:593',message:'Forced update to trigger notification for already at_risk account',data:{accountId:account.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-          // #endregion
-        } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:596',message:'Failed to force update for already at_risk account',data:{accountId:account.id,error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-          // #endregion
-          console.error(`❌ Error forcing update for already at_risk account ${account.name}:`, error);
-        }
-      } else if (isCurrentlyAtRisk && daysUntilRenewal > 180) {
-        // Only remove from at_risk if renewal is more than 6 months away (not urgent yet)
-        // Keep at_risk if renewal passed (daysUntilRenewal < 0) - those are URGENT
-        try {
-          await base44.entities.Account.update(account.id, { status: 'active' });
-          // Trigger will automatically update notifications for this account
-        } catch (error) {
-          console.error(`❌ Error updating account status for ${account.name}:`, error);
-        }
+    if (snoozeResponse.ok) {
+      const result = await snoozeResponse.json();
+      if (result.success && result.data?.restored_count > 0) {
+        console.log(`✅ Restored ${result.data.restored_count} accounts from expired snoozes`);
       }
     }
-    
-    // No need to call updateAllUserNotificationStates() - triggers handle it automatically!
     
     console.log(`✅ Renewal notification creation complete`);
-    console.log(`⚠️ At Risk Status: ${atRiskUpdatedCount} updated, ${atRiskAlreadyCount} already at_risk`);
-    console.log(`📊 Accounts with estimates: ${accountsWithEstimates}, with contract_end: ${accountsWithContractEnd}, with renewal date: ${accountsWithRenewalDate}`);
-    console.log(`📊 Notifications maintained automatically by database triggers`);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:601',message:'createRenewalNotifications complete',data:{atRiskUpdatedCount,atRiskAlreadyCount,accountsWithEstimates,accountsWithContractEnd,accountsWithRenewalDate,totalAtRisk:atRiskUpdatedCount+atRiskAlreadyCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
+    console.log(`📊 At-risk accounts table maintained automatically by database triggers`);
   } catch (error) {
     console.error('❌ Error creating renewal notifications:', error);
   }
@@ -634,13 +542,13 @@ export async function createRenewalNotifications() {
 
 /**
  * Create notifications for neglected accounts (no interaction in 30+ days)
- * OPTIMIZED APPROACH: Database triggers maintain the notification list automatically
- * This function is kept for backwards compatibility but does nothing - triggers handle it
+ * UNIFIED APPROACH: Background job maintains notification_cache automatically
+ * This function is kept for backwards compatibility but does nothing - background job handles it
  */
 export async function createNeglectedAccountNotifications() {
-  console.log('🔄 Neglected account notifications are maintained automatically by database triggers');
-  console.log('📊 No manual recalculation needed - triggers update notifications when accounts/interactions change');
-  // Triggers automatically maintain the notification list when:
+  console.log('🔄 Neglected account notifications are maintained automatically by background job (every 5 minutes)');
+  console.log('📊 Cache is updated via /api/cron/refresh-notifications');
+  // Background job automatically maintains the notification cache when:
   // - Accounts are updated (last_interaction_date, archived, status, etc.)
   // - Interactions are created/updated
   // - Estimates are created/updated (affects renewal dates)

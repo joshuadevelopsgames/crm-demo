@@ -5,7 +5,8 @@ import { base44 } from '@/api/base44Client';
 import { useUser } from '@/contexts/UserContext';
 import { createEndOfYearNotification, createRenewalNotifications, createNeglectedAccountNotifications, createOverdueTaskNotifications, snoozeNotification } from '@/services/notificationService';
 import { generateRecurringTaskInstances } from '@/services/recurringTaskService';
-import { calculateRenewalDate, getDaysUntilRenewal } from '@/utils/renewalDateCalculator';
+import { getDaysUntilRenewal } from '@/utils/renewalDateCalculator';
+import { getSupabaseClient } from '@/services/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -184,30 +185,84 @@ export default function Dashboard() {
     enabled: !userLoading && !!user // Wait for user to load before fetching
   });
 
-  // Fetch estimates to calculate renewal dates
-  const { data: estimates = [], isLoading: estimatesLoading } = useQuery({
-    queryKey: ['estimates'],
+  // Fetch at-risk accounts from unified API
+  const { data: atRiskAccountsData = [], isLoading: atRiskAccountsLoading } = useQuery({
+    queryKey: ['at-risk-accounts'],
     queryFn: async () => {
-      const response = await fetch('/api/data/estimates');
+      const response = await fetch('/api/notifications?type=at-risk-accounts');
       if (!response.ok) {
-        console.error('❌ Failed to fetch estimates:', response.status, response.statusText);
+        console.error('❌ Failed to fetch at-risk accounts:', response.status, response.statusText);
         return [];
       }
       const result = await response.json();
       if (!result.success) {
-        console.error('❌ Estimates API returned error:', result.error);
+        console.error('❌ At-risk accounts API returned error:', result.error);
         return [];
       }
       const data = result.data || [];
-      // #region agent log
-      const wonEstimates = data.filter(e => e.status?.toLowerCase() === 'won');
-      const wonWithContractEnd = wonEstimates.filter(e => e.contract_end);
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:164',message:'Estimates loaded',data:{total:data.length,wonCount:wonEstimates.length,wonWithContractEndCount:wonWithContractEnd.length,sampleWonWithEnd:wonWithContractEnd.slice(0,3).map(e=>({id:e.id,account_id:e.account_id,status:e.status,contract_end:e.contract_end}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      console.log('✅ Fetched estimates:', data.length, 'total estimates');
+      console.log('✅ Fetched at-risk accounts:', data.length, 'accounts');
       return data;
     },
-    enabled: !userLoading && !!user // Wait for user to load before fetching
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+  });
+  
+  // Fetch duplicate estimates
+  const { data: duplicateEstimates = [] } = useQuery({
+    queryKey: ['duplicate-estimates'],
+    queryFn: async () => {
+      const response = await fetch('/api/notifications?type=duplicate-estimates');
+      if (!response.ok) {
+        console.error('❌ Failed to fetch duplicate estimates:', response.status);
+        return [];
+      }
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    },
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+  
+  // Set up Supabase Realtime subscriptions for instant updates
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    
+    // Subscribe to cache updates
+    const cacheChannel = supabase
+      .channel('dashboard-notification-cache')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notification_cache'
+      }, () => {
+        console.log('🔔 Cache updated, refreshing dashboard data');
+        queryClient.invalidateQueries(['at-risk-accounts']);
+        queryClient.invalidateQueries(['duplicate-estimates']);
+      });
+    
+    // Subscribe to duplicate estimates
+    const duplicateChannel = supabase
+      .channel('dashboard-duplicate-estimates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'duplicate_at_risk_estimates'
+      }, () => {
+        queryClient.invalidateQueries(['duplicate-estimates']);
+      });
+    
+    cacheChannel.subscribe();
+    duplicateChannel.subscribe();
+    
+    return () => {
+      supabase.removeChannel(cacheChannel);
+      supabase.removeChannel(duplicateChannel);
+    };
+  }, [queryClient]);
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    refetchOnWindowFocus: true // Refetch when window regains focus
   });
 
   const { data: sequences = [] } = useQuery({
@@ -335,144 +390,60 @@ export default function Dashboard() {
   // Note: atRiskRenewals is calculated below, so we'll use that length
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
   
-  // At-risk accounts (renewals within 6 months / 180 days)
-  // Calculate renewal dates from estimates for each account
-  // IMPORTANT: Calculate based on renewal dates, not just status='at_risk'
-  // This ensures accounts show up even if status hasn't been updated yet
-  const atRiskRenewals = accounts
-    .map(account => {
-      // Skip archived accounts
-      if (account.archived) return null;
-      
-      // Skip if 'renewal_reminder' notification is snoozed for this account
-      const isSnoozed = notificationSnoozes.some(snooze => 
-        snooze.notification_type === 'renewal_reminder' &&
-        snooze.related_account_id === account.id &&
-        new Date(snooze.snoozed_until) > new Date()
-      );
-      if (isSnoozed) return null;
-      
-      // Get estimates for this account
-      const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      
-      // Calculate renewal date from estimates
-      const renewalDate = calculateRenewalDate(accountEstimates);
-      
-      if (!renewalDate) return null;
-      
-      // Calculate days until renewal using date string (no timezone conversion)
-      const daysUntil = getDaysUntilRenewal(renewalDate);
-      if (daysUntil === null) return null;
-      
-      // #region agent log
-      // Only log accounts that should be at-risk or are already at-risk
-      if (daysUntil <= 180 || account.status === 'at_risk') {
-        const wonEstimates = accountEstimates.filter(e => e.status?.toLowerCase() === 'won');
-        const wonWithEnd = wonEstimates.filter(e => e.contract_end);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:229',message:'At-risk account analysis',data:{accountId:account.id,accountName:account.name,accountStatus:account.status,renewalDate:renewalDate,daysUntil,shouldBeAtRisk:daysUntil<=180,totalEstimates:accountEstimates.length,wonWithEndCount:wonWithEnd.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      }
-      // #endregion
-      
-      // Include if renewal is within 6 months (180 days) OR has passed (negative days = urgent)
-      // Only exclude if renewal is more than 6 months away (not urgent yet)
-      // This matches the logic in createRenewalNotifications() service
-      if (daysUntil > 180) return null;
-      
-      return {
-        ...account,
-        renewal_date: renewalDate, // Date-only string (YYYY-MM-DD)
-        calculated_renewal_date: renewalDate // Date-only string (YYYY-MM-DD)
-      };
-    })
-    .filter(Boolean) // Remove null entries
-    .sort((a, b) => {
-      // Sort by days until renewal (soonest first, including past renewals)
-      const daysA = getDaysUntilRenewal(a.calculated_renewal_date);
-      const daysB = getDaysUntilRenewal(b.calculated_renewal_date);
-      return daysA - daysB;
-    });
+  // At-risk accounts from the dedicated table
+  // The table is automatically maintained by database triggers
+  // Accounts are removed when snoozed and re-added when snooze expires (if still at-risk)
+  const atRiskRenewals = useMemo(() => {
+    if (!atRiskAccountsData || atRiskAccountsData.length === 0) {
+      return [];
+    }
+    
+    // Map at-risk accounts data to account objects with renewal info
+    return atRiskAccountsData
+      .map(atRiskRecord => {
+        // Find the corresponding account
+        const account = accounts.find(acc => acc.id === atRiskRecord.account_id);
+        if (!account) {
+          // Account not found in accounts list, skip it
+          return null;
+        }
+        
+        return {
+          ...account,
+          renewal_date: atRiskRecord.renewal_date,
+          calculated_renewal_date: atRiskRecord.renewal_date,
+          days_until_renewal: atRiskRecord.days_until_renewal,
+          expiring_estimate_id: atRiskRecord.expiring_estimate_id,
+          expiring_estimate_number: atRiskRecord.expiring_estimate_number
+        };
+      })
+      .filter(Boolean) // Remove null entries
+      .sort((a, b) => {
+        // Sort by days until renewal (soonest first, including past renewals)
+        const daysA = a.days_until_renewal ?? 999;
+        const daysB = b.days_until_renewal ?? 999;
+        return daysA - daysB;
+      });
+  }, [atRiskAccountsData, accounts]);
 
-  // Debug logging for at-risk accounts calculation
+  // Debug logging for at-risk accounts
   useEffect(() => {
-    if (accounts.length > 0 && estimates.length > 0) {
-      const accountsWithEstimates = accounts.filter(acc => {
-        const accEstimates = estimates.filter(est => est.account_id === acc.id);
-        return accEstimates.length > 0;
-      });
-      
-      // Check what status values actually exist
-      const statusCounts = {};
-      const estimatesWithContractEnd = estimates.filter(est => est.contract_end);
-      estimates.forEach(est => {
-        const status = est.status || 'null';
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
-      
-      // Check estimates with contract_end by status
-      const contractEndByStatus = {};
-      estimatesWithContractEnd.forEach(est => {
-        const status = est.status || 'null';
-        contractEndByStatus[status] = (contractEndByStatus[status] || 0) + 1;
-      });
-      
-      const accountsWithWonEstimates = accounts.filter(acc => {
-        const accEstimates = estimates.filter(est => 
-          est.account_id === acc.id && est.status === 'won' && est.contract_end
-        );
-        return accEstimates.length > 0;
-      });
-      
-      // Try case-insensitive matching
-      const accountsWithWonEstimatesCaseInsensitive = accounts.filter(acc => {
-        const accEstimates = estimates.filter(est => 
-          est.account_id === acc.id && 
-          est.status && 
-          est.status.toLowerCase() === 'won' && 
-          est.contract_end
-        );
-        return accEstimates.length > 0;
-      });
-      
-      const accountsWithRenewalDates = accounts.filter(acc => {
-        const accEstimates = estimates.filter(est => est.account_id === acc.id);
-        const renewalDate = calculateRenewalDate(accEstimates);
-        return renewalDate !== null;
-      });
-      
+    if (accounts.length > 0 && atRiskAccountsData.length > 0) {
       console.log('🔍 At-Risk Accounts Debug:', {
         totalAccounts: accounts.length,
-        totalEstimates: estimates.length,
-        estimatesWithContractEnd: estimatesWithContractEnd.length,
-        accountsWithEstimates: accountsWithEstimates.length,
-        accountsWithWonEstimates: accountsWithWonEstimates.length,
-        accountsWithWonEstimatesCaseInsensitive: accountsWithWonEstimatesCaseInsensitive.length,
-        accountsWithRenewalDates: accountsWithRenewalDates.length,
+        atRiskAccountsInTable: atRiskAccountsData.length,
         atRiskRenewalsCount: atRiskRenewals.length,
-        statusCounts,
-        contractEndByStatus,
-        sampleEstimates: estimates.slice(0, 5).map(est => ({
-          id: est.id,
-          account_id: est.account_id,
-          status: est.status,
-          contract_end: est.contract_end,
-          hasContractEnd: !!est.contract_end
-        })),
-        atRiskRenewals: atRiskRenewals.map(acc => ({
+        atRiskRenewals: atRiskRenewals.slice(0, 5).map(acc => ({
           name: acc.name,
           renewalDate: acc.calculated_renewal_date,
-          daysUntil: getDaysUntilRenewal(acc.calculated_renewal_date)
+          daysUntil: acc.days_until_renewal
         }))
       });
     }
-  }, [accounts, estimates, atRiskRenewals]);
+  }, [accounts, atRiskAccountsData, atRiskRenewals]);
 
-  // Use calculated at-risk renewals count for stats
+  // Use at-risk renewals count for stats
   const atRiskAccounts = atRiskRenewals.length;
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:240',message:'At-risk renewals final count',data:{atRiskRenewalsCount:atRiskRenewals.length,accountsWithStatusAtRisk:accounts.filter(a=>a.status==='at_risk').length,totalAccounts:accounts.length,estimatesCount:estimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }, [atRiskRenewals.length, accounts.length, estimates.length]);
-  // #endregion
   
   // Debug logging to verify counts
   useEffect(() => {
@@ -758,17 +729,27 @@ export default function Dashboard() {
                 })()}
                 {/* #endregion */}
                   {atRiskRenewals.slice(0, 5).map(account => {
+                    // Check if this account has duplicate estimates
+                    const hasDuplicates = account.has_duplicates || duplicateEstimates.some(dup => dup.account_id === account.id);
+                    const duplicateInfo = duplicateEstimates.find(dup => dup.account_id === account.id);
                   const daysUntil = getDaysUntilRenewal(account.calculated_renewal_date);
                   return (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-border"
+                      className={`flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border ${hasDuplicates ? 'border-yellow-400 border-2' : 'border-red-100 dark:border-border'}`}
                     >
                       <Link
                         to={createPageUrl(`AccountDetail?id=${account.id}`)}
                         className="flex-1"
                       >
-                        <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                          {hasDuplicates && (
+                            <Badge variant="warning" className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">
+                              ⚠️ Duplicates
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500 dark:text-text-muted">
                           Renews in {daysUntil} day{daysUntil !== 1 ? 's' : ''} • {formatDateString(account.calculated_renewal_date, 'MMM d, yyyy')}
                         </p>

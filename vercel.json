@@ -4,6 +4,12 @@
   "devCommand": "npm run dev",
   "installCommand": "PUPPETEER_SKIP_DOWNLOAD=true npm ci || PUPPETEER_SKIP_DOWNLOAD=true npm install",
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/cron/refresh-notifications",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
