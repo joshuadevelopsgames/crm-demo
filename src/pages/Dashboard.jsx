@@ -260,10 +260,6 @@ export default function Dashboard() {
       supabase.removeChannel(duplicateChannel);
     };
   }, [queryClient]);
-    enabled: !userLoading && !!user, // Wait for user to load before fetching
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
-    refetchOnWindowFocus: true // Refetch when window regains focus
-  });
 
   const { data: sequences = [] } = useQuery({
     queryKey: ['sequence-enrollments'],
