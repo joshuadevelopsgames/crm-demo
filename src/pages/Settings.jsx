@@ -308,7 +308,16 @@ export default function Settings() {
         }
       });
 
-      const result = await response.json();
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      let result;
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        // If not JSON, get text and try to parse error
+        const text = await response.text();
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to refresh cache');

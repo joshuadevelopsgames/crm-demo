@@ -3,15 +3,50 @@
  * Only accessible to admins (system_admin or admin role)
  */
 
-import { getSupabaseClient } from '../../../src/services/supabaseClient.js';
+import { createClient } from '@supabase/supabase-js';
 import { calculateAtRiskAccounts, calculateNeglectedAccounts } from '../../../src/utils/atRiskCalculator.js';
 
+// Get Supabase service client (for data operations)
+function getSupabaseService() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
+// Get Supabase anon client (for auth verification)
+function getSupabaseAnon() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 
+                          process.env.VITE_SUPABASE_ANON_KEY ||
+                          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY to Vercel environment variables.');
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
 // Check if user is admin
-async function isAdmin(userId) {
+async function isAdmin(userId, supabaseService) {
   if (!userId) return false;
   
-  const supabase = getSupabaseClient();
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await supabaseService
     .from('profiles')
     .select('role, email')
     .eq('id', userId)
@@ -59,16 +94,39 @@ export default async function handler(req, res) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const supabase = getSupabaseClient();
     
-    // Verify token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Verify token using anon client (service role can't verify user tokens)
+    let supabaseAnon;
+    try {
+      supabaseAnon = getSupabaseAnon();
+    } catch (error) {
+      console.error('Failed to create anon client:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error: ' + error.message
+      });
+    }
+    
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
     if (authError || !user) {
+      console.error('Token verification error:', authError);
       return res.status(401).json({ success: false, error: 'Unauthorized - Invalid token' });
     }
 
+    // Get service client for data operations
+    let supabase;
+    try {
+      supabase = getSupabaseService();
+    } catch (error) {
+      console.error('Failed to create service client:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error: ' + error.message
+      });
+    }
+
     // Check if user is admin
-    const userIsAdmin = await isAdmin(user.id);
+    const userIsAdmin = await isAdmin(user.id, supabase);
     if (!userIsAdmin) {
       return res.status(403).json({ success: false, error: 'Forbidden - Admin access required' });
     }
