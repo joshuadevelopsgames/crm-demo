@@ -383,7 +383,7 @@ export default function NotificationBell() {
     Promise.all([
       import('@/utils/renewalDateCalculator'),
       import('date-fns')
-    ]).then(([{ calculateRenewalDate, getDaysUntilRenewal }, { differenceInDays, startOfDay }]) => {
+    ]).then(([{ calculateRenewalDate, getDaysUntilRenewal }, { differenceInDays, startOfDay, parseISO }]) => {
       const today = startOfDay(new Date());
       const now = new Date();
       let atRiskCount = 0;
