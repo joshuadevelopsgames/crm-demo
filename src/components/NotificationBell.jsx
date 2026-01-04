@@ -339,7 +339,7 @@ export default function NotificationBell() {
     Promise.all([
       import('@/utils/renewalDateCalculator'),
       import('date-fns')
-    ]).then(([{ calculateRenewalDate }, { differenceInDays, startOfDay }]) => {
+    ]).then(([{ calculateRenewalDate }, { differenceInDays, startOfDay, parseISO }]) => {
       const today = startOfDay(new Date());
       const atRiskSet = new Set();
       
@@ -348,7 +348,9 @@ export default function NotificationBell() {
         const accountEstimates = estimates.filter(est => est.account_id === account.id);
         const renewalDate = calculateRenewalDate(accountEstimates);
         if (renewalDate) {
-          const renewalDateStart = startOfDay(renewalDate);
+          // Handle string dates (date-fns v2+ requires parseISO for strings)
+          const renewalDateObj = typeof renewalDate === 'string' ? parseISO(renewalDate) : renewalDate;
+          const renewalDateStart = startOfDay(renewalDateObj);
           const daysUntilRenewal = differenceInDays(renewalDateStart, today);
           // Account should be at_risk if:
           // 1. Renewal is coming up (0-180 days in future) - proactive renewal

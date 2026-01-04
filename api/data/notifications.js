@@ -163,12 +163,18 @@ export default async function handler(req, res) {
           notificationData.id = id;
         }
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/data/notifications.js:166',message:'Creating notification',data:{hasUserId:!!notificationData.user_id,type:notificationData.type,hasRelatedTaskId:!!notificationData.related_task_id,hasRelatedAccountId:!!notificationData.related_account_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
         const { data: created, error } = await supabase
           .from('notifications')
           .insert(notificationData)
           .select()
           .single();
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/data/notifications.js:173',message:'Notification insert result',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,errorDetails:error?.details,hasData:!!created},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
         if (error) {
           // Provide helpful error message if table doesn't exist
           if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
