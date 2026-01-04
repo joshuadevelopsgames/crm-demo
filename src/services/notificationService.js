@@ -442,7 +442,12 @@ export async function createOverdueTaskNotifications() {
               code: error?.code,
               details: error?.details,
               hint: error?.hint,
-              notificationData: notificationData
+              notificationData: {
+                type: notificationData?.type,
+                user_id: notificationData?.user_id,
+                related_task_id: notificationData?.related_task_id,
+                related_account_id: notificationData?.related_account_id
+              }
             });
           }
         }
