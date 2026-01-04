@@ -282,7 +282,7 @@ export default function TotalWork({ estimates = [] }) {
       .map(est => {
         const durationMonths = calculateDurationMonths(est.contract_start, est.contract_end);
         const contractYears = getContractYears(durationMonths);
-        const hasTypo = detectContractTypoLocal(durationMonths, contractYears);
+        const hasTypo = detectContractTypo(durationMonths, contractYears);
         
         return {
           ...est,
