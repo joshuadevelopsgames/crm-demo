@@ -189,39 +189,47 @@ function getEstimateYearData(estimate, currentYear) {
     yearDeterminationSource = 'created_date';
   }
   
-  // If we have a date for year determination, use it
+  // Per spec R9: Multi-year contracts allocate to sequential calendar years starting from contract_start
+  // If we have both contract_start and contract_end, use contract allocation (not determination year)
+  if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+    // Multi-year contract: annualize the revenue per spec R8
+    const startYear = contractStart.getFullYear();
+    const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+    if (durationMonths <= 0) return null;
+    
+    const yearsCount = getContractYears(durationMonths);
+    const annualAmount = totalPrice / yearsCount;
+    
+    // Per spec R9: Allocate to sequential calendar years starting from contract_start
+    const yearsApplied = [];
+    for (let i = 0; i < yearsCount; i++) {
+      yearsApplied.push(startYear + i);
+    }
+    const appliesToCurrentYear = yearsApplied.includes(currentYear);
+    
+    // Detect typo (per spec R20)
+    const hasTypo = detectContractTypo(durationMonths, yearsCount);
+    
+    return {
+      appliesToCurrentYear,
+      value: appliesToCurrentYear ? annualAmount : 0,
+      durationMonths,        // Include for display
+      contractYears: yearsCount,  // Include for display
+      hasTypo,               // Typo flag
+      typoReason: hasTypo ? `Duration (${durationMonths} months) exceeds an exact ${yearsCount - 1} year boundary by one month. Possible date entry error.` : null
+    };
+  }
+  
+  // If we have a date for year determination (but no contract dates), use it
   if (yearDeterminationDate) {
     const determinationYear = yearDeterminationDate.getFullYear();
     const appliesToCurrentYear = currentYear === determinationYear;
     
-    // If we have both contract_start and contract_end, annualize the revenue
-    // Otherwise, use the full price
-    if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-      // Multi-year contract: annualize the revenue
-      const durationMonths = calculateDurationMonths(contractStart, contractEnd);
-      if (durationMonths <= 0) return null;
-      
-      const yearsCount = getContractYears(durationMonths);
-      const annualAmount = totalPrice / yearsCount;
-      
-      // Detect typo (per spec R24-R27)
-      const hasTypo = detectContractTypo(durationMonths, yearsCount);
-      
-      return {
-        appliesToCurrentYear,
-        value: appliesToCurrentYear ? annualAmount : 0,
-        durationMonths,        // Include for display
-        contractYears: yearsCount,  // Include for display
-        hasTypo,               // Typo flag
-        typoReason: hasTypo ? `Duration (${durationMonths} months) exceeds an exact ${yearsCount - 1} year boundary by one month. Possible date entry error.` : null
-      };
-    } else {
-      // Single-year or no contract dates: use full price
-      return {
-        appliesToCurrentYear,
-        value: appliesToCurrentYear ? totalPrice : 0
-      };
-    }
+    // Single-year or no contract dates: use full price
+    return {
+      appliesToCurrentYear,
+      value: appliesToCurrentYear ? totalPrice : 0
+    };
   }
   
   // Case: No dates at all - treat as applying to current year
