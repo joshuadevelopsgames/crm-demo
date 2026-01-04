@@ -321,143 +321,41 @@ export default function NotificationBell() {
     refetchOnWindowFocus: false, // Don't refetch on focus
   });
   
-  // Calculate which accounts SHOULD be at_risk based on renewal dates (source of truth)
-  // This is more accurate than relying on the status field, which might not update if API calls fail
-  const [accountsThatShouldBeAtRisk, setAccountsThatShouldBeAtRisk] = useState(new Set());
-  const [atRiskCalculationComplete, setAtRiskCalculationComplete] = useState(false);
-  
-  useEffect(() => {
-    if (accountsLoading || estimatesLoading || accounts.length === 0 || estimates.length === 0) {
-      setAccountsThatShouldBeAtRisk(new Set());
-      setAtRiskCalculationComplete(false);
-      return;
-    }
+  // Note: We now use the notification_cache as the source of truth for at-risk accounts
+  // The cache is maintained by background jobs and includes all the same logic
+  // This ensures consistency between Dashboard and NotificationBell
+
+  // Use cached data from notification_cache for counts (same as Dashboard)
+  // This ensures notification bell counts match dashboard counts and use the same source of truth
+  const cachedCounts = useMemo(() => {
+    const now = new Date();
     
-    setAtRiskCalculationComplete(false);
+    // Get at-risk accounts from cache (already filtered by snoozes in cache calculation)
+    const atRiskFromCache = notificationsData?.atRiskAccounts || [];
+    const atRiskCount = atRiskFromCache.filter(account => {
+      // Double-check snoozes (cache should already filter, but verify client-side)
+      const isSnoozed = snoozes.some(snooze => 
+        snooze.notification_type === 'renewal_reminder' &&
+        snooze.related_account_id === account.account_id &&
+        new Date(snooze.snoozed_until) > now
+      );
+      return !isSnoozed;
+    }).length;
     
-    // Dynamically import utilities
-    Promise.all([
-      import('@/utils/renewalDateCalculator'),
-      import('date-fns')
-    ]).then(([{ calculateRenewalDate }, { differenceInDays, startOfDay, parseISO }]) => {
-      const today = startOfDay(new Date());
-      const atRiskSet = new Set();
-      
-      accounts.forEach(account => {
-        if (account.archived) return;
-        const accountEstimates = estimates.filter(est => est.account_id === account.id);
-        const renewalDate = calculateRenewalDate(accountEstimates);
-        if (renewalDate) {
-          // Handle string dates (date-fns v2+ requires parseISO for strings)
-          const renewalDateObj = typeof renewalDate === 'string' ? parseISO(renewalDate) : renewalDate;
-          const renewalDateStart = startOfDay(renewalDateObj);
-          const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-          // Account should be at_risk if:
-          // Renewal is coming up (0-180 days in future) - proactive renewal (per R6, R6a)
-          // Past due renewals are excluded per spec R6a
-          // Account should NOT be at_risk if renewal is > 180 days away or < 0 days (past due)
-          // This matches the server logic in atRiskCalculator.js
-          if (daysUntilRenewal >= 0 && daysUntilRenewal <= 180) {
-            atRiskSet.add(account.id);
-          }
-        }
-      });
-      
-      // Debug logging removed
-      setAccountsThatShouldBeAtRisk(atRiskSet);
-      setAtRiskCalculationComplete(true);
-    });
-  }, [accounts, estimates, accountsLoading, estimatesLoading]);
-
-  // Calculate dashboard counts (same logic as Dashboard)
-  // This ensures notification bell counts match dashboard counts
-  const [dashboardCounts, setDashboardCounts] = useState({ atRisk: 0, neglected: 0 });
-
-  useEffect(() => {
-    if (accountsLoading || estimatesLoading || !accounts || accounts.length === 0 || !estimates || estimates.length === 0) {
-      setDashboardCounts({ atRisk: 0, neglected: 0 });
-      return;
-    }
-
-    // Dynamically import utilities
-    Promise.all([
-      import('@/utils/renewalDateCalculator'),
-      import('date-fns')
-    ]).then(([{ calculateRenewalDate, getDaysUntilRenewal }, { differenceInDays, startOfDay, parseISO }]) => {
-      const today = startOfDay(new Date());
-      const now = new Date();
-      let atRiskCount = 0;
-      let neglectedCount = 0;
-
-      // Calculate at-risk accounts (same logic as Dashboard)
-      accounts.forEach(account => {
-        // Skip archived accounts
-        if (account.archived) return;
-
-        // Skip if 'renewal_reminder' notification is snoozed for this account
-        const isSnoozedRenewal = snoozes.some(snooze => 
-          snooze.notification_type === 'renewal_reminder' &&
-          snooze.related_account_id === account.id &&
-          new Date(snooze.snoozed_until) > now
-        );
-        if (isSnoozedRenewal) return;
-
-        // Get estimates for this account
-        const accountEstimates = estimates.filter(est => est.account_id === account.id);
-
-        // Calculate renewal date from estimates
-        const renewalDate = calculateRenewalDate(accountEstimates);
-        if (!renewalDate) return;
-
-        // Calculate days until renewal
-        const daysUntil = getDaysUntilRenewal(renewalDate);
-        if (daysUntil === null) return;
-
-        // Include if renewal is within 6 months (0-180 days, excluding past due per R6, R6a)
-        if (daysUntil >= 0 && daysUntil <= 180) {
-          atRiskCount++;
-        }
-      });
-
-      // Calculate neglected accounts (same logic as Dashboard)
-      accounts.forEach(account => {
-        // Skip archived accounts
-        if (account.archived) return;
-
-        // Skip accounts with ICP status = 'na' (permanently excluded)
-        if (account.icp_status === 'na') return;
-
-        // Skip if 'neglected_account' notification is snoozed for this account
-        const isSnoozedNeglected = snoozes.some(snooze => 
-          snooze.notification_type === 'neglected_account' &&
-          snooze.related_account_id === account.id &&
-          new Date(snooze.snoozed_until) > now
-        );
-        if (isSnoozedNeglected) return;
-
-        // Determine threshold based on revenue segment
-        const segment = account.revenue_segment || 'C';
-        const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
-
-        // Check if no interaction beyond threshold
-        if (!account.last_interaction_date) {
-          neglectedCount++;
-          return;
-        }
-        // Handle string dates (date-fns v2+ requires parseISO for strings)
-        const lastInteractionDateRaw = account.last_interaction_date;
-        const lastInteractionDate = startOfDay(typeof lastInteractionDateRaw === 'string' ? parseISO(lastInteractionDateRaw) : new Date(lastInteractionDateRaw));
-        const daysSince = differenceInDays(today, lastInteractionDate);
-        if (daysSince > thresholdDays) {
-          neglectedCount++;
-        }
-      });
-
-      setDashboardCounts({ atRisk: atRiskCount, neglected: neglectedCount });
-    }).catch(() => {
-      setDashboardCounts({ atRisk: 0, neglected: 0 });
-    });
-  }, [accounts, estimates, accountsLoading, estimatesLoading, snoozes]);
+    // Get neglected accounts from cache (already filtered by snoozes in cache calculation)
+    const neglectedFromCache = notificationsData?.neglectedAccounts || [];
+    const neglectedCount = neglectedFromCache.filter(account => {
+      // Double-check snoozes (cache should already filter, but verify client-side)
+      const isSnoozed = snoozes.some(snooze => 
+        snooze.notification_type === 'neglected_account' &&
+        snooze.related_account_id === account.account_id &&
+        new Date(snooze.snoozed_until) > now
+      );
+      return !isSnoozed;
+    }).length;
+    
+    return { atRisk: atRiskCount, neglected: neglectedCount };
+  }, [notificationsData?.atRiskAccounts, notificationsData?.neglectedAccounts, snoozes]);
   
   // Filter out snoozed notifications and notifications for accounts that shouldn't be at_risk
   // Also ensure we only show notifications for the current user
@@ -629,7 +527,7 @@ export default function NotificationBell() {
     }
     
     return filtered;
-  }, [allNotifications, currentUserId, accountsThatShouldBeAtRisk, accountsLoading, estimatesLoading, accounts.length, estimates.length, atRiskCalculationComplete, snoozes, overdueTaskIds]);
+  }, [allNotifications, currentUserId, snoozes, overdueTaskIds]);
 
   // Debug logging removed to reduce console noise
 
@@ -861,16 +759,16 @@ export default function NotificationBell() {
           }
         }
         
-        // For renewal_reminder and neglected_account, use dashboard calculation instead of counting notifications
-        // This ensures notification bell counts match dashboard counts
+        // For renewal_reminder and neglected_account, use cached counts from notification_cache
+        // This ensures notification bell counts match dashboard counts and use the same source of truth
         if (type === 'renewal_reminder') {
-          count = dashboardCounts.atRisk;
+          count = cachedCounts.atRisk;
           // For unread count, use the same as count (all matching accounts are considered unread)
-          unreadCount = dashboardCounts.atRisk;
+          unreadCount = cachedCounts.atRisk;
         } else if (type === 'neglected_account') {
-          count = dashboardCounts.neglected;
+          count = cachedCounts.neglected;
           // For unread count, use the same as count (all matching accounts are considered unread)
-          unreadCount = dashboardCounts.neglected;
+          unreadCount = cachedCounts.neglected;
         } else {
           // For other types, count unique accounts from notifications
           const allAccountIds = activeNotificationsOnly
