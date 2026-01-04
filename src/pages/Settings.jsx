@@ -84,6 +84,8 @@ export default function Settings() {
       if (data.phone_number !== undefined) {
         updateData.phone_number = data.phone_number || null;
       }
+      // Only include notification_preferences if it's being updated
+      // Skip if column doesn't exist (will be handled by API fallback)
       if (data.notification_preferences !== undefined) {
         updateData.notification_preferences = data.notification_preferences;
       }

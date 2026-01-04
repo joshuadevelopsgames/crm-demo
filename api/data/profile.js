@@ -176,10 +176,42 @@ export default async function handler(req, res) {
         .single();
 
       if (error) {
+        // If error is about missing notification_preferences column, retry without it
+        if (error.message?.includes('notification_preferences') && 
+            (error.code === 'PGRST204' || error.message?.includes('schema cache')) &&
+            notification_preferences !== undefined) {
+          console.warn('notification_preferences column missing, retrying update without it...');
+          const retryData = { ...updateData };
+          delete retryData.notification_preferences;
+          
+          const { data: retryProfile, error: retryError } = await supabase
+            .from('profiles')
+            .upsert(retryData, {
+              onConflict: 'id'
+            })
+            .select()
+            .single();
+          
+          if (retryError) {
+            console.error('Error updating profile (retry):', retryError);
+            return res.status(500).json({
+              success: false,
+              error: retryError.message || 'Failed to update profile'
+            });
+          }
+          
+          return res.status(200).json({
+            success: true,
+            data: retryProfile,
+            warning: 'notification_preferences column is missing. Other fields updated successfully. Please run add_notification_preferences_to_profiles.sql migration in Supabase SQL Editor to enable notification preferences.'
+          });
+        }
+        
         console.error('Error updating profile:', error);
         return res.status(500).json({
           success: false,
-          error: error.message || 'Failed to update profile'
+          error: error.message || 'Failed to update profile',
+          code: error.code
         });
       }
 
