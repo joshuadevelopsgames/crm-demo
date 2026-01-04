@@ -35,7 +35,7 @@ export default function ICPManagementPanel() {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Update ICP status mutation
+  // Update ICP status mutation - optimized for bulk toggling
   const updateICPMutation = useMutation({
     mutationFn: async ({ accountId, icpStatus }) => {
       const account = await base44.entities.Account.update(accountId, {
@@ -46,13 +46,14 @@ export default function ICPManagementPanel() {
       });
       return account;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
+      // Silently update cache - no toast for individual toggles
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast.success(`ICP status updated for ${variables.accountName || 'account'}`);
     },
-    onError: (error, variables) => {
+    onError: (error) => {
       console.error('Error updating ICP status:', error);
-      toast.error(`Failed to update ICP status for ${variables.accountName || 'account'}`);
+      // Only show error toast, not success toast
+      toast.error('Failed to update ICP status');
     }
   });
 
