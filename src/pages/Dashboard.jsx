@@ -497,11 +497,12 @@ export default function Dashboard() {
   
   // Debug logging for neglected accounts calculation
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (Array.isArray(accounts) && accounts.length > 0) {
       const active = accounts.filter(a => a.status !== 'archived' && a.archived !== true);
       const excludedByICP = active.filter(a => a.icp_status === 'na').length;
+      const snoozesArray = Array.isArray(notificationSnoozes) ? notificationSnoozes : [];
       const snoozed = active.filter(a => {
-        return notificationSnoozes.some(snooze => 
+        return snoozesArray.some(snooze => 
           snooze.related_account_id === a.id &&
           new Date(snooze.snoozed_until) > new Date()
         );
