@@ -109,7 +109,18 @@ export default function ICPManagementPanel() {
     return { total, required, na, notSet };
   }, [accounts]);
 
+  // Optimized toggle with optimistic updates for faster UI response
   const handleToggle = (account, newStatus) => {
+    // Optimistically update the UI immediately
+    queryClient.setQueryData(['accounts'], (oldAccounts = []) => {
+      return oldAccounts.map(acc => 
+        acc.id === account.id 
+          ? { ...acc, icp_status: newStatus, icp_required: newStatus === 'required' }
+          : acc
+      );
+    });
+    
+    // Then update in background (no toast notification)
     updateICPMutation.mutate({
       accountId: account.id,
       accountName: account.name,
