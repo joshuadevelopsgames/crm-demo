@@ -44,8 +44,9 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Prevent refetch on focus that can cause data to disappear
       retry: 1,
       staleTime: 5 * 60 * 1000, // Default: cache for 5 minutes
-      gcTime: 10 * 60 * 1000, // Default: keep in cache for 10 minutes (formerly cacheTime)
+      gcTime: 30 * 60 * 1000, // Default: keep in cache for 30 minutes (formerly cacheTime) - longer to prevent disappearing
       placeholderData: (previousData) => previousData, // Keep previous data while refetching
+      keepPreviousData: true, // Keep previous data when query key changes or component unmounts
     },
   },
 });

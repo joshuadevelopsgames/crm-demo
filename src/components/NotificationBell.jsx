@@ -153,12 +153,14 @@ export default function NotificationBell() {
     },
     enabled: !!currentUser?.id && !userLoading,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep data in cache longer to prevent disappearing
     refetchInterval: 5 * 60 * 1000, // 5 minutes
     refetchOnMount: true, // Always refetch on mount to get latest cache data
     refetchOnWindowFocus: true, // Refetch when window regains focus to get latest cache
     refetchOnReconnect: true,
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
+    // Keep data in cache even when component unmounts
+    keepPreviousData: true,
   });
   
   // Set up Supabase Realtime subscriptions for instant updates
