@@ -88,8 +88,13 @@ export default function InstallPrompt() {
     return null;
   }
 
-  // Detect mobile device
+  // Detect mobile device - only show prompt on mobile
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  
+  // Don't show prompt on desktop
+  if (!isMobile) {
+    return null;
+  }
 
   return (
     <>

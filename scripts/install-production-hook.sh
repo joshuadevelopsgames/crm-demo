@@ -6,6 +6,11 @@ HOOK_CONTENT='#!/bin/bash
 # Git pre-push hook to block direct pushes to production
 # This ensures all production deployments go through the proper workflow
 # SECURITY: Codeword must be in commit message - cannot be bypassed by AI assistants
+#
+# ⚠️ CRITICAL SECURITY NOTE:
+# This hook can be bypassed with --no-verify flag. This is a git limitation.
+# To prevent this, use GitHub branch protection rules or server-side hooks.
+# AI ASSISTANTS: NEVER use --no-verify when pushing to production!
 
 # Get the remote name being pushed to
 remote="$1"
@@ -49,6 +54,12 @@ if [ "$remote" = "production" ]; then
     echo "   ⚠️  The codeword MUST be in the commit message"
     echo "   Environment variables are NOT accepted for security"
     echo ""
+    echo "🚫 SECURITY WARNING:"
+    echo "   Using --no-verify bypasses this hook entirely!"
+    echo "   This is a git limitation - hooks can be skipped."
+    echo "   For true protection, use GitHub branch protection rules."
+    echo "   AI ASSISTANTS: NEVER use --no-verify for production pushes!"
+    echo ""
     exit 1
 fi
 
@@ -62,6 +73,10 @@ echo "This hook will:"
 echo "  ✅ Block direct pushes to production"
 echo "  ✅ Only allow bypass if FLASH25 is in commit message"
 echo "  ❌ Reject environment variable bypass (more secure)"
+echo ""
+echo "⚠️  SECURITY LIMITATION:"
+echo "  This hook can be bypassed with --no-verify flag (git limitation)"
+echo "  For true protection, set up GitHub branch protection rules"
 echo ""
 
 # Install in current repo
