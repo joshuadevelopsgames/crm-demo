@@ -39,9 +39,25 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { formatDateString } from '@/utils/dateFormatter';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { selectedYear, setYear } = useYearSelector();
+  
+  // Generate year options (current year ± 5 years)
+  const baseYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let i = -5; i <= 5; i++) {
+    yearOptions.push(baseYear + i);
+  }
   const queryClient = useQueryClient();
   const { user, isLoading: userLoading } = useUser();
   const [snoozeAccount, setSnoozeAccount] = useState(null);

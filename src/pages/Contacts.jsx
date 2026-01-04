@@ -40,13 +40,6 @@ import { Textarea } from "@/components/ui/textarea";
 import TutorialTooltip from '../components/TutorialTooltip';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { UserFilter } from '@/components/UserFilter';
 import { useUser } from '@/contexts/UserContext';
 
