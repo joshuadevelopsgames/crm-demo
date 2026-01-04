@@ -6,15 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Search, Building2, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, Building2, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function ICPManagementPanel() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'required', 'na'
+  const [bulkConfirmDialog, setBulkConfirmDialog] = useState(null); // { status: 'required' | 'na', count: number }
 
   // Fetch all accounts
   const { data: accounts = [], isLoading } = useQuery({
@@ -112,12 +123,23 @@ export default function ICPManagementPanel() {
       return;
     }
     
-    if (confirm(`Update ${selectedAccounts.length} account${selectedAccounts.length !== 1 ? 's' : ''} to ${status === 'required' ? 'Required' : 'N/A'}?`)) {
-      bulkUpdateMutation.mutate({
-        accountIds: selectedAccounts.map(a => a.id),
-        icpStatus: status
-      });
-    }
+    // Show confirmation dialog
+    setBulkConfirmDialog({
+      status,
+      count: selectedAccounts.length
+    });
+  };
+
+  const confirmBulkUpdate = () => {
+    if (!bulkConfirmDialog) return;
+    
+    const selectedAccounts = filteredAccounts;
+    bulkUpdateMutation.mutate({
+      accountIds: selectedAccounts.map(a => a.id),
+      icpStatus: bulkConfirmDialog.status
+    });
+    
+    setBulkConfirmDialog(null);
   };
 
   if (isLoading) {
@@ -291,6 +313,61 @@ export default function ICPManagementPanel() {
           )}
         </div>
       </CardContent>
+
+      {/* Bulk Update Confirmation Dialog */}
+      <AlertDialog open={!!bulkConfirmDialog} onOpenChange={(open) => {
+        if (!open) setBulkConfirmDialog(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+              Confirm Bulk Update
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2">
+              Are you sure you want to update <strong>{bulkConfirmDialog?.count || 0} account{bulkConfirmDialog?.count !== 1 ? 's' : ''}</strong> to{' '}
+              <strong>{bulkConfirmDialog?.status === 'required' ? 'Required' : 'N/A'}</strong>?
+              <br /><br />
+              This will:
+              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                <li>Set ICP status to <strong>{bulkConfirmDialog?.status === 'required' ? 'Required' : 'N/A'}</strong> for all filtered accounts</li>
+                {bulkConfirmDialog?.status === 'na' && (
+                  <li>Clear last interaction dates for accounts set to N/A</li>
+                )}
+                <li>Exclude N/A accounts from neglected accounts tracking</li>
+                <li className="text-amber-600 dark:text-amber-400 font-medium">This action cannot be easily undone</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkUpdate}
+              className={bulkConfirmDialog?.status === 'na' 
+                ? 'bg-amber-600 hover:bg-amber-700' 
+                : 'bg-emerald-600 hover:bg-emerald-700'
+              }
+              disabled={bulkUpdateMutation.isPending}
+            >
+              {bulkUpdateMutation.isPending ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  {bulkConfirmDialog?.status === 'required' ? (
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
+                  Update {bulkConfirmDialog?.count || 0} Account{bulkConfirmDialog?.count !== 1 ? 's' : ''}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
