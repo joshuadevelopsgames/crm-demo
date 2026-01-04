@@ -97,7 +97,8 @@ export default function Dashboard() {
         // #endregion
         // Invalidate queries to refresh accounts (notifications are auto-updated by triggers)
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
-        queryClient.invalidateQueries({ queryKey: ['notifications'] }); // Refresh to get trigger-updated notifications
+        // Don't invalidate notifications here - triggers handle updates automatically
+        // Invalidating causes notifications to disappear when navigating to Dashboard
         lastStatusCheck = Date.now();
       } catch (error) {
         console.error('Error checking/updating account statuses:', error);
@@ -122,7 +123,8 @@ export default function Dashboard() {
         }
         
         await createOverdueTaskNotifications();
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        // Only invalidate tasks, not notifications - notifications will update via triggers or natural refetch
+        // Invalidating notifications causes them to disappear when navigating to Dashboard
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         lastStatusCheck = Date.now();
       } catch (error) {
