@@ -11,7 +11,20 @@
  */
 
 import { getSupabaseClient } from '../../src/services/supabaseClient.js';
-import { calculateAtRiskAccounts, calculateNeglectedAccounts } from '../../src/utils/atRiskCalculator.js';
+
+// Dynamic import for server-side compatibility (Vercel serverless functions)
+async function getAtRiskCalculator() {
+  try {
+    const module = await import('../../src/utils/atRiskCalculator.js');
+    return {
+      calculateAtRiskAccounts: module.calculateAtRiskAccounts,
+      calculateNeglectedAccounts: module.calculateNeglectedAccounts
+    };
+  } catch (error) {
+    console.error('Error importing atRiskCalculator:', error);
+    throw new Error(`Failed to import atRiskCalculator: ${error.message}`);
+  }
+}
 
 export default async function handler(req, res) {
   // Verify cron request is authorized
@@ -53,15 +66,21 @@ export default async function handler(req, res) {
     
     console.log(`📊 Fetched ${accounts.length} accounts, ${estimates.length} estimates, ${snoozes.length} snoozes`);
     
-    // 2. Calculate at-risk accounts (with renewal detection)
+    // 2. Import calculator functions (dynamic import for server-side compatibility)
+    console.log('📦 Importing calculator functions...');
+    const { calculateAtRiskAccounts, calculateNeglectedAccounts } = await getAtRiskCalculator();
+    
+    // 3. Calculate at-risk accounts (with renewal detection)
+    console.log('🧮 Calculating at-risk accounts...');
     const { atRiskAccounts, duplicateEstimates } = calculateAtRiskAccounts(accounts, estimates, snoozes);
     
-    // 3. Calculate neglected accounts
+    // 4. Calculate neglected accounts
+    console.log('🧮 Calculating neglected accounts...');
     const neglectedAccounts = calculateNeglectedAccounts(accounts, snoozes);
     
     console.log(`✅ Calculated ${atRiskAccounts.length} at-risk accounts, ${neglectedAccounts.length} neglected accounts, ${duplicateEstimates.length} duplicate estimate groups`);
     
-    // 4. Update cache
+    // 5. Update cache
     const cacheExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min from now
     
     await Promise.all([
@@ -94,7 +113,9 @@ export default async function handler(req, res) {
       })
     ]);
     
-    // 5. Handle duplicate estimates (bad data)
+    console.log('✅ Cache updated successfully');
+    
+    // 6. Handle duplicate estimates (bad data)
     let duplicateInsertCount = 0;
     if (duplicateEstimates.length > 0) {
       // Check which duplicates are already in the database (unresolved)
