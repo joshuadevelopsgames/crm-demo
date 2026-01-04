@@ -69,44 +69,76 @@ function getContractYears(durationMonths) {
 
 /**
  * Get the year an estimate applies to and its allocated value for the current year
- * Uses contract-year allocation logic: revenue allocated by contract years, not calendar year coverage
+ * Per spec R2-R9: Uses year determination priority and contract-year allocation logic
  * @param {Object} estimate - Estimate object
  * @param {number} currentYear - Current year (e.g., 2024)
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number, determinationMethod: string } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
+  // Per spec R2: Year determination priority: estimate_close_date → contract_start → estimate_date → created_date
+  const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
+  const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
-  // Use total_price_with_tax consistently
-  const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
-  if (totalPrice === 0) return null;
+  // Per spec R3-R5: Price field selection with fallback
+  const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
+  const totalPriceNoTax = parseFloat(estimate.total_price);
+  let totalPrice;
+  if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
+    if (totalPriceNoTax && totalPriceNoTax > 0) {
+      totalPrice = totalPriceNoTax;
+    } else {
+      // Per spec R5: Both missing/zero → exclude
+      return null;
+    }
+  } else {
+    totalPrice = totalPriceWithTax;
+  }
   
-  // Case 1: Both contract_start and contract_end exist
-  // Use contract-year allocation logic
+  // Per spec R2: Determine year using priority order
+  let yearDeterminationDate = null;
+  let yearSource = null;
+  if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
+    yearDeterminationDate = estimateCloseDate;
+    yearSource = 'estimate_close_date';
+  } else if (contractStart && !isNaN(contractStart.getTime())) {
+    yearDeterminationDate = contractStart;
+    yearSource = 'contract_start';
+  } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+    yearDeterminationDate = estimateDate;
+    yearSource = 'estimate_date';
+  } else if (createdDate && !isNaN(createdDate.getTime())) {
+    yearDeterminationDate = createdDate;
+    yearSource = 'created_date';
+  }
+  
+  if (!yearDeterminationDate) {
+    // Per spec R22: Every estimate has at least one date, but handle gracefully
+    return null;
+  }
+  
+  // Per spec R9: Multi-year contracts allocate to sequential calendar years starting from contract_start
+  // If we have both contract_start and contract_end, use contract allocation (not determination year)
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
     const startYear = contractStart.getFullYear();
     
-    // STEP 1: Calculate duration in months
+    // Per spec R6-R7: Calculate duration and contract years
     const durationMonths = calculateDurationMonths(contractStart, contractEnd);
     if (durationMonths <= 0) return null;
     
-    // STEP 2: Determine number of contract years
     const yearsCount = getContractYears(durationMonths);
     
-    // STEP 3: Determine which calendar years receive allocation
-    // years_applied = [start_year, start_year+1, ..., start_year+(years_count-1)]
+    // Per spec R9: Allocate to sequential calendar years starting from contract_start
     const yearsApplied = [];
     for (let i = 0; i < yearsCount; i++) {
       yearsApplied.push(startYear + i);
     }
     
-    // Check if current year is in years_applied
     const appliesToCurrentYear = yearsApplied.includes(currentYear);
     
-    // STEP 4: Allocate revenue
-    // annual_amount = total_price / years_count
+    // Per spec R8: Annualize revenue
     const annualAmount = totalPrice / yearsCount;
     
     // Build determination method string
@@ -121,32 +153,23 @@ function getEstimateYearData(estimate, currentYear) {
     };
   }
   
-  // Case 2: Only contract_start exists
-  if (contractStart && !isNaN(contractStart.getTime())) {
-    const startYear = contractStart.getFullYear();
-    const appliesToCurrentYear = currentYear === startYear;
-    
-    return {
-      appliesToCurrentYear,
-      value: totalPrice,
-      determinationMethod: `Contract Start: ${startYear}`
-    };
-  }
+  // Single-year or no contract dates: use determination year
+  const determinationYear = yearDeterminationDate.getFullYear();
+  const appliesToCurrentYear = currentYear === determinationYear;
   
-  // Case 3: No contract dates, use estimate_date
-  if (estimateDate && !isNaN(estimateDate.getTime())) {
-    const estimateYear = estimateDate.getFullYear();
-    const appliesToCurrentYear = currentYear === estimateYear;
-    
-    return {
-      appliesToCurrentYear,
-      value: totalPrice,
-      determinationMethod: `Estimate Date: ${estimateYear}`
-    };
-  }
+  const determinationMethod = yearSource === 'estimate_close_date' 
+    ? `Estimate Close Date: ${determinationYear}`
+    : yearSource === 'contract_start'
+    ? `Contract Start: ${determinationYear}`
+    : yearSource === 'estimate_date'
+    ? `Estimate Date: ${determinationYear}`
+    : `Created Date: ${determinationYear}`;
   
-  // No valid date found
-  return null;
+  return {
+    appliesToCurrentYear,
+    value: appliesToCurrentYear ? totalPrice : 0,
+    determinationMethod
+  };
 }
 
 /**

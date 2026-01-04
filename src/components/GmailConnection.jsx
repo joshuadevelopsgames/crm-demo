@@ -53,17 +53,21 @@ export default function GmailConnection({ onSyncComplete }) {
   });
 
   const handleConnect = () => {
-    setIsConnecting(true);
-    const authUrl = initGmailAuth();
+    toast('Feature Coming Soon!', { icon: 'ℹ️' });
+    return;
     
-    if (!authUrl) {
-      toast.error('Gmail integration not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
-      setIsConnecting(false);
-      return;
-    }
-
-    // Redirect to Gmail OAuth
-    window.location.href = authUrl;
+    // Original code commented out for coming soon
+    // setIsConnecting(true);
+    // const authUrl = initGmailAuth();
+    // 
+    // if (!authUrl) {
+    //   toast.error('Gmail integration not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
+    //   setIsConnecting(false);
+    //   return;
+    // }
+    //
+    // // Redirect to Gmail OAuth
+    // window.location.href = authUrl;
   };
 
   const handleDisconnect = async () => {

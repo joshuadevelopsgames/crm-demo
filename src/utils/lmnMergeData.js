@@ -783,8 +783,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       est.account_id === account.id
     );
 
-    // Calculate revenue from won estimates for current year using contract-year allocation
-    // Import the calculation function (using inline version to avoid circular dependencies)
+    // Calculate revenue from won estimates per spec R25: calculate for ALL years
+    // Import calculation functions from revenueSegmentCalculator (per spec R1-R22)
     // Helper to get current year (respects test mode)
     function getCurrentYearForCalculation() {
       // Use window function if available (set by TestModeProvider)
@@ -795,6 +795,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       return new Date().getFullYear();
     }
     const currentYear = getCurrentYearForCalculation();
+    
+    // Per spec R6: Contract duration calculation
     const calculateDurationMonths = (startDate, endDate) => {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -802,11 +804,14 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       const monthDiff = end.getMonth() - start.getMonth();
       const dayDiff = end.getDate() - start.getDate();
       let totalMonths = yearDiff * 12 + monthDiff;
+      // Per spec R6: Only add 1 if endDay > startDay (exact N*12 months don't add 1)
       if (dayDiff > 0) {
         totalMonths += 1;
       }
       return totalMonths;
     };
+    
+    // Per spec R7: Contract years calculation
     const getContractYears = (durationMonths) => {
       if (durationMonths <= 12) return 1;
       if (durationMonths <= 24) return 2;
@@ -816,58 +821,153 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
       return Math.ceil(durationMonths / 12);
     };
-    const getEstimateYearData = (estimate, currentYear) => {
+    
+    // Per spec R2: Year determination priority: estimate_close_date → contract_start → estimate_date → created_date
+    // Per spec R3-R5: Price field selection with fallback
+    // Per spec R8-R9: Multi-year contract annualization and allocation
+    const getEstimateYearData = (estimate, targetYear) => {
+      // Priority 1: estimate_close_date (per spec R2)
+      const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
       const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
       const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
       const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
-      const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
-      if (totalPrice === 0) return null;
+      const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
+      
+      // Per spec R3-R5: Price field selection with fallback
+      const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
+      const totalPriceNoTax = parseFloat(estimate.total_price);
+      let totalPrice;
+      if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
+        if (totalPriceNoTax && totalPriceNoTax > 0) {
+          totalPrice = totalPriceNoTax;
+        } else {
+          // Per spec R5: Both missing/zero → exclude
+          return null;
+        }
+      } else {
+        totalPrice = totalPriceWithTax;
+      }
+      
+      // Per spec R2: Year determination priority
+      let yearDeterminationDate = null;
+      if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
+        yearDeterminationDate = estimateCloseDate;
+      } else if (contractStart && !isNaN(contractStart.getTime())) {
+        yearDeterminationDate = contractStart;
+      } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+        yearDeterminationDate = estimateDate;
+      } else if (createdDate && !isNaN(createdDate.getTime())) {
+        yearDeterminationDate = createdDate;
+      }
+      
+      if (!yearDeterminationDate) {
+        // Per spec R22: Every estimate has at least one date, but handle gracefully
+        return null;
+      }
+      
+      const determinationYear = yearDeterminationDate.getFullYear();
+      
+      // Per spec R8-R9: Multi-year contract annualization
       if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
         const startYear = contractStart.getFullYear();
         const durationMonths = calculateDurationMonths(contractStart, contractEnd);
         if (durationMonths <= 0) return null;
+        
         const yearsCount = getContractYears(durationMonths);
+        const annualAmount = totalPrice / yearsCount;
+        
+        // Per spec R9: Allocate to sequential calendar years
         const yearsApplied = [];
         for (let i = 0; i < yearsCount; i++) {
           yearsApplied.push(startYear + i);
         }
-        const appliesToCurrentYear = yearsApplied.includes(currentYear);
-        const annualAmount = totalPrice / yearsCount;
+        
+        const appliesToTargetYear = yearsApplied.includes(targetYear);
         return {
-          appliesToCurrentYear,
-          value: appliesToCurrentYear ? annualAmount : 0
+          appliesToTargetYear,
+          value: appliesToTargetYear ? annualAmount : 0,
+          yearsApplied // Include for multi-year calculation
+        };
+      } else {
+        // Single-year or no contract dates: use full price
+        const appliesToTargetYear = targetYear === determinationYear;
+        return {
+          appliesToTargetYear,
+          value: appliesToTargetYear ? totalPrice : 0
         };
       }
-      if (contractStart && !isNaN(contractStart.getTime())) {
-        const startYear = contractStart.getFullYear();
-        return {
-          appliesToCurrentYear: currentYear === startYear,
-          value: totalPrice
-        };
-      }
-      if (estimateDate && !isNaN(estimateDate.getTime())) {
-        const estimateYear = estimateDate.getFullYear();
-        return {
-          appliesToCurrentYear: currentYear === estimateYear,
-          value: totalPrice
-        };
-      }
-      return null;
     };
-    const wonEstimates = accountEstimates.filter(est => est.status === 'won');
-    const totalRevenue = wonEstimates.reduce((sum, est) => {
-      const yearData = getEstimateYearData(est, currentYear);
-      if (!yearData || !yearData.appliesToCurrentYear) return sum;
-      return sum + (isNaN(yearData.value) ? 0 : yearData.value);
-    }, 0);
+    
+    // Per spec R1: Only won estimates (case-insensitive)
+    const wonEstimates = accountEstimates.filter(est => 
+      est.status && est.status.toLowerCase() === 'won'
+    );
+    
+    // Per spec R25: Calculate revenue for ALL years (not just current year)
+    // Find all unique years that estimates apply to
+    const yearsSet = new Set();
+    wonEstimates.forEach(est => {
+      const estimateCloseDate = est.estimate_close_date ? new Date(est.estimate_close_date) : null;
+      const contractStart = est.contract_start ? new Date(est.contract_start) : null;
+      const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
+      const createdDate = est.created_date ? new Date(est.created_date) : null;
+      
+      // Determine year using priority (per spec R2)
+      let year = null;
+      if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
+        year = estimateCloseDate.getFullYear();
+      } else if (contractStart && !isNaN(contractStart.getTime())) {
+        year = contractStart.getFullYear();
+      } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+        year = estimateDate.getFullYear();
+      } else if (createdDate && !isNaN(createdDate.getTime())) {
+        year = createdDate.getFullYear();
+      }
+      
+      if (year) {
+        yearsSet.add(year);
+        // For multi-year contracts, add all years in the contract
+        if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
+          const contractEnd = new Date(est.contract_end);
+          if (!isNaN(contractEnd.getTime())) {
+            const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+            if (durationMonths > 0) {
+              const yearsCount = getContractYears(durationMonths);
+              for (let i = 0; i < yearsCount; i++) {
+                yearsSet.add(contractStart.getFullYear() + i);
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Calculate revenue for each year (per spec R25)
+    const revenueByYear = {};
+    yearsSet.forEach(year => {
+      const yearRevenue = wonEstimates.reduce((sum, est) => {
+        const yearData = getEstimateYearData(est, year);
+        if (!yearData || !yearData.appliesToTargetYear) return sum;
+        return sum + (isNaN(yearData.value) ? 0 : yearData.value);
+      }, 0);
+      if (yearRevenue > 0) {
+        revenueByYear[year.toString()] = yearRevenue;
+      }
+    });
+    
+    // Per spec R11: Current year revenue (for annual_revenue field)
+    const currentYearRevenue = revenueByYear[currentYear.toString()] || 0;
 
     // Count jobsites for this account (now using account_id field from jobsites)
     const accountJobsites = jobsitesWithAccountId.filter(jobsite => 
       jobsite.account_id === account.id
     );
 
-    // Update account with calculated revenue
-    account.annual_revenue = totalRevenue > 0 ? totalRevenue : null;
+    // Per spec R25: Update account with calculated revenue
+    // annual_revenue stores current year value
+    account.annual_revenue = currentYearRevenue > 0 ? currentYearRevenue : null;
+    // revenue_by_year stores all years (JSONB field)
+    account.revenue_by_year = Object.keys(revenueByYear).length > 0 ? revenueByYear : null;
     
     // Only calculate automatic score if account doesn't already have a scorecard-based score
     // Scorecard scores take priority - they are set when scorecards are completed
