@@ -252,6 +252,7 @@ export default function Dashboard() {
         console.log('🔔 Cache updated, refreshing dashboard data');
         queryClient.invalidateQueries(['at-risk-accounts']);
         queryClient.invalidateQueries(['duplicate-estimates']);
+        queryClient.invalidateQueries(['notifications', user?.id]); // Also invalidate notifications query to refresh counts
       });
     
     // Subscribe to duplicate estimates
@@ -297,34 +298,64 @@ export default function Dashboard() {
 
   // Fetch notifications to get accurate counts that match the notification bell
   // This ensures the dashboard badge counts always match the notification bell counts
+  // Use the same API endpoint as NotificationBell to ensure consistency
   const { data: allNotificationsRaw = [] } = useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       try {
         const currentUserIdStr = String(user.id).trim();
-        const [bulkNotificationsResponse, taskNotifications] = await Promise.all([
-          fetch(`/api/data/userNotificationStates?user_id=${encodeURIComponent(currentUserIdStr)}`)
-            .then(async r => {
-              const json = await r.json();
-              return r.ok ? json : { success: false, error: json.error || 'Unknown error' };
-            })
-            .catch(error => ({ success: false, error: error.message })),
-          base44.entities.Notification.filter({ user_id: currentUserIdStr }, '-created_at')
-        ]);
         
-        const bulkNotifications = bulkNotificationsResponse.success 
-          ? (bulkNotificationsResponse.data?.notifications || [])
-          : [];
+        // Use the same unified API endpoint as NotificationBell
+        const response = await fetch(`/api/notifications?type=all&user_id=${encodeURIComponent(currentUserIdStr)}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.status}`);
+        }
+        const result = await response.json();
         
-        return [...bulkNotifications, ...taskNotifications];
+        if (!result.success) {
+          console.error('❌ Failed to fetch notifications:', result.error);
+          return [];
+        }
+        
+        // Convert at-risk and neglected accounts to notification format (same as NotificationBell)
+        const atRiskNotifications = (result.data.atRiskAccounts || []).map(account => ({
+          id: `at_risk_${account.account_id}`,
+          type: 'renewal_reminder',
+          title: `At Risk: ${account.account_name}`,
+          message: `Renewal in ${account.days_until_renewal} day${account.days_until_renewal !== 1 ? 's' : ''}`,
+          related_account_id: account.account_id,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        }));
+        
+        const neglectedNotifications = (result.data.neglectedAccounts || []).map(account => ({
+          id: `neglected_${account.account_id}`,
+          type: 'neglected_account',
+          title: `Neglected Account: ${account.account_name}`,
+          message: account.days_since_interaction 
+            ? `No contact in ${account.days_since_interaction} days`
+            : 'No interactions logged',
+          related_account_id: account.account_id,
+          is_read: false,
+          created_at: new Date().toISOString()
+        }));
+        
+        // Combine all notifications (same format as NotificationBell)
+        return [
+          ...atRiskNotifications,
+          ...neglectedNotifications,
+          ...(result.data.taskNotifications || []),
+          ...(result.data.systemNotifications || []),
+        ];
       } catch (error) {
         console.error('Error fetching notifications:', error);
         return [];
       }
     },
     enabled: !userLoading && !!user,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes (same as NotificationBell)
+    refetchOnWindowFocus: false,
   });
 
   // Process notifications to get counts that match the notification bell
