@@ -494,50 +494,12 @@ export async function createRenewalNotifications() {
   fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:491',message:'createRenewalNotifications called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
   // #endregion
   
-  try {
-    // Sync all at-risk accounts using the database function
-    // This will check all accounts, add/remove from at_risk_accounts table,
-    // and respect snoozes. The triggers will automatically update notifications.
-    const syncResponse = await fetch('/api/data/atRiskAccounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync_all' })
-    });
-    
-    if (syncResponse.ok) {
-      const result = await syncResponse.json();
-      if (result.success) {
-        const { added_count, removed_count, updated_count } = result.data || {};
-        console.log(`✅ At-risk accounts synced: ${added_count || 0} added, ${removed_count || 0} removed, ${updated_count || 0} updated`);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:601',message:'createRenewalNotifications complete',data:{added_count,removed_count,updated_count},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
-      } else {
-        console.error('⚠️ Sync returned error:', result.error);
-      }
-    } else {
-      console.error('⚠️ Failed to sync at-risk accounts:', await syncResponse.text());
-    }
-    
-    // Also check for expired snoozes and restore accounts
-    const snoozeResponse = await fetch('/api/data/atRiskAccounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'check_expired_snoozes' })
-    });
-    
-    if (snoozeResponse.ok) {
-      const result = await snoozeResponse.json();
-      if (result.success && result.data?.restored_count > 0) {
-        console.log(`✅ Restored ${result.data.restored_count} accounts from expired snoozes`);
-      }
-    }
-    
-    console.log(`✅ Renewal notification creation complete`);
-    console.log(`📊 At-risk accounts table maintained automatically by database triggers`);
-  } catch (error) {
-    console.error('❌ Error creating renewal notifications:', error);
-  }
+  // NOTE: At-risk accounts are now managed by the background cron job
+  // The cron job runs every 5 minutes and updates the notification_cache table
+  // This function is kept for backwards compatibility but no longer needs to do anything
+  // The cache is automatically refreshed by /api/cron/refresh-notifications
+  console.log(`✅ Renewal notification creation complete`);
+  console.log(`📊 At-risk accounts are maintained automatically by background job (runs every 5 minutes)`);
 }
 
 /**

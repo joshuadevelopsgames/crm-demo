@@ -63,7 +63,18 @@ export default async function handler(req, res) {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:58',message:'Cache query result',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,hasData:!!cache,hasExpiresAt:!!cache?.expires_at},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // If table doesn't exist (PGRST116 = no rows, but other codes might indicate missing table)
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          // Table doesn't exist or cache is empty - return empty array
+          console.warn('notification_cache table not found or empty, returning empty array');
+          return res.json({ 
+            success: true, 
+            data: [], 
+            stale: true,
+            message: 'Cache not available. Background job will create it shortly.'
+          });
+        }
         console.error('Error fetching at-risk accounts cache:', error);
         return res.status(500).json({ success: false, error: error.message });
       }
@@ -93,7 +104,17 @@ export default async function handler(req, res) {
         .eq('cache_key', 'neglected-accounts')
         .single();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // If table doesn't exist
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.warn('notification_cache table not found or empty, returning empty array');
+          return res.json({ 
+            success: true, 
+            data: [], 
+            stale: true,
+            message: 'Cache not available. Background job will create it shortly.'
+          });
+        }
         console.error('Error fetching neglected accounts cache:', error);
         return res.status(500).json({ success: false, error: error.message });
       }
@@ -130,6 +151,11 @@ export default async function handler(req, res) {
       fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:116',message:'Duplicate estimates query result',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,hasData:!!duplicates,dataLength:duplicates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
       if (error) {
+        // If table doesn't exist
+        if (error.message?.includes('relation') || error.message?.includes('does not exist') || error.code === 'PGRST204') {
+          console.warn('duplicate_at_risk_estimates table not found, returning empty array');
+          return res.json({ success: true, data: [] });
+        }
         console.error('Error fetching duplicate estimates:', error);
         return res.status(500).json({ success: false, error: error.message });
       }
