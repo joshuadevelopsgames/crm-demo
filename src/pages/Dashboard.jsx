@@ -949,7 +949,7 @@ export default function Dashboard() {
                 Active Sequences
               </CardTitle>
               <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 border-indigo-200">
-                {sequences.filter(s => s.status === 'active').length}
+                {(Array.isArray(sequencesRaw) ? sequencesRaw : []).filter(s => s.status === 'active').length}
               </Badge>
             </div>
           </CardHeader>
