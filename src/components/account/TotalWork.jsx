@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check } from 'lucide-react';
+import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/TestModeContext';
+import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
+import { format } from 'date-fns';
 
 /**
  * Calculate contract duration in months between two dates
@@ -273,6 +275,28 @@ export default function TotalWork({ estimates = [] }) {
     return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [soldBreakdown]);
   
+  // Detect typo estimates (per spec R24-R27)
+  const estimatesWithTypo = useMemo(() => {
+    return estimates
+      .filter(est => est.contract_start && est.contract_end && est.status?.toLowerCase() === 'won')
+      .map(est => {
+        const durationMonths = calculateDurationMonths(est.contract_start, est.contract_end);
+        const contractYears = getContractYears(durationMonths);
+        const hasTypo = detectContractTypoLocal(durationMonths, contractYears);
+        
+        return {
+          ...est,
+          durationMonths,
+          contractYears,
+          hasTypo,
+          typoReason: hasTypo 
+            ? `Duration (${durationMonths} months) exceeds an exact ${contractYears - 1} year boundary by one month. Possible date entry error.`
+            : null
+        };
+      })
+      .filter(est => est.hasTypo);
+  }, [estimates]);
+  
   // Calculate all-time totals (all estimates regardless of year)
   // Try total_price_with_tax first, fall back to total_price if not available
   const allTimeEstimated = useMemo(() => {
@@ -301,6 +325,38 @@ export default function TotalWork({ estimates = [] }) {
     : 0;
 
   return (
+    <>
+      {/* Typo Detection Warnings (per spec R24-R27) */}
+      {estimatesWithTypo.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 mb-4">
+          <CardHeader>
+            <CardTitle className="text-amber-900 dark:text-amber-200 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Possible Contract Date Typos ({estimatesWithTypo.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {estimatesWithTypo.map(est => (
+                <div key={est.id || est.lmn_estimate_id} className="text-sm">
+                  <div className="font-medium text-amber-900 dark:text-amber-200">
+                    Estimate {est.estimate_number || est.lmn_estimate_id || est.id}
+                  </div>
+                  <div className="text-amber-700 dark:text-amber-300">
+                    {est.typoReason}
+                  </div>
+                  <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Start: {format(new Date(est.contract_start), 'MMM d, yyyy')} → 
+                    End: {format(new Date(est.contract_end), 'MMM d, yyyy')} 
+                    ({est.durationMonths} months, calculated as {est.contractYears} years)
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">

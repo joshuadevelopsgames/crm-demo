@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, autoAssignRevenueSegments, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
+import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
 import { useTestMode } from '@/contexts/TestModeContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -369,48 +369,6 @@ export default function Accounts() {
     createAccountMutation.mutate(accountData);
   };
 
-  // Recalculate all revenue segments
-  const recalculateSegmentsMutation = useMutation({
-    mutationFn: async () => {
-      // Group estimates by account_id for revenue calculation
-      const estimatesByAccountId = {};
-      allEstimates.forEach(est => {
-        if (est.account_id) {
-          if (!estimatesByAccountId[est.account_id]) {
-            estimatesByAccountId[est.account_id] = [];
-          }
-          estimatesByAccountId[est.account_id].push(est);
-        }
-      });
-      
-      // Calculate segments for all accounts using actual revenue from estimates
-      const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
-      
-      // Update ALL accounts to ensure every account has the correct segment
-      // This ensures accounts without segments get assigned, and accounts with wrong segments get corrected
-      const updates = updatedAccounts.map(account => 
-        base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
-      );
-      
-      await Promise.all(updates);
-      
-      return { updated: updates.length, total: accounts.length };
-    },
-    onSuccess: ({ updated, total }) => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast.success(`Revenue segments recalculated: All ${total} accounts now have segments assigned`);
-    },
-    onError: (error) => {
-      console.error('Error recalculating segments:', error);
-      toast.error(error.message || 'Failed to recalculate segments');
-    }
-  });
-
-  const handleRecalculateSegments = () => {
-    if (window.confirm('Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)? This will update all accounts.')) {
-      recalculateSegmentsMutation.mutate();
-    }
-  };
 
   // Handle snooze for at-risk accounts
   const handleSnooze = async (account, duration, unit) => {
@@ -464,7 +422,8 @@ export default function Accounts() {
       );
       
       return accounts.filter(account => {
-        const isArchived = account.status === 'archived' || account.archived === true;
+        // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
+        const isArchived = account.archived === true || account.status === 'archived';
         if (isArchived) return false;
         
         const isAtRisk = atRiskAccountIds.has(account.id);
@@ -702,16 +661,6 @@ export default function Accounts() {
               Import from LMN
             </Button>
           </TutorialTooltip>
-          <Button 
-            onClick={handleRecalculateSegments}
-            variant="outline"
-            disabled={recalculateSegmentsMutation.isPending}
-            className="border-slate-300"
-            title="Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${recalculateSegmentsMutation.isPending ? 'animate-spin' : ''}`} />
-            Recalculate Segments
-          </Button>
         </div>
       </div>
 
@@ -1072,7 +1021,8 @@ export default function Accounts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAccounts.map((account) => {
             const neglectStatus = getNeglectStatus(account.last_interaction_date);
-            const isArchived = account.status === 'archived' || account.archived === true;
+            // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
+        const isArchived = account.archived === true || account.status === 'archived';
             // Get at-risk data for this account
             const atRiskData = statusFilter === 'at_risk' 
               ? atRiskAccountsData.find(record => record.account_id === account.id)
@@ -1355,7 +1305,8 @@ export default function Accounts() {
                   <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredAccounts.map((account) => {
                       const neglectStatus = getNeglectStatus(account.last_interaction_date);
-                      const isArchived = account.status === 'archived' || account.archived === true;
+                      // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
+        const isArchived = account.archived === true || account.status === 'archived';
                       return (
                         <tr 
                           key={account.id} 
@@ -1435,7 +1386,8 @@ export default function Accounts() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAccounts.map((account) => {
                 const neglectStatus = getNeglectStatus(account.last_interaction_date);
-                const isArchived = account.status === 'archived' || account.archived === true;
+                // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
+        const isArchived = account.archived === true || account.status === 'archived';
                 return (
                 <Link key={account.id} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
                   <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>

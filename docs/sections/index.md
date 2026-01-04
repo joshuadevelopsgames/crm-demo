@@ -20,6 +20,21 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (diagnostic scripts exist, unit tests needed)
 
+### Accounts
+- **Name**: Accounts
+- **Slug**: `accounts`
+- **Spec Path**: `docs/sections/accounts.md`
+- **Primary Code Locations**:
+  - `src/pages/Accounts.jsx` - Main accounts listing page with filtering and sorting
+  - `src/pages/AccountDetail.jsx` - Individual account detail page
+  - `api/data/accounts.js` - API endpoint for CRUD operations
+  - `src/api/base44Client.js` - Client wrapper for account operations
+  - `src/utils/revenueSegmentCalculator.js` - Revenue calculation and segment assignment
+  - `src/components/account/TotalWork.jsx` - Contract duration and revenue display
+  - `src/components/ImportLeadsDialog.jsx` - Import with auto segment recalculation
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (test mode exists, unit tests needed)
+
 ---
 
 ## Adding New Sections

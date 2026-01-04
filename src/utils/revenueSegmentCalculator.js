@@ -71,6 +71,24 @@ function getContractYears(durationMonths) {
 }
 
 /**
+ * Detect potential data entry errors in contract dates
+ * Flags contracts where duration is exactly 1 month over an exact year boundary
+ * (e.g., 13 months, 25 months, 37 months)
+ * Per spec R24-R27: Typo detection is advisory only and does not change contract_years
+ * @param {number} durationMonths - Duration in months
+ * @param {number} contractYears - Calculated contract years
+ * @returns {boolean} - True if typo is detected
+ */
+export function detectContractTypo(durationMonths, contractYears) {
+  // Calculate remainder months
+  const remainderMonths = durationMonths % 12;
+  
+  // Typo detected if remainder is exactly 1 month (per spec R24)
+  // This catches: 13 months (1 year + 1), 25 months (2 years + 1), 37 months (3 years + 1), etc.
+  return remainderMonths === 1;
+}
+
+/**
  * Get the year an estimate applies to and its allocated value for the current year
  * Uses year-based calculation (not rolling 12 months): revenue allocated by calendar year
  * Priority for year determination (matching Excel logic):
@@ -94,23 +112,30 @@ function getEstimateYearData(estimate, currentYear) {
   const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
   const totalPriceNoTax = parseFloat(estimate.total_price);
   
-  // If total_price_with_tax is missing but total_price exists, this is an edge case that should be reported
+  // If total_price_with_tax is missing but total_price exists, use total_price as fallback (per spec R8, R9)
+  let totalPrice;
   if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
     if (totalPriceNoTax && totalPriceNoTax > 0) {
-      // Edge case: missing total_price_with_tax but total_price exists
-      // Log warning for debugging (only log first few to avoid spam)
+      // Use total_price as fallback
+      totalPrice = totalPriceNoTax;
+      
+      // Notify user once per session (per spec R9)
       if (typeof window !== 'undefined') {
-        if (!window.__missingTotalPriceWithTaxCount) window.__missingTotalPriceWithTaxCount = 0;
-        if (window.__missingTotalPriceWithTaxCount < 10) {
-          console.warn(`⚠️ [getEstimateYearData] Estimate ${estimate.id || estimate.lmn_estimate_id} missing total_price_with_tax but has total_price (${totalPriceNoTax}). Revenue calculation will be skipped. This may indicate a data import issue.`);
-          window.__missingTotalPriceWithTaxCount++;
+        if (!window.__totalPriceFallbackNotified) {
+          // Dynamic import to avoid circular dependencies
+          import('react-hot-toast').then(({ default: toast }) => {
+            toast.error('Some estimates are missing tax-inclusive prices. Using base price as fallback.');
+          });
+          window.__totalPriceFallbackNotified = true;
         }
       }
+    } else {
+      // No price data at all
+      return null;
     }
-    return null; // Don't calculate revenue if total_price_with_tax is missing
+  } else {
+    totalPrice = totalPriceWithTax;
   }
-  
-  const totalPrice = totalPriceWithTax;
   
   // Debug logging for test mode
   if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && currentYear === 2025) {
@@ -179,9 +204,16 @@ function getEstimateYearData(estimate, currentYear) {
       const yearsCount = getContractYears(durationMonths);
       const annualAmount = totalPrice / yearsCount;
       
+      // Detect typo (per spec R24-R27)
+      const hasTypo = detectContractTypo(durationMonths, yearsCount);
+      
       return {
         appliesToCurrentYear,
-        value: appliesToCurrentYear ? annualAmount : 0
+        value: appliesToCurrentYear ? annualAmount : 0,
+        durationMonths,        // Include for display
+        contractYears: yearsCount,  // Include for display
+        hasTypo,               // Typo flag
+        typoReason: hasTypo ? `Duration (${durationMonths} months) exceeds an exact ${yearsCount - 1} year boundary by one month. Possible date entry error.` : null
       };
     } else {
       // Single-year or no contract dates: use full price

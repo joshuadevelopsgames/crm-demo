@@ -29,6 +29,8 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
 import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
+import { base44 } from '@/api/base44Client';
+import { autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
 
 export default function Settings() {
   const { profile, user, isAdmin } = useUser();
@@ -45,6 +47,7 @@ export default function Settings() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
+  const [isRecalculatingSegments, setIsRecalculatingSegments] = useState(false);
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -280,6 +283,56 @@ export default function Settings() {
       setExportProgress(null);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleRecalculateSegments = async () => {
+    if (!window.confirm('Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)? This will update all accounts.')) {
+      return;
+    }
+
+    setIsRecalculatingSegments(true);
+    
+    try {
+      toast.loading('Recalculating revenue segments...', { id: 'recalculate-segments-toast' });
+      
+      // Fetch all accounts and estimates
+      const accounts = await base44.entities.Account.list();
+      const estimatesResponse = await fetch('/api/data/estimates');
+      if (!estimatesResponse.ok) throw new Error('Failed to fetch estimates');
+      const estimatesResult = await estimatesResponse.json();
+      const allEstimates = estimatesResult.success ? (estimatesResult.data || []) : [];
+      
+      // Group estimates by account_id
+      const estimatesByAccountId = {};
+      allEstimates.forEach(est => {
+        if (est.account_id) {
+          if (!estimatesByAccountId[est.account_id]) {
+            estimatesByAccountId[est.account_id] = [];
+          }
+          estimatesByAccountId[est.account_id].push(est);
+        }
+      });
+      
+      // Calculate segments for all accounts
+      const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
+      
+      // Update ALL accounts
+      const updates = updatedAccounts.map(account => 
+        base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
+      );
+      
+      await Promise.all(updates);
+      
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      
+      toast.success(`✓ Revenue segments recalculated: All ${accounts.length} accounts now have segments assigned`, { id: 'recalculate-segments-toast' });
+    } catch (error) {
+      console.error('Error recalculating segments:', error);
+      toast.error(error.message || 'Failed to recalculate segments', { id: 'recalculate-segments-toast' });
+    } finally {
+      setIsRecalculatingSegments(false);
     }
   };
 
@@ -597,6 +650,45 @@ export default function Settings() {
                   <>
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Refresh Notification Cache
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Revenue Segment Recalculation - Admin Only */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Revenue Segments
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months).
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Segments are automatically recalculated on import. Use this to manually trigger recalculation if needed.
+                </p>
+              </div>
+              
+              <Button
+                onClick={handleRecalculateSegments}
+                disabled={isRecalculatingSegments}
+                variant="outline"
+                className="border-slate-300 disabled:opacity-50"
+              >
+                {isRecalculatingSegments ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Recalculating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Recalculate Segments
                   </>
                 )}
               </Button>

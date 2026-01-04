@@ -1,233 +1,358 @@
-#!/usr/bin/env node
+/**
+ * Diagnostic script to analyze at-risk accounts calculation
+ * Shows why accounts are/aren't at-risk and which estimates are used
+ */
 
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { differenceInDays, startOfDay } from 'date-fns';
+import { startOfDay, differenceInDays } from 'date-fns';
 
-// Try to load .env file if it exists (for local development)
-try {
+// Load environment variables
+function loadEnv() {
   const envPath = join(process.cwd(), '.env');
   if (existsSync(envPath)) {
     const envContent = readFileSync(envPath, 'utf-8');
     envContent.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const [key, ...valueParts] = trimmed.split('=');
-        if (key && valueParts.length > 0) {
-          const value = valueParts.join('=').replace(/^[\"']|[\"']$/g, '');
-          if (!process.env[key]) process.env[key] = value;
+      const match = line.match(/^([^#=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = value;
         }
       }
     });
   }
-} catch (e) {
-  console.error('Error loading .env file:', e);
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+loadEnv();
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables or .env file.');
-  process.exit(1);
-}
+// Get Supabase client
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
-
-function calculateRenewalDate(estimates = []) {
-  if (!estimates || estimates.length === 0) {
-    return null;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
   }
 
-  // Filter to only won estimates with valid contract_end dates
-  const wonEstimatesWithEndDate = estimates
-    .filter(est => {
-      // Must be won status
-      if (est.status !== 'won') return false;
-      
-      // Must have contract_end date
-      if (!est.contract_end) return false;
-      
-      // Must be a valid date
-      const endDate = new Date(est.contract_end);
-      return !isNaN(endDate.getTime());
-    })
-    .map(est => ({
-      ...est,
-      contract_end_date: new Date(est.contract_end)
-    }));
-
-  if (wonEstimatesWithEndDate.length === 0) {
-    return null;
-  }
-
-  // Find the latest contract_end date
-  const latestEndDate = wonEstimatesWithEndDate.reduce((latest, est) => {
-    return est.contract_end_date > latest ? est.contract_end_date : latest;
-  }, wonEstimatesWithEndDate[0].contract_end_date);
-
-  return latestEndDate;
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }
 
-async function diagnoseAtRiskAccounts() {
-  console.log('🔍 Diagnosing at-risk accounts...\n');
+// Inline isWonStatus (same as atRiskCalculator.js)
+function isWonStatus(statusOrEstimate, pipelineStatus = null) {
+  let status, pipeline;
+  
+  if (typeof statusOrEstimate === 'object' && statusOrEstimate !== null) {
+    status = statusOrEstimate.status;
+    pipeline = statusOrEstimate.pipeline_status;
+  } else {
+    status = statusOrEstimate;
+    pipeline = pipelineStatus;
+  }
+  
+  if (pipeline) {
+    const pipelineLower = pipeline.toString().toLowerCase().trim();
+    if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+      return true;
+    }
+  }
+  
+  if (!status) return false;
+  const statusLower = status.toString().toLowerCase().trim();
+  const wonStatuses = [
+    'contract signed',
+    'work complete',
+    'billing complete',
+    'email contract award',
+    'verbal contract award',
+    'sold',
+    'won'
+  ];
+  return wonStatuses.includes(statusLower);
+}
 
-  try {
-    // Get all accounts
-    const { data: accounts, error: accountsError } = await supabase
-      .from('accounts')
-      .select('id, name, status, archived, renewal_date')
-      .eq('archived', false);
+const DAYS_THRESHOLD = 180;
 
-    if (accountsError) throw accountsError;
-
-    // Get all estimates
-    const { data: estimates, error: estimatesError } = await supabase
-      .from('estimates')
-      .select('id, account_id, status, contract_end');
-
-    if (estimatesError) throw estimatesError;
-
-    console.log(`📊 Found ${accounts.length} active accounts`);
-    console.log(`📋 Found ${estimates.length} estimates\n`);
-
-    const today = startOfDay(new Date());
-    
-    // Categorize accounts
-    const currentlyAtRisk = accounts.filter(a => a.status === 'at_risk');
-    const shouldBeAtRisk = [];
-    const incorrectlyRemoved = [];
-    const noRenewalDate = [];
-    const renewalPast = [];
-    const renewalTooFar = [];
-
-    for (const account of accounts) {
-      const accountEstimates = estimates.filter(est => est.account_id === account.id);
-      const renewalDate = calculateRenewalDate(accountEstimates);
-      
-      if (!renewalDate) {
-        // No renewal date
-        if (account.status === 'at_risk') {
-          noRenewalDate.push({
-            account,
-            reason: 'No won estimates with contract_end dates'
-          });
-        }
-        continue;
+async function diagnose() {
+  console.log('🔍 At-Risk Accounts Diagnostic\n');
+  console.log('='.repeat(80));
+  
+  const supabase = getSupabase();
+  
+  // Fetch data
+  console.log('\n📥 Fetching data...');
+  const [accountsRes, estimatesRes, snoozesRes] = await Promise.all([
+    supabase.from('accounts').select('*').eq('archived', false),
+    supabase.from('estimates').select('*').eq('archived', false),
+    supabase.from('notification_snoozes').select('*')
+  ]);
+  
+  if (accountsRes.error) throw accountsRes.error;
+  if (estimatesRes.error) throw estimatesRes.error;
+  if (snoozesRes.error) throw snoozesRes.error;
+  
+  const accounts = accountsRes.data || [];
+  const estimates = estimatesRes.data || [];
+  const snoozes = snoozesRes.data || [];
+  
+  console.log(`✅ Fetched ${accounts.length} accounts, ${estimates.length} estimates, ${snoozes.length} snoozes\n`);
+  
+  // Group estimates by account
+  const estimatesByAccount = new Map();
+  estimates.forEach(est => {
+    if (!est.account_id) return;
+    if (!estimatesByAccount.has(est.account_id)) {
+      estimatesByAccount.set(est.account_id, []);
+    }
+    estimatesByAccount.get(est.account_id).push(est);
+  });
+  
+  // Create snooze lookup
+  const today = startOfDay(new Date());
+  const snoozeMap = new Map();
+  snoozes.forEach(snooze => {
+    if (snooze.notification_type === 'renewal_reminder' && snooze.related_account_id) {
+      const snoozedUntil = new Date(snooze.snoozed_until);
+      if (snoozedUntil > today) {
+        snoozeMap.set(snooze.related_account_id, snoozedUntil);
       }
-
-      const renewalDateStart = startOfDay(renewalDate);
-      const daysUntilRenewal = differenceInDays(renewalDateStart, today);
-      const shouldBeAtRiskBasedOnRenewal = daysUntilRenewal >= 0 && daysUntilRenewal <= 180;
-
-      if (shouldBeAtRiskBasedOnRenewal) {
-        shouldBeAtRisk.push({
-          account,
-          renewalDate: renewalDate.toISOString(),
-          daysUntilRenewal
-        });
-
-        // Check if it was incorrectly removed
-        if (account.status !== 'at_risk') {
-          incorrectlyRemoved.push({
-            account,
-            renewalDate: renewalDate.toISOString(),
-            daysUntilRenewal,
-            currentStatus: account.status
+    }
+  });
+  
+  // Diagnostic data
+  const stats = {
+    totalAccounts: accounts.length,
+    archivedAccounts: 0,
+    snoozedAccounts: 0,
+    accountsWithEstimates: 0,
+    accountsWithWonEstimates: 0,
+    accountsWithWonEstimatesWithEndDate: 0,
+    estimatesInWindow: 0,
+    estimatesPastDue: 0,
+    estimatesTooFar: 0,
+    accountsWithRenewals: 0,
+    atRiskAccounts: 0
+  };
+  
+  const accountDetails = [];
+  
+  // Process each account
+  accounts.forEach(account => {
+    if (account.archived) {
+      stats.archivedAccounts++;
+      return;
+    }
+    
+    if (snoozeMap.has(account.id)) {
+      stats.snoozedAccounts++;
+      return;
+    }
+    
+    const accountEstimates = estimatesByAccount.get(account.id) || [];
+    if (accountEstimates.length === 0) return;
+    
+    stats.accountsWithEstimates++;
+    
+    // Filter won estimates
+    const wonEstimates = accountEstimates.filter(est => isWonStatus(est));
+    if (wonEstimates.length === 0) return;
+    
+    stats.accountsWithWonEstimates++;
+    
+    // Filter won estimates with contract_end
+    const wonEstimatesWithEndDate = wonEstimates.filter(est => est.contract_end);
+    if (wonEstimatesWithEndDate.length === 0) return;
+    
+    stats.accountsWithWonEstimatesWithEndDate++;
+    
+    const accountDetail = {
+      accountId: account.id,
+      accountName: account.name,
+      totalEstimates: accountEstimates.length,
+      wonEstimates: wonEstimates.length,
+      wonEstimatesWithEndDate: wonEstimatesWithEndDate.length,
+      estimatesInWindow: [],
+      estimatesPastDue: [],
+      estimatesTooFar: [],
+      hasRenewal: false,
+      renewalEstimate: null,
+      atRiskEstimate: null,
+      isAtRisk: false,
+      reason: null
+    };
+    
+    // Check each won estimate with end date
+    wonEstimatesWithEndDate.forEach(est => {
+      try {
+        const renewalDate = startOfDay(new Date(est.contract_end));
+        if (isNaN(renewalDate.getTime())) return;
+        
+        const daysUntil = differenceInDays(renewalDate, today);
+        
+        if (daysUntil < 0) {
+          stats.estimatesPastDue++;
+          accountDetail.estimatesPastDue.push({
+            id: est.id,
+            estimate_number: est.estimate_number || est.lmn_estimate_id,
+            contract_end: est.contract_end,
+            daysUntil,
+            division: est.division,
+            address: est.address
           });
-        }
-      } else if (account.status === 'at_risk') {
-        // Account is at_risk but shouldn't be based on renewal
-        if (daysUntilRenewal < 0) {
-          renewalPast.push({
-            account,
-            renewalDate: renewalDate.toISOString(),
-            daysUntilRenewal
+        } else if (daysUntil > DAYS_THRESHOLD) {
+          stats.estimatesTooFar++;
+          accountDetail.estimatesTooFar.push({
+            id: est.id,
+            estimate_number: est.estimate_number || est.lmn_estimate_id,
+            contract_end: est.contract_end,
+            daysUntil,
+            division: est.division,
+            address: est.address
           });
         } else {
-          renewalTooFar.push({
-            account,
-            renewalDate: renewalDate.toISOString(),
-            daysUntilRenewal
+          stats.estimatesInWindow++;
+          accountDetail.estimatesInWindow.push({
+            id: est.id,
+            estimate_number: est.estimate_number || est.lmn_estimate_id,
+            contract_end: est.contract_end,
+            daysUntil,
+            division: est.division,
+            address: est.address
           });
         }
+      } catch (error) {
+        console.error(`Error processing estimate ${est.id}:`, error);
       }
-    }
-
-    // Print summary
-    console.log('══════════════════════════════════════════════════');
-    console.log('📊 AT-RISK ACCOUNT DIAGNOSIS');
-    console.log('══════════════════════════════════════════════════\n');
-
-    console.log(`🔴 Currently marked as at_risk: ${currentlyAtRisk.length}`);
-    if (currentlyAtRisk.length > 0) {
-      currentlyAtRisk.forEach(a => {
-        console.log(`   - ${a.name} (${a.status})`);
-      });
-    }
-
-    console.log(`\n✅ Should be at_risk (based on renewal dates): ${shouldBeAtRisk.length}`);
-    if (shouldBeAtRisk.length > 0) {
-      shouldBeAtRisk.slice(0, 10).forEach(({ account, daysUntilRenewal }) => {
-        console.log(`   - ${account.name} (${account.status}) - Renewal in ${daysUntilRenewal} days`);
-      });
-      if (shouldBeAtRisk.length > 10) {
-        console.log(`   ... and ${shouldBeAtRisk.length - 10} more`);
+    });
+    
+    // Check for renewals (newer estimate with same dept + address, > 180 days)
+    if (accountDetail.estimatesInWindow.length > 0) {
+      const atRiskEst = accountDetail.estimatesInWindow[0];
+      const atRiskDept = (atRiskEst.division || '').trim().toLowerCase();
+      const atRiskAddress = (atRiskEst.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      
+      if (atRiskDept && atRiskAddress) {
+        // Look for renewal
+        const renewalEst = wonEstimatesWithEndDate.find(est => {
+          if (!est.contract_end) return false;
+          
+          const estDept = (est.division || '').trim().toLowerCase();
+          const estAddress = (est.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
+          
+          if (estDept !== atRiskDept || estAddress !== atRiskAddress) return false;
+          
+          const estDate = new Date(est.contract_end);
+          const atRiskDate = new Date(atRiskEst.contract_end);
+          if (estDate <= atRiskDate) return false;
+          
+          const estRenewalDate = startOfDay(estDate);
+          const daysUntil = differenceInDays(estRenewalDate, today);
+          
+          return daysUntil > DAYS_THRESHOLD;
+        });
+        
+        if (renewalEst) {
+          accountDetail.hasRenewal = true;
+          accountDetail.renewalEstimate = {
+            id: renewalEst.id,
+            estimate_number: renewalEst.estimate_number || renewalEst.lmn_estimate_id,
+            contract_end: renewalEst.contract_end,
+            division: renewalEst.division,
+            address: renewalEst.address
+          };
+          accountDetail.reason = 'Has renewal estimate';
+        } else {
+          // Find soonest expiring estimate
+          const soonest = accountDetail.estimatesInWindow.reduce((soonest, est) => {
+            const soonestDate = new Date(soonest.contract_end);
+            const estDate = new Date(est.contract_end);
+            return estDate < soonestDate ? est : soonest;
+          });
+          
+          accountDetail.atRiskEstimate = soonest;
+          accountDetail.isAtRisk = true;
+          stats.atRiskAccounts++;
+          accountDetail.reason = 'At-risk (0-180 days, no renewal)';
+        }
+      } else {
+        accountDetail.reason = 'Missing division or address';
       }
+    } else if (accountDetail.estimatesPastDue.length > 0) {
+      accountDetail.reason = 'All estimates are past due (excluded per R6a)';
+    } else if (accountDetail.estimatesTooFar.length > 0) {
+      accountDetail.reason = 'All estimates are > 180 days away';
+    } else {
+      accountDetail.reason = 'No won estimates with contract_end';
     }
-
-    console.log(`\n⚠️  INCORRECTLY REMOVED (should be at_risk but aren't): ${incorrectlyRemoved.length}`);
-    if (incorrectlyRemoved.length > 0) {
-      incorrectlyRemoved.forEach(({ account, daysUntilRenewal, currentStatus }) => {
-        console.log(`   - ${account.name} (currently: ${currentStatus}) - Renewal in ${daysUntilRenewal} days`);
-      });
+    
+    accountDetails.push(accountDetail);
+  });
+  
+  // Print summary
+  console.log('\n📊 SUMMARY STATISTICS');
+  console.log('='.repeat(80));
+  console.log(`Total Accounts: ${stats.totalAccounts}`);
+  console.log(`  - Archived: ${stats.archivedAccounts}`);
+  console.log(`  - Snoozed: ${stats.snoozedAccounts}`);
+  console.log(`  - With Estimates: ${stats.accountsWithEstimates}`);
+  console.log(`  - With Won Estimates: ${stats.accountsWithWonEstimates}`);
+  console.log(`  - With Won Estimates (with contract_end): ${stats.accountsWithWonEstimatesWithEndDate}`);
+  console.log(`\nEstimate Breakdown:`);
+  console.log(`  - In Window (0-180 days): ${stats.estimatesInWindow}`);
+  console.log(`  - Past Due (< 0 days): ${stats.estimatesPastDue}`);
+  console.log(`  - Too Far (> 180 days): ${stats.estimatesTooFar}`);
+  console.log(`\n✅ At-Risk Accounts: ${stats.atRiskAccounts}`);
+  console.log(`❌ Excluded (have renewals): ${stats.accountsWithRenewals}`);
+  
+  // Print at-risk accounts
+  console.log('\n\n🎯 AT-RISK ACCOUNTS (7 expected)');
+  console.log('='.repeat(80));
+  const atRisk = accountDetails.filter(a => a.isAtRisk);
+  atRisk.forEach((account, idx) => {
+    console.log(`\n${idx + 1}. ${account.accountName} (${account.accountId})`);
+    console.log(`   Estimate: ${account.atRiskEstimate.estimate_number || account.atRiskEstimate.id}`);
+    console.log(`   Contract End: ${account.atRiskEstimate.contract_end}`);
+    console.log(`   Days Until: ${account.atRiskEstimate.daysUntil}`);
+    console.log(`   Division: ${account.atRiskEstimate.division || 'N/A'}`);
+    console.log(`   Address: ${account.atRiskEstimate.address || 'N/A'}`);
+    console.log(`   Total Won Estimates: ${account.wonEstimates}`);
+    console.log(`   Won Estimates with End Date: ${account.wonEstimatesWithEndDate}`);
+  });
+  
+  // Print excluded accounts (sample)
+  console.log('\n\n❌ EXCLUDED ACCOUNTS (Sample - first 10)');
+  console.log('='.repeat(80));
+  const excluded = accountDetails.filter(a => !a.isAtRisk && a.wonEstimatesWithEndDate > 0).slice(0, 10);
+  excluded.forEach((account, idx) => {
+    console.log(`\n${idx + 1}. ${account.accountName} (${account.accountId})`);
+    console.log(`   Reason: ${account.reason}`);
+    if (account.estimatesPastDue.length > 0) {
+      console.log(`   Past Due Estimates: ${account.estimatesPastDue.length}`);
     }
-
-    console.log(`\n📅 At_risk but renewal date passed: ${renewalPast.length}`);
-    if (renewalPast.length > 0) {
-      renewalPast.slice(0, 5).forEach(({ account, daysUntilRenewal }) => {
-        console.log(`   - ${account.name} - Renewal was ${Math.abs(daysUntilRenewal)} days ago`);
-      });
+    if (account.estimatesTooFar.length > 0) {
+      console.log(`   Too Far Estimates: ${account.estimatesTooFar.length}`);
     }
-
-    console.log(`\n📅 At_risk but renewal > 6 months away: ${renewalTooFar.length}`);
-    if (renewalTooFar.length > 0) {
-      renewalTooFar.slice(0, 5).forEach(({ account, daysUntilRenewal }) => {
-        console.log(`   - ${account.name} - Renewal in ${daysUntilRenewal} days`);
-      });
+    if (account.hasRenewal) {
+      console.log(`   Renewal Estimate: ${account.renewalEstimate.estimate_number || account.renewalEstimate.id}`);
+      console.log(`   Renewal Date: ${account.renewalEstimate.contract_end}`);
     }
-
-    console.log(`\n❓ At_risk but no renewal date: ${noRenewalDate.length}`);
-    if (noRenewalDate.length > 0) {
-      noRenewalDate.forEach(({ account, reason }) => {
-        console.log(`   - ${account.name} - ${reason}`);
-      });
-    }
-
-    console.log('\n══════════════════════════════════════════════════');
-    console.log('💡 SUMMARY');
-    console.log('══════════════════════════════════════════════════');
-    console.log(`Total accounts that SHOULD be at_risk: ${shouldBeAtRisk.length}`);
-    console.log(`Total accounts currently at_risk: ${currentlyAtRisk.length}`);
-    console.log(`Accounts incorrectly removed: ${incorrectlyRemoved.length}`);
-    console.log(`Accounts at_risk but shouldn't be (renewal-based): ${renewalPast.length + renewalTooFar.length}`);
-    console.log(`Accounts at_risk with no renewal date: ${noRenewalDate.length}`);
-
-    if (incorrectlyRemoved.length > 0) {
-      console.log('\n⚠️  WARNING: Some accounts that should be at_risk have been incorrectly removed!');
-      console.log('   These accounts will be restored when createRenewalNotifications() runs.');
-    }
-
-  } catch (error) {
-    console.error('❌ Error diagnosing at-risk accounts:', error);
+  });
+  
+  if (excluded.length < accountDetails.filter(a => !a.isAtRisk && a.wonEstimatesWithEndDate > 0).length) {
+    console.log(`\n... and ${accountDetails.filter(a => !a.isAtRisk && a.wonEstimatesWithEndDate > 0).length - excluded.length} more excluded accounts`);
   }
+  
+  console.log('\n\n✅ Diagnostic complete!\n');
 }
 
-diagnoseAtRiskAccounts();
-
+diagnose().catch(error => {
+  console.error('❌ Error:', error);
+  process.exit(1);
+});
