@@ -153,11 +153,12 @@ export default function NotificationBell() {
     },
     enabled: !!currentUser?.id && !userLoading,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     refetchInterval: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnMount: true, // Always refetch on mount to get latest cache data
+    refetchOnWindowFocus: true, // Refetch when window regains focus to get latest cache
     refetchOnReconnect: true,
+    placeholderData: (previousData) => previousData, // Keep previous data while refetching
   });
   
   // Set up Supabase Realtime subscriptions for instant updates
