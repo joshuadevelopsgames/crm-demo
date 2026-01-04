@@ -241,8 +241,8 @@ function getEstimateYearData(estimate, currentYear) {
   };
 }
 
-// Import getCurrentYear from test mode context
-import { getCurrentYear } from '@/contexts/TestModeContext';
+// Import getCurrentYear from year selector context
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 // Use the exported getCurrentYear function which respects test mode
 function getCurrentYearForCalculation() {

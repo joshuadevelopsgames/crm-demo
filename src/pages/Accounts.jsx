@@ -45,22 +45,29 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
-import { useTestMode } from '@/contexts/TestModeContext';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import { snoozeNotification } from '@/services/notificationService';
 
 export default function Accounts() {
-  // Use test mode to trigger re-render when test mode changes
-  const { isTestMode, getCurrentYear } = useTestMode();
+  // Use year selector to trigger re-render when year changes
+  const { selectedYear, setYear, getCurrentYear } = useYearSelector();
   const navigate = useNavigate();
   
-  // Debug: Log test mode status
+  // Generate year options (current year ± 5 years)
+  const baseYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let i = -5; i <= 5; i++) {
+    yearOptions.push(baseYear + i);
+  }
+
+  // Debug: Log year selection status
   useEffect(() => {
     const currentYear = getCurrentYear();
-    console.log('[Accounts] Test mode active:', isTestMode, 'Current year:', currentYear);
-  }, [isTestMode, getCurrentYear]);
+    console.log('[Accounts] Selected year:', selectedYear, 'Current year:', getCurrentYear());
+  }, [selectedYear, getCurrentYear]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -320,8 +327,8 @@ export default function Accounts() {
       }
     });
     
-    // Debug: Log estimate grouping when test mode is active
-    if (isTestMode) {
+    // Debug: Log estimate grouping
+    if (process.env.NODE_ENV === 'development') {
       const wonEstimates = allEstimates.filter(e => e.status?.toLowerCase() === 'won');
       console.log('[Accounts] Grouped estimates:', {
         totalEstimates: allEstimates.length,
@@ -353,7 +360,7 @@ export default function Accounts() {
     }
     
     return grouped;
-  }, [allEstimates, isTestMode]);
+  }, [allEstimates]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -663,6 +670,23 @@ export default function Accounts() {
         </TutorialTooltip>
         <div className="flex items-center gap-3">
           <TutorialTooltip
+            tip="Select the year to view site-wide data. Revenue calculations, segments, and reports will use this year. Your selection persists across sessions."
+            position="bottom"
+          >
+            <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue>{selectedYear}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TutorialTooltip>
+          <TutorialTooltip
             tip="Import accounts and contacts from LMN (golmn.com) by uploading CSV files. This creates new accounts and contacts with all their data (names, emails, phone numbers, etc.). Use this when you have new leads or want to bulk import data from your LMN system. The import will match existing accounts or create new ones."
             step={2}
             position="bottom"
@@ -956,8 +980,8 @@ export default function Accounts() {
                             const estimates = estimatesByAccountId[account.id] || [];
                             const revenue = getAccountRevenue(account, estimates);
                             
-                            // Debug logging for test mode - log first 5 accounts
-                            if (isTestMode) {
+                            // Debug logging - log first 5 accounts
+                            if (process.env.NODE_ENV === 'development') {
                               const accountIndex = filteredAccounts.findIndex(a => a.id === account.id);
                               if (accountIndex < 5) {
                                 console.log(`[Accounts Table Row ${accountIndex}]`, {
