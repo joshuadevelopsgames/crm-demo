@@ -12,9 +12,52 @@
  */
 
 import { startOfDay, differenceInDays } from 'date-fns';
-import { isWonStatus } from './reportCalculations';
 
 const DAYS_THRESHOLD = 180;
+
+/**
+ * Check if an estimate has a "won" status
+ * Inlined from reportCalculations.js to avoid serverless import issues
+ * @param {Object|string} statusOrEstimate - Estimate object or status string
+ * @param {string} pipelineStatus - Optional pipeline status (if first param is string)
+ * @returns {boolean} True if estimate is won
+ */
+function isWonStatus(statusOrEstimate, pipelineStatus = null) {
+  let status, pipeline;
+  
+  // Support both: isWonStatus(estimate) or isWonStatus(status, pipelineStatus)
+  if (typeof statusOrEstimate === 'object' && statusOrEstimate !== null) {
+    // First param is an estimate object
+    status = statusOrEstimate.status;
+    pipeline = statusOrEstimate.pipeline_status;
+  } else {
+    // First param is a status string
+    status = statusOrEstimate;
+    pipeline = pipelineStatus;
+  }
+  
+  // Check pipeline_status first (LMN's primary indicator for "Sold")
+  if (pipeline) {
+    const pipelineLower = pipeline.toString().toLowerCase().trim();
+    if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+      return true;
+    }
+  }
+  
+  // Check status field
+  if (!status) return false;
+  const statusLower = status.toString().toLowerCase().trim();
+  const wonStatuses = [
+    'contract signed',
+    'work complete',
+    'billing complete',
+    'email contract award',
+    'verbal contract award',
+    'sold', // LMN uses "Sold" as a won status
+    'won' // Also support our simplified 'won' status
+  ];
+  return wonStatuses.includes(statusLower);
+}
 
 /**
  * Normalize address for comparison (handles variations)
