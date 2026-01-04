@@ -177,13 +177,33 @@ export default async function handler(req, res) {
         // #endregion
         if (error) {
           // Provide helpful error message if table doesn't exist
-          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST204')) {
+          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.message.includes('does not exist') || error.code === 'PGRST204')) {
+            console.error('notifications table not found:', error);
             return res.status(500).json({
               success: false,
-              error: 'notifications table not found. Please create the table in Supabase first.'
+              error: 'notifications table not found. Please create the table in Supabase first.',
+              details: error.message
             });
           }
-          throw error;
+          // Log the full error for debugging
+          console.error('Error creating notification:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            notificationData: {
+              type: notificationData.type,
+              user_id: notificationData.user_id,
+              hasRelatedTaskId: !!notificationData.related_task_id,
+              hasRelatedAccountId: !!notificationData.related_account_id
+            }
+          });
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to create notification',
+            code: error.code,
+            details: error.details
+          });
         }
         
         return res.status(201).json({
