@@ -718,12 +718,7 @@ export default function Dashboard() {
             <CardContent>
               <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Renewing within 6 months</p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {/* #region agent log */}
-                {(() => {
-                  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:633',message:'Render at-risk accounts',data:{atRiskRenewalsLength:atRiskRenewals.length,accountsLength:accounts.length,estimatesLength:estimates.length,firstFiveAccountIds:atRiskRenewals.slice(0,5).map(a=>a.id),firstFiveAccountNames:atRiskRenewals.slice(0,5).map(a=>a.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                  return null;
-                })()}
-                {/* #endregion */}
+                {/* Debug logging removed - estimates no longer needed for at-risk calculation */}
                   {atRiskRenewals.slice(0, 5).map(account => {
                     // Check if this account has duplicate estimates
                     const hasDuplicates = account.has_duplicates || duplicateEstimates.some(dup => dup.account_id === account.id);
