@@ -958,7 +958,7 @@ export default function Dashboard() {
             <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Accounts in sequences</p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {(Array.isArray(sequencesRaw) ? sequencesRaw : []).filter(s => s.status === 'active').slice(0, 5).map(enrollment => {
-                const account = accounts.find(a => a.id === enrollment.account_id);
+                const account = accountsArray.find(a => a.id === enrollment.account_id);
                 return (
                   <div
                     key={enrollment.id}
