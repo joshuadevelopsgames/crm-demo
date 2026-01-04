@@ -40,17 +40,29 @@ export default async function handler(req, res) {
   }
   
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:42',message:'API handler entry',data:{method:req.method,type:req.query?.type,hasUserId:!!req.query?.user_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const supabase = getSupabaseClient();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:45',message:'Supabase client created',data:{hasClient:!!supabase,hasUrl:!!process.env.SUPABASE_URL,hasKey:!!process.env.SUPABASE_SERVICE_ROLE_KEY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     const { user_id, type } = req.query;
     
     if (type === 'at-risk-accounts') {
       // Return cached at-risk accounts
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:50',message:'Querying notification_cache',data:{cache_key:'at-risk-accounts'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const { data: cache, error } = await supabase
         .from('notification_cache')
         .select('*')
         .eq('cache_key', 'at-risk-accounts')
         .single();
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:58',message:'Cache query result',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,hasData:!!cache,hasExpiresAt:!!cache?.expires_at},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching at-risk accounts cache:', error);
         return res.status(500).json({ success: false, error: error.message });
@@ -105,12 +117,18 @@ export default async function handler(req, res) {
     
     if (type === 'duplicate-estimates') {
       // Get unresolved duplicate estimates
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:108',message:'Querying duplicate_at_risk_estimates',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       const { data: duplicates, error } = await supabase
         .from('duplicate_at_risk_estimates')
         .select('*')
         .is('resolved_at', null)
         .order('detected_at', { ascending: false });
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:116',message:'Duplicate estimates query result',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,hasData:!!duplicates,dataLength:duplicates?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (error) {
         console.error('Error fetching duplicate estimates:', error);
         return res.status(500).json({ success: false, error: error.message });
@@ -200,6 +218,9 @@ export default async function handler(req, res) {
     });
     
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/notifications.js:202',message:'API handler error',data:{errorMessage:error?.message,errorStack:error?.stack?.substring(0,200),errorName:error?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     console.error('Error in notifications API:', error);
     return res.status(500).json({ 
       success: false, 

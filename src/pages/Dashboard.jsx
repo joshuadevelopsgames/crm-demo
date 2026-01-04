@@ -189,17 +189,29 @@ export default function Dashboard() {
   const { data: atRiskAccountsData = [], isLoading: atRiskAccountsLoading } = useQuery({
     queryKey: ['at-risk-accounts'],
     queryFn: async () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:192',message:'Fetching at-risk accounts',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       const response = await fetch('/api/notifications?type=at-risk-accounts');
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:195',message:'At-risk accounts response',data:{ok:response.ok,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       if (!response.ok) {
         console.error('❌ Failed to fetch at-risk accounts:', response.status, response.statusText);
         return [];
       }
       const result = await response.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:202',message:'At-risk accounts result',data:{success:result.success,hasData:!!result.data,isArray:Array.isArray(result.data),dataType:typeof result.data,dataLength:result.data?.length,error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       if (!result.success) {
         console.error('❌ At-risk accounts API returned error:', result.error);
         return [];
       }
       const data = result.data || [];
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:207',message:'At-risk accounts final data',data:{isArray:Array.isArray(data),length:data.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       console.log('✅ Fetched at-risk accounts:', data.length, 'accounts');
       return data;
     },
@@ -317,7 +329,13 @@ export default function Dashboard() {
   // Process notifications to get counts that match the notification bell
   // This ensures dashboard badge counts always match notification bell counts
   const notificationCounts = useMemo(() => {
-    if (!allNotificationsRaw || allNotificationsRaw.length === 0) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:331',message:'notificationCounts useMemo entry',data:{hasAllNotificationsRaw:!!allNotificationsRaw,isArray:Array.isArray(allNotificationsRaw),type:typeof allNotificationsRaw,length:allNotificationsRaw?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
+    if (!Array.isArray(allNotificationsRaw) || allNotificationsRaw.length === 0) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:334',message:'notificationCounts early return',data:{reason:!Array.isArray(allNotificationsRaw)?'not-array':'empty'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
       return { neglected_account: 0, renewal_reminder: 0 };
     }
     
