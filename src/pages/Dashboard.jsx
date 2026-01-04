@@ -326,11 +326,11 @@ export default function Dashboard() {
     // Filter out snoozed notifications (same logic as NotificationBell)
     const activeNotifications = allNotificationsRaw.filter(notification => {
       // Check if this notification is snoozed
-      if (!notificationSnoozes || !Array.isArray(notificationSnoozes)) {
+      if (!snoozes || snoozes.length === 0) {
         return true; // If snoozes not loaded, include all
       }
       
-      const isSnoozed = notificationSnoozes.some(snooze => {
+      const isSnoozed = snoozes.some(snooze => {
         // Type must match
         if (snooze.notification_type !== notification.type) return false;
         
@@ -386,11 +386,16 @@ export default function Dashboard() {
   // Note: atRiskRenewals is calculated below, so we'll use that length
   const myTasks = tasks.filter(t => t.status !== 'completed').length;
   
-  // At-risk accounts from the dedicated table
-  // The table is automatically maintained by database triggers
-  // Accounts are removed when snoozed and re-added when snooze expires (if still at-risk)
+  // At-risk accounts from the unified API
+  // The cache is automatically maintained by background job every 5 minutes
   const atRiskRenewals = useMemo(() => {
-    if (!atRiskAccountsData || atRiskAccountsData.length === 0) {
+    // Ensure atRiskAccountsData is an array
+    if (!Array.isArray(atRiskAccountsData) || atRiskAccountsData.length === 0) {
+      return [];
+    }
+    
+    // Ensure accounts is an array
+    if (!Array.isArray(accounts) || accounts.length === 0) {
       return [];
     }
     
@@ -410,7 +415,9 @@ export default function Dashboard() {
           calculated_renewal_date: atRiskRecord.renewal_date,
           days_until_renewal: atRiskRecord.days_until_renewal,
           expiring_estimate_id: atRiskRecord.expiring_estimate_id,
-          expiring_estimate_number: atRiskRecord.expiring_estimate_number
+          expiring_estimate_number: atRiskRecord.expiring_estimate_number,
+          has_duplicates: atRiskRecord.has_duplicates || false,
+          duplicate_estimates: atRiskRecord.duplicate_estimates || []
         };
       })
       .filter(Boolean) // Remove null entries
