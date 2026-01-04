@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { calculateAtRiskAccounts, calculateNeglectedAccounts } from '../../../src/utils/atRiskCalculator.js';
+import { calculateAtRiskAccounts, calculateNeglectedAccounts } from '../../src/utils/atRiskCalculator.js';
 
 // Get Supabase service client (for data operations)
 function getSupabaseService() {
@@ -134,15 +134,25 @@ export default async function handler(req, res) {
     console.log(`🔄 Admin ${user.email} manually refreshing notification cache...`);
 
     // 1. Fetch all accounts and estimates
+    console.log('📥 Fetching data from Supabase...');
     const [accountsRes, estimatesRes, snoozesRes] = await Promise.all([
       supabase.from('accounts').select('*').eq('archived', false),
       supabase.from('estimates').select('*').eq('archived', false),
       supabase.from('notification_snoozes').select('*')
     ]);
     
-    if (accountsRes.error) throw accountsRes.error;
-    if (estimatesRes.error) throw estimatesRes.error;
-    if (snoozesRes.error) throw snoozesRes.error;
+    if (accountsRes.error) {
+      console.error('❌ Error fetching accounts:', accountsRes.error);
+      throw new Error(`Failed to fetch accounts: ${accountsRes.error.message}`);
+    }
+    if (estimatesRes.error) {
+      console.error('❌ Error fetching estimates:', estimatesRes.error);
+      throw new Error(`Failed to fetch estimates: ${estimatesRes.error.message}`);
+    }
+    if (snoozesRes.error) {
+      console.error('❌ Error fetching snoozes:', snoozesRes.error);
+      throw new Error(`Failed to fetch snoozes: ${snoozesRes.error.message}`);
+    }
     
     const accounts = accountsRes.data || [];
     const estimates = estimatesRes.data || [];
@@ -151,17 +161,34 @@ export default async function handler(req, res) {
     console.log(`📊 Fetched ${accounts.length} accounts, ${estimates.length} estimates, ${snoozes.length} snoozes`);
     
     // 2. Calculate at-risk accounts (with renewal detection)
-    const { atRiskAccounts, duplicateEstimates } = calculateAtRiskAccounts(accounts, estimates, snoozes);
+    console.log('🧮 Calculating at-risk accounts...');
+    let atRiskAccounts, duplicateEstimates;
+    try {
+      const result = calculateAtRiskAccounts(accounts, estimates, snoozes);
+      atRiskAccounts = result.atRiskAccounts;
+      duplicateEstimates = result.duplicateEstimates;
+    } catch (calcError) {
+      console.error('❌ Error calculating at-risk accounts:', calcError);
+      throw new Error(`Failed to calculate at-risk accounts: ${calcError.message}`);
+    }
     
     // 3. Calculate neglected accounts
-    const neglectedAccounts = calculateNeglectedAccounts(accounts, snoozes);
+    console.log('🧮 Calculating neglected accounts...');
+    let neglectedAccounts;
+    try {
+      neglectedAccounts = calculateNeglectedAccounts(accounts, snoozes);
+    } catch (calcError) {
+      console.error('❌ Error calculating neglected accounts:', calcError);
+      throw new Error(`Failed to calculate neglected accounts: ${calcError.message}`);
+    }
     
     console.log(`✅ Calculated ${atRiskAccounts.length} at-risk accounts, ${neglectedAccounts.length} neglected accounts, ${duplicateEstimates.length} duplicate estimate groups`);
     
     // 4. Update cache
+    console.log('💾 Updating notification cache...');
     const cacheExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min from now
     
-    await Promise.all([
+    const [atRiskCacheRes, neglectedCacheRes] = await Promise.all([
       // At-risk accounts cache
       supabase.from('notification_cache').upsert({
         cache_key: 'at-risk-accounts',
@@ -190,6 +217,17 @@ export default async function handler(req, res) {
         onConflict: 'cache_key'
       })
     ]);
+    
+    if (atRiskCacheRes.error) {
+      console.error('❌ Error updating at-risk cache:', atRiskCacheRes.error);
+      throw new Error(`Failed to update at-risk cache: ${atRiskCacheRes.error.message}`);
+    }
+    if (neglectedCacheRes.error) {
+      console.error('❌ Error updating neglected cache:', neglectedCacheRes.error);
+      throw new Error(`Failed to update neglected cache: ${neglectedCacheRes.error.message}`);
+    }
+    
+    console.log('✅ Cache updated successfully');
     
     // 5. Handle duplicate estimates (bad data)
     let duplicateInsertCount = 0;
@@ -244,9 +282,16 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('❌ Error refreshing cache:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      cause: error.cause
+    });
     return res.status(500).json({ 
       success: false,
-      error: error.message,
+      error: error.message || 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       timestamp: new Date().toISOString()
     });
   }
