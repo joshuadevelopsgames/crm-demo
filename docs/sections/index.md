@@ -77,6 +77,19 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: None (shared infrastructure, tested via at-risk and neglected accounts)
 
+### Revenue Logic
+- **Name**: Revenue Logic
+- **Slug**: `revenue-logic`
+- **Spec Path**: `docs/sections/revenue-logic.md`
+- **Primary Code Locations**:
+  - `src/utils/revenueSegmentCalculator.js` - Core revenue calculation, annualization, segment assignment
+  - `src/components/account/TotalWork.jsx` - Revenue display with breakdown
+  - `src/pages/Accounts.jsx` - Revenue column display
+  - `src/utils/lmnMergeData.js` - annual_revenue calculation during import
+  - `src/contexts/TestModeContext.jsx` - Current year determination (to be replaced with year selector)
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (test mode exists, unit tests needed)
+
 ---
 
 ## Adding New Sections
