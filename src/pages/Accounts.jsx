@@ -100,14 +100,22 @@ export default function Accounts() {
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
-    enabled: !userLoading && !!user // Wait for user to load before fetching
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
+    placeholderData: (previousData) => previousData, // Keep previous data while refetching
   });
 
   // Fetch contacts to check which accounts have contacts
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts'],
     queryFn: () => base44.entities.Contact.list(),
-    enabled: !userLoading && !!user // Wait for user to load before fetching
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   // Create a map of account IDs that have contacts
@@ -132,9 +140,11 @@ export default function Accounts() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     },
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    enabled: !userLoading && !!user // Wait for user to load before fetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    placeholderData: (previousData) => previousData, // Keep previous data while refetching
   });
 
   // Fetch all scorecards to check which accounts have completed ICP scorecards
@@ -146,7 +156,11 @@ export default function Accounts() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     },
-    enabled: !userLoading && !!user // Wait for user to load before fetching
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   // Create a map of account IDs that have completed scorecards

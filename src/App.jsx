@@ -37,12 +37,15 @@ import BugReportButton from './components/BugReportButton';
 import { createPageUrl } from './utils';
 import { getSupabaseAuth } from './services/supabaseClient';
 
-// Create a query client
+// Create a query client with better defaults to prevent data disappearing
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: false, // Prevent refetch on focus that can cause data to disappear
       retry: 1,
+      staleTime: 5 * 60 * 1000, // Default: cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Default: keep in cache for 10 minutes (formerly cacheTime)
+      placeholderData: (previousData) => previousData, // Keep previous data while refetching
     },
   },
 });
