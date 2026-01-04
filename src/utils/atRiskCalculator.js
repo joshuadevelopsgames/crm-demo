@@ -135,6 +135,20 @@ export function calculateAtRiskAccounts(accounts, estimates, snoozes = []) {
     estimatesByAccount.get(est.account_id).push(est);
   });
   
+  // DEBUG
+  const DEBUG_ACCOUNT_ID = 'lmn-account-3661753';
+  if (estimatesByAccount.has(DEBUG_ACCOUNT_ID)) {
+    const debugEsts = estimatesByAccount.get(DEBUG_ACCOUNT_ID);
+    console.log(`[DEBUG] Grouped estimates for Public Storage: ${debugEsts.length}`);
+    const estIds = ['EST3351938', 'EST3259705'];
+    debugEsts.forEach(est => {
+      const estId = (est.estimate_number || est.lmn_estimate_id || est.id).toString().toUpperCase();
+      if (estIds.some(id => estId.includes(id))) {
+        console.log(`[DEBUG] Found ${estId} in grouped estimates`);
+      }
+    });
+  }
+  
   // Create snooze lookup for fast checking
   const snoozeMap = new Map();
   snoozes.forEach(snooze => {
@@ -157,32 +171,89 @@ export function calculateAtRiskAccounts(accounts, estimates, snoozes = []) {
     
     const accountEstimates = estimatesByAccount.get(account.id) || [];
     
+    // DEBUG: Log for specific account
+    const DEBUG_ACCOUNT_ID = 'lmn-account-3661753'; // Public Storage
+    if (account.id === DEBUG_ACCOUNT_ID) {
+      console.log(`[DEBUG] Processing ${account.name}: ${accountEstimates.length} estimates`);
+    }
+    
     // Find all won estimates expiring <= 180 days
     const atRiskEstimates = accountEstimates.filter(est => {
-      if (!isWonStatus(est) || !est.contract_end) return false;
+      const estId = est.estimate_number || est.lmn_estimate_id || est.id;
+      const isWon = isWonStatus(est);
+      const hasContractEnd = !!est.contract_end;
+      
+      if (account.id === DEBUG_ACCOUNT_ID && (estId.toString().includes('3351938') || estId.toString().includes('3259705'))) {
+        console.log(`[DEBUG] ${account.name}: Checking estimate ${estId}: isWon=${isWon}, hasContractEnd=${hasContractEnd}`);
+      }
+      
+      if (!isWon || !hasContractEnd) {
+        if (account.id === DEBUG_ACCOUNT_ID && (estId.toString().includes('3351938') || estId.toString().includes('3259705'))) {
+          console.log(`[DEBUG] ${account.name}: Estimate ${estId} filtered out: isWon=${isWon}, hasContractEnd=${hasContractEnd}`);
+        }
+        return false;
+      }
       
       try {
         const renewalDate = startOfDay(new Date(est.contract_end));
-        if (isNaN(renewalDate.getTime())) return false;
+        if (isNaN(renewalDate.getTime())) {
+          if (account.id === DEBUG_ACCOUNT_ID && (estId.toString().includes('3351938') || estId.toString().includes('3259705'))) {
+            console.log(`[DEBUG] ${account.name}: Estimate ${estId} has invalid date`);
+          }
+          return false;
+        }
         
         const daysUntil = differenceInDays(renewalDate, today);
+        const inWindow = daysUntil <= DAYS_THRESHOLD && daysUntil >= 0;
+        
+        if (account.id === DEBUG_ACCOUNT_ID && (estId.toString().includes('3351938') || estId.toString().includes('3259705'))) {
+          console.log(`[DEBUG] ${account.name}: Estimate ${estId}: daysUntil=${daysUntil}, inWindow=${inWindow}`);
+        }
         
         // Include estimates expiring within threshold (0-180 days, excluding past due per R6, R6a)
-        return daysUntil <= DAYS_THRESHOLD && daysUntil >= 0;
+        return inWindow;
       } catch (error) {
+        if (account.id === DEBUG_ACCOUNT_ID) {
+          console.error(`[DEBUG] ${account.name}: Error processing estimate ${estId}:`, error);
+        }
         console.error(`Error processing estimate ${est.id} for at-risk check:`, error);
         return false;
       }
     });
     
-    if (atRiskEstimates.length === 0) return;
+    if (atRiskEstimates.length === 0) {
+      if (account.id === DEBUG_ACCOUNT_ID) {
+        console.log(`[DEBUG] ${account.name}: No at-risk estimates found`);
+      }
+      return;
+    }
+    
+    // DEBUG
+    if (account.id === DEBUG_ACCOUNT_ID) {
+      console.log(`[DEBUG] ${account.name}: Found ${atRiskEstimates.length} at-risk estimates`);
+    }
     
     // Check for renewals (newer estimate with same dept + address, > 180 days)
     const validAtRiskEstimates = atRiskEstimates.filter(est => {
-      return !hasRenewalEstimate(accountEstimates, est);
+      const hasRenewal = hasRenewalEstimate(accountEstimates, est);
+      if (account.id === DEBUG_ACCOUNT_ID) {
+        const estId = est.estimate_number || est.lmn_estimate_id || est.id;
+        console.log(`[DEBUG] ${account.name}: Estimate ${estId} has renewal: ${hasRenewal}`);
+      }
+      return !hasRenewal;
     });
     
-    if (validAtRiskEstimates.length === 0) return; // All have renewals
+    if (validAtRiskEstimates.length === 0) {
+      if (account.id === DEBUG_ACCOUNT_ID) {
+        console.log(`[DEBUG] ${account.name}: All estimates have renewals - EXCLUDED`);
+      }
+      return; // All have renewals
+    }
+    
+    // DEBUG
+    if (account.id === DEBUG_ACCOUNT_ID) {
+      console.log(`[DEBUG] ${account.name}: ${validAtRiskEstimates.length} valid at-risk estimates after renewal check`);
+    }
     
     // Find soonest expiring estimate
     const soonestEstimate = validAtRiskEstimates.reduce((soonest, est) => {

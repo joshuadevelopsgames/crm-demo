@@ -146,30 +146,72 @@ export default async function handler(req, res) {
 
     console.log(`🔄 Admin ${user.email} manually refreshing notification cache...`);
 
-    // 1. Fetch all accounts and estimates
-    console.log('📥 Fetching data from Supabase...');
-    const [accountsRes, estimatesRes, snoozesRes] = await Promise.all([
-      supabase.from('accounts').select('*').eq('archived', false),
-      supabase.from('estimates').select('*').eq('archived', false),
-      supabase.from('notification_snoozes').select('*')
-    ]);
+    // 1. Fetch all accounts (with pagination)
+    console.log('📥 Fetching accounts from Supabase...');
+    let allAccounts = [];
+    let accountsPage = 0;
+    const pageSize = 1000;
+    let hasMoreAccounts = true;
     
-    if (accountsRes.error) {
-      console.error('❌ Error fetching accounts:', accountsRes.error);
-      throw new Error(`Failed to fetch accounts: ${accountsRes.error.message}`);
-    }
-    if (estimatesRes.error) {
-      console.error('❌ Error fetching estimates:', estimatesRes.error);
-      throw new Error(`Failed to fetch estimates: ${estimatesRes.error.message}`);
-    }
-    if (snoozesRes.error) {
-      console.error('❌ Error fetching snoozes:', snoozesRes.error);
-      throw new Error(`Failed to fetch snoozes: ${snoozesRes.error.message}`);
+    while (hasMoreAccounts) {
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('archived', false)
+        .range(accountsPage * pageSize, (accountsPage + 1) * pageSize - 1);
+      
+      if (error) {
+        console.error('❌ Error fetching accounts:', error);
+        throw new Error(`Failed to fetch accounts: ${error.message}`);
+      }
+      if (data && data.length > 0) {
+        allAccounts = allAccounts.concat(data);
+        hasMoreAccounts = data.length === pageSize;
+        accountsPage++;
+      } else {
+        hasMoreAccounts = false;
+      }
     }
     
-    const accounts = accountsRes.data || [];
-    const estimates = estimatesRes.data || [];
-    const snoozes = snoozesRes.data || [];
+    // 2. Fetch all estimates (with pagination to handle > 1000 rows)
+    console.log('📥 Fetching estimates from Supabase...');
+    let allEstimates = [];
+    let estimatesPage = 0;
+    let hasMoreEstimates = true;
+    
+    while (hasMoreEstimates) {
+      const { data, error } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('archived', false)
+        .range(estimatesPage * pageSize, (estimatesPage + 1) * pageSize - 1);
+      
+      if (error) {
+        console.error('❌ Error fetching estimates:', error);
+        throw new Error(`Failed to fetch estimates: ${error.message}`);
+      }
+      if (data && data.length > 0) {
+        allEstimates = allEstimates.concat(data);
+        hasMoreEstimates = data.length === pageSize;
+        estimatesPage++;
+      } else {
+        hasMoreEstimates = false;
+      }
+    }
+    
+    // 3. Fetch all snoozes
+    console.log('📥 Fetching snoozes from Supabase...');
+    const { data: snoozes, error: snoozesError } = await supabase
+      .from('notification_snoozes')
+      .select('*');
+    
+    if (snoozesError) {
+      console.error('❌ Error fetching snoozes:', snoozesError);
+      throw new Error(`Failed to fetch snoozes: ${snoozesError.message}`);
+    }
+    
+    const accounts = allAccounts;
+    const estimates = allEstimates;
     
     console.log(`📊 Fetched ${accounts.length} accounts, ${estimates.length} estimates, ${snoozes.length} snoozes`);
     
