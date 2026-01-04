@@ -49,6 +49,34 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (test scripts exist, unit tests needed)
 
+### Neglected Accounts
+- **Name**: Neglected Accounts
+- **Slug**: `neglected-accounts`
+- **Spec Path**: `docs/sections/neglected-accounts.md`
+- **Primary Code Locations**:
+  - `src/utils/atRiskCalculator.js` - Core calculation logic (`calculateNeglectedAccounts`)
+  - `src/pages/Dashboard.jsx` - Display and stats
+  - `src/pages/NeglectedAccounts.jsx` - Dedicated neglected accounts page
+  - `src/pages/Accounts.jsx` - Neglect status badges and filtering
+  - `src/components/NotificationBell.jsx` - Notification count display
+  - `api/cron/refresh-notifications.js` - Background cache refresh
+  - `api/admin/refresh-cache.js` - Manual cache refresh (admin)
+  - `api/notifications.js` - API endpoint for fetching neglected accounts
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (diagnostic logging exists, unit tests needed)
+
+### Notification Caching
+- **Name**: Notification Caching
+- **Slug**: `notification-caching`
+- **Spec Path**: `docs/sections/notification-caching.md`
+- **Primary Code Locations**:
+  - `api/cron/refresh-notifications.js` - Background cache refresh job
+  - `api/admin/refresh-cache.js` - Manual cache refresh endpoint
+  - `api/notifications.js` - Cache retrieval endpoint
+  - `create_notification_cache_table.sql` - Database table schema
+- **Owner**: Product Owner
+- **Test Coverage Status**: None (shared infrastructure, tested via at-risk and neglected accounts)
+
 ---
 
 ## Adding New Sections

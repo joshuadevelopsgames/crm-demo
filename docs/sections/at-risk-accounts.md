@@ -29,8 +29,10 @@ The At-Risk Accounts section identifies accounts with won estimates expiring wit
 - `notification_snoozes.snoozed_until` - If future date, account is excluded
 
 ### Types and Units
-- **Dates**: All dates normalized to start of day (00:00:00) using `startOfDay()` from date-fns
-- **Time zone**: UTC (database stores timestamptz)
+- **Dates**: All dates normalized to start of day (00:00:00) using `normalizeToStartOfDay()` from `src/utils/timezoneConfig.js`
+- **Time zone**: GMT-7 (application timezone, defined in `src/utils/timezoneConfig.js::TIMEZONE_OFFSET_HOURS = -7`)
+- **Day boundary**: A day starts at 00:00:00 GMT-7 (07:00:00 UTC)
+- **Database storage**: UTC (timestamptz), but day calculations use GMT-7
 - **Days calculation**: Integer days using `differenceInDays()` from date-fns (can be negative for past due)
 - **Threshold**: 180 days (constant `DAYS_THRESHOLD = 180`)
 
@@ -86,7 +88,7 @@ The At-Risk Accounts section identifies accounts with won estimates expiring wit
 
 ### Transformations
 
-1. **Date Normalization**: `startOfDay(date)` - Sets time to 00:00:00
+1. **Date Normalization**: `normalizeToStartOfDay(date)` from `src/utils/timezoneConfig.js` - Sets time to 00:00:00 GMT-7
 2. **Department Normalization**: `division.trim().toLowerCase()` - Case-insensitive, trimmed
 3. **Address Normalization**: `address.trim().toLowerCase().replace(/\s+/g, ' ')` - Case-insensitive, trimmed, normalized whitespace
 4. **Days Calculation**: `differenceInDays(renewalDate, today)` - Integer days (negative = past due)
@@ -94,7 +96,7 @@ The At-Risk Accounts section identifies accounts with won estimates expiring wit
 
 ### Computations and Formulas
 
-- **Days until renewal**: `differenceInDays(contract_end, startOfDay(today))`
+- **Days until renewal**: `differenceInDays(contract_end, normalizeToStartOfDay(today))`
 - **Is at-risk**: `daysUntil <= 180` AND `daysUntil >= 0` (excludes past due renewals)
 - **Has renewal**: Exists newer won estimate with:
   - Same normalized department
