@@ -35,6 +35,20 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (test mode exists, unit tests needed)
 
+### Won Loss Ratio Logic
+- **Name**: Won Loss Ratio Logic
+- **Slug**: `won-loss-ratio`
+- **Spec Path**: `docs/sections/won-loss-ratio.md`
+- **Primary Code Locations**:
+  - `src/utils/reportCalculations.js` - Core calculation functions (isWonStatus, calculateOverallStats, calculateAccountStats, calculateDepartmentStats, filterEstimatesByYear)
+  - `src/components/reports/WinLossReport.jsx` - Win/Loss report UI component
+  - `src/pages/Reports.jsx` - Reports page with year filtering and statistics display
+  - `src/components/reports/AccountPerformanceReport.jsx` - Account performance report component
+  - `src/components/reports/DepartmentReport.jsx` - Department report component
+  - `api/data/estimates.js` - API endpoint for fetching estimates
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (test scripts exist, unit tests needed)
+
 ---
 
 ## Adding New Sections

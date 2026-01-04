@@ -33,28 +33,28 @@ export function formatCurrency(value) {
 export function calculateOverallStats(estimates) {
   // Filter out pending (treat as lost per user requirement)
   // Use isWonStatus to match LMN's won status logic
-  const decidedEstimates = estimates.filter(e => isWonStatus(e) || e.status === 'lost');
+  const decidedEstimates = estimates.filter(e => isWonStatus(e) || (e.status || '').toString().toLowerCase() === 'lost');
   const total = estimates.length;
   const won = estimates.filter(e => isWonStatus(e)).length;
-  const lost = estimates.filter(e => e.status === 'lost').length;
-  const pending = estimates.filter(e => !isWonStatus(e) && e.status !== 'lost').length;
+  const lost = estimates.filter(e => (e.status || '').toString().toLowerCase() === 'lost').length;
+  const pending = estimates.filter(e => !isWonStatus(e) && (e.status || '').toString().toLowerCase() !== 'lost').length;
   
   // Calculate win rate (won / (won + lost)) - only count decided estimates
   const decidedCount = won + lost;
   const winRate = decidedCount > 0 ? ((won / decidedCount) * 100) : 0;
   
   // Calculate revenue values
-  // Use total_price (no tax) to match LMN's behavior - they exclude tax from sales figures
-  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+  // Use total_price_with_tax with fallback to total_price
+  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
   const wonValue = estimates
     .filter(e => isWonStatus(e))
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
   const lostValue = estimates
-    .filter(e => e.status === 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .filter(e => (e.status || '').toString().toLowerCase() === 'lost')
+    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
   const pendingValue = estimates
-    .filter(e => !isWonStatus(e) && e.status !== 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .filter(e => !isWonStatus(e) && (e.status || '').toString().toLowerCase() !== 'lost')
+    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
   
   return {
     total,
@@ -114,14 +114,14 @@ export function calculateAccountStats(estimates, accounts) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    // Use total_price (no tax) to match LMN's behavior
-    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+    // Use total_price_with_tax with fallback to total_price
+    const value = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {
       stats.won++;
       stats.wonValue += value;
-    } else if (estimate.status === 'lost') {
+    } else if ((estimate.status || '').toString().toLowerCase() === 'lost') {
       stats.lost++;
       stats.lostValue += value;
     } else {
@@ -157,7 +157,7 @@ export function calculateDepartmentStats(estimates) {
   const deptMap = new Map();
   
   estimates.forEach(estimate => {
-    const division = estimate.division || 'Unknown';
+    const division = estimate.division || 'Uncategorized';
     
     if (!deptMap.has(division)) {
       deptMap.set(division, {
@@ -176,14 +176,14 @@ export function calculateDepartmentStats(estimates) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    // Use total_price (no tax) to match LMN's behavior
-    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+    // Use total_price_with_tax with fallback to total_price
+    const value = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {
       stats.won++;
       stats.wonValue += value;
-    } else if (estimate.status === 'lost') {
+    } else if ((estimate.status || '').toString().toLowerCase() === 'lost') {
       stats.lost++;
       stats.lostValue += value;
     }
@@ -216,7 +216,7 @@ export function calculateDepartmentStats(estimates) {
  */
 export function calculateDepartmentAccountStats(estimates, accounts, department) {
   // Filter estimates to only this department
-  const deptEstimates = estimates.filter(e => (e.division || 'Unknown') === department);
+  const deptEstimates = estimates.filter(e => (e.division || 'Uncategorized') === department);
   
   // Use the existing calculateAccountStats function but with filtered estimates
   return calculateAccountStats(deptEstimates, accounts);
