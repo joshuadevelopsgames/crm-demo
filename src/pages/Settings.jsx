@@ -29,7 +29,6 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
 import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
-import { base44 } from '@/api/base44Client';
 import { autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
 
 export default function Settings() {

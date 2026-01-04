@@ -629,6 +629,7 @@ export default function TotalWork({ estimates = [] }) {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
 
