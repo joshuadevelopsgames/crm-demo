@@ -55,14 +55,16 @@ export default function TrackingAssignment({ account, onUpdate }) {
   };
 
   const handleICPStatusChange = (newStatus) => {
+    // Only allow 'required' or 'na' (convert any invalid values)
+    const validStatus = newStatus === 'required' ? 'required' : 'na';
     const updatedData = {
       ...formData,
-      icp_status: newStatus,
-      icp_required: newStatus !== 'na'
+      icp_status: validStatus,
+      icp_required: validStatus === 'required'
     };
     
     // If setting to N/A, also clear last_interaction_date in the update
-    if (newStatus === 'na') {
+    if (validStatus === 'na') {
       updatedData.last_interaction_date = null;
     }
     
@@ -227,16 +229,15 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="required">Required</SelectItem>
-                    <SelectItem value="not_required">Not Required</SelectItem>
                     <SelectItem value="na">N/A</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex items-center gap-2">
                   <Switch
                     id="icp-required"
-                    checked={formData.icp_required}
+                    checked={formData.icp_status === 'required'}
                     onCheckedChange={(checked) => {
-                      const newStatus = checked ? 'required' : 'not_required';
+                      const newStatus = checked ? 'required' : 'na';
                       handleICPStatusChange(newStatus);
                     }}
                   />
@@ -257,14 +258,10 @@ export default function TrackingAssignment({ account, onUpdate }) {
                   className={
                     formData.icp_status === 'na' 
                       ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' 
-                      : formData.icp_status === 'required'
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                   }
                 >
-                  {formData.icp_status === 'na' ? 'N/A' : 
-                   formData.icp_status === 'required' ? 'Required' : 
-                   'Not Required'}
+                  {formData.icp_status === 'na' ? 'N/A' : 'Required'}
                 </Badge>
               </div>
             )}

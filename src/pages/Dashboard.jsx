@@ -14,6 +14,7 @@ import { createPageUrl } from '../utils';
 import TutorialTooltip from '../components/TutorialTooltip';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
+import ICPManagementPanel from '../components/ICPManagementPanel';
 import {
   Building2,
   Users,
@@ -1002,6 +1003,11 @@ export default function Dashboard() {
         </Card>
         </TutorialTooltip>
       </div>
+
+      {/* ICP Management Panel - Only for Jon Hopkins */}
+      {user?.email?.toLowerCase() === 'jon@lecm.ca' && (
+        <ICPManagementPanel />
+      )}
 
       {/* Snooze Dialog */}
       {snoozeAccount && (

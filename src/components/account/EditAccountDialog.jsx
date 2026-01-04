@@ -283,13 +283,15 @@ export default function EditAccountDialog({ open, onClose, account }) {
               <Select
                 value={formData.icp_status}
                 onValueChange={(value) => {
+                  // Only allow 'required' or 'na' (convert any invalid values)
+                  const validStatus = value === 'required' ? 'required' : 'na';
                   const updateData = { 
                     ...formData, 
-                    icp_status: value,
-                    icp_required: value !== 'na'
+                    icp_status: validStatus,
+                    icp_required: validStatus === 'required'
                   };
                   // If setting to N/A, also clear last_interaction_date
-                  if (value === 'na') {
+                  if (validStatus === 'na') {
                     updateData.last_interaction_date = null;
                   }
                   setFormData(updateData);
@@ -300,16 +302,15 @@ export default function EditAccountDialog({ open, onClose, account }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="required">Required</SelectItem>
-                  <SelectItem value="not_required">Not Required</SelectItem>
                   <SelectItem value="na">N/A</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2 mt-2">
                 <Switch
                   id="icp-required-edit"
-                  checked={formData.icp_required}
+                  checked={formData.icp_status === 'required'}
                   onCheckedChange={(checked) => {
-                    const newStatus = checked ? 'required' : 'not_required';
+                    const newStatus = checked ? 'required' : 'na';
                     setFormData({ 
                       ...formData, 
                       icp_required: checked,
