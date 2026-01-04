@@ -444,7 +444,9 @@ export default function NotificationBell() {
           neglectedCount++;
           return;
         }
-        const lastInteractionDate = startOfDay(new Date(account.last_interaction_date));
+        // Handle string dates (date-fns v2+ requires parseISO for strings)
+        const lastInteractionDateRaw = account.last_interaction_date;
+        const lastInteractionDate = startOfDay(typeof lastInteractionDateRaw === 'string' ? parseISO(lastInteractionDateRaw) : new Date(lastInteractionDateRaw));
         const daysSince = differenceInDays(today, lastInteractionDate);
         if (daysSince > thresholdDays) {
           neglectedCount++;
