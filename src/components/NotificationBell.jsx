@@ -63,10 +63,18 @@ export default function NotificationBell() {
   
   const currentUser = contextUser || profile || fallbackUser;
   const currentUserId = currentUser?.id;
+  
+  // Store previous user ID to prevent query key changes from clearing data
+  const [stableUserId, setStableUserId] = React.useState(currentUserId);
+  React.useEffect(() => {
+    if (currentUserId) {
+      setStableUserId(currentUserId);
+    }
+  }, [currentUserId]);
 
   // Fetch notifications using unified API
   const { data: notificationsData, refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
-    queryKey: ['notifications', currentUser?.id],
+    queryKey: ['notifications', stableUserId],
     queryFn: async () => {
       if (!currentUser?.id) {
         console.log('🔔 NotificationBell: No current user ID', { hasContextUser: !!contextUser, hasProfile: !!profile, userLoading });
@@ -151,16 +159,16 @@ export default function NotificationBell() {
         return { notifications: [], atRiskAccounts: [], neglectedAccounts: [], duplicateEstimates: [] };
       }
     },
-    enabled: !!currentUser?.id && !userLoading,
+    enabled: !!stableUserId && !userLoading,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes - keep data in cache longer to prevent disappearing
     refetchInterval: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: true, // Always refetch on mount to get latest cache data
+    refetchOnMount: 'always', // Always refetch on mount to get latest cache data
     refetchOnWindowFocus: true, // Refetch when window regains focus to get latest cache
     refetchOnReconnect: true,
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
-    // Keep data in cache even when component unmounts
-    keepPreviousData: true,
+    // Use initialDataUpdatedAt to prevent data from being considered stale immediately
+    initialDataUpdatedAt: () => Date.now(),
   });
   
   // Set up Supabase Realtime subscriptions for instant updates
@@ -193,7 +201,7 @@ export default function NotificationBell() {
       }, (payload) => {
         console.log('🔔 New notification received:', payload.new);
         // Optimistically add to UI
-        queryClient.setQueryData(['notifications', currentUser.id], (old) => {
+        queryClient.setQueryData(['notifications', stableUserId], (old) => {
           if (!old || !old.notifications) return old;
           return {
             ...old,
@@ -211,7 +219,7 @@ export default function NotificationBell() {
         table: 'duplicate_at_risk_estimates'
       }, () => {
         console.log('🔔 New duplicate estimate detected, invalidating notifications');
-        queryClient.invalidateQueries(['notifications', currentUser.id]);
+        queryClient.invalidateQueries({ queryKey: ['notifications', stableUserId] });
       });
     
     cacheChannel.subscribe();
@@ -223,19 +231,32 @@ export default function NotificationBell() {
       supabase.removeChannel(taskChannel);
       supabase.removeChannel(duplicateChannel);
     };
-  }, [currentUser?.id, queryClient]);
+  }, [stableUserId, queryClient]);
   
-  // Extract notifications from data
+  // Extract notifications from data - use cached data if available to prevent disappearing
   const allNotificationsRaw = notificationsData?.notifications || [];
+  
+  // Store previous notifications to prevent disappearing during refetch
+  const previousNotificationsRef = useRef(allNotificationsRaw);
+  useEffect(() => {
+    if (allNotificationsRaw && allNotificationsRaw.length > 0) {
+      previousNotificationsRef.current = allNotificationsRaw;
+    }
+  }, [allNotificationsRaw]);
+  
+  // Use cached data if current data is empty but we have previous data
+  const stableNotificationsRaw = allNotificationsRaw.length > 0 
+    ? allNotificationsRaw 
+    : previousNotificationsRef.current;
 
   // Safety check: Filter out any notifications that don't match current user (defensive programming)
   // This ensures we never show notifications from other users, even if the API returns them
   // NOTE: Bulk notifications (neglected_account, renewal_reminder) don't have user_id because
   // they're already user-specific (fetched from user_notification_states table for this user)
   const allNotifications = useMemo(() => {
-    if (!currentUserId) return [];
+    if (!currentUserId) return previousNotificationsRef.current || [];
     const currentUserIdStr = String(currentUserId).trim();
-    return allNotificationsRaw.filter(notification => {
+    return stableNotificationsRaw.filter(notification => {
       // Bulk notifications (neglected_account, renewal_reminder) don't have user_id
       // They're already user-specific, so always include them
       if (notification.type === 'neglected_account' || notification.type === 'renewal_reminder') {
@@ -245,7 +266,7 @@ export default function NotificationBell() {
       const notificationUserId = notification.user_id ? String(notification.user_id).trim() : null;
       return notificationUserId === currentUserIdStr;
     });
-  }, [allNotificationsRaw, currentUserId]);
+  }, [stableNotificationsRaw, currentUserId]);
 
   // Removed forced refetch on mount - now uses cached data to reduce egress
 
