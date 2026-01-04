@@ -261,7 +261,7 @@ export default function Dashboard() {
     };
   }, [queryClient]);
 
-  const { data: sequences = [] } = useQuery({
+  const { data: sequencesRaw = [] } = useQuery({
     queryKey: ['sequence-enrollments'],
     queryFn: () => base44.entities.SequenceEnrollment.list()
   });
@@ -322,6 +322,9 @@ export default function Dashboard() {
     }
     
     const now = new Date();
+    
+    // Ensure notificationSnoozes is an array
+    const snoozes = Array.isArray(notificationSnoozes) ? notificationSnoozes : [];
     
     // Filter out snoozed notifications (same logic as NotificationBell)
     const activeNotifications = allNotificationsRaw.filter(notification => {
