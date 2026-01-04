@@ -384,16 +384,18 @@ export async function createOverdueTaskNotifications() {
           continue; // Already exists (and is now unread)
         }
         
+        // Define notificationData outside try block so it's accessible in catch
+        const notificationData = {
+          user_id: String(notifData.user_id).trim(), // Ensure string format
+          type: 'task_overdue',
+          title: 'Task Overdue',
+          message: `"${notifData.task_title}" is overdue by ${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`,
+          related_task_id: notifData.task_id,
+          related_account_id: notifData.related_account_id,
+          scheduled_for: new Date().toISOString()
+        };
+        
         try {
-          const notificationData = {
-            user_id: String(notifData.user_id).trim(), // Ensure string format
-            type: 'task_overdue',
-            title: 'Task Overdue',
-            message: `"${notifData.task_title}" is overdue by ${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`,
-            related_task_id: notifData.task_id,
-            related_account_id: notifData.related_account_id,
-            scheduled_for: new Date().toISOString()
-          };
           console.log(`   🔔 Creating notification with user_id: ${notificationData.user_id} (currentUserId: ${currentUserIdStr}, match: ${notificationData.user_id === currentUserIdStr})`);
           const created = await base44.entities.Notification.create(notificationData);
           console.log(`   ✅ Created notification: id=${created?.id}, user_id=${created?.user_id}, requested_user_id=${notificationData.user_id}, match=${String(created?.user_id).trim() === notificationData.user_id}`);
