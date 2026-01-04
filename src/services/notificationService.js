@@ -402,15 +402,43 @@ export async function createOverdueTaskNotifications() {
           existingKeys.add(key);
           console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue, user_id: ${created?.user_id})`);
         } catch (error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:404',message:'Notification creation error caught',data:{errorMessage:error?.message,errorString:error?.toString(),errorResponse:error?.response,errorStatus:error?.status,hasError:!!error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+          // #endregion
+          
+          // Try to extract error from response if it's an HTTP error
+          let errorMessage = error?.message || error?.toString() || '';
+          let errorResponse = null;
+          
+          // Check if error has a response (from fetch/HTTP)
+          if (error?.response) {
+            try {
+              errorResponse = await error.response.json();
+              errorMessage = errorResponse?.error || errorResponse?.message || errorMessage;
+            } catch (e) {
+              // Response might not be JSON
+              try {
+                errorMessage = await error.response.text() || errorMessage;
+              } catch (e2) {
+                // Can't read response
+              }
+            }
+          }
+          
           // Check if error is due to duplicate key constraint (unique index violation)
-          const errorMessage = error?.message || error?.toString() || '';
-          if (errorMessage.includes('unique constraint') || errorMessage.includes('duplicate key') || errorMessage.includes('unique_user_task_notification')) {
+          if (errorMessage.includes('unique constraint') || errorMessage.includes('duplicate key') || errorMessage.includes('unique_user_task_notification') || errorMessage.includes('already exists')) {
             // This is expected - notification already exists (unique constraint prevented duplicate)
             skippedCount++;
             console.log(`   ⏭️  Skipping duplicate notification for task "${notifData.task_title}" (user_id: ${notifData.user_id}) - already exists`);
           } else {
             errorCount++;
-            console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, error);
+            console.error(`❌ Error creating overdue task notification for "${notifData.task_title}":`, {
+              error: error,
+              message: errorMessage,
+              response: errorResponse,
+              status: error?.status || error?.response?.status,
+              notificationData: notificationData
+            });
           }
         }
       }

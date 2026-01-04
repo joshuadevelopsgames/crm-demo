@@ -198,12 +198,20 @@ export default async function handler(req, res) {
               hasRelatedAccountId: !!notificationData.related_account_id
             }
           });
-          return res.status(500).json({
+          // Return detailed error information
+          const errorResponse = {
             success: false,
             error: error.message || 'Failed to create notification',
             code: error.code,
-            details: error.details
-          });
+            details: error.details,
+            hint: error.hint
+          };
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/data/notifications.js:200',message:'Returning error response',data:errorResponse,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+          // #endregion
+          
+          return res.status(500).json(errorResponse);
         }
         
         return res.status(201).json({
