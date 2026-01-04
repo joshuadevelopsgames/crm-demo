@@ -76,12 +76,13 @@ export default function NotificationBell() {
   const { data: notificationsData, refetch: refetchNotifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notifications', stableUserId],
     queryFn: async () => {
-      if (!currentUser?.id) {
-        console.log('🔔 NotificationBell: No current user ID', { hasContextUser: !!contextUser, hasProfile: !!profile, userLoading });
+      // Use stableUserId instead of currentUser?.id to prevent empty data during navigation
+      if (!stableUserId) {
+        console.log('🔔 NotificationBell: No stable user ID', { hasContextUser: !!contextUser, hasProfile: !!profile, userLoading, stableUserId });
         return { atRiskAccounts: [], neglectedAccounts: [], taskNotifications: [], systemNotifications: [], duplicateEstimates: [] };
       }
       try {
-        const currentUserIdStr = String(currentUser.id).trim();
+        const currentUserIdStr = String(stableUserId).trim();
         
         // Fetch all notifications from unified API
         const response = await fetch(`/api/notifications?type=all&user_id=${encodeURIComponent(currentUserIdStr)}`);
