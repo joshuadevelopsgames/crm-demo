@@ -52,8 +52,23 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
         return 'renewal reminder';
       case 'neglected_account':
         return 'neglected account';
+      case 'at-risk-account':
+        return 'at-risk account';
       default:
         return 'notification';
+    }
+  };
+
+  const getListName = () => {
+    switch (notificationType) {
+      case 'neglected_account':
+        return 'neglected list';
+      case 'at-risk-account':
+        return 'at-risk list';
+      case 'renewal_reminder':
+        return 'renewal reminders';
+      default:
+        return 'notification lists';
     }
   };
 
@@ -68,7 +83,7 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
             Snooze Account
           </DialogTitle>
           <DialogDescription>
-            Stop showing "{account?.name}" as a {getNotificationTypeLabel()}. The account will still be visible, but won't appear in neglected/at-risk lists until the snooze period ends.
+            Stop showing "{account?.name}" as a {getNotificationTypeLabel()}. The account will still be visible, but won't appear in the {getListName()} until the snooze period ends.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
