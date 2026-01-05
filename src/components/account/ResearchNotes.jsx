@@ -67,14 +67,7 @@ export default function ResearchNotes({ accountId }) {
   });
 
   const deleteNoteMutation = useMutation({
-    mutationFn: (id) => {
-      // In real implementation, this would be base44.entities.ResearchNote.delete(id)
-      const index = notes.findIndex(n => n.id === id);
-      if (index !== -1) {
-        notes.splice(index, 1);
-      }
-      return Promise.resolve();
-    },
+    mutationFn: (id) => base44.entities.ResearchNote.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['research-notes', accountId] });
     }

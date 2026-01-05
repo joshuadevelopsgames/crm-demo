@@ -68,15 +68,7 @@ export default function SalesInsights({ accountId, interactions = [] }) {
   });
 
   const deleteInsightMutation = useMutation({
-    mutationFn: (id) => {
-      // In real implementation, this would be base44.entities.SalesInsight.delete(id)
-      // For mock, we'll just remove from array
-      const index = insights.findIndex(i => i.id === id);
-      if (index !== -1) {
-        insights.splice(index, 1);
-      }
-      return Promise.resolve();
-    },
+    mutationFn: (id) => base44.entities.SalesInsight.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-insights', accountId] });
     }

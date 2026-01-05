@@ -368,6 +368,25 @@ export default function Accounts() {
 
   // Handle snooze for at-risk accounts
   const handleSnooze = async (account, notificationType, duration, unit) => {
+    // Defensive checks
+    if (!account) {
+      console.error('❌ Snooze error: account is null or undefined');
+      toast.error('Failed to snooze: account information is missing');
+      return;
+    }
+    
+    if (!account.id) {
+      console.error('❌ Snooze error: account.id is missing', { account });
+      toast.error('Failed to snooze: account ID is missing');
+      return;
+    }
+    
+    if (!notificationType) {
+      console.error('❌ Snooze error: notificationType is missing');
+      toast.error('Failed to snooze: notification type is missing');
+      return;
+    }
+    
     const now = new Date();
     let snoozedUntil;
     
@@ -395,13 +414,31 @@ export default function Accounts() {
     }
     
     try {
+      console.log('🔄 Snoozing account:', {
+        accountId: account.id,
+        accountName: account.name,
+        notificationType,
+        snoozedUntil: snoozedUntil.toISOString(),
+        duration,
+        unit
+      });
+      
       await snoozeNotification(notificationType, account.id, snoozedUntil);
+      
+      console.log('✅ Account snoozed successfully');
       queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
       queryClient.invalidateQueries({ queryKey: ['at-risk-accounts'] });
       setSnoozeAccount(null);
       toast.success('✓ Account snoozed');
     } catch (error) {
-      console.error('Error snoozing notification:', error);
+      console.error('❌ Error snoozing notification:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        accountId: account?.id,
+        accountName: account?.name,
+        notificationType
+      });
       toast.error(`Failed to snooze account: ${error?.message || 'Unknown error'}`);
     }
   };
@@ -1013,7 +1050,14 @@ export default function Accounts() {
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
+                                if (!account || !account.id) {
+                                  console.error('❌ Cannot snooze: account or account.id is missing', { account });
+                                  toast.error('Cannot snooze: account information is missing');
+                                  return;
+                                }
+                                console.log('🔄 Opening snooze dialog for account:', { accountId: account.id, accountName: account.name });
                                 setSnoozeAccount(account);
                               }}
                               className="text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/20"
@@ -1186,6 +1230,12 @@ export default function Accounts() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (!account || !account.id) {
+                        console.error('❌ Cannot snooze: account or account.id is missing', { account });
+                        toast.error('Cannot snooze: account information is missing');
+                        return;
+                      }
+                      console.log('🔄 Opening snooze dialog for account:', { accountId: account.id, accountName: account.name });
                       setSnoozeAccount(account);
                     }}
                     className="text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/20"
@@ -1516,7 +1566,12 @@ export default function Accounts() {
           account={snoozeAccount}
           notificationType="at-risk-account"
           open={!!snoozeAccount}
-          onOpenChange={(open) => !open && setSnoozeAccount(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              console.log('🔄 Closing snooze dialog');
+              setSnoozeAccount(null);
+            }
+          }}
           onSnooze={handleSnooze}
         />
       )}

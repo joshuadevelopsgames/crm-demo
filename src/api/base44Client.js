@@ -20,8 +20,21 @@ async function getData(entityType, forceRefresh = false) {
   try {
     const response = await fetch(`/api/data/${entityType}`);
     if (!response.ok) {
+      // If endpoint doesn't exist (404), return empty array silently
+      if (response.status === 404) {
+        return [];
+      }
       throw new Error(`Failed to fetch ${entityType}: ${response.statusText}`);
     }
+    
+    // Check if response is actually JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // Response is not JSON (likely HTML error page), return empty array
+      console.warn(`⚠️ ${entityType} endpoint returned non-JSON response (${contentType}), returning empty array`);
+      return [];
+    }
+    
     const result = await response.json();
     if (result.success) {
       console.log(`📡 Loaded ${result.data.length} ${entityType} from API`);
@@ -29,6 +42,11 @@ async function getData(entityType, forceRefresh = false) {
     }
     return [];
   } catch (error) {
+    // Only log non-JSON parsing errors if they're unexpected
+    if (error instanceof SyntaxError && error.message.includes('JSON')) {
+      // This is expected for missing endpoints that return HTML
+      return [];
+    }
     console.warn(`Error loading ${entityType} from API:`, error);
     return [];
   }
@@ -566,17 +584,61 @@ const base44Instance = {
         return results;
       },
       create: async (data) => {
-        const newInsight = { ...data, id: Date.now().toString() };
-        mockSalesInsights.push(newInsight);
-        return newInsight;
+        try {
+          const response = await fetch('/api/data/insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create', data })
+          });
+          const result = await response.json();
+          if (result.success) return result.data;
+          throw new Error(result.error || 'Failed to create sales insight');
+        } catch (error) {
+          console.error('Error creating sales insight:', error);
+          // Fallback to mock for development
+          const newInsight = { ...data, id: Date.now().toString() };
+          mockSalesInsights.push(newInsight);
+          return newInsight;
+        }
       },
       update: async (id, data) => {
-        const index = mockSalesInsights.findIndex(i => i.id === id);
-        if (index !== -1) {
-          mockSalesInsights[index] = { ...mockSalesInsights[index], ...data };
-          return mockSalesInsights[index];
+        try {
+          const response = await fetch('/api/data/insights', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, ...data })
+          });
+          const result = await response.json();
+          if (result.success) return result.data;
+          throw new Error(result.error || 'Failed to update sales insight');
+        } catch (error) {
+          console.error('Error updating sales insight:', error);
+          // Fallback to mock for development
+          const index = mockSalesInsights.findIndex(i => i.id === id);
+          if (index !== -1) {
+            mockSalesInsights[index] = { ...mockSalesInsights[index], ...data };
+            return mockSalesInsights[index];
+          }
+          return data;
         }
-        return data;
+      },
+      delete: async (id) => {
+        try {
+          const response = await fetch(`/api/data/insights?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          const result = await response.json();
+          if (result.success) return true;
+          throw new Error(result.error || 'Failed to delete sales insight');
+        } catch (error) {
+          console.error('Error deleting sales insight:', error);
+          // Fallback: remove from mock array
+          const index = mockSalesInsights.findIndex(i => i.id === id);
+          if (index !== -1) {
+            mockSalesInsights.splice(index, 1);
+          }
+          return false;
+        }
       },
     },
     ResearchNote: {
@@ -608,17 +670,61 @@ const base44Instance = {
         return results;
       },
       create: async (data) => {
-        const newNote = { ...data, id: Date.now().toString() };
-        mockResearchNotes.push(newNote);
-        return newNote;
+        try {
+          const response = await fetch('/api/data/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create', data })
+          });
+          const result = await response.json();
+          if (result.success) return result.data;
+          throw new Error(result.error || 'Failed to create research note');
+        } catch (error) {
+          console.error('Error creating research note:', error);
+          // Fallback to mock for development
+          const newNote = { ...data, id: Date.now().toString() };
+          mockResearchNotes.push(newNote);
+          return newNote;
+        }
       },
       update: async (id, data) => {
-        const index = mockResearchNotes.findIndex(n => n.id === id);
-        if (index !== -1) {
-          mockResearchNotes[index] = { ...mockResearchNotes[index], ...data };
-          return mockResearchNotes[index];
+        try {
+          const response = await fetch('/api/data/notes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, ...data })
+          });
+          const result = await response.json();
+          if (result.success) return result.data;
+          throw new Error(result.error || 'Failed to update research note');
+        } catch (error) {
+          console.error('Error updating research note:', error);
+          // Fallback to mock for development
+          const index = mockResearchNotes.findIndex(n => n.id === id);
+          if (index !== -1) {
+            mockResearchNotes[index] = { ...mockResearchNotes[index], ...data };
+            return mockResearchNotes[index];
+          }
+          return data;
         }
-        return data;
+      },
+      delete: async (id) => {
+        try {
+          const response = await fetch(`/api/data/notes?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          const result = await response.json();
+          if (result.success) return true;
+          throw new Error(result.error || 'Failed to delete research note');
+        } catch (error) {
+          console.error('Error deleting research note:', error);
+          // Fallback: remove from mock array
+          const index = mockResearchNotes.findIndex(n => n.id === id);
+          if (index !== -1) {
+            mockResearchNotes.splice(index, 1);
+          }
+          return false;
+        }
       },
     },
     User: {
