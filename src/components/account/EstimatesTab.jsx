@@ -96,28 +96,71 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   }, [estimates]);
 
   // Get available years from estimates
+  // Per Year Selection System spec R1, R2, R7: Use full date priority and exclude archived
   const availableYears = useMemo(() => {
     const years = new Set();
     estimates.forEach(est => {
-      if (est.estimate_date) {
-        const year = getYearFromDateString(est.estimate_date);
-        if (year) years.add(year);
+      // Per spec R2: Exclude archived estimates
+      if (est.archived) {
+        return; // Skip archived estimates
+      }
+      
+      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      let dateToUse = null;
+      if (est.contract_end) {
+        dateToUse = est.contract_end;
+      } else if (est.contract_start) {
+        dateToUse = est.contract_start;
+      } else if (est.estimate_date) {
+        dateToUse = est.estimate_date;
+      } else if (est.created_date) {
+        dateToUse = est.created_date;
+      }
+      
+      if (dateToUse) {
+        const year = getYearFromDateString(dateToUse);
+        if (year && year >= 2000 && year <= 2100) {
+          years.add(year);
+        }
       }
     });
     return Array.from(years).sort((a, b) => b - a); // Sort newest first
   }, [estimates]);
 
   // Filter by status, year, and user
+  // Per Year Selection System spec R1, R2, R7: Use full date priority for year filtering
   const statusFilteredEstimates = useMemo(() => {
     const filtered = estimates.filter(est => {
+      // Per spec R2: Exclude archived estimates
+      if (est.archived) {
+        return false;
+      }
+      
       // Per spec R1, R11: Use isWonStatus to respect pipeline_status priority
       const normalizedStatus = isWonStatus(est) ? 'won' : 'lost';
       
       if (filterStatus !== 'all' && normalizedStatus !== filterStatus) return false;
       
-      if (filterYear !== 'all' && est.estimate_date) {
-        const year = getYearFromDateString(est.estimate_date);
-        if (year && year.toString() !== filterYear) return false;
+      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      if (filterYear !== 'all') {
+        let dateToUse = null;
+        if (est.contract_end) {
+          dateToUse = est.contract_end;
+        } else if (est.contract_start) {
+          dateToUse = est.contract_start;
+        } else if (est.estimate_date) {
+          dateToUse = est.estimate_date;
+        } else if (est.created_date) {
+          dateToUse = est.created_date;
+        }
+        
+        if (dateToUse) {
+          const year = getYearFromDateString(dateToUse);
+          if (year && year.toString() !== filterYear) return false;
+        } else {
+          // No valid date field - exclude from year filtering
+          return false;
+        }
       }
       
       // User filter: if users are selected, only show estimates where those users are salesperson or estimator

@@ -120,6 +120,23 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: None (new section)
 
+### Year Selection System
+- **Name**: Year Selection System
+- **Slug**: `year-selection-system`
+- **Spec Path**: `docs/sections/year-selection-system.md`
+- **Primary Code Locations**:
+  - `src/contexts/YearSelectorContext.jsx` - Central context provider
+  - `src/utils/revenueSegmentCalculator.js` - Revenue filtering by year
+  - `src/utils/reportCalculations.js` - Report filtering by year
+  - `src/pages/Reports.jsx` - Reports page year filtering
+  - `src/pages/Accounts.jsx` - Accounts page year filtering
+  - `src/components/account/EstimatesTab.jsx` - Estimates tab year filtering
+  - `src/components/account/EstimatesStats.jsx` - Estimates stats year filtering
+  - `src/components/account/TotalWork.jsx` - Revenue display year filtering
+  - `api/data/estimates.js` - API endpoint for estimates (must include created_date, archived)
+- **Owner**: Product Owner
+- **Test Coverage Status**: None (new section)
+
 ---
 
 ## Adding New Sections

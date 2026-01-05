@@ -71,7 +71,9 @@ export default async function handler(req, res) {
       // This prevents hitting Vercel's 4.5MB response limit
       // Fields needed: id for matching, plus all fields used in findEstimateDifferences
       // CRITICAL: Must include account_id for renewal date calculations (at-risk accounts)
-      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number, estimate_type, estimate_date, contract_start, contract_end, total_price, total_price_with_tax, status, division, project_name, account_id';
+      // CRITICAL: Must include created_date for year determination (Priority 4 per spec R2)
+      // CRITICAL: Must include archived to exclude archived estimates from year calculation (per spec R12)
+      const fields = accountId ? '*' : 'id, lmn_estimate_id, estimate_number, estimate_type, estimate_date, contract_start, contract_end, created_date, archived, total_price, total_price_with_tax, status, division, project_name, account_id';
 
       while (hasMore) {
         let query = supabase
