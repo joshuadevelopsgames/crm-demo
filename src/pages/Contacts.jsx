@@ -46,14 +46,7 @@ import { useUser } from '@/contexts/UserContext';
 export default function Contacts() {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useUser();
-  const { selectedYear, setYear } = useYearSelector();
-  
-  // Generate year options (current year ± 5 years)
-  const baseYear = new Date().getFullYear();
-  const yearOptions = [];
-  for (let i = -5; i <= 5; i++) {
-    yearOptions.push(baseYear + i);
-  }
+  const { selectedYear, setYear, yearOptions } = useYearSelector();
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);

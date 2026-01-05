@@ -53,15 +53,8 @@ import { snoozeNotification } from '@/services/notificationService';
 
 export default function Accounts() {
   // Use year selector to trigger re-render when year changes
-  const { selectedYear, setYear, getCurrentYear } = useYearSelector();
+  const { selectedYear, setYear, getCurrentYear, yearOptions } = useYearSelector();
   const navigate = useNavigate();
-  
-  // Generate year options (current year ± 5 years)
-  const baseYear = new Date().getFullYear();
-  const yearOptions = [];
-  for (let i = -5; i <= 5; i++) {
-    yearOptions.push(baseYear + i);
-  }
 
   // Debug: Log year selection status
   useEffect(() => {
