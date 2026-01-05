@@ -1004,6 +1004,116 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     // revenue_by_year stores all years (JSONB field)
     account.revenue_by_year = Object.keys(revenueByYear).length > 0 ? revenueByYear : null;
     
+    // Per Estimates spec R20-R23: Calculate total estimates (won + lost, excluding archived) for ALL years
+    // Find all unique years that estimates apply to (all estimates, not just won)
+    const allEstimatesYearsSet = new Set();
+    // Filter out archived estimates (per R22)
+    const nonArchivedEstimates = accountEstimates.filter(est => !est.archived);
+    
+    nonArchivedEstimates.forEach(est => {
+      // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
+      const contractStart = est.contract_start ? new Date(est.contract_start) : null;
+      const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
+      const createdDate = est.created_date ? new Date(est.created_date) : null;
+      
+      // Determine year using priority (per spec R2)
+      let year = null;
+      // Priority 1: contract_end
+      if (contractEnd && !isNaN(contractEnd.getTime())) {
+        year = contractEnd.getFullYear();
+      }
+      // Priority 2: contract_start
+      else if (contractStart && !isNaN(contractStart.getTime())) {
+        year = contractStart.getFullYear();
+      }
+      // Priority 3: estimate_date
+      else if (estimateDate && !isNaN(estimateDate.getTime())) {
+        year = estimateDate.getFullYear();
+      }
+      // Priority 4: created_date
+      else if (createdDate && !isNaN(createdDate.getTime())) {
+        year = createdDate.getFullYear();
+      }
+      
+      if (year) {
+        allEstimatesYearsSet.add(year);
+        // For multi-year contracts, add all years in the contract (count once per year they span)
+        if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
+          const contractEndDate = new Date(est.contract_end);
+          if (!isNaN(contractEndDate.getTime())) {
+            const durationMonths = calculateDurationMonths(contractStart, contractEndDate);
+            if (durationMonths > 0) {
+              const yearsCount = getContractYears(durationMonths);
+              for (let i = 0; i < yearsCount; i++) {
+                allEstimatesYearsSet.add(contractStart.getFullYear() + i);
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Calculate total estimates count for each year (per spec R20)
+    const totalEstimatesByYear = {};
+    allEstimatesYearsSet.forEach(year => {
+      const yearCount = nonArchivedEstimates.reduce((count, est) => {
+        // Determine if this estimate applies to this year
+        const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
+        const contractStart = est.contract_start ? new Date(est.contract_start) : null;
+        const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
+        const createdDate = est.created_date ? new Date(est.created_date) : null;
+        
+        // Determine year using priority
+        let estimateYear = null;
+        if (contractEnd && !isNaN(contractEnd.getTime())) {
+          estimateYear = contractEnd.getFullYear();
+        } else if (contractStart && !isNaN(contractStart.getTime())) {
+          estimateYear = contractStart.getFullYear();
+        } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+          estimateYear = estimateDate.getFullYear();
+        } else if (createdDate && !isNaN(createdDate.getTime())) {
+          estimateYear = createdDate.getFullYear();
+        }
+        
+        if (!estimateYear) return count;
+        
+        // For multi-year contracts, check if this year is in the contract span
+        if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
+          const contractEndDate = new Date(est.contract_end);
+          if (!isNaN(contractEndDate.getTime())) {
+            const durationMonths = calculateDurationMonths(contractStart, contractEndDate);
+            if (durationMonths > 0) {
+              const yearsCount = getContractYears(durationMonths);
+              const startYear = contractStart.getFullYear();
+              const yearsApplied = [];
+              for (let i = 0; i < yearsCount; i++) {
+                yearsApplied.push(startYear + i);
+              }
+              if (yearsApplied.includes(year)) {
+                return count + 1;
+              }
+            }
+          }
+        }
+        
+        // For single-year estimates, check if year matches
+        if (estimateYear === year) {
+          return count + 1;
+        }
+        
+        return count;
+      }, 0);
+      
+      if (yearCount > 0) {
+        totalEstimatesByYear[year.toString()] = yearCount;
+      }
+    });
+    
+    // Per spec R20: Update account with calculated total estimates
+    // total_estimates_by_year stores all years (JSONB field)
+    account.total_estimates_by_year = Object.keys(totalEstimatesByYear).length > 0 ? totalEstimatesByYear : null;
+    
     // Only calculate automatic score if account doesn't already have a scorecard-based score
     // Scorecard scores take priority - they are set when scorecards are completed
     // We don't set organization_score here to preserve existing scorecard scores

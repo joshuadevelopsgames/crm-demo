@@ -420,7 +420,7 @@ export default function AccountDetail() {
           {/* Top Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <KeyDates account={account} />
-            <EstimatesStats estimates={estimates} />
+            <EstimatesStats estimates={estimates} account={account} />
             <TotalWork account={account} estimates={estimates} />
           </div>
 

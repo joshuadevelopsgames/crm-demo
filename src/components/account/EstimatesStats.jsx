@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, Target } from 'lucide-react';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
-import { getYearFromDateString } from '@/utils/dateFormatter';
 import { isWonStatus } from '@/utils/reportCalculations';
 
 // Helper to get current year (respects year selector) - REQUIRED, no fallback
@@ -20,33 +19,20 @@ function getCurrentYearForCalculation() {
   }
 }
 
-export default function EstimatesStats({ estimates = [] }) {
+export default function EstimatesStats({ estimates = [], account = null }) {
   const currentYear = getCurrentYearForCalculation();
   
-  // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
-  const thisYearEstimates = estimates.filter(e => {
-    let dateStr = null;
-    // Priority 1: contract_end
-    if (e.contract_end) {
-      dateStr = e.contract_end;
-    }
-    // Priority 2: contract_start
-    else if (e.contract_start) {
-      dateStr = e.contract_start;
-    }
-    // Priority 3: estimate_date
-    else if (e.estimate_date) {
-      dateStr = e.estimate_date;
-    }
-    // Priority 4: created_date
-    else if (e.created_date) {
-      dateStr = e.created_date;
+  // Per Estimates spec R20-R23: Use pre-calculated total_estimates_by_year
+  // This avoids on-the-fly filtering and improves performance
+  const thisYearEstimatesCount = useMemo(() => {
+    // Account and total_estimates_by_year are required
+    if (!account || !account.total_estimates_by_year || typeof account.total_estimates_by_year !== 'object') {
+      return 0;
     }
     
-    if (!dateStr) return false;
-    const estimateYear = getYearFromDateString(dateStr) || (dateStr instanceof Date ? dateStr.getFullYear() : null);
-    return estimateYear === currentYear;
-  });
+    const yearCount = account.total_estimates_by_year[currentYear.toString()];
+    return typeof yearCount === 'number' ? yearCount : parseInt(yearCount) || 0;
+  }, [account, currentYear]);
 
   // Per spec R1, R11: Calculate win percentage using isWonStatus to respect pipeline_status priority
   const winPercentage = useMemo(() => {
@@ -70,7 +56,7 @@ export default function EstimatesStats({ estimates = [] }) {
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">THIS YEAR</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-[#ffffff] mt-1">
-              {thisYearEstimates.length}
+              {thisYearEstimatesCount}
             </p>
           </div>
           <div>

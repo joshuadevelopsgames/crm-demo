@@ -434,6 +434,30 @@ export function calculateSegmentsForAllYears(account, allAccounts, estimates = [
 }
 
 /**
+ * Get total estimates count for selected year from account's total_estimates_by_year field
+ * 
+ * IMPORTANT: Total estimates are calculated during import only and stored in total_estimates_by_year.
+ * This function reads from stored data, it does NOT calculate counts from estimates.
+ * 
+ * Per Estimates spec R20-R23: Total estimates display reads from stored total_estimates_by_year[selectedYear] field.
+ * 
+ * @param {Object} account - Account object
+ * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
+ * @returns {number} - Total estimates count for selected year, or 0 if not available
+ */
+export function getTotalEstimatesForYear(account, selectedYear = null) {
+  const year = selectedYear || getCurrentYearForCalculation();
+  
+  if (account.total_estimates_by_year && typeof account.total_estimates_by_year === 'object') {
+    const yearCount = account.total_estimates_by_year[year.toString()];
+    return typeof yearCount === 'number' ? yearCount : parseInt(yearCount) || 0;
+  }
+  
+  // No total_estimates_by_year data available
+  return 0;
+}
+
+/**
  * Get segment for selected year from segment_by_year field
  * Falls back to revenue_segment if segment_by_year not available (backward compatibility)
  * @param {Object} account - Account object

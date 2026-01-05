@@ -1,7 +1,7 @@
 # Estimates Specification
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-01-XX  
+**Version**: 1.3.0  
+**Last Updated**: 2025-01-27  
 **Status**: Authoritative
 
 ## Purpose
@@ -100,14 +100,39 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 4. **Account Linking** (Priority Order):
    - Method 1: Direct `account_id` match
+     - If estimate has `account_id`, use it directly (if account exists in database)
    - Method 2: `lmn_contact_id` treated as CRM ID (Account ID) first
+     - Try matching `lmn_contact_id` to `account.lmn_crm_id` (case-insensitive)
+     - If match found, use that account_id
    - Method 3: `lmn_contact_id` treated as contact ID → maps to account
+     - If Method 2 fails, try matching `lmn_contact_id` to `contact.lmn_contact_id`
+     - If contact found and has `account_id`, use that account_id
    - Method 4: Email → contact → account
+     - Match estimate email (case-insensitive) to contact email
+     - If contact found and has `account_id`, use that account_id
    - Method 5: Phone → contact → account
+     - Normalize phone numbers (remove all non-digits)
+     - Match estimate phone to contact phone (normalized)
+     - If contact found and has `account_id`, use that account_id
    - Method 6: Contact name → fuzzy match to account name
+     - Normalize names: lowercase, trim, remove punctuation, remove common suffixes (inc, llc, ltd, corp, etc.)
+     - Calculate similarity (character overlap / longer length)
+     - If similarity > 0.85, match contact name to account name
+     - If match found, use that account_id
    - Method 7: CRM tags → account match
+     - Split estimate `crm_tags` by comma
+     - Match each tag (case-insensitive, trimmed) to `account.lmn_crm_id`
+     - Supports partial matches and space-normalized matches
+     - If match found, use that account_id
    - Method 8: Address → fuzzy match to account address
+     - Normalize addresses (lowercase, trim, remove punctuation)
+     - Calculate similarity (character overlap / longer length)
+     - If similarity > 0.85, match estimate address to account address
+     - If match found, use that account_id
    - Method 9: Orphaned (no link) → `account_id = null` (warn user)
+     - If no match found via any method, set `account_id = null`
+     - Track with `_is_orphaned = true` and `_link_method = null`
+     - Log warning and notify user in import summary
 
 5. **Year Determination** (Priority Order):
    - Priority 1: `contract_end` (if present and valid)
@@ -125,14 +150,62 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 ### Computations and Formulas
 
 - **Win Rate**: `(won estimates / total estimates) * 100`
+  - Archived estimates excluded from both numerator and denominator
+  - Uses `isWonStatus()` function to respect `pipeline_status` priority
 - **Department Total**: Sum of `total_price_with_tax` (or `total_price`) for all estimates in department
+- **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
+  - Archived estimates excluded
+  - Uses `isWonStatus()` function for status determination
 - **Year Extraction**: Extract year from date string (first 4 characters of YYYY-MM-DD)
+  - Validates year is between 2000-2100
+  - Returns null if invalid or missing
 
 ### Sorting and Grouping Rules
 
 - **Default Sort**: Newest first by `estimate_date`
 - **Grouping**: By division/department (with "Uncategorized" for missing/empty)
 - **Department Sort**: Uncategorized first, then known divisions, then alphabetically
+
+### Division Normalization
+
+- **Known Divisions** (exact match, case-insensitive):
+  - 'LE Irrigation'
+  - 'LE Landscapes'
+  - 'LE Maintenance (Summer/Winter)'
+  - 'LE Maintenance Enchancements'
+  - 'LE Paving'
+  - 'LE Tree Care'
+  - 'Line Painting'
+  - 'Parking Lot Sweeping'
+  - 'Snow'
+  - 'Warranty'
+- **Normalization Rules**:
+  - Empty/null/whitespace → "Uncategorized"
+  - Values like '<unassigned>', 'unassigned', '[unassigned]', 'null', 'undefined', 'n/a', 'na' → "Uncategorized"
+  - Exact match (case-insensitive) to known division → return exact category name (preserves casing)
+  - No match → "Uncategorized"
+
+### User Filtering
+
+- **Supported Filters**: Filter estimates by salesperson or estimator
+- **Filter Logic**: If users selected, only show estimates where:
+  - `estimate.salesperson` matches selected user, OR
+  - `estimate.estimator` matches selected user
+- **User Extraction**: Extract unique users from estimates with counts
+  - Includes both salesperson and estimator fields
+  - Sorted alphabetically by name
+
+### Department Grouping and Sorting
+
+- **Grouping**: Estimates grouped by normalized division/department
+- **Sorting Within Department**: Newest first by `estimate_date`
+- **Department Sort Order**:
+  1. "Uncategorized" always first
+  2. Known divisions (in order listed above)
+  3. Other divisions alphabetically
+- **Department Totals**: Sum of `total_price_with_tax` (or `total_price`) for all estimates in department
+- **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
+  - Archived estimates excluded from win rate calculation
 
 ## Rules
 
@@ -162,7 +235,15 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 **R13**: Duplicate detection: Within-batch duplicates are skipped; across-imports use `lmn_estimate_id` matching (updates existing record).
 
-**R14**: Account linking uses confidence scoring - store `_link_method` and `_link_confidence` for tracking (no manual review required for fuzzy matches).
+**R14**: Account linking stores `_link_method` for tracking (no manual review required for fuzzy matches). Link methods: 'crm_id_direct', 'contact_id', 'email_to_contact', 'phone_to_contact', 'name_match_fuzzy', 'crm_tags', 'address_match', or null (orphaned).
+
+**R16**: Division normalization maps empty/null/unassigned values to "Uncategorized". Known divisions matched exactly (case-insensitive), unknown divisions also map to "Uncategorized".
+
+**R17**: User filtering supports filtering by salesperson or estimator. If users selected, only estimates where salesperson OR estimator matches are shown.
+
+**R18**: Department grouping organizes estimates by normalized division. Departments sorted: Uncategorized first, then known divisions, then others alphabetically. Estimates within department sorted newest first by `estimate_date`.
+
+**R19**: Win rate calculations exclude archived estimates from both numerator and denominator. Uses `isWonStatus()` function to respect `pipeline_status` priority over `status` field.
 
 **R15**: Date validation: All dates must be between 2000-2100. Dates outside this range are invalid and trigger error notification.
 
@@ -417,6 +498,67 @@ All validation errors and warnings must notify users in the import summary:
 - **Errors**: Missing `lmn_estimate_id`, duplicate IDs, invalid dates
 - **Warnings**: Orphaned estimates, unrecognized statuses
 - **Summary**: Total counts, success/failure breakdown
+
+## Total Estimates by Year (Pre-calculation)
+
+### Purpose
+
+Similar to how `revenue_by_year` is pre-calculated during import, `total_estimates_by_year` stores the count of all estimates (won + lost) per year for each account. This avoids on-the-fly filtering and improves performance when displaying estimate counts.
+
+### Calculation During Import
+
+**R20**: Total estimates are calculated for ALL years during import (not just selected year)
+- For each account:
+  - Get all estimates linked to account (won + lost, excluding archived)
+  - Determine year for each estimate using date priority (R2): `contract_end` → `contract_start` → `estimate_date` → `created_date`
+  - For multi-year contracts, count once per year they span (same logic as revenue allocation)
+  - Store count in `total_estimates_by_year` JSONB: `{ "2024": 15, "2025": 23, ... }`
+
+**R21**: `total_estimates_by_year` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
+
+**R22**: Archived estimates are excluded from `total_estimates_by_year` calculations (per R12).
+
+**R23**: To get total estimates for selected year: `account.total_estimates_by_year[selectedYear] || 0`
+
+**R24**: Components MUST use pre-calculated `total_estimates_by_year` from account object. No fallback to on-the-fly filtering. If account or `total_estimates_by_year` is missing, return 0.
+
+### Storage
+
+- **Field**: `total_estimates_by_year` (JSONB on accounts table)
+- **Format**: `{ "2024": 15, "2025": 23, "2026": 18, ... }`
+- **Type**: Integer counts per year
+- **Calculation**: During import only (same pass as revenue calculation)
+
+### Usage
+
+- **EstimatesStats component**: 
+  - Requires `account` prop with `total_estimates_by_year` field
+  - Reads from `total_estimates_by_year[selectedYear]`
+  - Returns 0 if account or field is missing (no fallback to on-the-fly filtering)
+- **Account detail pages**: Display estimate counts per year using pre-calculated values
+- **Reports**: Can use pre-calculated counts for performance (future enhancement)
+
+### Implementation Details
+
+- **Database Field**: `total_estimates_by_year` (JSONB on accounts table)
+- **Migration**: `add_total_estimates_by_year_to_accounts.sql`
+- **Calculation Location**: `src/utils/lmnMergeData.js` (during import, same pass as revenue calculation)
+- **Component Usage**: `src/components/account/EstimatesStats.jsx` (uses pre-calculated value when account prop provided)
+- **Helper Function**: `getTotalEstimatesForYear(account, selectedYear)` in `src/utils/revenueSegmentCalculator.js` (similar to `getRevenueForYear`)
+
+## API Optimization
+
+### Field Selection for Large Imports
+
+- **Import Validation**: When fetching estimates for import validation, only fetch required fields to reduce response size
+- **Fields Included**: `id`, `lmn_estimate_id`, `estimate_number`, `estimate_type`, `estimate_date`, `contract_start`, `contract_end`, `created_date`, `archived`, `total_price`, `total_price_with_tax`, `status`, `division`, `project_name`, `account_id`
+- **Purpose**: Prevents hitting Vercel's 4.5MB response limit
+- **Full Fetch**: When `account_id` query parameter provided, fetch all fields (`*`)
+
+### Duplicate Removal
+
+- **In `filterEstimatesByYear()`**: Removes duplicates by `lmn_estimate_id` (keeps first occurrence)
+- **Purpose**: Prevents double-counting in reports when same estimate appears multiple times
 
 ## Open Questions for the Product Owner
 

@@ -19,6 +19,7 @@ This document defines how the CSV import process coordinates multiple systems an
 - **Contacts Table**: Updated with imported contact data
 - **Estimates Table**: Updated with imported estimate data
 - **Revenue Calculations**: `revenue_by_year` calculated and stored for all years
+- **Total Estimates Calculations**: `total_estimates_by_year` calculated and stored for all years (won + lost)
 - **Segment Calculations**: `segment_by_year` calculated and stored for all years
 
 ## Logic
@@ -44,7 +45,15 @@ This document defines how the CSV import process coordinates multiple systems an
      - Store in `revenue_by_year` JSONB: `{ "2024": 50000, "2025": 75000, ... }`
    - Also set `annual_revenue` to selected year's value (backward compatibility)
 
-4. **Calculate Segments for All Years** (per Segmentation spec)
+4. **Calculate Total Estimates for All Years** (per Estimates spec)
+   - For each account:
+     - Get all estimates (won + lost, excluding archived)
+     - Determine year for each estimate (using date priority: contract_end → contract_start → estimate_date → created_date)
+     - Count estimates per year (including multi-year contracts - count once per year they span)
+     - Store in `total_estimates_by_year` JSONB: `{ "2024": 15, "2025": 23, ... }`
+   - This pre-calculation avoids on-the-fly filtering and improves performance
+
+5. **Calculate Segments for All Years** (per Segmentation spec)
    - For each year (2024, 2025, 2026, etc.):
      - Calculate total revenue for THAT year only: `totalRevenue[year] = sum of all accounts.revenue_by_year[year]`
      - For each account:
@@ -56,12 +65,12 @@ This document defines how the CSV import process coordinates multiple systems an
    
    **Important**: Total revenue is calculated separately for each year. The total revenue for 2024 is independent of the total revenue for 2025. When calculating segments for 2024, we only use the total revenue for 2024, not the sum across all years.
 
-5. **Invalidate Caches** (per Notification Caching spec)
+6. **Invalidate Caches** (per Notification Caching spec)
    - Invalidate React Query caches for: accounts, contacts, estimates, scorecards
    - Force refetch of active queries
    - Notification cache will refresh automatically via cron (no manual invalidation needed)
 
-6. **User Notification**
+7. **User Notification**
    - Show success/error message
    - Display import statistics (accounts created/updated, estimates imported)
 
@@ -79,6 +88,14 @@ This document defines how the CSV import process coordinates multiple systems an
 **R2**: `annual_revenue` stores selected year's value (backward compatibility)
 - Set `annual_revenue = revenue_by_year[selectedYear]`
 - Used for legacy code that hasn't migrated to `revenue_by_year`
+
+**R3**: Total estimates are calculated for ALL years (not just selected year)
+- Process all estimates (won + lost, excluding archived)
+- Determine year for each estimate using date priority: `contract_end` → `contract_start` → `estimate_date` → `created_date`
+- For multi-year contracts, count once per year they span (same logic as revenue allocation)
+- Store in `total_estimates_by_year` JSONB field on accounts table: `{ "2024": 15, "2025": 23, ... }`
+- This pre-calculation avoids on-the-fly filtering and improves performance
+- Calculation happens during import in `lmnMergeData.js`, same pass as revenue calculation
 
 ### Segment Calculation (During Import)
 

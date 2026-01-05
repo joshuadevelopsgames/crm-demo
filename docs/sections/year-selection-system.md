@@ -28,11 +28,11 @@ The Year Selection System is a site-wide mechanism that allows users to select a
 
 **Required:**
 - At least one date field from estimates (`contract_end`, `contract_start`, `estimate_date`, or `created_date`)
-- `selectedYear` from YearSelectorContext (or fallback to current year)
+- `selectedYear` from YearSelectorContext (must be set by user via dropdown, no fallback)
 
 **Optional:**
-- `profiles.selected_year`: If null, defaults to current year
-- `localStorage.selectedYear`: Fallback if profile not available
+- `profiles.selected_year`: User's selected year preference (no default)
+- `localStorage.selectedYear`: Fallback if profile not available (no default)
 
 ### Types and Units
 
@@ -49,7 +49,7 @@ The Year Selection System is a site-wide mechanism that allows users to select a
    - YearSelectorProvider wraps entire application
    - Fetches estimates from `/api/data/estimates` (cached 10 minutes)
    - Calculates `availableYears` from database estimates
-   - Loads `selectedYear` from profile → localStorage → current year
+   - Loads `selectedYear` from profile → localStorage (no fallback to current year)
 
 2. **Year Determination** (for each estimate)
    - Uses standardized priority order (per Estimates spec R2):
@@ -102,7 +102,7 @@ The Year Selection System is a site-wide mechanism that allows users to select a
 
 **R4**: Only years that actually have estimates are included in `availableYears` (no gaps filled between min and max).
 
-**R5**: Selected year persists across sessions (stored in `profiles.selected_year` and `localStorage.selectedYear`).
+**R5**: Selected year persists across sessions (stored in `profiles.selected_year` and `localStorage.selectedYear`). There is NO fallback to current year - selected year must be set by user via dropdown.
 
 **R6**: All revenue calculations MUST use `getCurrentYear()` from YearSelectorContext (not hardcoded year or `new Date().getFullYear()`).
 
@@ -136,7 +136,7 @@ The Year Selection System is a site-wide mechanism that allows users to select a
 
 1. **Priority 1**: `profile.selected_year` (server) - If available and valid (2000-2100) → use this
 2. **Priority 2**: `localStorage.selectedYear` (client) - If Priority 1 missing/invalid → use this
-3. **Priority 3**: Current year - Default fallback: `new Date().getFullYear()`
+3. **No Fallback**: Selected year MUST be set by user via dropdown. There is NO fallback to current year.
 
 ### Conflict Examples
 
@@ -287,12 +287,13 @@ estimates: [
 
 ### Edge Cases
 
-- **No Estimates**: Defaults to current year for both range and available years
-- **All Estimates Archived**: Same as no estimates (defaults to current year)
-- **Selected Year Outside Range**: Automatically adjusted to closest valid year
+- **No Estimates**: No available years, user must select a year manually (no default)
+- **All Estimates Archived**: Same as no estimates (no available years, user must select manually)
+- **Selected Year Outside Range**: Automatically adjusted to closest valid year (yearRange.min or yearRange.max)
 - **Invalid Years in Data**: Excluded from calculation (2000-2100 validation)
 - **Missing Date Fields**: Estimate excluded from year-based calculations
 - **Multi-Year Contracts**: Annualized and allocated to selected year only
+- **No Selected Year Set**: System throws error - selected year must be set by user via dropdown (no fallback)
 
 ### Exceptions
 
