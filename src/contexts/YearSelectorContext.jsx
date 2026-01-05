@@ -90,12 +90,12 @@ export function YearSelectorProvider({ children }) {
     const years = new Set();
     
     estimates.forEach(est => {
-      // Per spec R2: Year determination priority
+      // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
       let year = null;
       
-      // Priority 1: estimate_close_date
-      if (est.estimate_close_date) {
-        const date = new Date(est.estimate_close_date);
+      // Priority 1: contract_end
+      if (est.contract_end) {
+        const date = new Date(est.contract_end);
         if (!isNaN(date.getTime())) {
           year = date.getFullYear();
         }
@@ -127,14 +127,6 @@ export function YearSelectorProvider({ children }) {
       
       if (year) {
         years.add(year);
-      }
-      
-      // Also include contract_end for projected dates (latest date)
-      if (est.contract_end) {
-        const date = new Date(est.contract_end);
-        if (!isNaN(date.getTime())) {
-          years.add(date.getFullYear());
-        }
       }
     });
     

@@ -34,7 +34,8 @@ The Accounts section provides the central hub for managing all company accounts 
   - `contract_start` (timestamptz) - Contract start date
   - `contract_end` (timestamptz) - Contract end date
   - `estimate_date` (timestamptz) - Estimate date
-  - `estimate_close_date` (timestamptz) - Estimate close date (primary for year determination)
+  - `contract_end` (timestamptz) - Contract end date (Priority 1 for year determination, per Estimates spec R2)
+  - `estimate_close_date` (timestamptz) - Estimate close date (deprecated, no longer used for year determination priority)
   - `created_date` (timestamptz) - Created date (fallback for year determination)
   - `estimate_type` (text) - 'Standard' (project) or 'Service' (ongoing)
   - `salesperson` (text) - Salesperson name
@@ -142,8 +143,8 @@ The Accounts section provides the central hub for managing all company accounts 
 
 9. **Revenue Calculation** (For display and segment assignment)
    - Source: Won estimates for current year (year-based, not rolling 12 months)
-   - Year determination priority:
-     1. `estimate_close_date` (primary)
+   - Year determination priority (per Estimates spec R2):
+     1. `contract_end` (primary)
      2. `contract_start` (fallback)
      3. `estimate_date` (fallback)
      4. `created_date` (fallback)
@@ -281,9 +282,9 @@ Contract duration is calculated in whole months before converting to years.
 2. **Fallback**: `total_price` (if total_price_with_tax missing/zero and total_price > 0)
 3. **Result**: Use fallback with user notification
 
-### Year Determination Precedence
+### Year Determination Precedence (per Estimates spec R2)
 
-1. **Primary**: `estimate_close_date`
+1. **Primary**: `contract_end`
 2. **Fallback 1**: `contract_start`
 3. **Fallback 2**: `estimate_date`
 4. **Fallback 3**: `created_date`

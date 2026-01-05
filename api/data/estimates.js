@@ -203,11 +203,13 @@ export default async function handler(req, res) {
       }
       
       if (action === 'bulk_upsert') {
+        // Per spec R8: Each import is treated as fresh data. LMN export is source of truth.
         // IMPORTANT: We use ID-based matching (lmn_estimate_id) ONLY, never name/number matching
         // IDs are immutable and reliable, while estimate numbers/names can change
-        const { estimates, lookupField = 'lmn_estimate_id' } = data;
+        const { estimates, lookupField = 'lmn_estimate_id', userNotifications: parserNotifications } = data;
         let created = 0;
         let updated = 0;
+        let orphanedCount = 0; // Per spec R7: Track orphaned estimates (no account_id AND no contact_id)
         
         // Use smaller batch size for estimates due to larger payload size
         const BATCH_SIZE = 50;
@@ -317,9 +319,14 @@ export default async function handler(req, res) {
               estimateData.contact_id = null;
             }
             
+            // Per spec R7: Track orphaned estimates (no account_id AND no contact_id)
+            if (!estimateData.account_id && !estimateData.contact_id) {
+              orphanedCount++;
+            }
+            
             // NOTE: Date fields (estimate_date, estimate_close_date, contract_start, contract_end) are preserved
             // by the spread operator above - no need to explicitly preserve them
-            // The dev version works this way and dates are saved correctly
+            // Per spec R2: contract_end is Priority 1 for year determination (estimate_close_date no longer used in priority)
             
             if (existingMap.has(lookupValue)) {
               toUpdate.push({ id: existingMap.get(lookupValue), data: estimateData });
@@ -453,12 +460,24 @@ export default async function handler(req, res) {
           // Don't fail the import if duplicate check fails
         }
         
+        // Per spec R7: Compile orphaned estimate warning
+        const userNotifications = {
+          errors: parserNotifications?.errors || [],
+          warnings: parserNotifications?.warnings || []
+        };
+        
+        if (orphanedCount > 0) {
+          userNotifications.warnings.push(`${orphanedCount} estimate(s) have no account_id or contact_id - orphaned (imported but flagged for review)`);
+        }
+        
         return res.status(200).json({
           success: true,
           created,
           updated,
           total: estimates.length,
-          warnings: duplicateWarnings
+          warnings: duplicateWarnings,
+          userNotifications: userNotifications.errors.length > 0 || userNotifications.warnings.length > 0 ? userNotifications : undefined,
+          orphanedCount: orphanedCount > 0 ? orphanedCount : undefined
         });
       }
       

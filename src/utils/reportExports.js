@@ -91,7 +91,8 @@ export function exportToXLSX(reportData, selectedYear) {
       account?.name || 'Unknown',
       est.project_name || 'N/A',
       est.estimate_date || 'N/A',
-      est.estimate_close_date || 'N/A',
+      // Per Estimates spec R2: Export contract_end (Priority 1) if available, fallback to other dates
+      est.contract_end || est.contract_start || est.estimate_date || est.created_date || 'N/A',
       est.status || 'N/A',
       est.division || 'N/A',
       est.total_price_with_tax || 0,

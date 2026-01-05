@@ -186,8 +186,9 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                   <tbody>
                                     {accountEstimates
                                       .sort((a, b) => {
-                                        const dateA = getDateStringTimestamp(a.estimate_close_date || a.estimate_date);
-                                        const dateB = getDateStringTimestamp(b.estimate_close_date || b.estimate_date);
+                                        // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+                                        const dateA = getDateStringTimestamp(a.contract_end || a.contract_start || a.estimate_date || a.created_date);
+                                        const dateB = getDateStringTimestamp(b.contract_end || b.contract_start || b.estimate_date || b.created_date);
                                         return dateB - dateA;
                                       })
                                       .map((estimate) => (
@@ -200,9 +201,12 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                               : 'N/A'}
                                           </td>
                                           <td className="p-2 text-slate-600">
-                                            {estimate.estimate_close_date 
-                                              ? formatDateString(estimate.estimate_close_date, 'MMM d, yyyy')
-                                              : 'N/A'}
+                                            {/* Per Estimates spec R2: Display contract_end (Priority 1) if available */}
+                                            {estimate.contract_end 
+                                              ? formatDateString(estimate.contract_end, 'MMM d, yyyy')
+                                              : (estimate.contract_start
+                                                ? formatDateString(estimate.contract_start, 'MMM d, yyyy')
+                                                : 'N/A')}
                                           </td>
                                           <td className="p-2 text-right text-slate-600">
                                             {formatCurrency(parseFloat(estimate.total_price_with_tax) || 0)}

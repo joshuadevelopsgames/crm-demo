@@ -13,6 +13,7 @@ import { FileText, Calendar, DollarSign, Filter, ChevronDown, ChevronRight, Targ
 import { format } from 'date-fns';
 import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
+import { isWonStatus } from '@/utils/reportCalculations';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -109,8 +110,8 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   // Filter by status, year, and user
   const statusFilteredEstimates = useMemo(() => {
     const filtered = estimates.filter(est => {
-      // Normalize status: treat pending and any non-won as lost
-      const normalizedStatus = est.status === 'won' ? 'won' : 'lost';
+      // Per spec R1, R11: Use isWonStatus to respect pipeline_status priority
+      const normalizedStatus = isWonStatus(est) ? 'won' : 'lost';
       
       if (filterStatus !== 'all' && normalizedStatus !== filterStatus) return false;
       
@@ -216,14 +217,14 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   // Calculate win percentage for a department
   const calculateDepartmentWinPercentage = (departmentEstimates) => {
     if (departmentEstimates.length === 0) return 0;
-    const won = departmentEstimates.filter(est => est.status === 'won').length;
+    const won = departmentEstimates.filter(est => isWonStatus(est)).length;
     return (won / departmentEstimates.length) * 100;
   };
 
   // Calculate total win percentage for all estimates (not filtered - for account overall)
   const totalWinPercentage = useMemo(() => {
     if (estimates.length === 0) return 0;
-    const won = estimates.filter(est => est.status === 'won').length;
+    const won = estimates.filter(est => isWonStatus(est)).length;
     return (won / estimates.length) * 100;
   }, [estimates]);
 
@@ -245,7 +246,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                   {totalWinPercentage.toFixed(1)}%
                 </p>
                 <p className="text-xs text-emerald-600 mt-1">
-                  {estimates.filter(est => est.status === 'won').length} won / {estimates.length} total
+                  {estimates.filter(est => isWonStatus(est)).length} won / {estimates.length} total
                 </p>
               </div>
             </div>
@@ -485,7 +486,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
                             </td>
                             <td className="px-4 py-4 text-center">
                               <Badge variant="outline" className={getStatusColor(estimate.status)}>
-                                {estimate.status === 'won' ? 'WON' : 'LOST'}
+                                {isWonStatus(estimate) ? 'WON' : 'LOST'}
                               </Badge>
                             </td>
                           </tr>

@@ -12,7 +12,9 @@ This document defines how revenue is calculated, displayed, and used for segment
   - `status` (text): Estimate status, must be "won" (case-insensitive) to count
   - `total_price_with_tax` (numeric): Primary price field for revenue calculations
   - `total_price` (numeric): Fallback price field if `total_price_with_tax` is missing/zero
-  - `estimate_close_date` (date): Primary date for year determination
+  - `contract_end` (date): Priority 1 for year determination (per Estimates spec R2)
+  - `contract_start` (date): Priority 2 for year determination (per Estimates spec R2)
+  - `estimate_close_date` (date): Deprecated, no longer used for year determination priority
   - `contract_start` (date): Contract start date, used for annualization and year fallback
   - `contract_end` (date): Contract end date, used for annualization
   - `estimate_date` (date): Fallback date for year determination
@@ -32,8 +34,8 @@ This document defines how revenue is calculated, displayed, and used for segment
 ### Fields Used
 
 **Required Fields:**
-- `status`: Must be "won" (case-insensitive) for revenue inclusion
-- At least one date field: `estimate_close_date`, `contract_start`, `estimate_date`, or `created_date`
+- `status`: Must be "won" (case-insensitive) for revenue inclusion (per Estimates spec R1, R11: uses isWonStatus which respects pipeline_status priority)
+- At least one date field: `contract_end`, `contract_start`, `estimate_date`, or `created_date` (per Estimates spec R2)
 - At least one price field: `total_price_with_tax` or `total_price`
 
 **Optional Fields:**
@@ -64,11 +66,11 @@ This document defines how revenue is calculated, displayed, and used for segment
    - Default to `new Date().getFullYear()` if context unavailable
 
 2. **Filter Estimates**
-   - Only include estimates where `status.toLowerCase() === 'won'`
+   - Only include estimates where `isWonStatus(estimate)` returns true (per Estimates spec R1, R11: respects pipeline_status priority)
    - Only include estimates that apply to current year (see Year Determination)
 
-3. **Determine Year for Each Estimate** (Priority Order)
-   - Priority 1: `estimate_close_date` (primary - matches Excel "Estimate Close Date")
+3. **Determine Year for Each Estimate** (Priority Order - per Estimates spec R2)
+   - Priority 1: `contract_end` (primary)
    - Priority 2: `contract_start` (fallback)
    - Priority 3: `estimate_date` (fallback)
    - Priority 4: `created_date` (fallback)
@@ -165,7 +167,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R1**: Only estimates with `status.toLowerCase() === 'won'` are included in revenue calculations.
 
-**R2**: Year determination uses priority order: `estimate_close_date` → `contract_start` → `estimate_date` → `created_date`.
+**R2**: Year determination uses priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (per Estimates spec R2).
 
 **R3**: Price field selection: Prefer `total_price_with_tax`, fallback to `total_price` if missing/zero.
 
@@ -205,7 +207,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R21**: Current year is determined by application context (currently `TestModeContext`, future: year selector dropdown).
 
-**R22**: Every estimate must have at least one date field (`estimate_close_date`, `contract_start`, `estimate_date`, or `created_date`). Use fallback priority if primary date is missing.
+**R22**: Every estimate must have at least one date field (`contract_end`, `contract_start`, `estimate_date`, or `created_date`). Use fallback priority if primary date is missing.
 
 **R23**: Year selector selection persists across sessions (stored in user profile). Selected year applies site-wide until changed.
 
@@ -219,7 +221,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 ### Year Determination Priority
 
-**Highest Priority**: `estimate_close_date` (matches Excel "Estimate Close Date")
+**Highest Priority**: `contract_end` (per Estimates spec R2)
 - If present and valid → use this year
 - If missing/invalid → fall to next priority
 
@@ -260,8 +262,8 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 ### Conflict Examples
 
 **Example 1: Multiple Date Fields**
-- Estimate has `estimate_close_date = 2024-01-15` and `contract_start = 2025-06-01`
-- **Resolution**: Use `estimate_close_date` (Priority 1) → applies to 2024, not 2025
+- Estimate has `contract_end = 2025-06-30` and `contract_start = 2025-06-01`
+- **Resolution**: Use `contract_end = 2025` (Priority 1, per Estimates spec R2) → applies to 2025
 
 **Example 2: Price Field Fallback**
 - Estimate has `total_price_with_tax = 0` and `total_price = 50000`
@@ -289,9 +291,9 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
   "id": "est-001",
   "status": "won",
   "total_price_with_tax": 50000,
-  "estimate_close_date": "2024-03-15",
-  "contract_start": "2024-04-01",
   "contract_end": "2025-03-31",
+  "contract_start": "2024-04-01",
+  "estimate_date": "2024-03-15",
   "account_id": "acc-001"
 }
 ```
@@ -299,7 +301,7 @@ Current year: 2024
 
 **Process:**
 1. Status is "won" → included
-2. Year determination: `estimate_close_date = 2024` → applies to 2024
+2. Year determination: `contract_end = 2025` (Priority 1, per Estimates spec R2) → does NOT apply to 2024
 3. Price: `total_price_with_tax = 50000`
 4. Contract duration: 12 months → 1 year
 5. Annualization: `50000 / 1 = 50000`
@@ -317,9 +319,9 @@ Current year: 2024
   "id": "est-002",
   "status": "won",
   "total_price_with_tax": 300000,
-  "estimate_close_date": "2024-06-01",
-  "contract_start": "2024-07-01",
   "contract_end": "2027-06-30",
+  "contract_start": "2024-07-01",
+  "estimate_date": "2024-06-01",
   "account_id": "acc-002"
 }
 ```
@@ -327,7 +329,7 @@ Current year: 2025
 
 **Process:**
 1. Status is "won" → included
-2. Year determination: `estimate_close_date = 2024` → does NOT apply to 2025
+2. Year determination: `contract_end = 2027` (Priority 1, per Estimates spec R2) → does NOT apply to 2025
 3. **Wait**: Check contract allocation
 4. Contract duration: 35 months → 3 years
 5. Annualization: `300000 / 3 = 100000`
@@ -347,7 +349,9 @@ Current year: 2025
   "status": "won",
   "total_price_with_tax": 0,
   "total_price": 75000,
-  "estimate_close_date": "2024-08-15",
+  "contract_end": null,
+  "contract_start": null,
+  "estimate_date": "2024-08-15",
   "account_id": "acc-003"
 }
 ```
@@ -355,7 +359,7 @@ Current year: 2024
 
 **Process:**
 1. Status is "won" → included
-2. Year determination: `estimate_close_date = 2024` → applies to 2024
+2. Year determination: `contract_end` and `contract_start` are null, so uses `estimate_date = 2024` (Priority 3, per Estimates spec R2) → applies to 2024
 3. Price: `total_price_with_tax = 0` → fallback to `total_price = 75000`
 4. Show toast: "Some estimates are missing tax-inclusive prices..."
 5. No contract dates → use full price
@@ -377,12 +381,16 @@ Estimates: [
   {
     "status": "won",
     "estimate_type": "Standard",
-    "estimate_close_date": "2024-05-01"
+    "contract_end": null,
+    "contract_start": null,
+    "estimate_date": "2024-05-01"
   },
   {
     "status": "won",
     "estimate_type": "Standard",
-    "estimate_close_date": "2024-08-01"
+    "contract_end": null,
+    "contract_start": null,
+    "estimate_date": "2024-08-01"
   }
 ]
 Total Revenue: $500000
@@ -469,7 +477,9 @@ Account: {
 Estimates: [
   {
     "status": "lost",
-    "estimate_close_date": "2024-03-01"
+    "contract_end": null,
+    "contract_start": null,
+    "estimate_date": "2024-03-01"
   }
 ]
 ```
@@ -487,7 +497,7 @@ Current year: 2024
 
 **AC1**: Only won estimates (case-insensitive) are included in revenue calculations. (R1)
 
-**AC2**: Year determination uses priority order: `estimate_close_date` → `contract_start` → `estimate_date` → `created_date`. (R2)
+**AC2**: Year determination uses priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (per Estimates spec R2). (R2)
 
 **AC3**: Price field selection prefers `total_price_with_tax`, falls back to `total_price` if missing/zero, shows toast once per session. (R3, R4)
 

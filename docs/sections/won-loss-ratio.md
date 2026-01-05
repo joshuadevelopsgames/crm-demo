@@ -18,7 +18,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
   - `total_price_with_tax` (numeric) - Tax-inclusive price (preferred)
   - `division` (text) - Department/division name
   - `estimate_date` (timestamptz) - Estimate creation date
-  - `estimate_close_date` (timestamptz) - Estimate close date (preferred for year filtering)
+  - `contract_end` (timestamptz) - Contract end date (Priority 1 for year filtering, per Estimates spec R2)
+  - `estimate_close_date` (timestamptz) - Estimate close date (deprecated, no longer used for year determination priority)
   - `archived` (boolean) - Archive flag
   - `exclude_stats` (boolean) - Exclude from statistics flag
 
@@ -37,7 +38,9 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 - `estimates.division` - Defaults to 'Uncategorized' if missing
 - `estimates.total_price_with_tax` - Preferred for revenue calculations
 - `estimates.total_price` - Fallback if total_price_with_tax missing
-- `estimates.estimate_close_date` - Preferred for year filtering
+- `estimates.contract_end` - Priority 1 for year filtering (per Estimates spec R2)
+- `estimates.contract_start` - Priority 2 for year filtering (per Estimates spec R2)
+- `estimates.estimate_close_date` - Deprecated, no longer used for year determination priority
 - `estimates.estimate_date` - Fallback for year filtering
 - `estimates.lmn_estimate_id` - Used for duplicate detection
 - `accounts.name` - Used for account name display (defaults to 'Unknown Account' if missing)
@@ -58,7 +61,7 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 - `estimates.total_price` can be null (treated as 0 if both price fields are null)
 - `estimates.division` can be null (defaults to 'Uncategorized')
 - `estimates.account_id` can be null (excluded from account statistics)
-- `estimates.estimate_close_date` can be null (falls back to `estimate_date`)
+- `estimates.contract_end` can be null (falls back to `contract_start` → `estimate_date` → `created_date` per Estimates spec R2)
 - `estimates.estimate_date` can be null (estimate excluded from year-based reports if both dates missing)
 - `accounts.name` can be null (defaults to 'Unknown Account')
 
@@ -79,13 +82,15 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 
 3. **Year Filtering** (if year specified)
    - Exclude archived estimates
-   - Determine date to use:
-     - If `salesPerformanceMode=true`: Use `estimate_close_date` if available, otherwise `estimate_date`
-     - If `salesPerformanceMode=false`: Use `estimate_close_date` OR `estimate_date`
+   - Determine date to use (per Estimates spec R2):
+     - Priority 1: `contract_end` (if available)
+     - Priority 2: `contract_start` (if available)
+     - Priority 3: `estimate_date` (if available)
+     - Priority 4: `created_date` (if available)
    - Extract year from date (first 4 characters of date string)
    - Validate year is between 2000-2100
    - If `soldOnly=true`: Exclude estimates with status containing "lost"
-   - Include estimates with `exclude_stats=true` (LMN compatibility)
+   - Per Estimates spec R10: `exclude_stats` field is ignored (never used in any system logic)
    - Include estimates with zero/negative prices (LMN compatibility)
 
 4. **Won Status Determination** (for each estimate)
@@ -224,13 +229,12 @@ Rules must be testable and numbered.
 ### Year Filtering Rules
 
 - **R21**: Archived estimates are excluded from year-based filtering.
-- **R22**: If `salesPerformanceMode=true`, use `estimate_close_date` if available, otherwise `estimate_date`.
-- **R23**: If `salesPerformanceMode=false`, use `estimate_close_date` OR `estimate_date` (either is acceptable).
-- **R24**: Year is extracted from date string (first 4 characters).
-- **R25**: Year must be between 2000-2100 (inclusive) to be valid.
-- **R26**: If `soldOnly=true`, exclude estimates with status containing "lost" (case-insensitive).
-- **R27**: Estimates with `exclude_stats=true` are included in year filtering (LMN compatibility).
-- **R28**: Estimates with zero/negative prices are included in year filtering (LMN compatibility).
+- **R22**: Year determination uses priority order (per Estimates spec R2): `contract_end` → `contract_start` → `estimate_date` → `created_date`.
+- **R23**: Year is extracted from date string (first 4 characters).
+- **R24**: Year must be between 2000-2100 (inclusive) to be valid.
+- **R25**: If `soldOnly=true`, exclude estimates with status containing "lost" (case-insensitive).
+- **R26**: Per Estimates spec R10: `exclude_stats` field is ignored - never used in any system logic.
+- **R27**: Estimates with zero/negative prices are included in year filtering (LMN compatibility).
 
 ### Duplicate Handling Rules
 
@@ -258,7 +262,7 @@ Rules must be testable and numbered.
 
 1. **Won Status Detection**: `pipeline_status` checked before `status` field (R1, R2)
 2. **Revenue Field**: `total_price_with_tax` preferred over `total_price` (R9, R10)
-3. **Date for Year Filtering**: `estimate_close_date` preferred over `estimate_date` (R22, R23)
+3. **Date for Year Filtering**: Per Estimates spec R2, priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (R22)
 4. **Duplicate Estimates**: First occurrence by `lmn_estimate_id` kept (R29, R30)
 5. **Missing Division**: Defaults to 'Uncategorized' (R35)
 6. **Missing Account Name**: Defaults to 'Unknown Account' (R37)
@@ -266,7 +270,7 @@ Rules must be testable and numbered.
 ### Tie Breakers
 
 - **Equal Total Values**: When sorting by `totalValue`, order is undefined (stable sort preserves insertion order)
-- **Missing Dates**: Estimates without both `estimate_close_date` and `estimate_date` are excluded from year-based reports
+- **Missing Dates**: Estimates without any valid date fields (`contract_end`, `contract_start`, `estimate_date`, or `created_date`) are excluded from year-based reports (per Estimates spec R2)
 - **Zero Revenue**: Estimates with zero revenue are included in counts but contribute 0 to revenue sums
 
 ### Conflict Examples
@@ -437,11 +441,11 @@ estimates = [
 **Input Data:**
 ```javascript
 estimates = [
-  { id: '1', estimate_close_date: '2025-03-15', estimate_date: '2025-01-10', status: 'won', archived: false },
-  { id: '2', estimate_close_date: null, estimate_date: '2025-02-20', status: 'won', archived: false },
-  { id: '3', estimate_close_date: '2024-12-31', estimate_date: '2024-11-15', status: 'won', archived: false },
-  { id: '4', estimate_close_date: null, estimate_date: null, status: 'won', archived: false },  // Missing both dates
-  { id: '5', estimate_close_date: '2025-06-01', estimate_date: '2025-05-01', status: 'won', archived: true }  // Archived
+  { id: '1', contract_end: '2025-03-15', contract_start: '2025-01-01', estimate_date: '2025-01-10', status: 'won', archived: false },
+  { id: '2', contract_end: null, contract_start: '2025-02-01', estimate_date: '2025-02-20', status: 'won', archived: false },
+  { id: '3', contract_end: '2024-12-31', contract_start: '2024-11-01', estimate_date: '2024-11-15', status: 'won', archived: false },
+  { id: '4', contract_end: null, contract_start: null, estimate_date: null, created_date: null, status: 'won', archived: false },  // Missing all dates
+  { id: '5', contract_end: '2025-06-01', contract_start: '2025-05-01', estimate_date: '2025-05-01', status: 'won', archived: true }  // Archived
 ]
 year = 2025
 salesPerformanceMode = true
@@ -450,8 +454,8 @@ salesPerformanceMode = true
 **Expected Output:**
 ```javascript
 [
-  { id: '1' },  // Uses estimate_close_date (2025) - R22
-  { id: '2' }   // Uses estimate_date (2025) - R22 fallback
+  { id: '1' },  // Uses contract_end (2025) - R22 (Priority 1)
+  { id: '2' }   // Uses contract_start (2025) - R22 (Priority 2 fallback)
   // ID 3 excluded (2024)
   // ID 4 excluded (no dates) - R23
   // ID 5 excluded (archived) - R21
@@ -569,7 +573,7 @@ estimates = [
 - **AC9**: Duplicate estimates are removed by `lmn_estimate_id`, keeping first occurrence (R29, R30).
 - **AC10**: All statistics are sorted by `totalValue` in descending order (R38, R39).
 - **AC11**: Win rates and ratios are formatted to 1 decimal place (R15, R18).
-- **AC12**: Estimates without both `estimate_close_date` and `estimate_date` are excluded from year-based reports.
+- **AC12**: Estimates without any valid date fields (`contract_end`, `contract_start`, `estimate_date`, or `created_date`) are excluded from year-based reports (per Estimates spec R2).
 
 ## Special considerations
 

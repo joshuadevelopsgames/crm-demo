@@ -10,14 +10,13 @@
  *   - If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
  * 
  * Revenue is calculated from won estimates for the current year only (year-based calculation)
- * Year determination priority (matching Excel logic):
- * 1. estimate_close_date (primary - matches Excel "Estimate Close Date")
- * 2. contract_start (fallback)
- * 3. estimate_date (fallback)
- * 4. created_date (fallback)
+ * Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+ * Per spec R1, R11: Status determination uses isWonStatus() to respect pipeline_status priority
  * 
  * Multi-year contracts are annualized (total price divided by number of years)
  */
+
+import { isWonStatus } from './reportCalculations.js';
 
 /**
  * Calculate contract duration in months between two dates
@@ -91,20 +90,15 @@ export function detectContractTypo(durationMonths, contractYears) {
 /**
  * Get the year an estimate applies to and its allocated value for the current year
  * Uses year-based calculation (not rolling 12 months): revenue allocated by calendar year
- * Priority for year determination (matching Excel logic):
- * 1. estimate_close_date (primary - matches Excel "Estimate Close Date")
- * 2. contract_start (fallback)
- * 3. estimate_date (fallback)
- * 4. created_date (fallback)
+ * Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
  * @param {Object} estimate - Estimate object
  * @param {number} currentYear - Current year (e.g., 2025)
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
-  // Priority 1: estimate_close_date (matches Excel "Estimate Close Date")
-  const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
-  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+  // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
@@ -142,19 +136,19 @@ function getEstimateYearData(estimate, currentYear) {
     const debugInfo = {
       estimateId: estimate.id || estimate.lmn_estimate_id,
       currentYear,
-      estimateCloseDateRaw: estimate.estimate_close_date,
-      estimateCloseDateParsed: estimateCloseDate ? estimateCloseDate.getFullYear() : null,
-      contractStartRaw: estimate.contract_start,
-      contractStartParsed: contractStart ? contractStart.getFullYear() : null,
       contractEndRaw: estimate.contract_end,
       contractEndParsed: contractEnd ? contractEnd.getFullYear() : null,
+      contractStartRaw: estimate.contract_start,
+      contractStartParsed: contractStart ? contractStart.getFullYear() : null,
       estimateDateRaw: estimate.estimate_date,
       estimateDateParsed: estimateDate ? estimateDate.getFullYear() : null,
+      createdDateRaw: estimate.created_date,
+      createdDateParsed: createdDate ? createdDate.getFullYear() : null,
       totalPrice,
-      hasEstimateCloseDate: !!estimateCloseDate && !isNaN(estimateCloseDate.getTime()),
-      hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
       hasContractEnd: !!contractEnd && !isNaN(contractEnd.getTime()),
-      hasEstimateDate: !!estimateDate && !isNaN(estimateDate.getTime())
+      hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
+      hasEstimateDate: !!estimateDate && !isNaN(estimateDate.getTime()),
+      hasCreatedDate: !!createdDate && !isNaN(createdDate.getTime())
     };
     // Only log first few to avoid spam
     if (!window.__estimateYearDataDebugCount) window.__estimateYearDataDebugCount = 0;
@@ -164,14 +158,14 @@ function getEstimateYearData(estimate, currentYear) {
     }
   }
   
-  // Determine which date to use for year calculation (priority order matches Excel)
+  // Per spec R2: Determine which date to use for year calculation
   let yearDeterminationDate = null;
   let yearDeterminationSource = null;
   
-  // Priority 1: estimate_close_date (matches Excel "Estimate Close Date")
-  if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
-    yearDeterminationDate = estimateCloseDate;
-    yearDeterminationSource = 'estimate_close_date';
+  // Priority 1: contract_end
+  if (contractEnd && !isNaN(contractEnd.getTime())) {
+    yearDeterminationDate = contractEnd;
+    yearDeterminationSource = 'contract_end';
   }
   // Priority 2: contract_start
   else if (contractStart && !isNaN(contractStart.getTime())) {
@@ -281,8 +275,8 @@ export function calculateRevenueFromEstimates(estimates = []) {
   
   return estimates
     .filter(est => {
-      // Only include won estimates (case-insensitive)
-      if (!est.status || est.status.toLowerCase() !== 'won') {
+      // Per spec R1, R11: Only include won estimates - use isWonStatus to respect pipeline_status priority
+      if (!isWonStatus(est)) {
         return false;
       }
       
@@ -318,9 +312,9 @@ export function getAccountRevenue(account, estimates = []) {
   if (estimates && estimates.length > 0) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
     
-    // Check if we have won estimates that apply to the current year
+    // Per spec R1, R11: Check if we have won estimates that apply to the current year
     const hasWonEstimatesForCurrentYear = estimates.some(est => {
-      if (!est.status || est.status.toLowerCase() !== 'won') {
+      if (!isWonStatus(est)) {
         return false;
       }
       const yearData = getEstimateYearData(est, currentYear);
@@ -378,10 +372,10 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
   if (estimates && estimates.length > 0) {
     const currentYear = getCurrentYearForCalculation();
     
-    // Only consider won estimates from current year for type checking
+    // Per spec R1, R11: Only consider won estimates from current year for type checking
     const wonEstimates = estimates.filter(est => {
-      // Must be won (case-insensitive)
-      if (!est.status || est.status.toLowerCase() !== 'won') {
+      // Must be won - use isWonStatus to respect pipeline_status priority
+      if (!isWonStatus(est)) {
         return false;
       }
       

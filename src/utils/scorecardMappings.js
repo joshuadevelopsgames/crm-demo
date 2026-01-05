@@ -11,6 +11,8 @@
  * - mapping_function (custom function to calculate the answer)
  */
 
+import { isWonStatus } from './reportCalculations';
+
 /**
  * Mapping rules for automatically scoring accounts
  * Add new rules here for future scorecards
@@ -134,8 +136,9 @@ export const mappingRules = [
         return null;
       };
       
+      // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
       const totalRevenue = estimates
-        .filter(est => est.status === 'won')
+        .filter(est => isWonStatus(est))
         .reduce((sum, est) => {
           const yearData = getEstimateYearData(est, currentYear);
           return sum + (yearData !== null ? yearData : 0);

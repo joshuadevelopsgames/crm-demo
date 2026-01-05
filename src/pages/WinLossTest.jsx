@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
+import { isWonStatus } from '@/utils/reportCalculations';
 
 export default function WinLossTest() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,7 +104,8 @@ export default function WinLossTest() {
       stats[customerId].totalValue += estimate.total_amount || 0;
       stats[customerId].estimates.push(estimate);
 
-      if (estimate.status === 'won') {
+      // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+      if (isWonStatus(estimate)) {
         stats[customerId].estimatesWon++;
         stats[customerId].wonValue += estimate.total_amount || 0;
     } else {
@@ -127,16 +129,18 @@ export default function WinLossTest() {
   // Overall statistics
   const overallStats = useMemo(() => {
     const total = estimates.length;
-    const won = estimates.filter(e => e.status === 'won').length;
+    // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+    const won = estimates.filter(e => isWonStatus(e)).length;
     // All non-won estimates (lost, pending, etc.) are treated as lost
-    const lost = estimates.filter(e => e.status !== 'won').length;
+    const lost = estimates.filter(e => !isWonStatus(e)).length;
     const decidedEstimates = total; // All estimates are now decided (won or lost)
     const winRate = decidedEstimates > 0 ? (won / decidedEstimates * 100).toFixed(1) : 0;
 
     const totalValue = estimates.reduce((sum, e) => sum + (e.total_amount || 0), 0);
-    const wonValue = estimates.filter(e => e.status === 'won')
+    // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+    const wonValue = estimates.filter(e => isWonStatus(e))
       .reduce((sum, e) => sum + (e.total_amount || 0), 0);
-    const lostValue = estimates.filter(e => e.status !== 'won')
+    const lostValue = estimates.filter(e => !isWonStatus(e))
       .reduce((sum, e) => sum + (e.total_amount || 0), 0);
 
     return {
@@ -173,7 +177,8 @@ export default function WinLossTest() {
     if (filterStatus !== 'all') {
       // Normalize status: treat pending and any non-won as lost
       filtered = filtered.filter(e => {
-        const normalizedStatus = e.status === 'won' ? 'won' : 'lost';
+        // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+        const normalizedStatus = isWonStatus(e) ? 'won' : 'lost';
         return normalizedStatus === filterStatus;
       });
     }
@@ -443,7 +448,7 @@ export default function WinLossTest() {
                       <Badge variant="outline" className={getStatusColor(estimate.status)}>
                         {estimate.status.toUpperCase()}
                       </Badge>
-                      {estimate.status === 'won' && estimate.won_date && (
+                      {isWonStatus(estimate) && estimate.won_date && (
                         <p className="text-xs text-slate-500 mt-1">
                           Won: {formatDateString(estimate.won_date, 'MMM d')}
                         </p>

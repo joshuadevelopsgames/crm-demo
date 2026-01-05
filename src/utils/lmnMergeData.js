@@ -822,14 +822,13 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       return Math.ceil(durationMonths / 12);
     };
     
-    // Per spec R2: Year determination priority: estimate_close_date → contract_start → estimate_date → created_date
+    // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
     // Per spec R3-R5: Price field selection with fallback
     // Per spec R8-R9: Multi-year contract annualization and allocation
     const getEstimateYearData = (estimate, targetYear) => {
-      // Priority 1: estimate_close_date (per spec R2)
-      const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
-      const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+      // Per spec R2: Year determination priority
       const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+      const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
       const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
       const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
       
@@ -850,13 +849,20 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       
       // Per spec R2: Year determination priority
       let yearDeterminationDate = null;
-      if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
-        yearDeterminationDate = estimateCloseDate;
-      } else if (contractStart && !isNaN(contractStart.getTime())) {
+      // Priority 1: contract_end
+      if (contractEnd && !isNaN(contractEnd.getTime())) {
+        yearDeterminationDate = contractEnd;
+      }
+      // Priority 2: contract_start
+      else if (contractStart && !isNaN(contractStart.getTime())) {
         yearDeterminationDate = contractStart;
-      } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+      }
+      // Priority 3: estimate_date
+      else if (estimateDate && !isNaN(estimateDate.getTime())) {
         yearDeterminationDate = estimateDate;
-      } else if (createdDate && !isNaN(createdDate.getTime())) {
+      }
+      // Priority 4: created_date
+      else if (createdDate && !isNaN(createdDate.getTime())) {
         yearDeterminationDate = createdDate;
       }
       
@@ -898,29 +904,61 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     };
     
-    // Per spec R1: Only won estimates (case-insensitive)
-    const wonEstimates = accountEstimates.filter(est => 
-      est.status && est.status.toLowerCase() === 'won'
-    );
+    // Per spec R1, R11: Only won estimates - use isWonStatus logic to respect pipeline_status priority
+    // Inline isWonStatus to avoid serverless import issues (same logic as atRiskCalculator.js)
+    const isWonStatus = (est) => {
+      // Per spec R11: Check pipeline_status first (preferred)
+      if (est.pipeline_status) {
+        const pipelineLower = est.pipeline_status.toString().toLowerCase().trim();
+        if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+          return true;
+        }
+      }
+      // Per spec R11: Check status field (fallback)
+      if (!est.status) return false;
+      const statusLower = est.status.toString().toLowerCase().trim();
+      const wonStatuses = [
+        'contract signed',
+        'work complete',
+        'billing complete',
+        'email contract award',
+        'verbal contract award',
+        'contract in progress',
+        'contract + billing complete',
+        'work in progress',
+        'sold',
+        'won'
+      ];
+      return wonStatuses.includes(statusLower);
+    };
+    const wonEstimates = accountEstimates.filter(est => isWonStatus(est));
     
     // Per spec R25: Calculate revenue for ALL years (not just current year)
     // Find all unique years that estimates apply to
     const yearsSet = new Set();
     wonEstimates.forEach(est => {
-      const estimateCloseDate = est.estimate_close_date ? new Date(est.estimate_close_date) : null;
+      // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
       const contractStart = est.contract_start ? new Date(est.contract_start) : null;
       const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
       const createdDate = est.created_date ? new Date(est.created_date) : null;
       
       // Determine year using priority (per spec R2)
       let year = null;
-      if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
-        year = estimateCloseDate.getFullYear();
-      } else if (contractStart && !isNaN(contractStart.getTime())) {
+      // Priority 1: contract_end
+      if (contractEnd && !isNaN(contractEnd.getTime())) {
+        year = contractEnd.getFullYear();
+      }
+      // Priority 2: contract_start
+      else if (contractStart && !isNaN(contractStart.getTime())) {
         year = contractStart.getFullYear();
-      } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+      }
+      // Priority 3: estimate_date
+      else if (estimateDate && !isNaN(estimateDate.getTime())) {
         year = estimateDate.getFullYear();
-      } else if (createdDate && !isNaN(createdDate.getTime())) {
+      }
+      // Priority 4: created_date
+      else if (createdDate && !isNaN(createdDate.getTime())) {
         year = createdDate.getFullYear();
       }
       

@@ -5,6 +5,7 @@
 
 import { findMappingRule, applyMappingRule } from './scorecardMappings';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
+import { isWonStatus } from './reportCalculations';
 
 /**
  * Auto-score an account using the primary scorecard template
@@ -77,24 +78,19 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
         value: appliesToCurrentYear ? annualAmount : 0
       };
     }
-    if (contractStart && !isNaN(contractStart.getTime())) {
-      const startYear = contractStart.getFullYear();
+    // Per Estimates spec R2: Use year determination date if available
+    if (yearDeterminationDate) {
+      const determinationYear = yearDeterminationDate.getFullYear();
       return {
-        appliesToCurrentYear: currentYear === startYear,
-        value: totalPrice
-      };
-    }
-    if (estimateDate && !isNaN(estimateDate.getTime())) {
-      const estimateYear = estimateDate.getFullYear();
-      return {
-        appliesToCurrentYear: currentYear === estimateYear,
+        appliesToCurrentYear: currentYear === determinationYear,
         value: totalPrice
       };
     }
     return null;
   };
+  // Per Estimates spec R1, R11: Only won estimates - use isWonStatus to respect pipeline_status priority
   const totalRevenue = estimates
-    .filter(est => est.status === 'won')
+    .filter(est => isWonStatus(est))
     .reduce((sum, est) => {
       const yearData = getEstimateYearData(est, currentYear);
       if (!yearData || !yearData.appliesToCurrentYear) return sum;
@@ -102,7 +98,8 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
     }, 0);
   
   const totalEstimates = estimates.length;
-  const wonEstimates = estimates.filter(est => est.status === 'won').length;
+  // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+  const wonEstimates = estimates.filter(est => isWonStatus(est)).length;
   const lostEstimates = estimates.filter(est => est.status === 'lost').length;
   const jobsitesCount = jobsites.length;
 

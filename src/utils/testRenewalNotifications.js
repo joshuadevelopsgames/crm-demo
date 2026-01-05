@@ -10,6 +10,7 @@
 import { base44 } from '@/api/base44Client';
 import { calculateRenewalDate, getDaysUntilRenewal, isRenewalWithinDays } from './renewalDateCalculator';
 import { format, addDays } from 'date-fns';
+import { isWonStatus } from './reportCalculations';
 
 export async function testRenewalNotifications() {
   console.log('🔍 Testing Renewal Notification System...\n');
@@ -59,7 +60,8 @@ export async function testRenewalNotifications() {
           account,
           renewalDate,
           daysUntilRenewal,
-          wonEstimatesCount: accountEstimates.filter(e => e.status === 'won').length
+          // Per Estimates spec R1, R11: Use isWonStatus to respect pipeline_status priority
+          wonEstimatesCount: accountEstimates.filter(e => isWonStatus(e)).length
         });
       }
     }

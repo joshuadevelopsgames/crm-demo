@@ -1092,7 +1092,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
         console.log('📊 Calculating revenue segments for all accounts...');
         const allAccounts = await base44.entities.Account.list();
         
-        // Use API endpoint to get estimates with all fields (contract_end, estimate_close_date, etc.)
+        // Use API endpoint to get estimates with all fields (contract_end, contract_start, estimate_date, created_date, etc.)
         const estimatesResponse = await fetch('/api/data/estimates');
         let allEstimates = [];
         if (estimatesResponse.ok) {

@@ -93,7 +93,14 @@ export function parseEstimatesList(csvTextOrRows) {
 
     const estimates = [];
     const errors = [];
+    const warnings = [];
+    const userNotifications = {
+      errors: [],
+      warnings: []
+    };
     const seenEstimateIds = new Set(); // Track duplicate IDs
+    const unrecognizedStatuses = new Set(); // Track unique unrecognized statuses
+    const invalidDates = []; // Track invalid dates
     let wonEstimatesWithoutContractEnd = 0; // Track won estimates missing contract_end
     
     // Warn if Contract End column is not found
@@ -126,22 +133,35 @@ export function parseEstimatesList(csvTextOrRows) {
         const contactIdRaw = row[colMap.contactId]?.toString().trim();
         const contactId = contactIdRaw ? contactIdRaw.toLowerCase() : null;
         
+        // Per spec R5: Missing lmn_estimate_id is an error - skip and notify user
         if (!estimateId) {
-          errors.push(`Row ${i + 1}: Missing Estimate ID, skipped`);
+          const errorMsg = `Row ${i + 1}: Missing Estimate ID - skipped`;
+          errors.push(errorMsg);
+          if (!userNotifications.errors.some(e => e.includes('missing Estimate ID'))) {
+            userNotifications.errors.push(`Some estimates are missing Estimate ID and were skipped. This is bad data - please check your export file.`);
+          }
           continue;
         }
 
-        // Check for duplicate estimate IDs
+        // Per spec R6: Duplicate lmn_estimate_id within batch is an error - skip and notify user
         if (seenEstimateIds.has(estimateId)) {
-          errors.push(`Row ${i + 1}: Duplicate Estimate ID "${estimateId}", skipped`);
+          const errorMsg = `Row ${i + 1}: Duplicate Estimate ID "${estimateId}" - skipped`;
+          errors.push(errorMsg);
+          if (!userNotifications.errors.some(e => e.includes('duplicate Estimate ID'))) {
+            userNotifications.errors.push(`Some estimates have duplicate Estimate IDs and were skipped. This is bad data - please check your export file.`);
+          }
           continue;
         }
         seenEstimateIds.add(estimateId);
 
         // Parse dates (Excel serial dates or ISO strings)
         // Return date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
-        const parseDate = (value) => {
+        // Per spec R3, R10, R15: Normalize to YYYY-MM-DD, validate 1900-2100 range
+        const parseDate = (value, fieldName = 'date') => {
           if (!value) return null;
+          let parsedDate = null;
+          let dateString = null;
+          
           // If it's an Excel serial date (number)
           if (typeof value === 'number') {
             // Excel epoch is 1900-01-01, but Excel has a bug where 1900 is treated as leap year
@@ -154,44 +174,66 @@ export function parseEstimatesList(csvTextOrRows) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`; // Date-only string (YYYY-MM-DD)
+            dateString = `${year}-${month}-${day}`; // Date-only string (YYYY-MM-DD)
+            parsedDate = date;
           }
           // Try parsing as date string
-          if (typeof value === 'string') {
+          else if (typeof value === 'string') {
             const trimmed = value.trim();
             
             // If it's already in YYYY-MM-DD format, return as-is
             const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (isoMatch) {
-              return isoMatch[0]; // Return date-only string
+              dateString = isoMatch[0]; // Return date-only string
+              parsedDate = new Date(dateString);
             }
-            
             // Handle MM/DD/YYYY format (common in Excel exports)
-            const mmddyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-            if (mmddyyyyMatch) {
-              const [, month, day, year] = mmddyyyyMatch;
-              const monthPadded = String(month).padStart(2, '0');
-              const dayPadded = String(day).padStart(2, '0');
-              return `${year}-${monthPadded}-${dayPadded}`; // Date-only string
-            }
-            
-            // If the string includes timezone info, extract date part only
-            if (trimmed.includes('T') || trimmed.includes('Z') || trimmed.includes('+') || (trimmed.includes('-') && trimmed.match(/^\d{4}-\d{2}-\d{2}/))) {
-              const dateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-              if (dateMatch) {
-                return dateMatch[0]; // Return date-only part
+            else {
+              const mmddyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+              if (mmddyyyyMatch) {
+                const [, month, day, year] = mmddyyyyMatch;
+                const monthPadded = String(month).padStart(2, '0');
+                const dayPadded = String(day).padStart(2, '0');
+                dateString = `${year}-${monthPadded}-${dayPadded}`; // Date-only string
+                parsedDate = new Date(dateString);
               }
-            } else {
-              // Try parsing as a simple date string and extract date components
-              const parsed = new Date(trimmed);
-              if (!isNaN(parsed.getTime())) {
-                const year = parsed.getFullYear();
-                const month = String(parsed.getMonth() + 1).padStart(2, '0');
-                const day = String(parsed.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`; // Date-only string
+              // If the string includes timezone info, extract date part only
+              else if (trimmed.includes('T') || trimmed.includes('Z') || trimmed.includes('+') || (trimmed.includes('-') && trimmed.match(/^\d{4}-\d{2}-\d{2}/))) {
+                const dateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (dateMatch) {
+                  dateString = dateMatch[0]; // Return date-only part
+                  parsedDate = new Date(dateString);
+                }
+              } else {
+                // Try parsing as a simple date string and extract date components
+                const parsed = new Date(trimmed);
+                if (!isNaN(parsed.getTime())) {
+                  const year = parsed.getFullYear();
+                  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                  const day = String(parsed.getDate()).padStart(2, '0');
+                  dateString = `${year}-${month}-${day}`; // Date-only string
+                  parsedDate = parsed;
+                }
               }
             }
           }
+          
+          // Validate date range (1900-2100) per spec R15
+          if (dateString && parsedDate && !isNaN(parsedDate.getTime())) {
+            const year = parsedDate.getFullYear();
+            if (year < 1900 || year > 2100) {
+              // Invalid date - log error and notify user per spec R10, R15
+              const errorMsg = `Invalid ${fieldName} '${value}' for estimate '${estimateId || 'unknown'}' (row ${i + 1}) - outside valid range (1900-2100)`;
+              errors.push(errorMsg);
+              invalidDates.push({ estimateId: estimateId || 'unknown', field: fieldName, value, row: i + 1 });
+              if (!userNotifications.errors.some(e => e.includes('invalid dates'))) {
+                userNotifications.errors.push(`Some estimates have invalid dates outside the valid range (1900-2100). Review recommended.`);
+              }
+              return null; // Skip invalid date
+            }
+            return dateString;
+          }
+          
           return null;
         };
 
@@ -202,79 +244,92 @@ export function parseEstimatesList(csvTextOrRows) {
           return isNaN(num) ? null : num;
         };
 
-        // Determine status
-        // Only reading from "Status" column - not using "Sales Pipeline Status"
+        // Per spec R1, R11: Status determination - pipeline_status preferred, status as fallback
+        const pipelineStatus = row[colMap.salesPipelineStatus]?.toString().trim() || '';
         const status = row[colMap.status]?.toString().trim() || '';
         let estimateStatus = 'lost'; // Default to lost (no pending option)
         
-        const stat = status.toLowerCase().trim();
-        
-        // Explicit Won statuses
-        // Reading from LMN CSV column: "Status" only
-        // These are the actual status values that appear in LMN Excel exports
-        if (
-          stat === 'email contract award' ||
-          stat === 'verbal contract award' ||
-          stat === 'work complete' ||
-          stat === 'work in progress' ||
-          stat === 'billing complete' ||
-          stat === 'contract signed' ||
-          stat === 'contract in progress' ||
-          stat === 'contract + billing complete' ||
-          stat.includes('email contract award') ||
-          stat.includes('verbal contract award') ||
-          stat.includes('work complete') ||
-          stat.includes('billing complete') ||
-          stat.includes('contract signed') ||
-          stat.includes('contract in progress') ||
-          stat.includes('contract + billing complete')
-        ) {
+        // Priority 1: Check pipeline_status (preferred per spec R11)
+        const pipelineStatusLower = pipelineStatus.toLowerCase().trim();
+        if (pipelineStatusLower === 'sold' || pipelineStatusLower.includes('sold')) {
           estimateStatus = 'won';
         }
-        // Explicit Lost statuses
-        else if (
-          stat === 'estimate in progress - lost' ||
-          stat === 'review + approve - lost' ||
-          stat === 'client proposal phase - lost' ||
-          stat === 'estimate lost' ||
-          stat === 'estimate on hold' ||
-          stat === 'estimate lost - no reply' ||
-          stat === 'estimate lost - price too high' ||
-          stat.includes('estimate in progress - lost') ||
-          stat.includes('review + approve - lost') ||
-          stat.includes('client proposal phase - lost') ||
-          stat.includes('estimate lost - no reply') ||
-          stat.includes('estimate lost - price too high') ||
-          stat.includes('estimate on hold')
-        ) {
-          estimateStatus = 'lost';
+        // Priority 2: Check status field (fallback per spec R11)
+        else {
+          const stat = status.toLowerCase().trim();
+          
+          // Explicit Won statuses
+          // These are the actual status values that appear in LMN Excel exports
+          if (
+            stat === 'email contract award' ||
+            stat === 'verbal contract award' ||
+            stat === 'work complete' ||
+            stat === 'work in progress' ||
+            stat === 'billing complete' ||
+            stat === 'contract signed' ||
+            stat === 'contract in progress' ||
+            stat === 'contract + billing complete' ||
+            stat.includes('email contract award') ||
+            stat.includes('verbal contract award') ||
+            stat.includes('work complete') ||
+            stat.includes('billing complete') ||
+            stat.includes('contract signed') ||
+            stat.includes('contract in progress') ||
+            stat.includes('contract + billing complete')
+          ) {
+            estimateStatus = 'won';
+          }
+          // Explicit Lost statuses
+          else if (
+            stat === 'estimate in progress - lost' ||
+            stat === 'review + approve - lost' ||
+            stat === 'client proposal phase - lost' ||
+            stat === 'estimate lost' ||
+            stat === 'estimate on hold' ||
+            stat === 'estimate lost - no reply' ||
+            stat === 'estimate lost - price too high' ||
+            stat.includes('estimate in progress - lost') ||
+            stat.includes('review + approve - lost') ||
+            stat.includes('client proposal phase - lost') ||
+            stat.includes('estimate lost - no reply') ||
+            stat.includes('estimate lost - price too high') ||
+            stat.includes('estimate on hold')
+          ) {
+            estimateStatus = 'lost';
+          }
+          // All other cases default to lost (no pattern matching)
         }
-        // All other cases default to lost (no pattern matching)
         
-        // Debug: Log unrecognized status values to help identify what's in the Excel file
-        // Only log once per unique status to avoid spam
-        if (status && estimateStatus === 'lost' && 
-            !stat.includes('lost') && 
-            !stat.includes('on hold') &&
-            !stat.includes('in progress') &&
-            !stat.includes('pending') &&
-            !stat.includes('estimate')) {
-          // Only log if we haven't seen this status before (to avoid console spam)
-          if (!errors.some(e => e.includes(`Unrecognized status: "${status}"`))) {
-            errors.push(`Unrecognized status: "${status}" (row ${i + 1}) - defaulting to 'lost'. If this should be 'won', the status value needs to be added to the parser.`);
+        // Per spec R9: Unrecognized status values - log warning and notify user
+        if (status && estimateStatus === 'lost' && !pipelineStatusLower.includes('sold')) {
+          const stat = status.toLowerCase().trim();
+          if (!stat.includes('lost') && 
+              !stat.includes('on hold') &&
+              !stat.includes('in progress') &&
+              !stat.includes('pending') &&
+              !stat.includes('estimate') &&
+              !unrecognizedStatuses.has(status)) {
+            unrecognizedStatuses.add(status);
+            const warningMsg = `Unrecognized status: "${status}" (row ${i + 1}) - defaulting to 'lost'. If this should be 'won', the status value needs to be added to the parser.`;
+            warnings.push(warningMsg);
+            if (!userNotifications.warnings.some(w => w.includes('unrecognized status'))) {
+              userNotifications.warnings.push(`Some estimates have unrecognized status values and defaulted to 'lost'. Review recommended.`);
+            }
           }
         }
 
-        // Parse dates
+        // Parse dates - per spec R3: Normalize to YYYY-MM-DD format
+        // Per spec R2: contract_end is Priority 1 for year determination (estimate_close_date no longer used)
         const estimateDateRaw = colMap.estimateDate >= 0 ? row[colMap.estimateDate] : null;
-        const estimateDate = parseDate(estimateDateRaw);
-        const estimateCloseDate = parseDate(row[colMap.estimateCloseDate]);
+        const estimateDate = parseDate(estimateDateRaw, 'estimate_date');
+        // Note: estimate_close_date is parsed but not used in priority (replaced by contract_end per spec)
+        const estimateCloseDate = parseDate(row[colMap.estimateCloseDate], 'estimate_close_date');
         
-        // Parse contract dates
+        // Parse contract dates - contract_end is Priority 1 per spec R2
         const contractStartRaw = colMap.contractStart >= 0 ? row[colMap.contractStart] : null;
         const contractEndRaw = colMap.contractEnd >= 0 ? row[colMap.contractEnd] : null;
-        const contractStart = parseDate(contractStartRaw);
-        const contractEnd = parseDate(contractEndRaw);
+        const contractStart = parseDate(contractStartRaw, 'contract_start');
+        const contractEnd = parseDate(contractEndRaw, 'contract_end');
         
         // Debug: Log first few estimates to see date parsing (AFTER all dates are parsed)
         if (estimates.length < 5) {
@@ -333,10 +388,8 @@ export function parseEstimatesList(csvTextOrRows) {
           }
         }
         
-        // Keep estimate_date and estimate_close_date separate
-        // Reports logic will use close_date if available, otherwise estimate_date
-        // This allows estimates to be counted in the year they closed (if closed) 
-        // or the year they were made (if not closed yet, even if for future year)
+        // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+        // estimate_close_date is still parsed and stored for backward compatibility, but is NOT used for year determination priority
         
         const estimate = {
           id: `lmn-estimate-${estimateId}`,
@@ -361,8 +414,7 @@ export function parseEstimatesList(csvTextOrRows) {
           salesperson: row[colMap.salesperson]?.toString().trim() || '',
           estimator: row[colMap.estimator]?.toString().trim() || '',
           status: estimateStatus,
-          pipeline_status: row[colMap.salesPipelineStatus]?.toString().trim() || null, // Save Sales Pipeline Status for reporting
-          // Note: Sales Pipeline Status is separate from status - used for pipeline reporting, not win/loss determination
+          pipeline_status: row[colMap.salesPipelineStatus]?.toString().trim() || null, // Per spec R11: Preferred for won/lost determination
           proposal_first_shared: parseDate(row[colMap.proposalFirstShared]),
           proposal_last_shared: parseDate(row[colMap.proposalLastShared]),
           proposal_last_updated: parseDate(row[colMap.proposalLastUpdated]),
@@ -371,7 +423,7 @@ export function parseEstimatesList(csvTextOrRows) {
           referral_note: row[colMap.refNote]?.toString().trim() || '',
           confidence_level: parseNumber(row[colMap.confidenceLevel]),
           archived: row[colMap.archived]?.toString().toLowerCase().trim() === 'true',
-          exclude_stats: row[colMap.excludeStats]?.toString().toLowerCase().trim() === 'true',
+          // Per spec R10: exclude_stats field is ignored - never used in any system logic
           material_cost: parseNumber(row[colMap.materialCost]),
           material_price: parseNumber(row[colMap.materialPrice]),
           labor_cost: parseNumber(row[colMap.laborCost]),
@@ -404,6 +456,8 @@ export function parseEstimatesList(csvTextOrRows) {
     const uniqueEstimateIds = new Set(estimates.map(e => e.lmn_estimate_id));
     const estimatesWithContactId = estimates.filter(e => e.lmn_contact_id).length;
     const estimatesWithoutContactId = estimates.length - estimatesWithContactId;
+    // Per spec R1, R11: Use status field directly here since we just set it in the parser
+    // (parser already respects pipeline_status priority when setting status)
     const wonEstimates = estimates.filter(e => e.status === 'won').length;
     
     // Log summary about won estimates missing contract_end
@@ -419,16 +473,47 @@ export function parseEstimatesList(csvTextOrRows) {
       }
     }
 
+    // Per spec: Compile user notifications for import summary
+    const duplicateCount = errors.filter(e => e.includes('Duplicate Estimate ID')).length;
+    const missingIdCount = errors.filter(e => e.includes('Missing Estimate ID')).length;
+    const invalidDateCount = invalidDates.length;
+    const unrecognizedStatusCount = unrecognizedStatuses.size;
+    
+    // Add summary notifications
+    if (missingIdCount > 0) {
+      userNotifications.errors.push(`${missingIdCount} estimate(s) skipped due to missing Estimate ID`);
+    }
+    if (duplicateCount > 0) {
+      userNotifications.errors.push(`${duplicateCount} duplicate estimate(s) detected and skipped`);
+    }
+    if (invalidDateCount > 0) {
+      userNotifications.errors.push(`${invalidDateCount} estimate(s) have invalid dates (outside 1900-2100 range)`);
+    }
+    if (unrecognizedStatusCount > 0) {
+      userNotifications.warnings.push(`${unrecognizedStatusCount} estimate(s) have unrecognized status values (defaulted to 'lost')`);
+    }
+
     return {
       estimates,
       stats: {
         total: estimates.length,
         uniqueEstimateIds: uniqueEstimateIds.size,
-        duplicatesSkipped: errors.filter(e => e.includes('Duplicate Estimate ID')).length,
+        duplicatesSkipped: duplicateCount,
+        missingIdsSkipped: missingIdCount,
+        invalidDatesCount: invalidDateCount,
+        unrecognizedStatusesCount: unrecognizedStatusCount,
         estimatesWithContactId,
         estimatesWithoutContactId,
-        errors: errors.length > 0 ? errors.slice(0, 10) : null, // Limit errors shown
-        errorsCount: errors.length
+        errors: errors.length > 0 ? errors.slice(0, 50) : null, // Show more errors for debugging
+        warnings: warnings.length > 0 ? warnings.slice(0, 50) : null,
+        errorsCount: errors.length,
+        warningsCount: warnings.length,
+        userNotifications: {
+          errors: userNotifications.errors,
+          warnings: userNotifications.warnings,
+          unrecognizedStatuses: Array.from(unrecognizedStatuses),
+          invalidDates: invalidDates.slice(0, 10) // Show first 10 invalid dates
+        }
       }
     };
   } catch (err) {

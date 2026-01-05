@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
+import { isWonStatus } from '@/utils/reportCalculations';
 
 /**
  * Calculate contract duration in months between two dates
@@ -75,10 +76,9 @@ function getContractYears(durationMonths) {
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number, determinationMethod: string } or null if no valid date
  */
 function getEstimateYearData(estimate, currentYear) {
-  // Per spec R2: Year determination priority: estimate_close_date → contract_start → estimate_date → created_date
-  const estimateCloseDate = estimate.estimate_close_date ? new Date(estimate.estimate_close_date) : null;
-  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+  // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
   const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
@@ -100,13 +100,18 @@ function getEstimateYearData(estimate, currentYear) {
   // Per spec R2: Determine year using priority order
   let yearDeterminationDate = null;
   let yearSource = null;
-  if (estimateCloseDate && !isNaN(estimateCloseDate.getTime())) {
-    yearDeterminationDate = estimateCloseDate;
-    yearSource = 'estimate_close_date';
-  } else if (contractStart && !isNaN(contractStart.getTime())) {
+  // Priority 1: contract_end
+  if (contractEnd && !isNaN(contractEnd.getTime())) {
+    yearDeterminationDate = contractEnd;
+    yearSource = 'contract_end';
+  }
+  // Priority 2: contract_start
+  else if (contractStart && !isNaN(contractStart.getTime())) {
     yearDeterminationDate = contractStart;
     yearSource = 'contract_start';
-  } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+  }
+  // Priority 3: estimate_date
+  else if (estimateDate && !isNaN(estimateDate.getTime())) {
     yearDeterminationDate = estimateDate;
     yearSource = 'estimate_date';
   } else if (createdDate && !isNaN(createdDate.getTime())) {
@@ -157,8 +162,8 @@ function getEstimateYearData(estimate, currentYear) {
   const determinationYear = yearDeterminationDate.getFullYear();
   const appliesToCurrentYear = currentYear === determinationYear;
   
-  const determinationMethod = yearSource === 'estimate_close_date' 
-    ? `Estimate Close Date: ${determinationYear}`
+  const determinationMethod = yearSource === 'contract_end' 
+    ? `Contract End: ${determinationYear}`
     : yearSource === 'contract_start'
     ? `Contract Start: ${determinationYear}`
     : yearSource === 'estimate_date'
@@ -253,7 +258,7 @@ export default function TotalWork({ estimates = [] }) {
     const excluded = [];
     
     estimates
-      .filter(est => est.status === 'won')
+      .filter(est => isWonStatus(est))
       .forEach(est => {
         const yearData = getEstimateYearData(est, currentYear);
         // Use total_price_with_tax consistently
@@ -301,7 +306,7 @@ export default function TotalWork({ estimates = [] }) {
   // Detect typo estimates (per spec R24-R27)
   const estimatesWithTypo = useMemo(() => {
     return estimates
-      .filter(est => est.contract_start && est.contract_end && est.status?.toLowerCase() === 'won')
+      .filter(est => est.contract_start && est.contract_end && isWonStatus(est))
       .map(est => {
         const durationMonths = calculateDurationMonths(est.contract_start, est.contract_end);
         const contractYears = getContractYears(durationMonths);
@@ -331,7 +336,7 @@ export default function TotalWork({ estimates = [] }) {
   
   const allTimeSold = useMemo(() => {
     return estimates
-      .filter(est => est.status && est.status.toLowerCase() === 'won')
+      .filter(est => isWonStatus(est))
       .reduce((sum, est) => {
         const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
         return sum + totalPrice;
@@ -381,7 +386,7 @@ export default function TotalWork({ estimates = [] }) {
               )}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {estimates.filter(est => est.status && est.status.toLowerCase() === 'won').length} won estimate{estimates.filter(est => est.status && est.status.toLowerCase() === 'won').length !== 1 ? 's' : ''}
+              {estimates.filter(est => isWonStatus(est)).length} won estimate{estimates.filter(est => isWonStatus(est)).length !== 1 ? 's' : ''}
               {totalSold !== allTimeSold && (
                 <span> • {soldBreakdown.included.length} for {currentYear}</span>
               )}

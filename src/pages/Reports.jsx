@@ -72,7 +72,7 @@ export default function Reports() {
     queryKey: ['estimates'],
     queryFn: async () => {
       try {
-        // Use API endpoint to get estimates with all fields (estimate_close_date, contract_end, etc.)
+        // Use API endpoint to get estimates with all fields (contract_end, contract_start, estimate_date, created_date, etc.)
         const response = await fetch('/api/data/estimates');
         if (!response.ok) {
           console.warn('⚠️ Estimates API failed');
@@ -110,15 +110,18 @@ export default function Reports() {
   const availableYears = useMemo(() => {
     const years = new Set();
     estimates.forEach(e => {
-      // Use same logic as filtering: close_date takes priority, then estimate_date
-      // Don't use created_at - that's when we imported, not when estimate was created
+      // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
       let dateToUse = null;
-      if (e.estimate_close_date) {
-        dateToUse = e.estimate_close_date;
+      if (e.contract_end) {
+        dateToUse = e.contract_end;
+      } else if (e.contract_start) {
+        dateToUse = e.contract_start;
       } else if (e.estimate_date) {
         dateToUse = e.estimate_date;
+      } else if (e.created_date) {
+        dateToUse = e.created_date;
       }
-      // If neither exists, skip (don't use created_at)
+      // If no date exists, skip
       if (dateToUse) {
         const dateStr = String(dateToUse);
         if (dateStr.length >= 4) {
@@ -166,7 +169,7 @@ export default function Reports() {
   });
 
   // Filter estimates by year, account, and department
-  // For Salesperson Performance: Use estimate_close_date only (matches LMN's "All sales figures based on estimates sold")
+  // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   // OLD CODE REMOVED: filteredEstimates useMemo is no longer used
   // We now use yearEstimates and yearWonEstimates with filterEstimatesByYear
   // This ensures we match LMN's "Estimates Sold" count exactly
@@ -207,9 +210,17 @@ export default function Reports() {
           if (yearStr === '2025') return true;
         }
       }
-      // Check estimate_close_date
-      if (e.estimate_close_date) {
-        const dateStr = String(e.estimate_close_date);
+      // Per Estimates spec R2: Check contract_end (Priority 1)
+      if (e.contract_end) {
+        const dateStr = String(e.contract_end);
+        if (dateStr.length >= 4) {
+          const yearStr = dateStr.substring(0, 4);
+          if (yearStr === '2025') return true;
+        }
+      }
+      // Check contract_start (Priority 2)
+      if (e.contract_start) {
+        const dateStr = String(e.contract_start);
         if (dateStr.length >= 4) {
           const yearStr = dateStr.substring(0, 4);
           if (yearStr === '2025') return true;
@@ -230,38 +241,32 @@ export default function Reports() {
       sample: dates2025.slice(0, 5).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
-        estimate_close_date: e.estimate_close_date,
+        contract_end: e.contract_end,
+        contract_start: e.contract_start,
         created_at: e.created_at,
         status: e.status,
-        exclude_stats: e.exclude_stats
       }))
     });
     
-    // Check if 2025 estimates are being filtered out by exclude_stats
-    const dates2025WithExclude = dates2025.filter(e => e.exclude_stats);
-    console.log('📊 Reports: 2025 estimates filtered by exclude_stats', {
-      total2025: dates2025.length,
-      excluded: dates2025WithExclude.length,
-      wouldShow: dates2025.length - dates2025WithExclude.length
-    });
+    // Per spec R10: exclude_stats field is ignored - never used in any system logic
     
-    // Check all estimates that would match 2025 if we used estimate_close_date
-    const dates2025ByCloseDate = uniqueEstimates.filter(e => {
-      if (!e.estimate_close_date) return false;
-      const dateStr = String(e.estimate_close_date);
+    // Per Estimates spec R2: Check estimates with 2025 in contract_end (Priority 1)
+    const dates2025ByContractEnd = uniqueEstimates.filter(e => {
+      if (!e.contract_end) return false;
+      const dateStr = String(e.contract_end);
       if (dateStr.length >= 4) {
         return dateStr.substring(0, 4) === '2025';
       }
       return false;
     });
-    console.log('📊 Reports: Estimates with 2025 in estimate_close_date', {
-      count: dates2025ByCloseDate.length,
-      sample: dates2025ByCloseDate.slice(0, 5).map(e => ({
+    console.log('📊 Reports: Estimates with 2025 in contract_end (Priority 1, per Estimates spec R2)', {
+      count: dates2025ByContractEnd.length,
+      sample: dates2025ByContractEnd.slice(0, 5).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
-        estimate_close_date: e.estimate_close_date,
+        contract_end: e.contract_end,
+        contract_start: e.contract_start,
         status: e.status,
-        exclude_stats: e.exclude_stats
       }))
     });
     
@@ -274,55 +279,59 @@ export default function Reports() {
       sample: estimatesWithoutEstimateDate.map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
-        estimate_close_date: e.estimate_close_date,
+        contract_end: e.contract_end,
+        contract_start: e.contract_start,
         created_at: e.created_at,
         status: e.status
       }))
     });
     
-    // Check for 2025 in estimate_close_date or created_at
-    const dates2025CloseDate = uniqueEstimates.filter(e => {
-      if (e.estimate_close_date) {
-        const dateStr = String(e.estimate_close_date);
+    // Per Estimates spec R2: Check for 2025 in contract_end (Priority 1) or created_date (Priority 4)
+    const dates2025ContractEnd = uniqueEstimates.filter(e => {
+      if (e.contract_end) {
+        const dateStr = String(e.contract_end);
         if (dateStr.length >= 4 && dateStr.substring(0, 4) === '2025') return true;
       }
       return false;
     });
     const dates2025Created = uniqueEstimates.filter(e => {
-      if (e.created_at) {
-        const dateStr = String(e.created_at);
+      if (e.created_date) {
+        const dateStr = String(e.created_date);
         if (dateStr.length >= 4 && dateStr.substring(0, 4) === '2025') return true;
       }
       return false;
     });
-    console.log('📊 Reports: 2025 data in other date fields', {
-      estimate_close_date_2025: dates2025CloseDate.length,
-      created_at_2025: dates2025Created.length,
-      sample_close_date: dates2025CloseDate.slice(0, 3).map(e => ({
+    console.log('📊 Reports: 2025 data in date fields (per Estimates spec R2)', {
+      contract_end_2025: dates2025ContractEnd.length,
+      created_date_2025: dates2025Created.length,
+      sample_contract_end: dates2025ContractEnd.slice(0, 3).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
-        estimate_close_date: e.estimate_close_date,
+        contract_end: e.contract_end,
+        contract_start: e.contract_start,
         status: e.status,
-        exclude_stats: e.exclude_stats
       })),
       sample_created: dates2025Created.slice(0, 3).map(e => ({
         id: e.id,
         estimate_date: e.estimate_date,
-        created_at: e.created_at,
+        created_date: e.created_date,
         status: e.status
       }))
     });
     
-    // Check what years are available in the data (using same logic: close_date -> estimate_date, exclude if neither exists)
+    // Per Estimates spec R2: Check what years are available in the data (contract_end → contract_start → estimate_date → created_date)
     const yearsInData = new Set();
     uniqueEstimates.forEach(e => {
-      // Use same logic as filtering: close_date takes priority, then estimate_date
-      // Don't use created_at - that's when we imported, not when estimate was created
+      // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
       let dateToUse = null;
-      if (e.estimate_close_date) {
-        dateToUse = e.estimate_close_date;
+      if (e.contract_end) {
+        dateToUse = e.contract_end;
+      } else if (e.contract_start) {
+        dateToUse = e.contract_start;
       } else if (e.estimate_date) {
         dateToUse = e.estimate_date;
+      } else if (e.created_date) {
+        dateToUse = e.created_date;
       }
       // If neither exists, skip (don't use created_at)
       if (dateToUse) {
@@ -349,25 +358,29 @@ export default function Reports() {
     });
 
     const filtered = uniqueEstimates.filter(estimate => {
-      // Business logic for year filtering:
-      // 1. If estimate has a close date → use that year (counts in year it closed)
-      // 2. Otherwise, use estimate_date → use that year (counts in year it was made, even if for future year)
-      // If neither exists, exclude from reports (don't use created_at - that's just when we imported it)
+      // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      // If no valid date exists, exclude from reports
       let dateToUse = null;
       
-      // Priority 1: If estimate closed, count it in the year it closed
-      if (estimate.estimate_close_date) {
-        dateToUse = estimate.estimate_close_date;
+      // Priority 1: contract_end
+      if (estimate.contract_end) {
+        dateToUse = estimate.contract_end;
       }
-      // Priority 2: Otherwise, use the date the estimate was made (even if for future year)
+      // Priority 2: contract_start
+      else if (estimate.contract_start) {
+        dateToUse = estimate.contract_start;
+      }
+      // Priority 3: estimate_date
       else if (estimate.estimate_date) {
         dateToUse = estimate.estimate_date;
       }
-      // If neither exists, exclude from year-based reports
-      // (created_at is when we imported, not when estimate was created, so it's not useful for reporting)
+      // Priority 4: created_date
+      else if (estimate.created_date) {
+        dateToUse = estimate.created_date;
+      }
       
       if (!dateToUse) {
-        return false; // Skip estimates without estimate_close_date or estimate_date
+        return false; // Skip estimates without any valid date
       }
       
       // Handle different date formats
@@ -424,14 +437,16 @@ export default function Reports() {
       
       // Debug: Log first few estimates to see date format
       if (uniqueEstimates.indexOf(estimate) < 3) {
-        const dateSource = estimate.estimate_close_date 
-          ? 'close_date' 
-          : (estimate.estimate_date ? 'estimate_date' : 'created_at');
+        // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+        const dateSource = estimate.contract_end 
+          ? 'contract_end' 
+          : (estimate.contract_start ? 'contract_start' : (estimate.estimate_date ? 'estimate_date' : 'created_date'));
         console.log('📊 Reports: Date parsing example', {
           estimate_id: estimate.id,
           status: estimate.status,
           estimate_date: estimate.estimate_date,
-          estimate_close_date: estimate.estimate_close_date,
+          contract_end: estimate.contract_end,
+          contract_start: estimate.contract_start,
           created_at: estimate.created_at,
           dateUsed: dateToUse,
           dateSource,
@@ -443,10 +458,7 @@ export default function Reports() {
       
       if (estimateYear !== selectedYear) return false;
 
-      // Exclude estimates marked for exclusion from stats
-      if (estimate.exclude_stats) {
-        return false;
-      }
+      // Per spec R10: exclude_stats field is ignored - never used in any system logic
 
       // Filter by account
       if (selectedAccount !== 'all' && estimate.account_id !== selectedAccount) {
@@ -470,7 +482,6 @@ export default function Reports() {
         id: e.id,
         estimate_date: e.estimate_date,
         status: e.status,
-        exclude_stats: e.exclude_stats
       }))
     });
     
@@ -484,10 +495,10 @@ export default function Reports() {
   }, [estimates]);
 
   // Get ALL estimates for selected year (from database) - includes won, lost, and pending
-  // For general reports: Use close_date OR estimate_date (shows all estimates for the year)
+  // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const yearEstimates = useMemo(() => {
     if (!Array.isArray(estimates)) return [];
-    // Use salesPerformanceMode=true to match LMN's date logic (close_date with fallback to estimate_date)
+    // Per Estimates spec R2: Uses standardized date priority (contract_end → contract_start → estimate_date → created_date)
     // soldOnly=false to include all estimates (won, lost, pending) for total count
     return filterEstimatesByYear(estimates, selectedYear, true, false);
   }, [estimates, selectedYear]);
@@ -496,9 +507,8 @@ export default function Reports() {
   // This should match LMN's count exactly (validated: 1,057 for 2025)
   const yearWonEstimates = useMemo(() => {
     if (!Array.isArray(estimates)) return [];
-    // Use salesPerformanceMode=true and soldOnly=true to match LMN's "Estimates Sold" logic
-    // This uses estimate_close_date when available, but falls back to estimate_date
-    // LMN includes exclude_stats and zero price estimates in their "Estimates Sold" count
+    // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+    // Per Estimates spec R10: exclude_stats field is ignored - never used in any system logic
     const won = filterEstimatesByYear(estimates, selectedYear, true, true);
     // Debug: Log the count and analyze missing estimates for 2025
     if (selectedYear === 2025) {
@@ -508,16 +518,17 @@ export default function Reports() {
       const all2025 = filterEstimatesByYear(estimates, selectedYear, true, false); // All estimates (won, lost, pending)
       console.log(`[Reports] Year 2025 Total Estimates (all statuses): ${all2025.length}`);
       
-      // Debug: Check how many estimates have 2025 in estimate_date (without filtering by status)
+      // Debug: Check how many estimates have 2025 in date fields (per Estimates spec R2 priority)
       const estimatesWith2025Date = estimates.filter(e => {
-        if (!e.estimate_date && !e.estimate_close_date) return false;
-        const dateStr = String(e.estimate_close_date || e.estimate_date || '');
+        // Per Estimates spec R2: contract_end → contract_start → estimate_date → created_date
+        const dateStr = String(e.contract_end || e.contract_start || e.estimate_date || e.created_date || '');
+        if (!dateStr || dateStr === '') return false;
         if (dateStr.length >= 4) {
           return dateStr.substring(0, 4) === '2025';
         }
         return false;
       });
-      console.log(`[Reports] Estimates with 2025 in estimate_date or estimate_close_date: ${estimatesWith2025Date.length}`);
+      console.log(`[Reports] Estimates with 2025 in date fields (per Estimates spec R2): ${estimatesWith2025Date.length}`);
       
       // Check how many are archived
       const archived2025 = estimatesWith2025Date.filter(e => e.archived);
@@ -661,8 +672,8 @@ export default function Reports() {
   // Calculate estimates missing both dates (must be before early returns to maintain hook order)
   const estimatesMissingDates = useMemo(() => {
     return estimates.filter(est => {
-      // Check if estimate has neither estimate_close_date nor estimate_date
-      return !est.estimate_close_date && !est.estimate_date;
+      // Per Estimates spec R2: Check if estimate has no valid date fields (contract_end → contract_start → estimate_date → created_date)
+      return !est.contract_end && !est.contract_start && !est.estimate_date && !est.created_date;
     });
   }, [estimates]);
 
@@ -736,7 +747,7 @@ export default function Reports() {
                   Data Quality Issue: {estimatesMissingDates.length} estimate{estimatesMissingDates.length !== 1 ? 's' : ''} missing dates
                 </h3>
                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                  These estimates are missing both <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">estimate_date</code> and <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">estimate_close_date</code>, 
+                  These estimates are missing all date fields (<code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">contract_end</code>, <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">contract_start</code>, <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">estimate_date</code>, <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">created_date</code>), 
                   so they are excluded from year-based reports. Please update these estimates with the correct dates to include them in reports.
                 </p>
                 {estimatesMissingDates.length <= 10 && (

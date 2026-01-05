@@ -36,7 +36,7 @@ function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     pipeline = pipelineStatus;
   }
   
-  // Check pipeline_status first (LMN's primary indicator for "Sold")
+  // Per spec R11: Check pipeline_status first (preferred)
   if (pipeline) {
     const pipelineLower = pipeline.toString().toLowerCase().trim();
     if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
@@ -44,7 +44,7 @@ function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     }
   }
   
-  // Check status field
+  // Per spec R11: Check status field (fallback)
   if (!status) return false;
   const statusLower = status.toString().toLowerCase().trim();
   const wonStatuses = [
@@ -53,6 +53,9 @@ function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     'billing complete',
     'email contract award',
     'verbal contract award',
+    'contract in progress',
+    'contract + billing complete',
+    'work in progress',
     'sold', // LMN uses "Sold" as a won status
     'won' // Also support our simplified 'won' status
   ];

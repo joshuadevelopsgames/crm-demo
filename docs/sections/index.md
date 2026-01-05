@@ -90,6 +90,22 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (test mode exists, unit tests needed)
 
+### Estimates
+- **Name**: Estimates
+- **Slug**: `estimates`
+- **Spec Path**: `docs/sections/estimates.md`
+- **Primary Code Locations**:
+  - `src/utils/lmnEstimatesListParser.js` - Parser for Estimates List.xlsx
+  - `api/data/estimates.js` - API endpoint for CRUD operations
+  - `src/utils/lmnMergeData.js` - Account/contact linking during import
+  - `src/components/account/EstimatesTab.jsx` - Estimates display component
+  - `src/components/account/EstimatesStats.jsx` - Estimates statistics component
+  - `src/utils/reportCalculations.js` - Win/loss calculations and year filtering
+  - `src/pages/Reports.jsx` - Reports using estimates
+  - `src/utils/revenueSegmentCalculator.js` - Revenue calculations from estimates
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (diagnostic scripts exist, unit tests needed)
+
 ---
 
 ## Adding New Sections

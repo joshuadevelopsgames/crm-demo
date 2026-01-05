@@ -224,8 +224,8 @@ export function calculateDepartmentAccountStats(estimates, accounts, department)
 
 /**
  * Check if an estimate status is considered "won" (sold) based on LMN's logic
+ * Per spec R1, R11: pipeline_status is preferred, status field is fallback
  * Won statuses: Contract Signed, Work Complete, Billing Complete, Email Contract Award, Verbal Contract Award
- * Also checks pipeline_status field for "Sold"
  * @param {string|object} statusOrEstimate - Estimate status string OR full estimate object
  * @param {string} pipelineStatus - Estimate pipeline_status field (optional, only if first param is string)
  * @returns {boolean} True if status is considered "won"
@@ -244,7 +244,7 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     pipeline = pipelineStatus;
   }
   
-  // Check pipeline_status first (LMN's primary indicator for "Sold")
+  // Per spec R11: Check pipeline_status first (preferred)
   if (pipeline) {
     const pipelineLower = pipeline.toString().toLowerCase().trim();
     if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
@@ -252,7 +252,7 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     }
   }
   
-  // Check status field
+  // Per spec R11: Check status field (fallback)
   if (!status) return false;
   const statusLower = status.toString().toLowerCase().trim();
   const wonStatuses = [
@@ -261,6 +261,8 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
     'billing complete',
     'email contract award',
     'verbal contract award',
+    'contract in progress',
+    'contract + billing complete',
     'sold', // LMN uses "Sold" as a won status
     'won' // Also support our simplified 'won' status
   ];
@@ -270,34 +272,15 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
 /**
  * Filter estimates by year for Salesperson Performance reports
  * 
- * LMN-Compatible Filtering Rules (Validated to match LMN's count of 1,057 for 2025):
- * 
- * Date Logic:
- * - For salesPerformanceMode: Uses estimate_close_date if available, otherwise falls back to estimate_date
- *   This matches LMN's logic where they use close_date when available, but include estimates with only estimate_date
- * - For general reports: Uses estimate_close_date if available, otherwise estimate_date
- * 
- * Inclusion Rules (LMN INCLUDES these):
- * - Estimates with exclude_stats=true (LMN includes them in "Estimates Sold" count)
- * - Estimates with zero/negative prices (LMN includes them)
- * 
- * Exclusion Rules (LMN EXCLUDES these):
- * - Archived estimates
- * - Estimates with status containing "Lost" (even if they have a close_date)
- * 
- * Other Rules:
- * - Removes duplicates by lmn_estimate_id (keeps first occurrence)
- * - For soldOnly=true: Only includes estimates with won statuses (checks both pipeline_status and status fields)
- * - Year validation: Only accepts years between 2000-2100
- * 
- * This logic is validated to match LMN's "# of Estimates Sold" count exactly (1,057 for 2025).
- * The logic should work for any year as long as LMN's filtering rules remain consistent.
+ * Per spec R2: Year determination uses priority order: contract_end → contract_start → estimate_date → created_date
+ * Per spec R10: exclude_stats field is ignored - never used in any system logic
+ * Per spec R12: Archived estimates are excluded from reports
  * 
  * @param {Array} estimates - Array of estimate objects
  * @param {number} year - Year to filter by (must be between 2000-2100)
- * @param {boolean} salesPerformanceMode - If true, uses estimate_close_date with fallback to estimate_date. If false, uses close_date OR estimate_date (for general reports)
+ * @param {boolean} salesPerformanceMode - If true, uses same date priority. If false, uses same date priority (standardized per spec)
  * @param {boolean} soldOnly - If true, only include estimates with won statuses (for "Estimates Sold" calculations)
- * @returns {Array} Filtered estimates matching LMN's filtering logic
+ * @returns {Array} Filtered estimates
  */
 export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false, soldOnly = false) {
   // First, remove duplicates by lmn_estimate_id (keep first occurrence)
@@ -316,49 +299,41 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
   });
 
   return uniqueEstimates.filter(estimate => {
-    // Exclude archived estimates (LMN excludes archived)
+    // Per spec R12: Exclude archived estimates
     if (estimate.archived) return false;
     
     const status = (estimate.status || '').toString().toLowerCase().trim();
     
-    // LMN-Compatible Rule: Exclude estimates with "Lost" status ONLY when soldOnly=true
-    // For "Estimates Sold" reports, LMN excludes "Lost" statuses
-    // But for general reports (soldOnly=false), we should include all estimates (won, lost, pending)
+    // Exclude estimates with "Lost" status ONLY when soldOnly=true
+    // For "Estimates Sold" reports, exclude "Lost" statuses
+    // But for general reports (soldOnly=false), include all estimates (won, lost, pending)
     if (soldOnly && status.includes('lost')) {
       return false;
     }
     
-    // Business logic for year filtering (MUST happen before soldOnly check):
+    // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
     let dateToUse = null;
     
-    if (salesPerformanceMode) {
-      // For Salesperson Performance: Use estimate_close_date if available, otherwise estimate_date
-      // This matches LMN's logic: they use close_date when available, but fall back to estimate_date
-      if (estimate.estimate_close_date) {
-        dateToUse = estimate.estimate_close_date;
-      } else if (estimate.estimate_date) {
-        dateToUse = estimate.estimate_date;
-      } else {
-        return false; // Must have at least one date
-      }
-    } else {
-      // For general reports: Use close_date if available, otherwise estimate_date
-      // 1. If estimate has a close date → use that year (counts in year it closed)
-      // 2. Otherwise, use estimate_date → use that year (counts in year it was made)
-      if (estimate.estimate_close_date) {
-        dateToUse = estimate.estimate_close_date;
-      } else if (estimate.estimate_date) {
-        dateToUse = estimate.estimate_date;
-      }
-      // If neither exists, exclude from year-based reports
+    // Priority 1: contract_end
+    if (estimate.contract_end) {
+      dateToUse = estimate.contract_end;
+    }
+    // Priority 2: contract_start
+    else if (estimate.contract_start) {
+      dateToUse = estimate.contract_start;
+    }
+    // Priority 3: estimate_date
+    else if (estimate.estimate_date) {
+      dateToUse = estimate.estimate_date;
+    }
+    // Priority 4: created_date
+    else if (estimate.created_date) {
+      dateToUse = estimate.created_date;
     }
     
     if (!dateToUse) return false;
     
-    // NOTE: LMN includes exclude_stats estimates and zero price estimates
-    // We do NOT exclude them here to match LMN's count of 1,057
-    
-    // Extract year from date string to avoid timezone conversion issues (LMN dates are UTC)
+    // Extract year from date string to avoid timezone conversion issues
     // Use substring to extract first 4 characters (year) - more reliable than regex
     const dateStr = String(dateToUse);
     let estimateYear;
@@ -377,13 +352,8 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     // Year filter: Only include estimates for the specified year
     if (estimateYear !== year) return false;
     
-    // If soldOnly is true, only include estimates with won statuses (matches LMN's "Estimates Sold" logic)
-    // HYPOTHESIS: LMN may count ALL non-lost estimates as "sold" (not just explicitly won statuses)
-    // Testing this by counting all non-lost estimates as sold (after year filtering)
+    // If soldOnly is true, only include estimates with won statuses
     if (soldOnly) {
-      // Count all non-lost estimates as "sold" (this is the hypothesis we're testing)
-      // If this matches 1,057, then LMN's definition of "sold" is simply "not lost"
-      // If not, we'll revert and look for other patterns
       return true; // All non-lost estimates for this year are considered "sold"
     }
     

@@ -861,8 +861,9 @@ async function parseImportedEstimates() {
             fieldName.includes('breakeven') || fieldName === 'labor_hours' ||
             fieldName === 'confidence_level') {
           estimate[fieldName] = value ? parseFloat(value) : null;
-        } else if (fieldName === 'archived' || fieldName === 'exclude_stats') {
+        } else if (fieldName === 'archived') {
           estimate[fieldName] = value === 'TRUE' || value === true || value === 'true';
+          // Per spec R10: exclude_stats field is ignored - never used in any system logic
         } else {
           estimate[fieldName] = value;
         }

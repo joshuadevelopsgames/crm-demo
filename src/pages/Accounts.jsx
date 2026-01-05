@@ -27,6 +27,7 @@ import {
   BellOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { isWonStatus } from '@/utils/reportCalculations';
 import {
   Select,
   SelectContent,
@@ -322,7 +323,7 @@ export default function Accounts() {
     
     // Debug: Log estimate grouping
     if (process.env.NODE_ENV === 'development') {
-      const wonEstimates = allEstimates.filter(e => e.status?.toLowerCase() === 'won');
+      const wonEstimates = allEstimates.filter(e => isWonStatus(e));
       console.log('[Accounts] Grouped estimates:', {
         totalEstimates: allEstimates.length,
         wonEstimates: wonEstimates.length,
@@ -981,7 +982,7 @@ export default function Accounts() {
                                   accountName: account.name,
                                   accountId: account.id,
                                   estimatesCount: estimates.length,
-                                  wonEstimates: estimates.filter(e => e.status?.toLowerCase() === 'won').length,
+                                  wonEstimates: estimates.filter(e => isWonStatus(e)).length,
                                   revenue,
                                   currentYear: getCurrentYear(),
                                   sampleEstimates: estimates.slice(0, 3).map(est => ({
