@@ -779,14 +779,15 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Only set automatic score if account doesn't already have a scorecard-based score
   
   // Helper functions (defined outside loops for reuse in both revenue and segment calculations)
-  // Helper to get current year (respects year selector)
+  // Helper to get current year (respects year selector) - REQUIRED, no fallback
+  // Per user requirement: Never fall back to current year, only ever go by selected year
   function getCurrentYearForCalculation() {
     // Use window function if available (set by YearSelectorProvider)
     if (typeof window !== 'undefined' && window.__getCurrentYear) {
       return window.__getCurrentYear();
     }
-    // Fallback to actual year
-    return new Date().getFullYear();
+    // No fallback - selected year is required
+    throw new Error('lmnMergeData.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
   }
   
   // Per spec R6: Contract duration calculation

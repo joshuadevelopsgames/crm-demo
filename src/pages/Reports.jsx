@@ -39,7 +39,12 @@ function getCurrentYearForCalculation() {
     if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
       return window.__testModeGetCurrentYear();
     }
-    return new Date().getFullYear();
+    // Fallback to window.__getCurrentYear if available
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      return window.__getCurrentYear();
+    }
+    // No fallback - selected year is required
+    throw new Error('getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
   }
 }
 

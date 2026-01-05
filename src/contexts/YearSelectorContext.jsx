@@ -6,6 +6,7 @@ import { getSupabaseAuth } from '@/services/supabaseClient';
 const YearSelectorContext = createContext(null);
 
 // Initialize global function synchronously based on localStorage
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function initializeGlobalGetCurrentYear() {
   try {
     const stored = localStorage.getItem('selectedYear');
@@ -18,13 +19,18 @@ function initializeGlobalGetCurrentYear() {
   } catch (error) {
     // localStorage not available or error
   }
-  return () => new Date().getFullYear();
+  // No fallback - selected year must be set in localStorage or profile
+  // This will throw if called before YearSelectorProvider initializes
+  return () => {
+    throw new Error('YearSelectorContext: selectedYear not initialized. A year must be selected before use.');
+  };
 }
 
 // Global function to get current year (can be used outside React components)
 let globalGetCurrentYear = initializeGlobalGetCurrentYear();
 
 // Initialize global function to get current date (respects year selector)
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function initializeGlobalGetCurrentDate() {
   try {
     const stored = localStorage.getItem('selectedYear');
@@ -40,7 +46,11 @@ function initializeGlobalGetCurrentDate() {
   } catch (error) {
     // localStorage not available or error
   }
-  return () => new Date();
+  // No fallback - selected year must be set in localStorage or profile
+  // This will throw if called before YearSelectorProvider initializes
+  return () => {
+    throw new Error('YearSelectorContext: selectedYear not initialized. A year must be selected before use.');
+  };
 }
 
 // Global function to get current date (can be used outside React components)
@@ -81,13 +91,36 @@ export function YearSelectorProvider({ children }) {
   
   // Calculate year range from estimates (earliest to latest)
   // Also store the actual years that exist (not just min/max range)
+  // Per user requirement: Never fall back to current year, only ever go by selected year
   const { yearRange, availableYears } = useMemo(() => {
     if (!estimates || estimates.length === 0) {
-      // Default range if no estimates
-      const currentYear = new Date().getFullYear();
+      // If no estimates, try to get selected year from localStorage or use a placeholder
+      // This will be updated when selectedYear state is set
+      let defaultYear;
+      try {
+        const stored = localStorage.getItem('selectedYear');
+        if (stored) {
+          const year = parseInt(stored, 10);
+          if (!isNaN(year) && year >= 2000 && year <= 2100) {
+            defaultYear = year;
+          }
+        }
+      } catch {
+        // localStorage not available
+      }
+      // If we still don't have a year, we'll use a placeholder that will be updated
+      // when selectedYear state initializes (this is only for initial render)
+      defaultYear = defaultYear || (profile?.selected_year || null);
+      if (!defaultYear) {
+        // No year available yet - return empty range, will be updated when selectedYear is set
+        return { 
+          yearRange: { min: null, max: null },
+          availableYears: []
+        };
+      }
       return { 
-        yearRange: { min: currentYear, max: currentYear },
-        availableYears: [currentYear]
+        yearRange: { min: defaultYear, max: defaultYear },
+        availableYears: [defaultYear]
       };
     }
     
@@ -153,11 +186,30 @@ export function YearSelectorProvider({ children }) {
     });
     
     if (years.size === 0) {
-      // Fallback if no valid dates found
-      const currentYear = new Date().getFullYear();
+      // If no valid dates found, try to get selected year from localStorage
+      let defaultYear;
+      try {
+        const stored = localStorage.getItem('selectedYear');
+        if (stored) {
+          const year = parseInt(stored, 10);
+          if (!isNaN(year) && year >= 2000 && year <= 2100) {
+            defaultYear = year;
+          }
+        }
+      } catch {
+        // localStorage not available
+      }
+      defaultYear = defaultYear || (profile?.selected_year || null);
+      if (!defaultYear) {
+        // No year available - return empty range
+        return { 
+          yearRange: { min: null, max: null },
+          availableYears: []
+        };
+      }
       return { 
-        yearRange: { min: currentYear, max: currentYear },
-        availableYears: [currentYear]
+        yearRange: { min: defaultYear, max: defaultYear },
+        availableYears: [defaultYear]
       };
     }
     
@@ -272,6 +324,7 @@ export function YearSelectorProvider({ children }) {
   }, [estimates]);
   
   // Load selected year from profile first, then localStorage as fallback
+  // Per user requirement: Never fall back to current year, only ever go by selected year
   const [selectedYear, setSelectedYear] = useState(() => {
     // Try profile first
     if (profile?.selected_year) {
@@ -289,8 +342,9 @@ export function YearSelectorProvider({ children }) {
     } catch {
       // localStorage not available
     }
-    // Default to current year
-    return new Date().getFullYear();
+    // No fallback - return null and we'll set it in useEffect when estimates/profile load
+    // This ensures we never use current year as a fallback
+    return null;
   });
   
   // Ensure selected year is within valid range
@@ -417,15 +471,36 @@ export function YearSelectorProvider({ children }) {
 export function useYearSelector() {
   const context = useContext(YearSelectorContext);
   if (!context) {
-    // Return default values if context is not available
-    const currentYear = new Date().getFullYear();
+    // Per user requirement: Never fall back to current year, only ever go by selected year
+    // Try to get from localStorage as last resort
+    let selectedYear;
+    try {
+      const stored = localStorage.getItem('selectedYear');
+      if (stored) {
+        const year = parseInt(stored, 10);
+        if (!isNaN(year) && year >= 2000 && year <= 2100) {
+          selectedYear = year;
+        }
+      }
+    } catch {
+      // localStorage not available
+    }
+    
+    if (!selectedYear) {
+      // No fallback - context must be available
+      throw new Error('useYearSelector: YearSelectorContext not available. Make sure YearSelectorProvider wraps your app.');
+    }
+    
     return {
-      selectedYear: currentYear,
-      setYear: () => {},
-      getCurrentYear: () => currentYear,
-      getCurrentDate: () => new Date(),
-      yearRange: { min: currentYear, max: currentYear },
-      availableYears: [currentYear]
+      selectedYear,
+      setYear: () => { throw new Error('useYearSelector: Cannot set year outside YearSelectorProvider'); },
+      getCurrentYear: () => selectedYear,
+      getCurrentDate: () => {
+        const now = new Date();
+        return new Date(selectedYear, now.getMonth(), now.getDate());
+      },
+      yearRange: { min: selectedYear, max: selectedYear },
+      availableYears: [selectedYear]
     };
   }
   return context;

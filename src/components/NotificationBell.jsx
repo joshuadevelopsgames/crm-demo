@@ -1031,14 +1031,19 @@ export default function NotificationBell() {
     
     // Navigate based on notification type
     if (notification.type === 'end_of_year_analysis') {
-      // Helper to get current year (respects test mode)
+      // Helper to get current year (respects year selector) - REQUIRED, no fallback
+      // Per user requirement: Never fall back to current year, only ever go by selected year
       function getCurrentYearForCalculation() {
         // Use window function if available (set by TestModeProvider)
         if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
           return window.__testModeGetCurrentYear();
         }
-        // Fallback to actual year
-        return new Date().getFullYear();
+        // Fallback to YearSelectorContext
+        if (typeof window !== 'undefined' && window.__getCurrentYear) {
+          return window.__getCurrentYear();
+        }
+        // No fallback - selected year is required
+        throw new Error('NotificationBell.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
       }
       const currentYear = getCurrentYearForCalculation();
       navigate(`${createPageUrl('Reports')}?year=${currentYear}`);

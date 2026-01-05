@@ -22,7 +22,8 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
 
   // Calculate derived values from account data
   // Use current year revenue with contract-year allocation (same logic as revenueSegmentCalculator)
-  // Helper to get current year (respects test mode)
+  // Helper to get current year (respects year selector) - REQUIRED, no fallback
+  // Per user requirement: Never fall back to current year, only ever go by selected year
   function getCurrentYearForCalculation() {
     try {
       return getCurrentYear();
@@ -31,7 +32,8 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
       if (typeof window !== 'undefined' && window.__getCurrentYear) {
         return window.__getCurrentYear();
       }
-      return new Date().getFullYear();
+      // No fallback - selected year is required
+      throw new Error('autoScoreAccount.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
     }
   }
   const currentYear = getCurrentYearForCalculation();

@@ -131,10 +131,9 @@ export default function Accounts() {
   }, [contacts]);
 
   // Fetch all estimates to calculate actual revenue from won estimates
-  // Include current year in query key so it refetches when test mode changes
-  const currentYear = getCurrentYear();
+  // Include selected year in query key so it refetches when year selection changes
   const { data: allEstimates = [] } = useQuery({
-    queryKey: ['estimates', currentYear], // Include year so it refetches when test mode changes
+    queryKey: ['estimates', selectedYear], // Include year so it refetches when year selection changes
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
       if (!response.ok) return [];
@@ -326,7 +325,7 @@ export default function Accounts() {
       const accountsWithEstimates = Object.keys(grouped).length;
       const totalEstimates = allEstimates.length;
       const wonEstimates = allEstimates.filter(e => isWonStatus(e)).length;
-      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
+      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : selectedYear;
       
       console.log(`[getAccountRevenue] Summary for ${currentYear}:`, {
         accountsWithEstimates,

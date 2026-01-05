@@ -1123,7 +1123,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
         const updatedAccounts = autoAssignRevenueSegments(allAccounts, estimatesByAccountId);
         
         // Count segments for logging (use selected year's segment)
-        const currentYearForLogging = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
+        const currentYearForLogging = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : (() => { throw new Error('ImportLeadsDialog: YearSelectorContext not initialized. Selected year is required.'); })();
         const segmentCounts = updatedAccounts.reduce((acc, account) => {
           const segment = account.segment_by_year?.[currentYearForLogging.toString()] || account.revenue_segment || 'null';
           acc[segment] = (acc[segment] || 0) + 1;
@@ -1139,7 +1139,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
         // Update ALL accounts with their calculated segments (including accounts that should be Segment D)
         // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
         // Update both segment_by_year and revenue_segment (for backward compatibility)
-        const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
+        const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : (() => { throw new Error('ImportLeadsDialog: YearSelectorContext not initialized. Selected year is required.'); })();
         const segmentUpdates = updatedAccounts
           .filter(account => account.id) // Only filter out accounts without valid IDs
           .map(account => {

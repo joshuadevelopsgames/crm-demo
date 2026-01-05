@@ -15,11 +15,15 @@ import { startOfDay, differenceInDays } from 'date-fns';
 import { getSegmentForYear } from './revenueSegmentCalculator.js';
 
 // Server-safe getCurrentYear (for serverless functions where localStorage/context isn't available)
-// In serverless context, always use current year since there's no user session
+// Get selected year from YearSelectorContext - REQUIRED, no fallback
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function getCurrentYear() {
-  // In serverless functions, we don't have access to user's selected year
-  // Default to current year - this is fine since cache refresh runs for all users
-  return new Date().getFullYear();
+  // Use the global getCurrentYear function from YearSelectorContext
+  if (typeof window !== 'undefined' && window.__getCurrentYear) {
+    return window.__getCurrentYear();
+  }
+  // No fallback - selected year is required
+  throw new Error('atRiskCalculator.getCurrentYear: YearSelectorContext not initialized. Selected year is required.');
 }
 
 const DAYS_THRESHOLD = 180;
