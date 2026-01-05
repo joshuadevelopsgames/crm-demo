@@ -80,12 +80,13 @@ export default async function handler(req, res) {
       });
     }
     
-    // Validate and truncate console logs if needed
-    if (bugReport.consoleLogs && Array.isArray(bugReport.consoleLogs)) {
+    // Validate and truncate console logs if needed (create a new variable to avoid modifying req.body)
+    let consoleLogs = bugReport.consoleLogs;
+    if (consoleLogs && Array.isArray(consoleLogs)) {
       const MAX_CONSOLE_LOGS = 2000;
-      if (bugReport.consoleLogs.length > MAX_CONSOLE_LOGS) {
-        console.warn(`⚠️ Truncating console logs: ${bugReport.consoleLogs.length} → ${MAX_CONSOLE_LOGS}`);
-        bugReport.consoleLogs = bugReport.consoleLogs.slice(-MAX_CONSOLE_LOGS);
+      if (consoleLogs.length > MAX_CONSOLE_LOGS) {
+        console.warn(`⚠️ Truncating console logs: ${consoleLogs.length} → ${MAX_CONSOLE_LOGS}`);
+        consoleLogs = consoleLogs.slice(-MAX_CONSOLE_LOGS);
       }
     }
 
@@ -148,12 +149,12 @@ ${JSON.stringify(bugReport.selectedElement, null, 2)}
     }
 
     // Add console logs
-    if (bugReport.consoleLogs && bugReport.consoleLogs.length > 0) {
+    if (consoleLogs && consoleLogs.length > 0) {
       emailBody += `
-## Console Logs (${bugReport.consoleLogs.length} entries)
+## Console Logs (${consoleLogs.length} entries)
 
 \`\`\`
-${bugReport.consoleLogs.map(log => 
+${consoleLogs.map(log => 
   `[${log.timestamp}] [${log.type.toUpperCase()}] ${log.message}`
 ).join('\n')}
 \`\`\`
