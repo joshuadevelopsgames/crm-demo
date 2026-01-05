@@ -143,10 +143,97 @@ export default function BugReportButton() {
         return;
       }
       
+      const element = e.target;
+      
+      // Check if the clicked element is part of a dropdown menu
+      const isDropdownElement = (el) => {
+        if (!el) return false;
+        
+        // Check if element is inside a SelectContent (Radix UI Select dropdown)
+        if (el.closest('[role="listbox"]') || el.closest('.select-dropdown')) {
+          return true;
+        }
+        
+        // Check if element is a SelectTrigger or has Radix Select data attributes
+        if (el.hasAttribute('data-radix-select-trigger') || 
+            el.closest('[data-radix-select-trigger]')) {
+          return true;
+        }
+        
+        // Check if element is a SelectItem or inside SelectContent
+        if (el.hasAttribute('data-radix-select-item') ||
+            el.closest('[data-radix-select-item]') ||
+            el.closest('[data-radix-select-content]')) {
+          return true;
+        }
+        
+        // Check for common dropdown patterns
+        if (el.getAttribute('role') === 'combobox' || 
+            el.getAttribute('aria-haspopup') === 'true' ||
+            el.getAttribute('aria-haspopup') === 'listbox') {
+          return true;
+        }
+        
+        // Check if element is inside a Radix Portal (where SelectContent is rendered)
+        if (el.closest('[data-radix-portal]')) {
+          return true;
+        }
+        
+        // Check for custom dropdowns (like UserFilter) that use portals
+        // These typically have high z-index and are positioned fixed
+        const computedStyle = window.getComputedStyle(el);
+        const zIndex = parseInt(computedStyle.zIndex) || 0;
+        if (zIndex >= 9999 && (computedStyle.position === 'fixed' || computedStyle.position === 'absolute')) {
+          // Likely a dropdown menu
+          return true;
+        }
+        
+        // Check if element is inside a high z-index container (dropdown menus)
+        let current = el;
+        for (let i = 0; i < 10 && current; i++) { // Check up to 10 levels up
+          const style = window.getComputedStyle(current);
+          const currentZIndex = parseInt(style.zIndex) || 0;
+          if (currentZIndex >= 9999 && (style.position === 'fixed' || style.position === 'absolute')) {
+            return true;
+          }
+          current = current.parentElement;
+        }
+        
+        // Check for other common dropdown patterns (aria-expanded, etc.)
+        const parent = el.parentElement;
+        if (parent && (
+          parent.getAttribute('role') === 'combobox' ||
+          parent.getAttribute('aria-haspopup') === 'true' ||
+          parent.getAttribute('aria-haspopup') === 'listbox'
+        )) {
+          return true;
+        }
+        
+        // Check if clicking on a button that might open a dropdown
+        // (buttons with chevron icons or similar patterns)
+        if (el.tagName === 'BUTTON' || el.closest('button')) {
+          const button = el.tagName === 'BUTTON' ? el : el.closest('button');
+          // Check if button contains a chevron icon (common in dropdown triggers)
+          if (button && (
+            button.querySelector('svg[class*="chevron"]') ||
+            button.querySelector('svg[class*="Chevron"]') ||
+            button.getAttribute('aria-expanded') !== null
+          )) {
+            return true;
+          }
+        }
+        
+        return false;
+      };
+      
+      // If it's a dropdown element, allow the click to proceed normally
+      if (isDropdownElement(element)) {
+        return; // Don't prevent default or stop propagation
+      }
+      
       e.preventDefault();
       e.stopPropagation();
       
-      const element = e.target;
       if (element && element !== document.body && element !== document.documentElement) {
         // Get element information
         const elementInfo = {
