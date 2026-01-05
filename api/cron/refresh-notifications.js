@@ -121,7 +121,8 @@ export default async function handler(req, res) {
     console.log(`✅ Calculated ${atRiskAccounts.length} at-risk accounts, ${neglectedAccounts.length} neglected accounts, ${duplicateEstimates.length} duplicate estimate groups`);
     
     // 5. Update cache
-    const cacheExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min from now
+    // Set expiry to 24 hours (effectively never expires since cron refreshes every 5 min)
+    const cacheExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     
     await Promise.all([
       // At-risk accounts cache

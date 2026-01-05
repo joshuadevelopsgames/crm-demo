@@ -245,7 +245,8 @@ export default async function handler(req, res) {
     
     // 5. Update cache
     console.log('💾 Updating notification cache...');
-    const cacheExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 min from now
+    // Set expiry to 24 hours (effectively never expires since cron refreshes every 5 min)
+    const cacheExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     
     const [atRiskCacheRes, neglectedCacheRes] = await Promise.all([
       // At-risk accounts cache

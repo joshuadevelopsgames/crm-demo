@@ -107,20 +107,28 @@ export default async function handler(req, res) {
         });
       }
       
-      if (!cache || new Date(cache.expires_at) < new Date()) {
-        // Cache expired or missing - return empty (background job should refresh)
+      if (!cache) {
+        // Cache missing - return empty
         return res.json({ 
           success: true, 
           data: [], 
           stale: true,
-          message: 'Cache expired or missing. Background job will refresh shortly.'
+          message: 'Cache not available. Background job will create it shortly.'
         });
+      }
+      
+      // If cache exists but is expired, still return it (stale data is better than no data)
+      // The cron job will refresh it, but we don't want to show empty lists
+      const isExpired = new Date(cache.expires_at) < new Date();
+      if (isExpired) {
+        console.warn('⚠️ Cache expired but returning stale data:', cache.cache_key);
       }
       
       return res.json({ 
         success: true, 
         data: cache.cache_data?.accounts || [],
-        updated_at: cache.updated_at
+        updated_at: cache.updated_at,
+        stale: isExpired
       });
     }
     
@@ -147,20 +155,28 @@ export default async function handler(req, res) {
         return res.status(500).json({ success: false, error: error.message });
       }
       
-      if (!cache || new Date(cache.expires_at) < new Date()) {
-        // Cache expired or missing
+      if (!cache) {
+        // Cache missing - return empty
         return res.json({ 
           success: true, 
           data: [], 
           stale: true,
-          message: 'Cache expired or missing. Background job will refresh shortly.'
+          message: 'Cache not available. Background job will create it shortly.'
         });
+      }
+      
+      // If cache exists but is expired, still return it (stale data is better than no data)
+      // The cron job will refresh it, but we don't want to show empty lists
+      const isExpired = new Date(cache.expires_at) < new Date();
+      if (isExpired) {
+        console.warn('⚠️ Cache expired but returning stale data:', cache.cache_key);
       }
       
       return res.json({ 
         success: true, 
         data: cache.cache_data?.accounts || [],
-        updated_at: cache.updated_at
+        updated_at: cache.updated_at,
+        stale: isExpired
       });
     }
     
