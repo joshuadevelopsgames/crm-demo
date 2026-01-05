@@ -68,7 +68,7 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
             Snooze Account
           </DialogTitle>
           <DialogDescription>
-            Temporarily hide the {getNotificationTypeLabel()} notification for "{account?.name}". It will reappear after the snooze period ends.
+            Stop showing "{account?.name}" as a {getNotificationTypeLabel()}. The account will still be visible, but won't appear in neglected/at-risk lists until the snooze period ends.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -102,11 +102,11 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
             <p className="text-sm text-slate-600">
               {unit === 'forever' ? (
                 <span>
-                  Account will be <span className="font-semibold text-slate-900">permanently hidden</span>
+                  Account will <span className="font-semibold text-slate-900">never appear as {getNotificationTypeLabel()}</span>
                 </span>
               ) : (
                 <span>
-                  Account will reappear on{' '}
+                  Account will reappear as {getNotificationTypeLabel()} on{' '}
                   <span className="font-semibold text-slate-900">
                     {format(snoozeDate, 'MMM d, yyyy')}
                   </span>
