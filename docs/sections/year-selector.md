@@ -34,7 +34,7 @@ The Year Selector is a site-wide context that allows users to select a year for 
 
 - **Year**: Integer (e.g., 2024, 2025)
 - **Year Range**: Object with `min` and `max` properties (integers)
-- **Year Options**: Array of integers (actual years with estimates, sorted descending)
+- **Available Years**: Array of integers (actual years with estimates, sorted descending)
 - **Selected Year**: Integer (2000-2100 range)
 
 ### Nullability Assumptions
@@ -61,7 +61,7 @@ The Year Selector is a site-wide context that allows users to select a year for 
    - Extract year from date (validate 2000-2100 range)
    - Collect unique years into Set
    - Calculate `yearRange`: `{ min: earliestYear, max: latestYear }`
-   - Store `availableYears`: Array of actual years (no gaps filled)
+   - Store `availableYears`: Array of actual years (sorted descending, no gaps filled)
 
 3. **Load Selected Year** (initialization)
    - Priority 1: Load from `profile.selected_year` (if available)
@@ -74,9 +74,9 @@ The Year Selector is a site-wide context that allows users to select a year for 
    - If selected year > `yearRange.max`: Adjust to `yearRange.max`
    - If selected year not in `availableYears`: Adjust to closest valid year
 
-5. **Generate Year Options** (for UI dropdown)
-   - Use `availableYears` array (actual years with estimates)
-   - Sort descending (most recent first) for better UX
+5. **Available Years** (for UI dropdown)
+   - `availableYears` array contains actual years with estimates
+   - Already sorted descending (most recent first) for better UX
    - Do NOT fill gaps between min and max (only show years with actual data)
 
 6. **Persist Selection** (when user changes year)
@@ -90,13 +90,13 @@ The Year Selector is a site-wide context that allows users to select a year for 
    - `getCurrentYear()`: Function to get current year (respects selection)
    - `getCurrentDate()`: Function to get current date (respects selection)
    - `yearRange`: `{ min, max }` object
-   - `yearOptions`: Array of available years (sorted descending)
+   - `availableYears`: Array of available years (sorted descending, ready for UI)
 
 ### Transformations
 
 1. **Year Extraction**: Date field → Extract year → Validate 2000-2100 → Add to Set
 2. **Year Range Calculation**: Set of years → Sort ascending → `{ min: first, max: last }`
-3. **Year Options Generation**: Set of years → Array → Sort descending
+3. **Available Years Generation**: Set of years → Array → Sort descending (for UI display)
 4. **Selected Year Validation**: Selected year → Check against range → Adjust if needed
 
 ### Computations and Formulas
@@ -119,15 +119,15 @@ The Year Selector is a site-wide context that allows users to select a year for 
 
 **R3**: Year validation: All years must be between 2000-2100 (inclusive). Years outside this range are invalid and excluded.
 
-**R4**: Only years that actually have estimates are included in `yearOptions` (no gaps filled between min and max).
+**R4**: Only years that actually have estimates are included in `availableYears` (no gaps filled between min and max).
 
 **R5**: Selected year persists across sessions (stored in `profiles.selected_year`).
 
 **R6**: If selected year is outside available range, automatically adjust to closest valid year (`yearRange.min` or `yearRange.max`).
 
-**R7**: Year options are sorted descending (most recent first) for better user experience.
+**R7**: Available years are sorted descending (most recent first) for better user experience.
 
-**R8**: If no estimates exist, default to current year for both `yearRange` and `yearOptions`.
+**R8**: If no estimates exist, default to current year for both `yearRange` and `availableYears`.
 
 **R9**: Selected year initialization priority: `profile.selected_year` → `localStorage.selectedYear` → current year.
 
@@ -203,7 +203,7 @@ estimates = [
 {
   yearRange: { min: 2023, max: 2025 },
   availableYears: [2023, 2024, 2025],
-  yearOptions: [2025, 2024, 2023] // Sorted descending
+  availableYears: [2025, 2024, 2023] // Sorted descending
 }
 ```
 
@@ -224,7 +224,7 @@ estimates = [
 {
   yearRange: { min: 2020, max: 2025 },
   availableYears: [2020, 2025], // NOT [2020, 2021, 2022, 2023, 2024, 2025]
-  yearOptions: [2025, 2020]
+  availableYears: [2025, 2020]
 }
 ```
 
@@ -288,7 +288,7 @@ selectedYear: 2023 // Profile takes priority
 
 **AC2**: Only years that actually have estimates are shown in year options (no gaps filled) (R4).
 
-**AC3**: Year options are sorted descending (most recent first) (R7).
+**AC3**: Available years are sorted descending (most recent first) (R7).
 
 **AC4**: Selected year persists across sessions (stored in user profile) (R5).
 

@@ -54,7 +54,7 @@ import { snoozeNotification } from '@/services/notificationService';
 
 export default function Accounts() {
   // Use year selector to trigger re-render when year changes
-  const { selectedYear, setYear, getCurrentYear, yearOptions } = useYearSelector();
+  const { selectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
   const navigate = useNavigate();
 
   // Debug: Log year selection status
@@ -672,7 +672,7 @@ export default function Accounts() {
                 <SelectValue>{selectedYear}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {yearOptions.map((year) => (
+                {availableYears.map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
                   </SelectItem>

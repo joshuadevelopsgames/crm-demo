@@ -167,7 +167,7 @@ export function YearSelectorProvider({ children }) {
         min: yearArray[0],
         max: yearArray[yearArray.length - 1]
       },
-      availableYears: yearArray // Store actual years that exist (ascending for range, will be reversed for display)
+      availableYears: yearArray.sort((a, b) => b - a) // Sort descending (most recent first) for UI display
     };
     
     // Debug logging to help diagnose year calculation issues
@@ -312,23 +312,14 @@ export function YearSelectorProvider({ children }) {
     }
   };
   
-  // Generate year options from actual years that exist in estimates (not filling gaps)
-  // Sort descending (most recent first) for better UX
-  const yearOptions = useMemo(() => {
-    // Use availableYears (actual years with estimates) instead of filling min-max range
-    const options = availableYears.length > 0 ? [...availableYears] : [new Date().getFullYear()];
-    // Sort descending (most recent first) for better user experience
-    return options.sort((a, b) => b - a);
-  }, [availableYears]);
-  
   const value = useMemo(() => ({
     selectedYear,
     setYear,
     getCurrentYear,
     getCurrentDate,
     yearRange,
-    yearOptions
-  }), [selectedYear, getCurrentYear, getCurrentDate, yearRange, yearOptions]);
+    availableYears
+  }), [selectedYear, getCurrentYear, getCurrentDate, yearRange, availableYears]);
   
   return (
     <YearSelectorContext.Provider value={value}>
@@ -348,7 +339,7 @@ export function useYearSelector() {
       getCurrentYear: () => currentYear,
       getCurrentDate: () => new Date(),
       yearRange: { min: currentYear, max: currentYear },
-      yearOptions: [currentYear]
+      availableYears: [currentYear]
     };
   }
   return context;

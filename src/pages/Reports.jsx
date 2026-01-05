@@ -28,7 +28,7 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 
-import { getCurrentYear } from '@/contexts/YearSelectorContext';
+import { getCurrentYear, useYearSelector } from '@/contexts/YearSelectorContext';
 
 // Helper to get current year (respects test mode)
 function getCurrentYearForCalculation() {
@@ -47,6 +47,7 @@ export default function Reports() {
   const [searchParams] = useSearchParams();
   const currentYear = getCurrentYearForCalculation();
   const yearFromUrl = searchParams.get('year');
+  const { availableYears: contextAvailableYears } = useYearSelector();
   const [selectedYear, setSelectedYear] = useState(yearFromUrl ? parseInt(yearFromUrl) : currentYear);
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
@@ -58,14 +59,13 @@ export default function Reports() {
     }
   }, [yearFromUrl]);
 
-  // Generate year options (current year and 5 years back)
-  const yearOptions = useMemo(() => {
-    const years = [];
-    for (let i = 0; i <= 5; i++) {
-      years.push(currentYear - i);
-    }
-    return years;
-  }, [currentYear]);
+  // Use availableYears from YearSelectorContext (calculated from actual estimates)
+  // Fallback to current year if context not available
+  const availableYears = useMemo(() => {
+    return contextAvailableYears && contextAvailableYears.length > 0 
+      ? contextAvailableYears 
+      : [currentYear];
+  }, [contextAvailableYears, currentYear]);
 
   // Fetch estimates from database
   const { data: estimates = [], isLoading: estimatesLoading, error: estimatesError } = useQuery({
@@ -106,35 +106,6 @@ export default function Reports() {
     }
   });
 
-  // Calculate available years from estimates (use same logic: close_date -> estimate_date, exclude if neither exists)
-  const availableYears = useMemo(() => {
-    const years = new Set();
-    estimates.forEach(e => {
-      // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
-      let dateToUse = null;
-      if (e.contract_end) {
-        dateToUse = e.contract_end;
-      } else if (e.contract_start) {
-        dateToUse = e.contract_start;
-      } else if (e.estimate_date) {
-        dateToUse = e.estimate_date;
-      } else if (e.created_date) {
-        dateToUse = e.created_date;
-      }
-      // If no date exists, skip
-      if (dateToUse) {
-        const dateStr = String(dateToUse);
-        if (dateStr.length >= 4) {
-          const yearStr = dateStr.substring(0, 4);
-          const year = parseInt(yearStr);
-          if (!isNaN(year) && year >= 2000 && year <= 2100) {
-            years.add(year);
-          }
-        }
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a); // Most recent first
-  }, [estimates]);
 
   // Track if user has manually changed the year
   const [userHasChangedYear, setUserHasChangedYear] = useState(false);
@@ -782,7 +753,7 @@ export default function Reports() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {yearOptions.map(year => (
+                  {availableYears.map(year => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>

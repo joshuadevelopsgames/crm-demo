@@ -42,7 +42,7 @@ import { formatDateString } from '@/utils/dateFormatter';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { selectedYear, setYear, yearOptions } = useYearSelector();
+  const { selectedYear, setYear, availableYears } = useYearSelector();
   const queryClient = useQueryClient();
   const { user, isLoading: userLoading } = useUser();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
@@ -668,7 +668,7 @@ export default function Dashboard() {
               <SelectValue>{selectedYear}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {yearOptions.map((year) => (
+              {availableYears.map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
                 </SelectItem>

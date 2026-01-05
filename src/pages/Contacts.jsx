@@ -46,7 +46,7 @@ import { useUser } from '@/contexts/UserContext';
 export default function Contacts() {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useUser();
-  const { selectedYear, setYear, yearOptions } = useYearSelector();
+  const { selectedYear, setYear, availableYears } = useYearSelector();
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -272,7 +272,7 @@ export default function Contacts() {
                 <SelectValue>{selectedYear}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {yearOptions.map((year) => (
+                {availableYears.map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
                   </SelectItem>
