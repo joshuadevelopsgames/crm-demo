@@ -237,29 +237,14 @@ function getEstimateYearData(estimate, currentYear) {
   };
 }
 
-// Import getCurrentYear from year selector context
-import { getCurrentYear } from '@/contexts/YearSelectorContext';
-
-// Use the exported getCurrentYear function which respects test mode
+// Server-safe getCurrentYear (for serverless functions where localStorage/context isn't available)
+// In serverless context, always use current year since there's no user session
 function getCurrentYearForCalculation() {
-  try {
-    const year = getCurrentYear();
-    // Debug: log the year being used
-    if (typeof window !== 'undefined' && window.__getCurrentYear) {
-      console.log('[getCurrentYearForCalculation] Using year:', year, 'from getCurrentYear()');
-    }
-    return year;
-  } catch (error) {
-    // Fallback if context not initialized yet
-    if (typeof window !== 'undefined' && window.__getCurrentYear) {
-      const year = window.__getCurrentYear();
-      console.log('[getCurrentYearForCalculation] Using year:', year, 'from window.__getCurrentYear (fallback)');
-      return year;
-    }
-    const year = new Date().getFullYear();
-    console.warn('[getCurrentYearForCalculation] Using year:', year, 'from new Date() (no test mode available)');
-    return year;
-  }
+  // In serverless functions, we don't have access to user's selected year
+  // Default to current year - this is fine since cache refresh runs for all users
+  // In browser context, this will be overridden by the actual getCurrentYear from context
+  // but for serverless, we just use current year
+  return new Date().getFullYear();
 }
 
 /**
