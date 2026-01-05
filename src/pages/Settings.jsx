@@ -314,17 +314,62 @@ export default function Settings() {
       // Calculate segments for all accounts
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
-      // Update ALL accounts
-      const updates = updatedAccounts.map(account => 
-        base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
-      );
+      // Count segments for logging
+      const segmentCounts = updatedAccounts.reduce((acc, account) => {
+        const segment = account.revenue_segment || 'null';
+        acc[segment] = (acc[segment] || 0) + 1;
+        return acc;
+      }, {});
       
-      await Promise.all(updates);
+      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : 'unknown';
+      
+      console.log('📊 Segment recalculation results:', {
+        totalAccounts: updatedAccounts.length,
+        segmentCounts,
+        year: currentYear
+      });
+      
+      // Update ALL accounts with their calculated segments
+      // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
+      const updates = updatedAccounts.map(account => {
+        const segment = account.revenue_segment || 'C'; // Default to 'C' if somehow missing
+        return base44.entities.Account.update(account.id, { revenue_segment: segment })
+          .then(() => {
+            if (segment === 'D') {
+              console.log(`✅ Updated ${account.name || account.id} to Segment D`);
+            }
+            return { success: true, accountId: account.id, segment };
+          })
+          .catch(error => {
+            console.error(`❌ Failed to update revenue segment for account ${account.id || account.name}:`, error);
+            return { success: false, accountId: account.id, error: error.message };
+          });
+      });
+      
+      const results = await Promise.all(updates);
+      const successCount = results.filter(r => r.success).length;
+      const dSegmentCount = results.filter(r => r.success && r.segment === 'D').length;
+      const failedCount = results.filter(r => !r.success).length;
+      
+      if (failedCount > 0) {
+        console.warn(`⚠️ ${failedCount} accounts failed to update. Check console for details.`);
+        toast.error(`${failedCount} accounts failed to update. Check console for details.`, { id: 'recalculate-segments-toast' });
+      }
+      
+      console.log(`✅ Segment updates: ${successCount} successful, ${failedCount} failed, ${dSegmentCount} Segment D accounts`);
       
       // Invalidate queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       
-      toast.success(`✓ Revenue segments recalculated: All ${accounts.length} accounts now have segments assigned`, { id: 'recalculate-segments-toast' });
+      const segmentSummary = Object.entries(segmentCounts)
+        .map(([seg, count]) => `${seg}: ${count}`)
+        .join(', ');
+      
+      if (failedCount === 0) {
+        toast.success(`✓ Revenue segments recalculated for ${currentYear}: ${segmentSummary}`, { id: 'recalculate-segments-toast' });
+      } else {
+        toast.success(`✓ Revenue segments recalculated: ${successCount} updated, ${failedCount} failed. ${segmentSummary}`, { id: 'recalculate-segments-toast' });
+      }
     } catch (error) {
       console.error('Error recalculating segments:', error);
       toast.error(error.message || 'Failed to recalculate segments', { id: 'recalculate-segments-toast' });

@@ -1122,21 +1122,49 @@ export default function ImportLeadsDialog({ open, onClose }) {
         // Calculate segments for all accounts
         const updatedAccounts = autoAssignRevenueSegments(allAccounts, estimatesByAccountId);
         
-        // Update all accounts with their calculated segments
-        // Filter out accounts without valid IDs and handle errors gracefully
+        // Count segments for logging
+        const segmentCounts = updatedAccounts.reduce((acc, account) => {
+          const segment = account.revenue_segment || 'null';
+          acc[segment] = (acc[segment] || 0) + 1;
+          return acc;
+        }, {});
+        
+        console.log('📊 Segment calculation results:', {
+          totalAccounts: updatedAccounts.length,
+          segmentCounts,
+          year: typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : 'unknown'
+        });
+        
+        // Update ALL accounts with their calculated segments (including accounts that should be Segment D)
+        // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
         const segmentUpdates = updatedAccounts
-          .filter(account => account.id && account.revenue_segment) // Only update accounts with valid ID and segment
-          .map(account => 
-            base44.entities.Account.update(account.id, { revenue_segment: account.revenue_segment })
-              .catch(error => {
-                console.warn(`⚠️ Failed to update revenue segment for account ${account.id}:`, error.message);
-                return null; // Return null for failed updates
+          .filter(account => account.id) // Only filter out accounts without valid IDs
+          .map(account => {
+            const segment = account.revenue_segment || 'C'; // Default to 'C' if somehow missing
+            return base44.entities.Account.update(account.id, { revenue_segment: segment })
+              .then(() => {
+                if (segment === 'D') {
+                  console.log(`✅ Updated ${account.name || account.id} to Segment D`);
+                }
+                return { success: true, accountId: account.id, segment };
               })
-          );
+              .catch(error => {
+                console.warn(`⚠️ Failed to update revenue segment for account ${account.id || account.name}:`, error.message);
+                return { success: false, accountId: account.id, error: error.message };
+              });
+          });
         
         const results = await Promise.all(segmentUpdates);
-        const successCount = results.filter(r => r !== null).length;
-        console.log(`✅ Assigned revenue segments to ${successCount} of ${updatedAccounts.length} accounts based on 12-month rolling revenue`);
+        const successCount = results.filter(r => r.success).length;
+        const dSegmentCount = results.filter(r => r.success && r.segment === 'D').length;
+        const failedCount = results.filter(r => !r.success).length;
+        
+        console.log(`✅ Assigned revenue segments: ${successCount} successful, ${failedCount} failed`);
+        console.log(`   Segment D accounts: ${dSegmentCount}`);
+        
+        if (failedCount > 0) {
+          console.warn(`⚠️ ${failedCount} accounts failed to update. Check console for details.`);
+        }
       } catch (segmentError) {
         console.error('⚠️ Error calculating revenue segments:', segmentError);
         // Don't fail the import if segment calculation fails

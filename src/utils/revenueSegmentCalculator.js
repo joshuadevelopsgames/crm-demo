@@ -384,6 +384,15 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
       return yearData && yearData.appliesToCurrentYear;
     });
     
+    // Debug logging for Segment D calculation
+    if (typeof window !== 'undefined' && window.__debugSegmentD) {
+      console.log(`[Segment D Debug] Account: ${account.name || account.id}, Year: ${currentYear}, Total estimates: ${estimates.length}, Won estimates for year: ${wonEstimates.length}`);
+      if (wonEstimates.length > 0) {
+        const types = wonEstimates.map(e => e.estimate_type || 'NULL');
+        console.log(`  Estimate types: ${types.join(', ')}`);
+      }
+    }
+    
     const hasStandardEstimates = wonEstimates.some(est => 
       est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
     );
@@ -394,7 +403,14 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     // Segment D: Project only - has "Standard" (project) estimates but NO "Service" (ongoing) estimates
     // If it has BOTH Standard and Service, it will be A/B/C based on revenue percentage
     if (hasStandardEstimates && !hasServiceEstimates) {
+      if (typeof window !== 'undefined' && window.__debugSegmentD) {
+        console.log(`  ✅ Segment D assigned to ${account.name || account.id}`);
+      }
       return 'D';
+    }
+    
+    if (typeof window !== 'undefined' && window.__debugSegmentD && hasStandardEstimates) {
+      console.log(`  ⚠️  Account has Standard but also Service - will use revenue-based segment`);
     }
   }
   
