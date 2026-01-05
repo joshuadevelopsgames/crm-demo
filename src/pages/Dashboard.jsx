@@ -15,6 +15,7 @@ import TutorialTooltip from '../components/TutorialTooltip';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
+import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import {
   Select,
   SelectContent,
@@ -513,7 +514,7 @@ export default function Dashboard() {
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
     // Default to 'C' (90 days) if segment is missing
-    const segment = account.revenue_segment || 'C';
+    const segment = getSegmentForYear(account, selectedYear) || 'C';
     const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
     
     // Check if no interaction beyond threshold
@@ -539,7 +540,7 @@ export default function Dashboard() {
       }).length;
       const hasRecentInteraction = active.filter(a => {
         if (!a.last_interaction_date) return false;
-        const segment = a.revenue_segment || 'C'; // Default to 'C' if missing
+        const segment = getSegmentForYear(a, selectedYear) || 'C'; // Default to 'C' if missing
         const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
         const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
         return daysSince <= thresholdDays;
@@ -547,7 +548,7 @@ export default function Dashboard() {
       const noInteractionDate = active.filter(a => !a.last_interaction_date).length;
       const oldInteraction = active.filter(a => {
         if (!a.last_interaction_date) return false;
-        const segment = a.revenue_segment || 'C'; // Default to 'C' if missing
+        const segment = getSegmentForYear(a, selectedYear) || 'C'; // Default to 'C' if missing
         const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
         const daysSince = differenceInDays(new Date(), new Date(a.last_interaction_date));
         return daysSince > thresholdDays;
@@ -877,7 +878,7 @@ export default function Dashboard() {
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {neglectedAccounts.slice(0, 5).map(account => {
-                  const segment = account.revenue_segment || 'C';
+                  const segment = getSegmentForYear(account, selectedYear) || 'C';
                   const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
                   const daysSince = account.last_interaction_date 
                     ? differenceInDays(new Date(), new Date(account.last_interaction_date))

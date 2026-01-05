@@ -53,18 +53,24 @@ async function recalculateSegments(supabase) {
     const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
     
     // Update all accounts with their calculated segments (non-blocking, don't wait for all updates)
+    // Update both segment_by_year and revenue_segment (for backward compatibility)
     const updatePromises = updatedAccounts.map(account => {
-      const segment = account.revenue_segment || 'C';
+      const selectedYear = new Date().getFullYear(); // Use current year as default
+      const selectedYearSegment = account.segment_by_year?.[selectedYear.toString()] || account.revenue_segment || 'C';
+      
       return supabase
         .from('accounts')
-        .update({ revenue_segment: segment })
+        .update({ 
+          segment_by_year: account.segment_by_year,
+          revenue_segment: selectedYearSegment // Keep for backward compatibility
+        })
         .eq('id', account.id)
         .then(({ error }) => {
           if (error) {
             console.error(`Failed to update segment for account ${account.id}:`, error);
             return { success: false, accountId: account.id, error: error.message };
           }
-          return { success: true, accountId: account.id, segment };
+          return { success: true, accountId: account.id, segment: selectedYearSegment };
         });
     });
     

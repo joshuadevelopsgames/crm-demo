@@ -45,8 +45,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
-import { useYearSelector } from '@/contexts/YearSelectorContext';
+import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
 import SnoozeDialog from '@/components/SnoozeDialog';
@@ -527,7 +527,8 @@ export default function Accounts() {
   const filteredAccounts = accountsByStatus.filter(account => {
     const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = accountMatchesType(account, filterType);
-    const matchesSegment = filterSegment === 'all' || account.revenue_segment === filterSegment;
+    const accountSegment = getSegmentForYear(account, selectedYear);
+    const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
     
     // User filter: if users are selected, only show accounts that have estimates with those users
     let matchesUser = true;
@@ -550,7 +551,7 @@ export default function Accounts() {
       const segmentCounts = {};
       const statusCounts = {};
       accounts.forEach(acc => {
-        const segment = acc.revenue_segment || 'null';
+        const segment = getSegmentForYear(acc, selectedYear) || 'null';
         const status = acc.status || 'null';
         segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
         statusCounts[status] = (statusCounts[status] || 0) + 1;
@@ -565,11 +566,11 @@ export default function Accounts() {
         statusFilter,
         segmentCounts,
         statusCounts,
-        accountsWithSegmentB: accounts.filter(a => a.revenue_segment === 'B').length,
+        accountsWithSegmentB: accounts.filter(a => getSegmentForYear(a, selectedYear) === 'B').length,
         accountsWithAtRiskStatus: accounts.filter(a => a.status === 'at_risk').length,
         sampleAccounts: accounts.slice(0, 5).map(a => ({
           name: a.name,
-          revenue_segment: a.revenue_segment,
+          revenue_segment: getSegmentForYear(a, selectedYear),
           status: a.status,
           archived: a.archived
         }))
@@ -916,7 +917,7 @@ export default function Accounts() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {account.revenue_segment || '-'}
+                          {getSegmentForYear(account, selectedYear) || '-'}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
                           {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
@@ -1094,9 +1095,9 @@ export default function Accounts() {
                         <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                         {account.status}
                       </Badge>
-                      {account.revenue_segment && (
+                      {getSegmentForYear(account, selectedYear) && (
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
-                          {account.revenue_segment}
+                          {getSegmentForYear(account, selectedYear)}
                         </Badge>
                       )}
                       {/* User role badges when filtered */}
@@ -1376,7 +1377,7 @@ export default function Accounts() {
                             </Badge>
                           </td>
                           <td className={`px-6 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {account.revenue_segment || '-'}
+                            {getSegmentForYear(account, selectedYear) || '-'}
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4">
                             {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
@@ -1454,9 +1455,9 @@ export default function Accounts() {
                         <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                           {account.status}
                         </Badge>
-                        {account.revenue_segment && (
+                        {getSegmentForYear(account, selectedYear) && (
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
-                            {account.revenue_segment}
+                            {getSegmentForYear(account, selectedYear)}
                           </Badge>
                         )}
                       </div>

@@ -9,8 +9,9 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 ### Sources
 
 - **Accounts Table** (`accounts`):
-  - `revenue_segment` (text): Segment classification ('A', 'B', 'C', or 'D')
-  - `revenue_by_year` (jsonb): Historical revenue by year `{ "2024": 50000, "2025": 75000, ... }` (calculated during import)
+  - `revenue_segment` (text): Segment for selected year (backward compatibility, stores selected year's segment)
+  - `segment_by_year` (jsonb): Historical segments by year `{ "2024": "A", "2025": "B", ... }` (calculated during import for all years)
+  - `revenue_by_year` (jsonb): Historical revenue by year `{ "2024": 50000, "2025": 75000, ... }` (calculated during import for all years)
   - `id` (text, PK): Account identifier
 
 - **Estimates Table** (`estimates`):
@@ -25,7 +26,8 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 **Required Fields:**
 - `revenue_by_year`: Used for percentage calculation (revenue for selected year from `revenue_by_year[selectedYear]`)
-- `revenue_segment`: Storage field for segment classification
+- `segment_by_year`: Primary storage field for segment classification per year (format: `{ "2024": "A", "2025": "B", ... }`)
+- `revenue_segment`: Storage field for selected year's segment (backward compatibility)
 
 **Optional Fields:**
 - `estimate_type`: Used for Segment D classification
@@ -40,9 +42,11 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 ### Nullability Assumptions
 
-- `revenue_segment`: Defaults to 'C' if missing or no revenue data
+- `segment_by_year`: Can be `null` or missing selected year if account has no won estimates for selected year
+- `revenue_segment`: Defaults to 'C' if missing (stores selected year's segment for backward compatibility)
 - `revenue_by_year`: Can be `null` or missing selected year if account has no won estimates for selected year
 - If `revenue_by_year[selectedYear]` is `null`, `undefined`, or `0`, segment defaults to 'C'
+- Segments are calculated and stored for ALL years during import (not just selected year)
 
 ## Logic
 
@@ -52,12 +56,18 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
    - Retrieve from YearSelectorContext (site-wide, user-selectable)
    - Default to current calendar year if context unavailable
 
-2. **Calculate Total Revenue**
-   - Sum of all accounts' `revenue_by_year[selectedYear]` values for selected year
-   - Uses stored `revenue_by_year` values (not recalculated from estimates)
-   - If `totalRevenue <= 0`, all accounts default to segment 'C'
+2. **Calculate Segments for All Years** (during import)
+   - For each account, calculate segments for ALL years (not just selected year)
+   - For each year, calculate total revenue across all accounts for that year
+   - Store segments in `segment_by_year` JSONB field: `{ "2024": "A", "2025": "B", ... }`
+   - Also set `revenue_segment` to selected year's segment (for backward compatibility)
 
-3. **For Each Account, Calculate Segment**
+3. **Get Segment for Selected Year** (for display)
+   - Retrieve segment from `segment_by_year[selectedYear]`
+   - Fallback to `revenue_segment` if `segment_by_year` not available (backward compatibility)
+   - If neither available, default to 'C'
+
+4. **For Each Account and Year, Calculate Segment**
 
    a. **Segment D Check** (highest priority, uses selected year):
       - Filter won estimates for selected year only
@@ -78,11 +88,15 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 ### Transformations in Sequence
 
-1. **Total Revenue Aggregation**: Sum all accounts' `revenue_by_year[selectedYear]` for selected year
-2. **Segment D Classification**: Check if account has ANY Service estimates for selected year
-3. **Revenue Percentage**: Calculate `(accountRevenue / totalRevenue) * 100`
-4. **Threshold Comparison**: Compare percentage to segment thresholds (15%, 5%)
-5. **Segment Assignment**: Assign A/B/C/D based on rules
+1. **Revenue Aggregation by Year**: For each year, sum all accounts' `revenue_by_year[year]` for that year
+2. **Segment Calculation by Year**: For each account and each year:
+   - Calculate total revenue for that year across all accounts
+   - Segment D Classification: Check if account has ANY Service estimates for that year
+   - Revenue Percentage: Calculate `(accountRevenue / totalRevenue) * 100` for that year
+   - Threshold Comparison: Compare percentage to segment thresholds (15%, 5%)
+   - Segment Assignment: Assign A/B/C/D based on rules for that year
+3. **Storage**: Store all year segments in `segment_by_year` JSONB field
+4. **Backward Compatibility**: Set `revenue_segment` to selected year's segment
 
 ### Computations and Formulas
 
@@ -138,6 +152,10 @@ else → 'C'
 **R12**: Segments are always read-only in all UI contexts. No manual override is available.
 
 **R13**: Segment calculation uses stored `revenue_by_year[selectedYear]` field (revenue for selected year), not recalculated from estimates.
+
+**R22**: Segments are calculated and stored for ALL years during import, not just the selected year. The `segment_by_year` JSONB field stores segments per year: `{ "2024": "A", "2025": "B", ... }`.
+
+**R23**: The `revenue_segment` field stores the segment for the selected year (backward compatibility). When displaying segments, use `segment_by_year[selectedYear]` with fallback to `revenue_segment`.
 
 **R14**: Selected year is determined by YearSelectorContext (site-wide, user-selectable, persists in user profile).
 
@@ -440,6 +458,10 @@ Selected Year: 2025
 **AC8**: Segments are always read-only in all UI contexts. No manual override is available. (R12)
 
 **AC9**: Segment calculation uses stored `revenue_by_year[selectedYear]` field (revenue for selected year), not recalculated from estimates. (R13)
+
+**AC22**: Segments are stored per year in `segment_by_year` JSONB field. An account can have different segments for different years (e.g., A in 2024, B in 2025). (R22)
+
+**AC23**: When displaying segments in the UI, use `getSegmentForYear(account, selectedYear)` which retrieves from `segment_by_year[selectedYear]` with fallback to `revenue_segment`. (R23)
 
 **AC10**: Selected year is determined by YearSelectorContext and applies site-wide. (R14)
 

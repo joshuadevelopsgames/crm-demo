@@ -1008,6 +1008,104 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     // account.organization_score should be set by scorecard completions, not automatic calculation
   });
 
+  // Second pass: Calculate segments for all years (after all accounts have revenue_by_year)
+  // Import calculateSegmentsForAllYears from revenueSegmentCalculator
+  // We need to do this in a second pass because segment calculation requires total revenue for each year
+  // which depends on all accounts having revenue_by_year calculated first
+  accountsArray.forEach(account => {
+    if (!account.revenue_by_year || typeof account.revenue_by_year !== 'object') {
+      account.segment_by_year = null;
+      account.revenue_segment = 'C'; // Default for backward compatibility
+      return;
+    }
+    
+    const segmentsByYear = {};
+    const years = Object.keys(account.revenue_by_year);
+    
+    years.forEach(yearStr => {
+      const year = parseInt(yearStr);
+      
+      // Calculate total revenue for this year across all accounts
+      const totalRevenueForYear = accountsArray.reduce((total, acc) => {
+        if (acc.revenue_by_year && acc.revenue_by_year[yearStr]) {
+          const yearRevenue = typeof acc.revenue_by_year[yearStr] === 'number'
+            ? acc.revenue_by_year[yearStr]
+            : parseFloat(acc.revenue_by_year[yearStr]) || 0;
+          return total + yearRevenue;
+        }
+        return total;
+      }, 0);
+      
+      // Get estimates for this account
+      const accountEstimates = estimatesWithAccountId.filter(est => 
+        est.account_id === account.id
+      );
+      
+      // Calculate segment for this year using the same logic as calculateRevenueSegmentForYear
+      // Segment D check (uses estimates for this specific year)
+      let segment = 'C'; // Default
+      
+      if (accountEstimates && accountEstimates.length > 0) {
+        const wonEstimates = accountEstimates.filter(est => {
+          if (!isWonStatus(est)) return false;
+          const yearData = getEstimateYearData(est, year);
+          return yearData && yearData.appliesToTargetYear;
+        });
+        
+        const hasStandardEstimates = wonEstimates.some(est => 
+          est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
+        );
+        const hasServiceEstimates = wonEstimates.some(est => 
+          est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'service'
+        );
+        
+        if (hasStandardEstimates && !hasServiceEstimates) {
+          segment = 'D';
+        } else {
+          // Calculate revenue percentage for A/B/C
+          const accountRevenue = typeof account.revenue_by_year[yearStr] === 'number'
+            ? account.revenue_by_year[yearStr]
+            : parseFloat(account.revenue_by_year[yearStr]) || 0;
+          
+          if (accountRevenue > 0 && totalRevenueForYear > 0) {
+            const revenuePercentage = (accountRevenue / totalRevenueForYear) * 100;
+            if (revenuePercentage > 15) {
+              segment = 'A';
+            } else if (revenuePercentage >= 5) {
+              segment = 'B';
+            } else {
+              segment = 'C';
+            }
+          }
+        }
+      } else {
+        // No estimates - check if there's revenue
+        const accountRevenue = typeof account.revenue_by_year[yearStr] === 'number'
+          ? account.revenue_by_year[yearStr]
+          : parseFloat(account.revenue_by_year[yearStr]) || 0;
+        
+        if (accountRevenue > 0 && totalRevenueForYear > 0) {
+          const revenuePercentage = (accountRevenue / totalRevenueForYear) * 100;
+          if (revenuePercentage > 15) {
+            segment = 'A';
+          } else if (revenuePercentage >= 5) {
+            segment = 'B';
+          } else {
+            segment = 'C';
+          }
+        }
+      }
+      
+      segmentsByYear[yearStr] = segment;
+    });
+    
+    account.segment_by_year = Object.keys(segmentsByYear).length > 0 ? segmentsByYear : null;
+    
+    // Also set revenue_segment to current year's segment for backward compatibility
+    const currentYear = getCurrentYearForCalculation();
+    account.revenue_segment = segmentsByYear[currentYear.toString()] || 'C';
+  });
+
   // Filter orphaned jobsites for easy access
   const orphanedJobsites = jobsitesWithAccountId.filter(jobsite => jobsite._is_orphaned);
 

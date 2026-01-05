@@ -28,6 +28,8 @@ import {
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
+import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import toast from 'react-hot-toast';
 import InteractionTimeline from '../components/account/InteractionTimeline';
@@ -63,6 +65,7 @@ export default function AccountDetail() {
   const { user: currentUser } = useUser();
   const { permissions } = useUserPermissions();
   const canManageInteractions = permissions['manage_interactions'] === true;
+  const { selectedYear } = useYearSelector();
 
   const queryClient = useQueryClient();
 
@@ -332,9 +335,9 @@ export default function AccountDetail() {
               <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
                 {account.account_type}
               </Badge>
-              {account.revenue_segment && (
+              {getSegmentForYear(account, selectedYear) && (
                 <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
-                  {account.revenue_segment}
+                  {getSegmentForYear(account, selectedYear)}
                 </Badge>
               )}
               <Badge variant="outline" className="text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs">

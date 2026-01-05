@@ -12,6 +12,8 @@
  */
 
 import { startOfDay, differenceInDays } from 'date-fns';
+import { getSegmentForYear } from './revenueSegmentCalculator';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 const DAYS_THRESHOLD = 180;
 
@@ -356,7 +358,8 @@ export function calculateNeglectedAccounts(accounts, snoozes = []) {
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
     // Default to 'C' (90 days) if segment is missing
-    const segment = account.revenue_segment || 'C';
+    const selectedYear = getCurrentYear();
+    const segment = getSegmentForYear(account, selectedYear) || 'C';
     const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
     
     // Check if no interaction beyond threshold

@@ -314,9 +314,10 @@ export default function Settings() {
       // Calculate segments for all accounts
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
-      // Count segments for logging
+      // Count segments for logging (use selected year's segment)
+      const currentYearForLogging = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
       const segmentCounts = updatedAccounts.reduce((acc, account) => {
-        const segment = account.revenue_segment || 'null';
+        const segment = account.segment_by_year?.[currentYearForLogging.toString()] || account.revenue_segment || 'null';
         acc[segment] = (acc[segment] || 0) + 1;
         return acc;
       }, {});
@@ -331,14 +332,19 @@ export default function Settings() {
       
       // Update ALL accounts with their calculated segments
       // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
+      // Update both segment_by_year and revenue_segment (for backward compatibility)
+      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
       const updates = updatedAccounts.map(account => {
-        const segment = account.revenue_segment || 'C'; // Default to 'C' if somehow missing
-        return base44.entities.Account.update(account.id, { revenue_segment: segment })
+        const selectedYearSegment = account.segment_by_year?.[currentYear.toString()] || account.revenue_segment || 'C';
+        return base44.entities.Account.update(account.id, { 
+          segment_by_year: account.segment_by_year,
+          revenue_segment: selectedYearSegment // Keep for backward compatibility
+        })
           .then(() => {
-            if (segment === 'D') {
+            if (selectedYearSegment === 'D') {
               console.log(`✅ Updated ${account.name || account.id} to Segment D`);
             }
-            return { success: true, accountId: account.id, segment };
+            return { success: true, accountId: account.id, segment: selectedYearSegment };
           })
           .catch(error => {
             console.error(`❌ Failed to update revenue segment for account ${account.id || account.name}:`, error);

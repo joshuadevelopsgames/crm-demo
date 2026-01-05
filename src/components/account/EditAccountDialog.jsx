@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
+import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 export default function EditAccountDialog({ open, onClose, account }) {
   const queryClient = useQueryClient();
@@ -61,11 +62,12 @@ export default function EditAccountDialog({ open, onClose, account }) {
   
   useEffect(() => {
     if (account) {
+      const selectedYear = getCurrentYear();
       setFormData({
         name: account.name || '',
         account_type: account.account_type || 'prospect',
         status: account.status || 'active',
-        revenue_segment: account.revenue_segment || 'C',
+        revenue_segment: getSegmentForYear(account, selectedYear) || 'C',
         industry: account.industry || '',
         website: account.website || '',
         phone: account.phone || '',

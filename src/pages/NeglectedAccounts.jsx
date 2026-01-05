@@ -11,7 +11,7 @@ import { createPageUrl } from '@/utils';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import { snoozeNotification } from '@/services/notificationService';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
-import { getRevenueForYear } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 
 export default function NeglectedAccounts() {
   const navigate = useNavigate();
@@ -77,7 +77,7 @@ export default function NeglectedAccounts() {
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
     // Default to 'C' (90 days) if segment is missing
-    const segment = account.revenue_segment || 'C';
+    const segment = getSegmentForYear(account, selectedYear) || 'C';
     const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
     
     // Check if no interaction beyond threshold

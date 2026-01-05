@@ -1,6 +1,8 @@
 import { base44 } from '@/api/base44Client';
 import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format } from 'date-fns';
 import { calculateRenewalDate, hasAnyEstimateExpiringSoon } from '@/utils/renewalDateCalculator';
+import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 /**
  * Parse assigned users from comma-separated string
@@ -681,7 +683,8 @@ export async function updateAllUserNotificationStates() {
         if (isNeglected) {
           const isSnoozed = await checkNotificationSnoozed('neglected_account', account.id);
           if (!isSnoozed) {
-            const segment = account.revenue_segment || 'C';
+            const selectedYear = getCurrentYear();
+            const segment = getSegmentForYear(account, selectedYear) || 'C';
             const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
             let daysSinceInteraction = null;
             let message = '';
@@ -755,7 +758,8 @@ export async function updateAllUserNotificationStates() {
 async function shouldHaveNeglectedNotification(account, today) {
   if (account.archived || account.icp_status === 'na') return false;
   
-  const segment = account.revenue_segment || 'C';
+  const selectedYear = getCurrentYear();
+  const segment = getSegmentForYear(account, selectedYear) || 'C';
   const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
   
   if (!account.last_interaction_date) return true;

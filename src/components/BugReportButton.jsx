@@ -33,74 +33,88 @@ export default function BugReportButton() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const consoleLogRef = useRef([]);
   const originalConsoleRef = useRef(null);
+  const consoleCaptureStartedRef = useRef(false);
 
-  // Capture console logs
+  // Capture console logs - start immediately on mount, not just when dialog opens
   useEffect(() => {
-    if (isOpen) {
-      // Store original console methods
-      originalConsoleRef.current = {
-        log: console.log,
-        error: console.error,
-        warn: console.warn,
-        info: console.info,
-      };
+    // Only set up console interception once
+    if (consoleCaptureStartedRef.current) return;
+    consoleCaptureStartedRef.current = true;
 
-      // Override console methods to capture logs
-      console.log = (...args) => {
-        originalConsoleRef.current.log(...args);
-        consoleLogRef.current.push({
-          type: 'log',
-          message: args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-          ).join(' '),
-          timestamp: new Date().toISOString(),
-        });
-      };
-
-      console.error = (...args) => {
-        originalConsoleRef.current.error(...args);
-        consoleLogRef.current.push({
-          type: 'error',
-          message: args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-          ).join(' '),
-          timestamp: new Date().toISOString(),
-        });
-      };
-
-      console.warn = (...args) => {
-        originalConsoleRef.current.warn(...args);
-        consoleLogRef.current.push({
-          type: 'warn',
-          message: args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-          ).join(' '),
-          timestamp: new Date().toISOString(),
-        });
-      };
-
-      console.info = (...args) => {
-        originalConsoleRef.current.info(...args);
-        consoleLogRef.current.push({
-          type: 'info',
-          message: args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-          ).join(' '),
-          timestamp: new Date().toISOString(),
-        });
-      };
-    }
-
-    return () => {
-      // Restore original console methods
-      if (originalConsoleRef.current) {
-        console.log = originalConsoleRef.current.log;
-        console.error = originalConsoleRef.current.error;
-        console.warn = originalConsoleRef.current.warn;
-        console.info = originalConsoleRef.current.info;
-      }
+    // Store original console methods
+    originalConsoleRef.current = {
+      log: console.log,
+      error: console.error,
+      warn: console.warn,
+      info: console.info,
+      debug: console.debug,
     };
-  }, [isOpen]);
+
+    // Helper to format console arguments
+    const formatArgs = (args) => {
+      return args.map(arg => {
+        if (arg === null) return 'null';
+        if (arg === undefined) return 'undefined';
+        if (typeof arg === 'object') {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch (e) {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+    };
+
+    // Override console methods to capture logs
+    console.log = (...args) => {
+      originalConsoleRef.current.log(...args);
+      consoleLogRef.current.push({
+        type: 'log',
+        message: formatArgs(args),
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    console.error = (...args) => {
+      originalConsoleRef.current.error(...args);
+      consoleLogRef.current.push({
+        type: 'error',
+        message: formatArgs(args),
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    console.warn = (...args) => {
+      originalConsoleRef.current.warn(...args);
+      consoleLogRef.current.push({
+        type: 'warn',
+        message: formatArgs(args),
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    console.info = (...args) => {
+      originalConsoleRef.current.info(...args);
+      consoleLogRef.current.push({
+        type: 'info',
+        message: formatArgs(args),
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    console.debug = (...args) => {
+      originalConsoleRef.current.debug(...args);
+      consoleLogRef.current.push({
+        type: 'debug',
+        message: formatArgs(args),
+        timestamp: new Date().toISOString(),
+      });
+    };
+
+    // Note: We don't restore console methods on unmount because we want to capture
+    // logs throughout the entire session, not just when the dialog is open
+  }, []);
 
   // Handle element inspection
   useEffect(() => {
@@ -219,7 +233,7 @@ export default function BugReportButton() {
 
   const handleOpen = () => {
     setIsOpen(true);
-    consoleLogRef.current = [];
+    // Don't clear console logs - we want to keep the full history
   };
 
   const handleClose = () => {
@@ -229,7 +243,7 @@ export default function BugReportButton() {
     setDescription('');
     setUserEmail('');
     setPriority('medium');
-    consoleLogRef.current = [];
+    // Don't clear console logs - we want to keep the full history
   };
 
   const handleStartInspection = () => {
