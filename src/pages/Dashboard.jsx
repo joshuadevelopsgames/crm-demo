@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { formatDateString } from '@/utils/dateFormatter';
+import toast from 'react-hot-toast';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -584,6 +585,11 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setSnoozeAccount(null);
       setSnoozeNotificationType(null);
+      toast.success('✓ Account snoozed');
+    },
+    onError: (error) => {
+      console.error('Error snoozing notification:', error);
+      toast.error(`Failed to snooze account: ${error?.message || 'Unknown error'}`);
     }
   });
 
@@ -604,7 +610,13 @@ export default function Dashboard() {
       case 'years':
         snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
         break;
+      case 'forever':
+        // Set to 100 years in the future (effectively forever)
+        snoozedUntil = new Date(now.getFullYear() + 100, now.getMonth(), now.getDate());
+        break;
       default:
+        console.error('Invalid snooze unit:', unit, 'duration:', duration);
+        toast.error('Invalid snooze duration');
         return;
     }
     

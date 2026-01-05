@@ -674,7 +674,7 @@ export default function AccountDetail() {
           notificationType="neglected_account"
           open={showSnoozeDialog}
           onOpenChange={setShowSnoozeDialog}
-          onSnooze={async (account, duration, unit) => {
+          onSnooze={async (account, notificationType, duration, unit) => {
             const now = new Date();
             let snoozedUntil;
             
@@ -691,7 +691,13 @@ export default function AccountDetail() {
               case 'years':
                 snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
                 break;
+              case 'forever':
+                // Set to 100 years in the future (effectively forever)
+                snoozedUntil = new Date(now.getFullYear() + 100, now.getMonth(), now.getDate());
+                break;
               default:
+                console.error('Invalid snooze unit:', unit, 'duration:', duration);
+                toast.error('Invalid snooze duration');
                 return;
             }
             
@@ -701,8 +707,10 @@ export default function AccountDetail() {
               await snoozeNotification('renewal_reminder', account.id, snoozedUntil);
               queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
               setShowSnoozeDialog(false);
+              toast.success('✓ Account snoozed');
             } catch (error) {
               console.error('Error snoozing notifications:', error);
+              toast.error(`Failed to snooze account: ${error?.message || 'Unknown error'}`);
             }
           }}
         />

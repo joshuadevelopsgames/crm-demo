@@ -34,6 +34,9 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
         return addMonths(now, duration);
       case 'years':
         return addYears(now, duration);
+      case 'forever':
+        // Use a far future date (100 years from now)
+        return addYears(now, 100);
       default:
         return now;
     }
@@ -72,13 +75,15 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
           <div className="space-y-2">
             <Label>Duration</Label>
             <div className="flex gap-2">
-              <Input
-                type="number"
-                min="1"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
-                className="w-24"
-              />
+              {unit !== 'forever' && (
+                <Input
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+                  className="w-24"
+                />
+              )}
               <Select value={unit} onValueChange={setUnit}>
                 <SelectTrigger className="flex-1">
                   <SelectValue />
@@ -88,16 +93,25 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
                   <SelectItem value="weeks">Week(s)</SelectItem>
                   <SelectItem value="months">Month(s)</SelectItem>
                   <SelectItem value="years">Year(s)</SelectItem>
+                  <SelectItem value="forever">Forever</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="p-3 bg-slate-50 rounded-lg">
             <p className="text-sm text-slate-600">
-              Account will reappear on{' '}
-              <span className="font-semibold text-slate-900">
-                {format(snoozeDate, 'MMM d, yyyy')}
-              </span>
+              {unit === 'forever' ? (
+                <span>
+                  Account will be <span className="font-semibold text-slate-900">permanently hidden</span>
+                </span>
+              ) : (
+                <span>
+                  Account will reappear on{' '}
+                  <span className="font-semibold text-slate-900">
+                    {format(snoozeDate, 'MMM d, yyyy')}
+                  </span>
+                </span>
+              )}
             </p>
           </div>
           <div className="flex justify-end gap-3">

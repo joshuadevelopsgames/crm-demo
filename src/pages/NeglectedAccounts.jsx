@@ -12,6 +12,7 @@ import SnoozeDialog from '@/components/SnoozeDialog';
 import { snoozeNotification } from '@/services/notificationService';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
 import { getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import toast from 'react-hot-toast';
 
 export default function NeglectedAccounts() {
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ export default function NeglectedAccounts() {
     return daysSince > thresholdDays;
   });
 
-  const handleSnooze = async (account, duration, unit) => {
+  const handleSnooze = async (account, notificationType, duration, unit) => {
     const now = new Date();
     let snoozedUntil;
     
@@ -103,7 +104,13 @@ export default function NeglectedAccounts() {
       case 'years':
         snoozedUntil = new Date(now.getFullYear() + duration, now.getMonth(), now.getDate());
         break;
+      case 'forever':
+        // Set to 100 years in the future (effectively forever)
+        snoozedUntil = new Date(now.getFullYear() + 100, now.getMonth(), now.getDate());
+        break;
       default:
+        console.error('Invalid snooze unit:', unit, 'duration:', duration);
+        toast.error('Invalid snooze duration');
         return;
     }
     
@@ -111,8 +118,10 @@ export default function NeglectedAccounts() {
       await snoozeNotification('neglected_account', account.id, snoozedUntil);
       queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
       setSnoozeAccount(null);
+      toast.success('✓ Account snoozed');
     } catch (error) {
       console.error('Error snoozing notification:', error);
+      toast.error(`Failed to snooze account: ${error?.message || 'Unknown error'}`);
     }
   };
 
