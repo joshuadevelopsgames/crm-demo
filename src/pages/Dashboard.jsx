@@ -867,7 +867,7 @@ export default function Dashboard() {
                   <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
                     {neglectedAccounts.length}
                   </Badge>
-                  {notificationCounts.neglected_account > 5 && (
+                  {neglectedAccounts.length > 5 && (
                     <Button
                       variant="ghost"
                       size="sm"
