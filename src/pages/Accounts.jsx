@@ -617,8 +617,8 @@ export default function Accounts() {
       return (b.organization_score || 0) - (a.organization_score || 0);
     }
     if (sortBy === 'revenue') {
-      const aRevenue = getAccountRevenue(a, estimatesByAccountId[a.id] || []);
-      const bRevenue = getAccountRevenue(b, estimatesByAccountId[b.id] || []);
+      const aRevenue = getRevenueForYear(a, selectedYear);
+      const bRevenue = getRevenueForYear(b, selectedYear);
       return bRevenue - aRevenue;
     }
     if (sortBy === 'last_interaction') {
@@ -998,8 +998,7 @@ export default function Accounts() {
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
                           {(() => {
-                            const estimates = estimatesByAccountId[account.id] || [];
-                            const revenue = getAccountRevenue(account, estimates);
+                            const revenue = getRevenueForYear(account, selectedYear);
                             
                             // Debug logging - log first 5 accounts
                             if (process.env.NODE_ENV === 'development') {
@@ -1182,7 +1181,7 @@ export default function Accounts() {
                         </span>
                       </div>
                       {(() => {
-                        const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                        const revenue = getRevenueForYear(account, selectedYear);
                         return revenue > 0 ? (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
@@ -1442,7 +1441,7 @@ export default function Accounts() {
                           </td>
                           <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                             {(() => {
-                              const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                              const revenue = getRevenueForYear(account, selectedYear);
                               return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
                             })()}
                           </td>
