@@ -270,7 +270,39 @@ export default function BugReportButton() {
 
     try {
       // Get current console logs (not shown to user, only sent in email)
-      const currentLogs = [...consoleLogRef.current];
+      let currentLogs = [...consoleLogRef.current];
+      
+      // Limit console logs to prevent size issues (keep most recent 2000 entries, or limit to ~2MB)
+      const MAX_CONSOLE_LOGS = 2000;
+      const MAX_CONSOLE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+      
+      if (currentLogs.length > MAX_CONSOLE_LOGS) {
+        console.warn(`⚠️ Truncating console logs from ${currentLogs.length} to ${MAX_CONSOLE_LOGS} entries`);
+        currentLogs = currentLogs.slice(-MAX_CONSOLE_LOGS);
+      }
+      
+      // Further truncate if total size is too large
+      let totalSize = 0;
+      const truncatedLogs = [];
+      for (let i = currentLogs.length - 1; i >= 0; i--) {
+        const logSize = JSON.stringify(currentLogs[i]).length;
+        if (totalSize + logSize > MAX_CONSOLE_SIZE_BYTES) {
+          break;
+        }
+        truncatedLogs.unshift(currentLogs[i]);
+        totalSize += logSize;
+      }
+      
+      if (truncatedLogs.length < currentLogs.length) {
+        console.warn(`⚠️ Truncated console logs due to size: ${currentLogs.length} → ${truncatedLogs.length} entries`);
+        currentLogs = truncatedLogs;
+      }
+      
+      // Limit description length (10,000 characters)
+      const MAX_DESCRIPTION_LENGTH = 10000;
+      const truncatedDescription = description.length > MAX_DESCRIPTION_LENGTH
+        ? description.substring(0, MAX_DESCRIPTION_LENGTH) + '\n\n[Description truncated due to length]'
+        : description;
 
       // Get user info
       const userInfo = {
@@ -285,13 +317,50 @@ export default function BugReportButton() {
 
       // Prepare bug report data
       const bugReport = {
-        description,
+        description: truncatedDescription,
         userEmail: userEmail || 'Not provided',
         priority,
         selectedElement,
         consoleLogs: currentLogs,
         userInfo,
       };
+
+      // Check payload size before sending (Vercel limit is ~4.5MB)
+      const payload = JSON.stringify(bugReport);
+      const payloadSizeMB = payload.length / (1024 * 1024);
+      const MAX_PAYLOAD_SIZE_MB = 4.0; // Leave some buffer
+      
+      if (payloadSizeMB > MAX_PAYLOAD_SIZE_MB) {
+        // Aggressively truncate console logs
+        const targetSize = MAX_PAYLOAD_SIZE_MB * 1024 * 1024;
+        const descriptionSize = JSON.stringify(truncatedDescription).length;
+        const otherDataSize = JSON.stringify({
+          userEmail: bugReport.userEmail,
+          priority: bugReport.priority,
+          selectedElement: bugReport.selectedElement,
+          userInfo: bugReport.userInfo
+        }).length;
+        const availableForLogs = targetSize - descriptionSize - otherDataSize - 10000; // 10KB buffer
+        
+        let logSize = 0;
+        const finalLogs = [];
+        for (let i = currentLogs.length - 1; i >= 0; i--) {
+          const logStr = JSON.stringify(currentLogs[i]);
+          if (logSize + logStr.length > availableForLogs) {
+            break;
+          }
+          finalLogs.unshift(currentLogs[i]);
+          logSize += logStr.length;
+        }
+        
+        bugReport.consoleLogs = finalLogs;
+        console.warn(`⚠️ Payload too large (${payloadSizeMB.toFixed(2)}MB), truncated console logs to ${finalLogs.length} entries`);
+        
+        toast('⚠️ Bug report is very large. Some console logs were truncated to ensure delivery.', { 
+          duration: 5000,
+          icon: '⚠️'
+        });
+      }
 
       // Send to API
       const response = await fetch('/api/bug-report', {
@@ -302,7 +371,15 @@ export default function BugReportButton() {
         body: JSON.stringify(bugReport),
       });
 
-      const result = await response.json();
+      // Handle response - check if it's JSON first
+      let result;
+      try {
+        const text = await response.text();
+        result = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error('❌ Failed to parse response:', parseError);
+        throw new Error('Server returned invalid response. The bug report may be too large.');
+      }
 
       if (!response.ok) {
         const errorMessage = result.error || 'Failed to send bug report';
@@ -312,6 +389,12 @@ export default function BugReportButton() {
           error: errorMessage,
           details: result.details
         });
+        
+        // Provide helpful error message for size-related issues
+        if (response.status === 413 || response.status === 400 || errorMessage.toLowerCase().includes('size') || errorMessage.toLowerCase().includes('too large')) {
+          throw new Error('Bug report is too large. Please shorten your description or try again with fewer console logs.');
+        }
+        
         throw new Error(errorMessage + details);
       }
 
@@ -353,7 +436,15 @@ export default function BugReportButton() {
     } catch (error) {
       console.error('❌ Error submitting bug report:', error);
       const errorMessage = error.message || 'Failed to send bug report';
-      toast.error(`Failed to send bug report: ${errorMessage}`, { duration: 6000 });
+      
+      // Check for network errors or size-related errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        toast.error('Network error. Please check your connection and try again.', { duration: 6000 });
+      } else if (errorMessage.includes('too large') || errorMessage.includes('size')) {
+        toast.error(errorMessage, { duration: 8000 });
+      } else {
+        toast.error(`Failed to send bug report: ${errorMessage}`, { duration: 6000 });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -501,8 +592,14 @@ export default function BugReportButton() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 className="resize-none"
+                maxLength={10000}
                 required
               />
+              {description.length > 9000 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  ⚠️ Approaching character limit ({description.length}/10,000)
+                </p>
+              )}
             </div>
           </div>
 

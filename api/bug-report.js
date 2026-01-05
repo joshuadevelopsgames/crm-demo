@@ -57,6 +57,20 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check request size (Vercel limit is ~4.5MB)
+    const contentLength = req.headers['content-length'];
+    if (contentLength) {
+      const sizeMB = parseInt(contentLength) / (1024 * 1024);
+      if (sizeMB > 4.5) {
+        console.error(`❌ Request too large: ${sizeMB.toFixed(2)}MB`);
+        return res.status(413).json({ 
+          success: false,
+          error: 'Bug report payload is too large. Please shorten your description.',
+          details: { sizeMB: sizeMB.toFixed(2), maxMB: 4.5 }
+        });
+      }
+    }
+
     const bugReport = req.body;
 
     if (!bugReport || !bugReport.description) {
@@ -64,6 +78,15 @@ export default async function handler(req, res) {
         success: false,
         error: 'Bug report description is required' 
       });
+    }
+    
+    // Validate and truncate console logs if needed
+    if (bugReport.consoleLogs && Array.isArray(bugReport.consoleLogs)) {
+      const MAX_CONSOLE_LOGS = 2000;
+      if (bugReport.consoleLogs.length > MAX_CONSOLE_LOGS) {
+        console.warn(`⚠️ Truncating console logs: ${bugReport.consoleLogs.length} → ${MAX_CONSOLE_LOGS}`);
+        bugReport.consoleLogs = bugReport.consoleLogs.slice(-MAX_CONSOLE_LOGS);
+      }
     }
 
     // Get email configuration from environment variables
