@@ -56,12 +56,16 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
     }
     return Math.ceil(durationMonths / 12);
   };
+  // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const getEstimateYearData = (estimate, currentYear) => {
-    const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
     const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+    const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
     const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
+    const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
     const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
     if (totalPrice === 0) return null;
+    
+    // If we have both contract_start and contract_end, use contract allocation (multi-year)
     if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
       const startYear = contractStart.getFullYear();
       const durationMonths = calculateDurationMonths(contractStart, contractEnd);
@@ -78,6 +82,19 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
         value: appliesToCurrentYear ? annualAmount : 0
       };
     }
+    
+    // Per Estimates spec R2: Year determination priority
+    let yearDeterminationDate = null;
+    if (contractEnd && !isNaN(contractEnd.getTime())) {
+      yearDeterminationDate = contractEnd;
+    } else if (contractStart && !isNaN(contractStart.getTime())) {
+      yearDeterminationDate = contractStart;
+    } else if (estimateDate && !isNaN(estimateDate.getTime())) {
+      yearDeterminationDate = estimateDate;
+    } else if (createdDate && !isNaN(createdDate.getTime())) {
+      yearDeterminationDate = createdDate;
+    }
+    
     // Per Estimates spec R2: Use year determination date if available
     if (yearDeterminationDate) {
       const determinationYear = yearDeterminationDate.getFullYear();
