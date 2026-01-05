@@ -333,7 +333,6 @@ export default function Settings() {
       // Update ALL accounts with their calculated segments
       // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
       // Update both segment_by_year and revenue_segment (for backward compatibility)
-      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
       const updates = updatedAccounts.map(account => {
         const selectedYearSegment = account.segment_by_year?.[currentYear.toString()] || account.revenue_segment || 'C';
         return base44.entities.Account.update(account.id, { 

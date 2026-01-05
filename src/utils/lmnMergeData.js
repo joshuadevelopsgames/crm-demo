@@ -777,55 +777,48 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Calculate revenue and scores for each account
   // NOTE: organization_score is now primarily set by scorecards, not automatic calculation
   // Only set automatic score if account doesn't already have a scorecard-based score
-  accountsArray.forEach(account => {
-    // Find all estimates for this account (now using account_id field)
-    const accountEstimates = estimatesWithAccountId.filter(est => 
-      est.account_id === account.id
-    );
-
-    // Calculate revenue from won estimates per spec R25: calculate for ALL years
-    // Import calculation functions from revenueSegmentCalculator (per spec R1-R22)
-    // Helper to get current year (respects year selector)
-    function getCurrentYearForCalculation() {
-      // Use window function if available (set by YearSelectorProvider)
-      if (typeof window !== 'undefined' && window.__getCurrentYear) {
-        return window.__getCurrentYear();
-      }
-      // Fallback to actual year
-      return new Date().getFullYear();
+  
+  // Helper functions (defined outside loops for reuse in both revenue and segment calculations)
+  // Helper to get current year (respects year selector)
+  function getCurrentYearForCalculation() {
+    // Use window function if available (set by YearSelectorProvider)
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      return window.__getCurrentYear();
     }
-    const currentYear = getCurrentYearForCalculation();
-    
-    // Per spec R6: Contract duration calculation
-    const calculateDurationMonths = (startDate, endDate) => {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const yearDiff = end.getFullYear() - start.getFullYear();
-      const monthDiff = end.getMonth() - start.getMonth();
-      const dayDiff = end.getDate() - start.getDate();
-      let totalMonths = yearDiff * 12 + monthDiff;
-      // Per spec R6: Only add 1 if endDay > startDay (exact N*12 months don't add 1)
-      if (dayDiff > 0) {
-        totalMonths += 1;
-      }
-      return totalMonths;
-    };
-    
-    // Per spec R7: Contract years calculation
-    const getContractYears = (durationMonths) => {
-      if (durationMonths <= 12) return 1;
-      if (durationMonths <= 24) return 2;
-      if (durationMonths <= 36) return 3;
-      if (durationMonths % 12 === 0) {
-        return durationMonths / 12;
-      }
-      return Math.ceil(durationMonths / 12);
-    };
-    
-    // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
-    // Per spec R3-R5: Price field selection with fallback
-    // Per spec R8-R9: Multi-year contract annualization and allocation
-    const getEstimateYearData = (estimate, targetYear) => {
+    // Fallback to actual year
+    return new Date().getFullYear();
+  }
+  
+  // Per spec R6: Contract duration calculation
+  const calculateDurationMonths = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const yearDiff = end.getFullYear() - start.getFullYear();
+    const monthDiff = end.getMonth() - start.getMonth();
+    const dayDiff = end.getDate() - start.getDate();
+    let totalMonths = yearDiff * 12 + monthDiff;
+    // Per spec R6: Only add 1 if endDay > startDay (exact N*12 months don't add 1)
+    if (dayDiff > 0) {
+      totalMonths += 1;
+    }
+    return totalMonths;
+  };
+  
+  // Per spec R7: Contract years calculation
+  const getContractYears = (durationMonths) => {
+    if (durationMonths <= 12) return 1;
+    if (durationMonths <= 24) return 2;
+    if (durationMonths <= 36) return 3;
+    if (durationMonths % 12 === 0) {
+      return durationMonths / 12;
+    }
+    return Math.ceil(durationMonths / 12);
+  };
+  
+  // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
+  // Per spec R3-R5: Price field selection with fallback
+  // Per spec R8-R9: Multi-year contract annualization and allocation
+  const getEstimateYearData = (estimate, targetYear) => {
       // Per spec R2: Year determination priority
       const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
       const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -903,34 +896,42 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
         };
       }
     };
-    
-    // Per spec R1, R11: Only won estimates - use isWonStatus logic to respect pipeline_status priority
-    // Inline isWonStatus to avoid serverless import issues (same logic as atRiskCalculator.js)
-    const isWonStatus = (est) => {
-      // Per spec R11: Check pipeline_status first (preferred)
-      if (est.pipeline_status) {
-        const pipelineLower = est.pipeline_status.toString().toLowerCase().trim();
-        if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
-          return true;
-        }
+  
+  // Per spec R1, R11: Only won estimates - use isWonStatus logic to respect pipeline_status priority
+  // Inline isWonStatus to avoid serverless import issues (same logic as atRiskCalculator.js)
+  const isWonStatus = (est) => {
+    // Per spec R11: Check pipeline_status first (preferred)
+    if (est.pipeline_status) {
+      const pipelineLower = est.pipeline_status.toString().toLowerCase().trim();
+      if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+        return true;
       }
-      // Per spec R11: Check status field (fallback)
-      if (!est.status) return false;
-      const statusLower = est.status.toString().toLowerCase().trim();
-      const wonStatuses = [
-        'contract signed',
-        'work complete',
-        'billing complete',
-        'email contract award',
-        'verbal contract award',
-        'contract in progress',
-        'contract + billing complete',
-        'work in progress',
-        'sold',
-        'won'
-      ];
-      return wonStatuses.includes(statusLower);
-    };
+    }
+    // Per spec R11: Check status field (fallback)
+    if (!est.status) return false;
+    const statusLower = est.status.toString().toLowerCase().trim();
+    const wonStatuses = [
+      'contract signed',
+      'work complete',
+      'billing complete',
+      'email contract award',
+      'verbal contract award',
+      'contract in progress',
+      'contract + billing complete',
+      'work in progress',
+      'sold',
+      'won'
+    ];
+    return wonStatuses.includes(statusLower);
+  };
+  
+  accountsArray.forEach(account => {
+    // Find all estimates for this account (now using account_id field)
+    const accountEstimates = estimatesWithAccountId.filter(est => 
+      est.account_id === account.id
+    );
+    
+    const currentYear = getCurrentYearForCalculation();
     const wonEstimates = accountEstimates.filter(est => isWonStatus(est));
     
     // Per spec R25: Calculate revenue for ALL years (not just current year)
