@@ -1,5 +1,9 @@
 # Estimates Specification
 
+**Version**: 1.0.0  
+**Last Updated**: 2025-01-XX  
+**Status**: Authoritative
+
 ## Purpose
 
 This document defines how estimates (proposals/quotes) are imported, processed, validated, and used throughout the application. Estimates are the primary source of revenue data, drive win/loss reporting, link to accounts and contacts, and support at-risk account detection.

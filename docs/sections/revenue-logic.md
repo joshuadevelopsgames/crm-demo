@@ -1,5 +1,9 @@
 # Revenue Logic Specification
 
+**Version**: 2.0.0  
+**Last Updated**: 2025-01-XX  
+**Status**: Authoritative
+
 ## Purpose
 
 This document defines how revenue is calculated, displayed, and used for segment assignment across the application. Revenue calculations determine account financial value, drive revenue segment classification (A/B/C/D), and support reporting and analytics.
@@ -23,13 +27,14 @@ This document defines how revenue is calculated, displayed, and used for segment
   - `account_id` (text): Links estimate to account
 
 - **Accounts Table**: Stores calculated revenue and segments
-  - `annual_revenue` (numeric): Stored revenue value for current year (calculated during import)
+  - `annual_revenue` (numeric): Stored revenue value for selected year (calculated during import, backward compatibility)
   - `revenue_segment` (text): Segment classification ('A', 'B', 'C', or 'D')
   - `revenue_by_year` (jsonb, optional): Historical revenue by year `{ "2024": 50000, "2025": 75000, ... }` (calculated during import for all years)
 
-- **Current Year**: Determined by application context
-  - Currently: `TestModeContext` (supports test mode override)
-  - Future: Year selector dropdown (site-wide, user-selectable, persists in user profile)
+- **Selected Year**: Determined by YearSelectorContext (site-wide, user-selectable, persists in user profile)
+  - User can select any year from available years
+  - Selection persists across sessions
+  - All revenue calculations and displays use selected year
 
 ### Fields Used
 
@@ -46,13 +51,13 @@ This document defines how revenue is calculated, displayed, and used for segment
 
 - **Revenue**: Numeric (USD), stored as `numeric(12,2)` in database
 - **Dates**: ISO 8601 date strings or Date objects
-- **Current Year**: Integer (e.g., 2024, 2025)
+- **Selected Year**: Integer (e.g., 2024, 2025)
 - **Contract Duration**: Integer (months)
 - **Contract Years**: Integer (1, 2, 3, etc.)
 
 ### Nullability Assumptions
 
-- `annual_revenue`: Can be `null` if account has no won estimates for current year
+- `annual_revenue`: Can be `null` if account has no won estimates for selected year
 - `revenue_segment`: Defaults to 'C' if missing or no revenue data
 - Date fields: At least one must be present (per data validation)
 - Price fields: If both are missing/zero, estimate is excluded from revenue
@@ -61,20 +66,20 @@ This document defines how revenue is calculated, displayed, and used for segment
 
 ### Ordered End-to-End Flow
 
-1. **Get Current Year**
-   - Retrieve from application context (currently `TestModeContext`, future: year selector)
-   - Default to `new Date().getFullYear()` if context unavailable
+1. **Get Selected Year**
+   - Retrieve from YearSelectorContext (site-wide, user-selectable)
+   - Selected year is required (no fallback to calendar year)
 
 2. **Filter Estimates**
    - Only include estimates where `isWonStatus(estimate)` returns true (per Estimates spec R1, R11: respects pipeline_status priority)
-   - Only include estimates that apply to current year (see Year Determination)
+   - Only include estimates that apply to selected year (see Year Determination)
 
 3. **Determine Year for Each Estimate** (Priority Order - per Estimates spec R2)
    - Priority 1: `contract_end` (primary)
    - Priority 2: `contract_start` (fallback)
    - Priority 3: `estimate_date` (fallback)
    - Priority 4: `created_date` (fallback)
-   - If estimate applies to current year, proceed; otherwise exclude
+   - If estimate applies to selected year, proceed; otherwise exclude
 
 4. **Select Price Field**
    - Prefer `total_price_with_tax`
@@ -98,16 +103,19 @@ This document defines how revenue is calculated, displayed, and used for segment
    - If both `contract_start` and `contract_end` exist:
      - `annualAmount = totalPrice / contractYears`
      - Allocate to calendar years: `[startYear, startYear+1, ..., startYear+(years-1)]`
-     - If current year is in allocation, use `annualAmount`; otherwise 0
+     - If selected year is in allocation, use `annualAmount`; otherwise 0
    - If only `contract_start` exists: use full price for that year
    - If no contract dates: use full price for determined year
 
-8. **Calculate Account Revenue**
-   - Sum all annualized values for won estimates that apply to current year
-   - If no won estimates for current year → return 0
+8. **Calculate Account Revenue** (during import only)
+   - Sum all annualized values for won estimates that apply to each year
+   - Calculated for ALL years (not just selected year)
+   - If no won estimates for a year → 0 for that year
 
-9. **Calculate Total Revenue**
-   - Sum of all accounts' `annual_revenue` fields (stored values, not recalculated)
+9. **Store Revenue by Year** (during import only)
+   - Store calculated revenue in `revenue_by_year` JSONB field: `{ "2024": 50000, "2025": 75000, ... }`
+   - Each account has revenue stored for all years that have won estimates
+   - `annual_revenue` field stores value for selected year only (backward compatibility)
 
 10. **Calculate Historical Revenue** (during import only)
     - For each account, calculate revenue for ALL years (not just current year)
@@ -121,7 +129,7 @@ This document defines how revenue is calculated, displayed, and used for segment
 
 ### Transformations in Sequence
 
-1. **Year Determination**: Date field selection → Extract year → Compare to current year
+1. **Year Determination**: Date field selection → Extract year → Compare to selected year
 2. **Price Selection**: `total_price_with_tax` → `total_price` (fallback) → Exclude if both missing
 3. **Duration Calculation**: Contract dates → Months → Years
 4. **Annualization**: Total price → Divide by years → Allocate to calendar years
@@ -183,17 +191,21 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R9**: Multi-year contract revenue is allocated to sequential calendar years starting from `contract_start` year: `[startYear, startYear+1, ..., startYear+(years-1)]`.
 
-**R10**: If estimate applies to current year, include annualized value; otherwise exclude (value = 0).
+**R10**: If estimate applies to selected year, include annualized value; otherwise exclude (value = 0).
 
 **R11**: Account revenue is sum of annualized values for all won estimates that apply to current year.
 
 **R12**: If account has no won estimates for current year, revenue = 0 (displays as "-" in UI).
 
-**R13**: `annual_revenue` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
+**R12b**: If account has no won estimates for selected year, stored revenue = 0 (displays as "-" in UI).
 
-**R14**: Total revenue is sum of all accounts' stored `annual_revenue` fields (not recalculated from estimates).
+**R13**: `revenue_by_year` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
 
-**R15**: Segment D assignment: Account has "Standard" type won estimates AND no "Service" type won estimates (current year only). If account has BOTH Standard and Service, it gets A/B/C based on revenue percentage calculated from ALL won estimates (not just Service).
+**R13a**: `annual_revenue` field stores value for selected year only (backward compatibility, also calculated during import).
+
+**R14**: Total revenue for segment calculation is sum of all accounts' stored `revenue_by_year[selectedYear]` fields (not recalculated from estimates).
+
+**R15**: Segment D assignment: Account has "Standard" type won estimates AND no "Service" type won estimates (selected year only). If account has BOTH Standard and Service, it gets A/B/C based on revenue percentage calculated from ALL won estimates (not just Service).
 
 **R16**: Segment A: `(accountRevenue / totalRevenue) * 100 >= 15%`.
 
@@ -205,15 +217,15 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R20**: Typo detection: Contracts where `durationMonths % 12 === 1` (e.g., 13, 25, 37 months) are flagged as advisory warnings. Typo detection does NOT change contract years calculation.
 
-**R21**: Current year is determined by application context (currently `TestModeContext`, future: year selector dropdown).
+**R21**: Selected year is determined by YearSelectorContext (site-wide, user-selectable, persists in user profile).
 
 **R22**: Every estimate must have at least one date field (`contract_end`, `contract_start`, `estimate_date`, or `created_date`). Use fallback priority if primary date is missing.
 
 **R23**: Year selector selection persists across sessions (stored in user profile). Selected year applies site-wide until changed.
 
-**R24**: Manual "Recalculate Revenue" button available for admins to refresh `annual_revenue` values without full import. Recalculation updates `annual_revenue` for current year and `revenue_by_year` for all years.
+**R24**: Manual "Recalculate Revenue" button available for admins to refresh `annual_revenue` values without full import. Recalculation updates `annual_revenue` for selected year and `revenue_by_year` for all years.
 
-**R25**: On import, revenue is calculated for ALL years (not just current year). Results stored in `revenue_by_year` JSONB field: `{ "2024": 50000, "2025": 75000, ... }`. `annual_revenue` field stores value for current year only.
+**R25**: On import, revenue is calculated for ALL years (not just selected year). Results stored in `revenue_by_year` JSONB field: `{ "2024": 50000, "2025": 75000, ... }`. `annual_revenue` field stores value for selected year only.
 
 **R26**: For accounts with both Standard and Service won estimates, revenue percentage for A/B/C segments is calculated from ALL won estimates (not just Service).
 
@@ -250,7 +262,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 ### Segment Assignment Precedence
 
 1. **Segment D Check** (highest priority)
-   - If account has "Standard" won estimates AND no "Service" won estimates (current year) → D
+   - If account has "Standard" won estimates AND no "Service" won estimates (selected year) → D
    - If account has BOTH Standard and Service → proceed to percentage calculation
 
 2. **Percentage-Based Segments** (A/B/C)
@@ -270,7 +282,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 - **Resolution**: Use `total_price` (fallback) → show toast once per session
 
 **Example 3: Segment D vs Percentage**
-- Account has Standard won estimates ($10k) and Service won estimates ($5k) for current year
+- Account has Standard won estimates ($10k) and Service won estimates ($5k) for selected year
 - **Resolution**: Has BOTH types → calculate percentage from ALL won estimates ($15k total) → assign A/B/C based on percentage (not D)
 
 **Example 4: Exact 12-Month Contract**
@@ -278,7 +290,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 - **Resolution**: `durationMonths = 12` (not 13) → `contractYears = 1` → full price for 2024
 
 **Example 5: Multi-Year Allocation**
-- Contract: `2024-01-01` to `2026-12-31`, total price $300k, current year = 2025
+- Contract: `2024-01-01` to `2026-12-31`, total price $300k, selected year = 2025
 - **Resolution**: `durationMonths = 35` → `contractYears = 3` → `annualAmount = $100k` → allocated to [2024, 2025, 2026] → 2025 gets $100k
 
 ## Examples
@@ -395,7 +407,7 @@ Estimates: [
 ]
 Total Revenue: $500000
 ```
-Current year: 2024
+Selected year: 2024
 
 **Process:**
 1. Check Segment D: Has "Standard" won estimates, no "Service" won estimates → Segment D
@@ -415,7 +427,7 @@ Account: {
 }
 Total Revenue: $500000
 ```
-Current year: 2024
+Selected year: 2024
 
 **Process:**
 1. Check Segment D: No estimates provided, assume not D
@@ -436,7 +448,7 @@ Account: {
 }
 Total Revenue: $500000
 ```
-Current year: 2024
+Selected year: 2024
 
 **Process:**
 1. Calculate percentage: `(50000 / 500000) * 100 = 10%`
@@ -456,7 +468,7 @@ Account: {
 }
 Total Revenue: $500000
 ```
-Current year: 2024
+Selected year: 2024
 
 **Process:**
 1. Calculate percentage: `(20000 / 500000) * 100 = 4%`
@@ -515,11 +527,13 @@ Current year: 2024
 
 **AC10**: Accounts with no won estimates for current year have revenue = 0 (displays as "-"). (R12)
 
-**AC11**: `annual_revenue` field is calculated and stored during import only, not updated by triggers. (R13)
+**AC11**: `revenue_by_year` field is calculated and stored during import only, not updated by triggers. (R13)
 
-**AC12**: Total revenue is sum of all accounts' stored `annual_revenue` fields. (R14)
+**AC11a**: `annual_revenue` field stores value for selected year only (backward compatibility). (R13a)
 
-**AC13**: Segment D is assigned to accounts with "Standard" won estimates and no "Service" won estimates (current year only). (R15)
+**AC12**: Total revenue for segment calculation is sum of all accounts' stored `revenue_by_year[selectedYear]` fields. (R14)
+
+**AC13**: Segment D is assigned to accounts with "Standard" won estimates and no "Service" won estimates (selected year only). (R15)
 
 **AC14**: Segment A/B/C are assigned based on revenue percentage thresholds (≥15%→A, 5-15%→B, <5%→C). (R16, R17, R18)
 
@@ -527,7 +541,7 @@ Current year: 2024
 
 **AC16**: Typo detection flags contracts with duration % 12 === 1 as advisory warnings only. (R20)
 
-**AC17**: Current year is determined by application context (year selector when implemented). (R21)
+**AC17**: Selected year is determined by YearSelectorContext (site-wide, user-selectable, persists in user profile). (R21)
 
 **AC18**: Every estimate has at least one date field, using fallback priority if primary is missing. (R22)
 
@@ -556,7 +570,8 @@ Current year: 2024
 
 ### Backward Compatibility
 
-- `annual_revenue` field must be recalculated on import if estimates change
+- `revenue_by_year` field is calculated and stored during import - existing accounts will have it populated on next import
+- `annual_revenue` field stores value for selected year only (backward compatibility, also calculated during import)
 - Revenue segment defaults to 'C' if missing (preserves existing behavior)
 - Test mode will be replaced with year selector (behavior change requires spec approval)
 - `revenue_by_year` field is new - existing accounts will have it populated on next import

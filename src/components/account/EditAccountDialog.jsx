@@ -19,46 +19,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 export default function EditAccountDialog({ open, onClose, account }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
-  const [autoCalculateSegment, setAutoCalculateSegment] = useState(true);
   
   // Check if account was imported (has lmn_crm_id)
   const isImported = account?.lmn_crm_id ? true : false;
   
-  // Get all accounts to calculate total revenue for segment assignment
-  const { data: allAccounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
-  });
-
-  // Get estimates for this account and all accounts
-  const { data: accountEstimates = [] } = useQuery({
-    queryKey: ['estimates', account?.id],
-    queryFn: async () => {
-      if (!account?.id) return [];
-      const response = await fetch(`/api/data/estimates?account_id=${encodeURIComponent(account.id)}`);
-      if (!response.ok) return [];
-      const result = await response.json();
-      return result.success ? (result.data || []) : [];
-    },
-    enabled: !!account?.id
-  });
-
-  // Get all estimates to calculate total revenue across all accounts
-  const { data: allEstimates = [] } = useQuery({
-    queryKey: ['estimates'],
-    queryFn: async () => {
-      const response = await fetch('/api/data/estimates');
-      if (!response.ok) return [];
-      const result = await response.json();
-      return result.success ? (result.data || []) : [];
-    }
-  });
+  // Note: Segments are calculated during import only, not on-the-fly
+  // We just read from stored segment_by_year or revenue_segment field
   
   useEffect(() => {
     if (account) {
@@ -78,34 +50,8 @@ export default function EditAccountDialog({ open, onClose, account }) {
         icp_required: account.icp_required !== undefined ? account.icp_required : true,
         icp_status: account.icp_status || 'required'
       });
-      setAutoCalculateSegment(true); // Reset auto-calc when account changes
     }
   }, [account]);
-  
-  // Auto-calculate revenue segment based on won estimates
-  useEffect(() => {
-    if (autoCalculateSegment && account?.id && allAccounts.length > 0 && accountEstimates.length >= 0) {
-      // Group estimates by account_id for revenue calculation
-      const estimatesByAccountId = {};
-      allEstimates.forEach(est => {
-        if (est.account_id) {
-          if (!estimatesByAccountId[est.account_id]) {
-            estimatesByAccountId[est.account_id] = [];
-          }
-          estimatesByAccountId[est.account_id].push(est);
-        }
-      });
-      
-      // Calculate total revenue using estimates for all accounts
-      const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId);
-      
-      if (totalRevenue > 0) {
-        // Calculate segment based on actual revenue from won estimates
-        const segment = calculateRevenueSegment(account, totalRevenue, accountEstimates);
-        setFormData(prev => ({ ...prev, revenue_segment: segment }));
-      }
-    }
-  }, [autoCalculateSegment, allAccounts, allEstimates, account, accountEstimates]);
 
   const updateAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.update(account.id, data),

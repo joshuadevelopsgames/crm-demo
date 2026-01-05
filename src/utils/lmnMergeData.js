@@ -1013,6 +1013,12 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
   // Import calculateSegmentsForAllYears from revenueSegmentCalculator
   // We need to do this in a second pass because segment calculation requires total revenue for each year
   // which depends on all accounts having revenue_by_year calculated first
+  // 
+  // IMPORTANT: Total revenue is calculated separately for each year. For 2024, we calculate
+  // totalRevenue[2024] = sum of all accounts' revenue_by_year[2024]. For 2025, we calculate
+  // totalRevenue[2025] = sum of all accounts' revenue_by_year[2025]. These are independent
+  // calculations. When calculating segments for 2024, we only use the total revenue for 2024,
+  // not the sum across all years. Per spec R5: Total revenue is calculated per year (not across all years).
   accountsArray.forEach(account => {
     if (!account.revenue_by_year || typeof account.revenue_by_year !== 'object') {
       account.segment_by_year = null;
@@ -1026,7 +1032,8 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     years.forEach(yearStr => {
       const year = parseInt(yearStr);
       
-      // Calculate total revenue for this year across all accounts
+      // Calculate total revenue for THIS SPECIFIC YEAR ONLY (not across all years)
+      // Per spec R5: totalRevenue[year] = sum of all accounts' revenue_by_year[year] for that year only
       const totalRevenueForYear = accountsArray.reduce((total, acc) => {
         if (acc.revenue_by_year && acc.revenue_by_year[yearStr]) {
           const yearRevenue = typeof acc.revenue_by_year[yearStr] === 'number'

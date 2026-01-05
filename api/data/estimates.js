@@ -256,10 +256,9 @@ export default async function handler(req, res) {
           
           if (updateError) throw updateError;
           
-          // Per spec R16: Recalculate segments when estimates are updated (non-blocking)
-          recalculateSegments(supabase).catch(err => {
-            console.error('Background segment recalculation failed:', err);
-          });
+          // Segments are calculated during import only, not when estimates are updated
+          // Per spec: Data only changes on import, so segments are only recalculated during import
+          // Removed automatic recalculation - segments will be recalculated on next import
           
           return res.status(200).json({
             success: true,
@@ -276,10 +275,9 @@ export default async function handler(req, res) {
           
           if (createError) throw createError;
           
-          // Per spec R16: Recalculate segments when estimates are created (non-blocking)
-          recalculateSegments(supabase).catch(err => {
-            console.error('Background segment recalculation failed:', err);
-          });
+          // Segments are calculated during import only, not when estimates are created
+          // Per spec: Data only changes on import, so segments are only recalculated during import
+          // Removed automatic recalculation - segments will be recalculated on next import
           
           return res.status(201).json({
             success: true,
@@ -597,10 +595,9 @@ export default async function handler(req, res) {
         });
       }
       
-      // Per spec R16: Recalculate segments when estimates are deleted (non-blocking)
-      recalculateSegments(supabase).catch(err => {
-        console.error('Background segment recalculation failed:', err);
-      });
+      // Segments are calculated during import only, not when estimates are deleted
+      // Per spec: Data only changes on import, so segments are only recalculated during import
+      // Removed automatic recalculation - segments will be recalculated on next import
       
       return res.status(200).json({
         success: true,

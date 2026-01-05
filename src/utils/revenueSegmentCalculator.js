@@ -12,6 +12,9 @@
  * 
  * Revenue is calculated from won estimates for the selected year only (year-based calculation)
  * Per spec R1: All segment information is based on total revenue for the selected year
+ * Per spec R5: Total revenue is calculated per year (not across all years). For 2024, we calculate
+ *   totalRevenue[2024] = sum of all accounts' revenue_by_year[2024]. For 2025, we calculate
+ *   totalRevenue[2025] = sum of all accounts' revenue_by_year[2025]. These are independent.
  * Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
  * Per spec R1, R11: Status determination uses isWonStatus() to respect pipeline_status priority
  * 
@@ -248,36 +251,13 @@ function getCurrentYearForCalculation() {
 }
 
 /**
- * Calculate actual revenue from won estimates for the selected year
- * Multi-year contracts are annualized (divided by number of years)
- * @param {Array} estimates - Array of estimate objects
- * @returns {number} - Total revenue from won estimates in selected year (annualized for multi-year contracts)
- */
-export function calculateRevenueFromEstimates(estimates = []) {
-  const currentYear = getCurrentYearForCalculation();
-  
-  // Removed individual log - will be grouped in getAccountRevenue instead
-  
-  return estimates
-    .filter(est => {
-      // Per spec R1, R11: Only include won estimates - use isWonStatus to respect pipeline_status priority
-      if (!isWonStatus(est)) {
-        return false;
-      }
-      
-      // Check if estimate applies to current year
-      const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
-    })
-    .reduce((sum, est) => {
-      const yearData = getEstimateYearData(est, currentYear);
-      if (!yearData) return sum;
-      return sum + (isNaN(yearData.value) ? 0 : yearData.value);
-    }, 0);
-}
-
-/**
  * Get revenue for selected year from account's revenue_by_year field
+ * 
+ * IMPORTANT: Revenue is calculated during import only and stored in revenue_by_year.
+ * This function reads from stored data, it does NOT calculate revenue from estimates.
+ * 
+ * Per spec R12a: Revenue display reads from stored revenue_by_year[selectedYear] field.
+ * 
  * @param {Object} account - Account object
  * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
  * @returns {number} - Revenue for selected year, or 0 if not available
@@ -295,46 +275,16 @@ export function getRevenueForYear(account, selectedYear = null) {
 }
 
 /**
- * Get account revenue - total revenue from selected year
- * @param {Object} account - Account object
- * @param {Array} estimates - Array of estimate objects for this account (optional)
- * @returns {number} - Account total revenue from selected year (annualized for multi-year contracts)
- */
-export function getAccountRevenue(account, estimates = []) {
-  // Revenue should only come from won estimates for the selected year
-  // If there are no won estimates, return 0 (which will display as "-" in the UI)
-  
-  const currentYear = getCurrentYearForCalculation();
-  
-  if (estimates && estimates.length > 0) {
-    const calculatedRevenue = calculateRevenueFromEstimates(estimates);
-    
-    // Per spec R1, R11: Check if we have won estimates that apply to the current year
-    const hasWonEstimatesForCurrentYear = estimates.some(est => {
-      if (!isWonStatus(est)) {
-        return false;
-      }
-      const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
-    });
-    
-    if (hasWonEstimatesForCurrentYear) {
-      // We have won estimates that apply to current year, return calculated revenue
-      // (even if 0, because that's the actual revenue from won estimates)
-      return calculatedRevenue;
-    }
-  }
-  
-  // No estimates or no won estimates for current year - return 0 (will display as "-" in UI)
-  return 0;
-}
-
-/**
  * Calculate revenue segment for a specific year
  * Helper function used by both calculateRevenueSegment and calculateSegmentsForAllYears
+ * 
+ * IMPORTANT: totalRevenue parameter must be the total revenue for THIS SPECIFIC YEAR ONLY,
+ * not total revenue across all years. Per spec R5: totalRevenue[year] = sum of all accounts'
+ * revenue_by_year[year] for that year only.
+ * 
  * @param {Object} account - The account object
  * @param {number} year - The year to calculate segment for
- * @param {number} totalRevenue - Total revenue across all accounts for this year
+ * @param {number} totalRevenue - Total revenue for THIS SPECIFIC YEAR ONLY (not across all years)
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
  * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
@@ -380,8 +330,13 @@ function calculateRevenueSegmentForYear(account, year, totalRevenue, estimates =
 /**
  * Calculate revenue segment for a single account
  * Uses revenue_by_year[selectedYear] for account revenue
+ * 
+ * IMPORTANT: totalRevenue parameter must be the total revenue for the selected year ONLY,
+ * not total revenue across all years. Per spec R5: totalRevenue[selectedYear] = sum of all
+ * accounts' revenue_by_year[selectedYear] for that year only.
+ * 
  * @param {Object} account - The account object
- * @param {number} totalRevenue - Total revenue across all accounts (sum of revenue for selected year)
+ * @param {number} totalRevenue - Total revenue for selected year ONLY (not across all years)
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
  * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
@@ -392,18 +347,27 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 }
 
 /**
- * Calculate total revenue across all accounts (selected year total)
+ * Calculate total revenue across all accounts for the selected year only
  * Uses revenue_by_year[selectedYear] from each account
+ * 
+ * IMPORTANT: This calculates total revenue for ONE specific year only (the selected year).
+ * Total revenue is calculated separately for each year. The total revenue for 2024 is 
+ * independent of the total revenue for 2025.
+ * 
+ * Per spec R1, R5: All segment information is based on total revenue for the selected year only
+ * (not total revenue across all years).
+ * 
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, not used anymore)
- * @returns {number} - Total revenue from selected year (sum of all accounts' revenue for selected year)
+ * @returns {number} - Total revenue for selected year only (sum of all accounts' revenue_by_year[selectedYear])
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
-  // Per spec R1: All segment information is based on total revenue for the selected year
+  // Per spec R1, R5: All segment information is based on total revenue for the selected year only
+  // (not total revenue across all years)
   const selectedYear = getCurrentYearForCalculation();
   
   return accounts.reduce((total, account) => {
-    // Use revenue_by_year for selected year (per spec R1)
+    // Use revenue_by_year for selected year only (per spec R1, R5)
     let revenue = 0;
     
     if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
@@ -418,8 +382,17 @@ export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
 /**
  * Calculate revenue segments for all years (not just selected year)
  * Returns object: { "2024": "A", "2025": "B", ... }
+ * 
+ * IMPORTANT: Total revenue is calculated separately for each year. For 2024, we calculate
+ * totalRevenue[2024] = sum of all accounts' revenue_by_year[2024]. For 2025, we calculate
+ * totalRevenue[2025] = sum of all accounts' revenue_by_year[2025]. These are independent
+ * calculations. When calculating segments for 2024, we only use the total revenue for 2024,
+ * not the sum across all years.
+ * 
+ * Per spec R5: Total revenue is calculated per year (not across all years).
+ * 
  * @param {Object} account - The account object
- * @param {Array} allAccounts - Array of all accounts (for total revenue calculation)
+ * @param {Array} allAccounts - Array of all accounts (for total revenue calculation per year)
  * @param {Array} estimates - Array of estimate objects for this account
  * @returns {Object} - Object with year as key and segment as value
  */
@@ -435,7 +408,8 @@ export function calculateSegmentsForAllYears(account, allAccounts, estimates = [
   
   // Calculate segment for each year
   years.forEach(year => {
-    // Calculate total revenue for this year across all accounts
+    // Calculate total revenue for THIS SPECIFIC YEAR ONLY (not across all years)
+    // Per spec R5: totalRevenue[year] = sum of all accounts' revenue_by_year[year] for that year only
     const totalRevenueForYear = allAccounts.reduce((total, acc) => {
       if (acc.revenue_by_year && acc.revenue_by_year[year.toString()]) {
         const yearRevenue = typeof acc.revenue_by_year[year.toString()] === 'number'
@@ -446,7 +420,7 @@ export function calculateSegmentsForAllYears(account, allAccounts, estimates = [
       return total;
     }, 0);
     
-    // Calculate segment for this specific year
+    // Calculate segment for this specific year using this year's total revenue only
     const segment = calculateRevenueSegmentForYear(account, year, totalRevenueForYear, estimates);
     segmentsByYear[year.toString()] = segment;
   });

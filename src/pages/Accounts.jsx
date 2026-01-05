@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -328,10 +328,12 @@ export default function Accounts() {
       const wonEstimates = allEstimates.filter(e => isWonStatus(e)).length;
       const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
       
-      console.log(`[getAccountRevenue] Summary for ${currentYear}:`, {
+      // Note: Revenue now comes from stored revenue_by_year field, not calculated on-the-fly
+      console.log(`[Accounts] Summary for ${currentYear}:`, {
         accountsWithEstimates,
         totalEstimates,
-        wonEstimates
+        wonEstimates,
+        note: 'Revenue is read from stored revenue_by_year field, not calculated from estimates'
       });
     }
     

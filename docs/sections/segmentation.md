@@ -1,5 +1,9 @@
 # Segmentation Spec
 
+**Version**: 1.0.0  
+**Last Updated**: 2025-01-XX  
+**Status**: Authoritative
+
 ## Purpose
 
 The Segmentation section classifies accounts into revenue segments (A, B, C, D) based on their revenue percentage relative to total revenue for the selected year and their estimate types. Segments enable prioritization, filtering, and strategic account management. Segments are calculated automatically based on revenue data and are read-only in all user interfaces.
@@ -105,10 +109,12 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 revenuePercentage = (account.revenue_by_year[selectedYear] / totalRevenue) * 100
 ```
 
-**Total Revenue:**
+**Total Revenue (per year):**
 ```
-totalRevenue = sum of all accounts.revenue_by_year[selectedYear] for selected year
+totalRevenue[year] = sum of all accounts.revenue_by_year[year] for that specific year only
 ```
+
+**Important**: Total revenue is calculated separately for each year. The total revenue for 2024 is independent of the total revenue for 2025. When calculating segments for 2024, we only use the total revenue for 2024, not the sum across all years.
 
 **Segment Assignment:**
 ```
@@ -135,7 +141,7 @@ else → 'C'
 
 **R4**: Segment D check uses only won estimates for the selected year. Historical years do not affect Segment D classification.
 
-**R5**: Revenue percentage calculation: `(account.revenue_by_year[selectedYear] / totalRevenue) * 100`, where `totalRevenue` is sum of all accounts' `revenue_by_year[selectedYear]` for selected year.
+**R5**: Revenue percentage calculation: `(account.revenue_by_year[selectedYear] / totalRevenue[selectedYear]) * 100`, where `totalRevenue[selectedYear]` is sum of all accounts' `revenue_by_year[selectedYear]` for that specific year only (not total revenue across all years).
 
 **R6**: Segment A: Account represents more than 15% of total company revenue by year (`revenuePercentage > 15%`).
 

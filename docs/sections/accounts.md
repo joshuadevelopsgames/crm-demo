@@ -1,8 +1,12 @@
 # Accounts Spec
 
+**Version**: 2.0.0  
+**Last Updated**: 2025-01-XX  
+**Status**: Authoritative
+
 ## Purpose
 
-The Accounts section provides the central hub for managing all company accounts in the CRM. It enables users to view, filter, search, and sort accounts by various criteria including type, revenue segment, status, organization score, and last interaction date. The section calculates and displays revenue from won estimates, assigns revenue segments based on current year revenue percentages, and integrates with at-risk account detection for proactive renewal management.
+The Accounts section provides the central hub for managing all company accounts in the CRM. It enables users to view, filter, search, and sort accounts by various criteria including type, revenue segment, status, organization score, and last interaction date. The section calculates and displays revenue from won estimates, assigns revenue segments based on selected year revenue percentages, and integrates with at-risk account detection for proactive renewal management.
 
 ## Data contract
 
@@ -15,7 +19,7 @@ The Accounts section provides the central hub for managing all company accounts 
   - `account_type` (text) - Type: 'prospect', 'customer', 'renewal', 'churned', 'client', 'lead', etc.
   - `status` (text) - Status: 'active', 'archived', 'at_risk', 'negotiating', 'onboarding', 'churned'
   - `revenue_segment` (text) - Revenue segment: 'A', 'B', 'C', 'D'
-  - `annual_revenue` (numeric) - Stored annual revenue for current year (used for segment calculation)
+  - `annual_revenue` (numeric) - Stored annual revenue for selected year (used for segment calculation, backward compatibility)
   - `organization_score` (numeric) - ICP scorecard score (0-100)
   - `tags` (text[]) - Array of tags for additional categorization
   - `archived` (boolean) - Archive flag (preferred over status='archived')
@@ -156,9 +160,9 @@ The Accounts section provides the central hub for managing all company accounts 
    - Contract years calculation: See Contract Duration section
 
 10. **Revenue Segment Assignment**
-    - Segment A: ≥15% of total revenue (current year)
-    - Segment B: 5-15% of total revenue (current year)
-    - Segment C: 0-5% of total revenue (current year)
+    - Segment A: ≥15% of total revenue (selected year)
+    - Segment B: 5-15% of total revenue (selected year)
+    - Segment C: 0-5% of total revenue (selected year)
     - Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
     - Uses stored `annual_revenue` field (not calculated on-the-fly)
     - Default: 'C' if missing or no revenue data
@@ -168,13 +172,13 @@ The Accounts section provides the central hub for managing all company accounts 
 
 1. **Archive Status**: `account.archived === true || account.status === 'archived'` (boolean preferred)
 2. **Type Matching**: Case-insensitive comparison, checks both `account_type` and `tags`
-3. **Revenue Calculation**: Sum of won estimates for current year, annualized for multi-year contracts
+3. **Revenue Calculation**: Sum of won estimates for selected year, annualized for multi-year contracts
 4. **Segment Calculation**: Percentage of total revenue across all accounts
 5. **User Filtering**: OR logic (salesperson OR estimator matches)
 
 ### Computations and Formulas
 
-- **Account Revenue**: Sum of `getEstimateYearData(estimate, currentYear).value` for all won estimates
+- **Account Revenue**: Sum of `getEstimateYearData(estimate, selectedYear).value` for all won estimates
 - **Total Revenue**: Sum of all accounts' `annual_revenue` field
 - **Revenue Percentage**: `(account.annual_revenue / totalRevenue) * 100`
 - **Contract Duration**: See Contract Duration section
@@ -227,9 +231,9 @@ Contract duration is calculated in whole months before converting to years.
 
 ### Revenue Segment Rules
 
-- **R12**: Segment A: ≥15% of total revenue (current year)
-- **R13**: Segment B: 5-15% of total revenue (current year)
-- **R14**: Segment C: 0-5% of total revenue (current year)
+- **R12**: Segment A: ≥15% of total revenue (selected year)
+- **R13**: Segment B: 5-15% of total revenue (selected year)
+- **R14**: Segment C: 0-5% of total revenue (selected year)
 - **R15**: Segment D: Project only (has "Standard" type but no "Service" type won estimates)
 - **R16**: If account has both Standard and Service estimates, assign A/B/C based on revenue (not D)
 - **R17**: Default segment is 'C' if missing or no revenue data
@@ -288,7 +292,7 @@ Contract duration is calculated in whole months before converting to years.
 2. **Fallback 1**: `contract_start`
 3. **Fallback 2**: `estimate_date`
 4. **Fallback 3**: `created_date`
-5. **Default**: Current year (if no dates available)
+5. **Default**: Selected year (if no dates available, uses selected year from YearSelectorContext)
 
 ### Revenue Segment Assignment Precedence
 
@@ -327,7 +331,7 @@ Contract duration is calculated in whole months before converting to years.
 
 **Input**:
 - Estimate: `{ status: 'won', total_price_with_tax: 120000, contract_start: '2024-01-01', contract_end: '2025-12-31' }`
-- Current year: 2024
+- Selected year: 2024
 
 **Calculation**:
 - Duration: 24 months
@@ -431,7 +435,7 @@ Contract duration is calculated in whole months before converting to years.
 - **Missing price data**: Falls back to `total_price` with user notification
 - **No won estimates**: Revenue displays as "-", segment defaults to 'C'
 - **Conflicting archive flags**: Boolean `archived` takes precedence over `status='archived'`
-- **No dates on estimate**: Assumes current year for revenue calculation
+- **No dates on estimate**: Uses selected year for revenue calculation
 - **Exact year boundaries**: 12, 24, 36 months don't round up (R22)
 - **Typo detection**: Only flags 1-month overages, not 2+ months
 

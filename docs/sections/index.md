@@ -167,6 +167,69 @@ When documenting a new section:
    - Owner
    - Test coverage status
 
+## Spec Dependencies
+
+### Dependency Graph
+
+```
+Estimates (foundation)
+  ├─→ Revenue Logic
+  │     ├─→ Segmentation
+  │     └─→ Accounts
+  ├─→ Year Selection System
+  │     ├─→ Revenue Logic
+  │     ├─→ Segmentation
+  │     ├─→ Accounts
+  │     └─→ Won/Loss Ratio
+  └─→ At-Risk Accounts
+        └─→ Notification Caching
+              └─→ Neglected Accounts
+```
+
+### Detailed Dependencies
+
+- **Accounts** depends on:
+  - Revenue Logic (for revenue calculation rules)
+  - Segmentation (for segment display and filtering)
+  - Estimates (for revenue data source)
+  - Year Selection System (for selected year)
+
+- **Revenue Logic** depends on:
+  - Estimates (for data source and year determination)
+  - Year Selection System (for selected year)
+
+- **Segmentation** depends on:
+  - Revenue Logic (for revenue calculation)
+  - Year Selection System (for selected year)
+  - Accounts (for data structure)
+
+- **Year Selection System** depends on:
+  - Estimates (for year determination priority)
+  - Year Selector (for context implementation)
+
+- **At-Risk Accounts** depends on:
+  - Notification Caching (for cache structure)
+  - Estimates (for contract end dates)
+
+- **Neglected Accounts** depends on:
+  - Notification Caching (for cache structure)
+  - Accounts (for interaction dates)
+
+- **Won/Loss Ratio** depends on:
+  - Estimates (for status determination)
+  - Year Selection System (for year filtering)
+
+- **Import Process** depends on:
+  - Revenue Logic (for revenue calculation)
+  - Segmentation (for segment calculation)
+  - Accounts (for account updates)
+  - Estimates (for estimate updates)
+  - Cache Invalidation (for cache invalidation)
+
+- **Cache Invalidation** depends on:
+  - Import Process (for invalidation triggers)
+  - Notification Caching (for cache structure)
+
 ## Status Legend
 
 - **Spec Status**: `authoritative` | `draft` | `missing`

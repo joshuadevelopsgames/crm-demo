@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
-import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
+import { detectContractTypo, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
 
@@ -207,10 +207,17 @@ function getCurrentYearForCalculation() {
   }
 }
 
-export default function TotalWork({ estimates = [] }) {
+export default function TotalWork({ account, estimates = [] }) {
   const currentYear = getCurrentYearForCalculation();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Get stored revenue for WON VALUE (calculated during import, not on-the-fly)
+  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
+  const storedWonRevenue = useMemo(() => {
+    if (!account) return 0;
+    return getRevenueForYear(account, currentYear);
+  }, [account, currentYear]);
   
   // Calculate breakdown for ESTIMATED
   const estimatedBreakdown = useMemo(() => {
@@ -298,10 +305,11 @@ export default function TotalWork({ estimates = [] }) {
   const totalEstimated = useMemo(() => {
     return estimatedBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [estimatedBreakdown]);
-  
-  const totalSold = useMemo(() => {
-    return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
-  }, [soldBreakdown]);
+
+  // Use stored revenue for WON VALUE (calculated during import, not on-the-fly)
+  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
+  // The breakdown calculation is kept for display/transparency, but the total comes from stored data
+  const totalSold = storedWonRevenue;
   
   // Detect typo estimates (per spec R24-R27)
   const estimatesWithTypo = useMemo(() => {
@@ -333,7 +341,9 @@ export default function TotalWork({ estimates = [] }) {
       return sum + totalPrice;
     }, 0);
   }, [estimates]);
-  
+
+  // All-time sold: sum of all won estimates (regardless of year)
+  // This is for display purposes only (shows total value of all won estimates)
   const allTimeSold = useMemo(() => {
     return estimates
       .filter(est => isWonStatus(est))
@@ -342,7 +352,7 @@ export default function TotalWork({ estimates = [] }) {
         return sum + totalPrice;
       }, 0);
   }, [estimates]);
-  
+
   // Calculate sold percentage
   const soldPercentage = totalEstimated > 0 
     ? Math.round((totalSold / totalEstimated) * 100) 
@@ -380,7 +390,7 @@ export default function TotalWork({ estimates = [] }) {
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">WON VALUE</p>
             <p className="text-2xl font-semibold text-emerald-600 mt-1">
-              ${allTimeSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               {allTimeEstimated > 0 && (
                 <span className="text-base ml-2">({allTimeSoldPercentage}%)</span>
               )}
@@ -448,6 +458,7 @@ export default function TotalWork({ estimates = [] }) {
                     }
                     
                     text += `\n=== SOLD BREAKDOWN (Won Estimates Only) ===\n\n`;
+                    text += `STORED REVENUE (from revenue_by_year[${currentYear}]): $${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n`;
                     text += `INCLUDED (${soldBreakdown.included.length} estimates):\n`;
                     soldBreakdown.included.forEach((item, idx) => {
                       text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
