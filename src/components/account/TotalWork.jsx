@@ -349,37 +349,6 @@ export default function TotalWork({ estimates = [] }) {
 
   return (
     <>
-      {/* Typo Detection Warnings (per spec R24-R27) */}
-      {estimatesWithTypo.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 mb-4">
-          <CardHeader>
-            <CardTitle className="text-amber-900 dark:text-amber-200 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              Possible Contract Date Typos ({estimatesWithTypo.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {estimatesWithTypo.map(est => (
-                <div key={est.id || est.lmn_estimate_id} className="text-sm">
-                  <div className="font-medium text-amber-900 dark:text-amber-200">
-                    Estimate {est.estimate_number || est.lmn_estimate_id || est.id}
-                  </div>
-                  <div className="text-amber-700 dark:text-amber-300">
-                    {est.typoReason}
-                  </div>
-                  <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                    Start: {format(new Date(est.contract_start), 'MMM d, yyyy')} → 
-                    End: {format(new Date(est.contract_end), 'MMM d, yyyy')} 
-                    ({est.durationMonths} months, calculated as {est.contractYears} years)
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -652,6 +621,37 @@ export default function TotalWork({ estimates = [] }) {
         </div>
       </CardContent>
     </Card>
+    
+    {/* Typo Detection Warnings (per spec R24-R27) */}
+    {estimatesWithTypo.length > 0 && (
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 mt-4">
+        <CardHeader>
+          <CardTitle className="text-amber-900 dark:text-amber-200 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            Possible Contract Date Typos ({estimatesWithTypo.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {estimatesWithTypo.map(est => (
+              <div key={est.id || est.lmn_estimate_id} className="text-sm">
+                <div className="font-medium text-amber-900 dark:text-amber-200">
+                  Estimate {est.estimate_number || est.lmn_estimate_id || est.id}
+                </div>
+                <div className="text-amber-700 dark:text-amber-300">
+                  {est.typoReason}
+                </div>
+                <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Start: {format(new Date(est.contract_start), 'MMM d, yyyy')} → 
+                  End: {format(new Date(est.contract_end), 'MMM d, yyyy')} 
+                  ({est.durationMonths} months, calculated as {est.contractYears} years)
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )}
     </>
   );
 }
