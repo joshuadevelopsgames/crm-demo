@@ -172,6 +172,73 @@ export function YearSelectorProvider({ children }) {
     
     // Debug logging to help diagnose year calculation issues
     if (process.env.NODE_ENV === 'development') {
+      // Track which estimates contribute to each year for debugging
+      const yearToEstimates = new Map();
+      estimates.forEach(est => {
+        if (est.archived) return;
+        
+        let year = null;
+        let dateSource = null;
+        
+        if (est.contract_end) {
+          const date = new Date(est.contract_end);
+          if (!isNaN(date.getTime())) {
+            const yearValue = date.getFullYear();
+            if (yearValue >= 2000 && yearValue <= 2100) {
+              year = yearValue;
+              dateSource = 'contract_end';
+            }
+          }
+        }
+        
+        if (!year && est.contract_start) {
+          const date = new Date(est.contract_start);
+          if (!isNaN(date.getTime())) {
+            const yearValue = date.getFullYear();
+            if (yearValue >= 2000 && yearValue <= 2100) {
+              year = yearValue;
+              dateSource = 'contract_start';
+            }
+          }
+        }
+        
+        if (!year && est.estimate_date) {
+          const date = new Date(est.estimate_date);
+          if (!isNaN(date.getTime())) {
+            const yearValue = date.getFullYear();
+            if (yearValue >= 2000 && yearValue <= 2100) {
+              year = yearValue;
+              dateSource = 'estimate_date';
+            }
+          }
+        }
+        
+        if (!year && est.created_date) {
+          const date = new Date(est.created_date);
+          if (!isNaN(date.getTime())) {
+            const yearValue = date.getFullYear();
+            if (yearValue >= 2000 && yearValue <= 2100) {
+              year = yearValue;
+              dateSource = 'created_date';
+            }
+          }
+        }
+        
+        if (year) {
+          if (!yearToEstimates.has(year)) {
+            yearToEstimates.set(year, []);
+          }
+          yearToEstimates.get(year).push({
+            id: est.lmn_estimate_id || est.id,
+            dateSource,
+            contract_end: est.contract_end,
+            contract_start: est.contract_start,
+            estimate_date: est.estimate_date,
+            created_date: est.created_date
+          });
+        }
+      });
+      
       console.log('📅 YearSelector: Calculated year range', {
         totalEstimates: estimates.length,
         uniqueYears: yearArray.length,
@@ -179,6 +246,25 @@ export function YearSelectorProvider({ children }) {
         min: result.yearRange.min,
         max: result.yearRange.max,
         note: 'Only showing years that actually have estimates (no gaps filled)'
+      });
+      
+      // Show detailed breakdown for 2029 if it exists
+      if (yearToEstimates.has(2029)) {
+        console.log('🔍 YearSelector: Estimates contributing to 2029:', yearToEstimates.get(2029));
+      }
+      
+      // Show sample estimates for each year (first 3 per year)
+      yearArray.forEach(year => {
+        const ests = yearToEstimates.get(year);
+        if (ests && ests.length > 0) {
+          console.log(`📊 YearSelector: Year ${year} has ${ests.length} estimate(s)`, {
+            sample: ests.slice(0, 3).map(e => ({
+              id: e.id,
+              dateSource: e.dateSource,
+              date: e[e.dateSource]
+            }))
+          });
+        }
       });
     }
     
