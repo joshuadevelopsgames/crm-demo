@@ -9,12 +9,12 @@ const YearSelectorContext = createContext(null);
 function initializeGlobalGetCurrentYear() {
   try {
     const stored = localStorage.getItem('selectedYear');
-    if (stored) {
-      const year = parseInt(stored, 10);
-      if (!isNaN(year) && year >= 2020 && year <= 2100) {
-        return () => year;
+      if (stored) {
+        const year = parseInt(stored, 10);
+        if (!isNaN(year) && year >= 2000 && year <= 2100) {
+          return () => year;
+        }
       }
-    }
   } catch (error) {
     // localStorage not available or error
   }
@@ -28,15 +28,15 @@ let globalGetCurrentYear = initializeGlobalGetCurrentYear();
 function initializeGlobalGetCurrentDate() {
   try {
     const stored = localStorage.getItem('selectedYear');
-    if (stored) {
-      const year = parseInt(stored, 10);
-      if (!isNaN(year) && year >= 2020 && year <= 2100) {
-        return () => {
-          const now = new Date();
-          return new Date(year, now.getMonth(), now.getDate());
-        };
+      if (stored) {
+        const year = parseInt(stored, 10);
+        if (!isNaN(year) && year >= 2000 && year <= 2100) {
+          return () => {
+            const now = new Date();
+            return new Date(year, now.getMonth(), now.getDate());
+          };
+        }
       }
-    }
   } catch (error) {
     // localStorage not available or error
   }
@@ -80,16 +80,25 @@ export function YearSelectorProvider({ children }) {
   });
   
   // Calculate year range from estimates (earliest to latest)
-  const yearRange = useMemo(() => {
+  // Also store the actual years that exist (not just min/max range)
+  const { yearRange, availableYears } = useMemo(() => {
     if (!estimates || estimates.length === 0) {
       // Default range if no estimates
       const currentYear = new Date().getFullYear();
-      return { min: currentYear, max: currentYear };
+      return { 
+        yearRange: { min: currentYear, max: currentYear },
+        availableYears: [currentYear]
+      };
     }
     
     const years = new Set();
     
     estimates.forEach(est => {
+      // Per spec R11: Exclude archived estimates from year range calculation
+      if (est.archived) {
+        return; // Skip archived estimates
+      }
+      
       // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
       let year = null;
       
@@ -97,7 +106,11 @@ export function YearSelectorProvider({ children }) {
       if (est.contract_end) {
         const date = new Date(est.contract_end);
         if (!isNaN(date.getTime())) {
-          year = date.getFullYear();
+          const yearValue = date.getFullYear();
+          // Validate year is reasonable (2000-2100 per spec)
+          if (yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+          }
         }
       }
       
@@ -105,7 +118,10 @@ export function YearSelectorProvider({ children }) {
       if (!year && est.contract_start) {
         const date = new Date(est.contract_start);
         if (!isNaN(date.getTime())) {
-          year = date.getFullYear();
+          const yearValue = date.getFullYear();
+          if (yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+          }
         }
       }
       
@@ -113,7 +129,10 @@ export function YearSelectorProvider({ children }) {
       if (!year && est.estimate_date) {
         const date = new Date(est.estimate_date);
         if (!isNaN(date.getTime())) {
-          year = date.getFullYear();
+          const yearValue = date.getFullYear();
+          if (yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+          }
         }
       }
       
@@ -121,7 +140,10 @@ export function YearSelectorProvider({ children }) {
       if (!year && est.created_date) {
         const date = new Date(est.created_date);
         if (!isNaN(date.getTime())) {
-          year = date.getFullYear();
+          const yearValue = date.getFullYear();
+          if (yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+          }
         }
       }
       
@@ -133,14 +155,34 @@ export function YearSelectorProvider({ children }) {
     if (years.size === 0) {
       // Fallback if no valid dates found
       const currentYear = new Date().getFullYear();
-      return { min: currentYear, max: currentYear };
+      return { 
+        yearRange: { min: currentYear, max: currentYear },
+        availableYears: [currentYear]
+      };
     }
     
     const yearArray = Array.from(years).sort((a, b) => a - b);
-    return {
-      min: yearArray[0],
-      max: yearArray[yearArray.length - 1]
+    const result = {
+      yearRange: {
+        min: yearArray[0],
+        max: yearArray[yearArray.length - 1]
+      },
+      availableYears: yearArray // Store actual years that exist (ascending for range, will be reversed for display)
     };
+    
+    // Debug logging to help diagnose year calculation issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📅 YearSelector: Calculated year range', {
+        totalEstimates: estimates.length,
+        uniqueYears: yearArray.length,
+        years: yearArray,
+        min: result.yearRange.min,
+        max: result.yearRange.max,
+        note: 'Only showing years that actually have estimates (no gaps filled)'
+      });
+    }
+    
+    return result;
   }, [estimates]);
   
   // Load selected year from profile first, then localStorage as fallback
@@ -154,7 +196,7 @@ export function YearSelectorProvider({ children }) {
       const stored = localStorage.getItem('selectedYear');
       if (stored) {
         const year = parseInt(stored, 10);
-        if (!isNaN(year) && year >= 2020 && year <= 2100) {
+        if (!isNaN(year) && year >= 2000 && year <= 2100) {
           return year;
         }
       }
@@ -252,7 +294,7 @@ export function YearSelectorProvider({ children }) {
 
   // Change selected year
   const setYear = (year) => {
-    if (year >= 2020 && year <= 2100) {
+    if (year >= 2000 && year <= 2100) {
       setSelectedYear(year);
       
       // Update global function immediately
@@ -270,20 +312,14 @@ export function YearSelectorProvider({ children }) {
     }
   };
   
-  // Generate year options from dataset range
+  // Generate year options from actual years that exist in estimates (not filling gaps)
+  // Sort descending (most recent first) for better UX
   const yearOptions = useMemo(() => {
-    const options = [];
-    if (yearRange.min && yearRange.max) {
-      for (let year = yearRange.min; year <= yearRange.max; year++) {
-        options.push(year);
-      }
-    } else {
-      // Fallback if range not calculated yet
-      const currentYear = new Date().getFullYear();
-      options.push(currentYear);
-    }
-    return options;
-  }, [yearRange]);
+    // Use availableYears (actual years with estimates) instead of filling min-max range
+    const options = availableYears.length > 0 ? [...availableYears] : [new Date().getFullYear()];
+    // Sort descending (most recent first) for better user experience
+    return options.sort((a, b) => b - a);
+  }, [availableYears]);
   
   const value = useMemo(() => ({
     selectedYear,

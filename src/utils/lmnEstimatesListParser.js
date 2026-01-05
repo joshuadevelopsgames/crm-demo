@@ -156,7 +156,7 @@ export function parseEstimatesList(csvTextOrRows) {
 
         // Parse dates (Excel serial dates or ISO strings)
         // Return date-only strings (YYYY-MM-DD) to avoid timezone conversion issues
-        // Per spec R3, R10, R15: Normalize to YYYY-MM-DD, validate 1900-2100 range
+        // Per spec R3, R10, R15: Normalize to YYYY-MM-DD, validate 2000-2100 range
         const parseDate = (value, fieldName = 'date') => {
           if (!value) return null;
           let parsedDate = null;
@@ -218,16 +218,16 @@ export function parseEstimatesList(csvTextOrRows) {
             }
           }
           
-          // Validate date range (1900-2100) per spec R15
+          // Validate date range (2000-2100) per spec R15
           if (dateString && parsedDate && !isNaN(parsedDate.getTime())) {
             const year = parsedDate.getFullYear();
-            if (year < 1900 || year > 2100) {
+            if (year < 2000 || year > 2100) {
               // Invalid date - log error and notify user per spec R10, R15
-              const errorMsg = `Invalid ${fieldName} '${value}' for estimate '${estimateId || 'unknown'}' (row ${i + 1}) - outside valid range (1900-2100)`;
+              const errorMsg = `Invalid ${fieldName} '${value}' for estimate '${estimateId || 'unknown'}' (row ${i + 1}) - outside valid range (2000-2100)`;
               errors.push(errorMsg);
               invalidDates.push({ estimateId: estimateId || 'unknown', field: fieldName, value, row: i + 1 });
               if (!userNotifications.errors.some(e => e.includes('invalid dates'))) {
-                userNotifications.errors.push(`Some estimates have invalid dates outside the valid range (1900-2100). Review recommended.`);
+                userNotifications.errors.push(`Some estimates have invalid dates outside the valid range (2000-2100). Review recommended.`);
               }
               return null; // Skip invalid date
             }
@@ -487,7 +487,7 @@ export function parseEstimatesList(csvTextOrRows) {
       userNotifications.errors.push(`${duplicateCount} duplicate estimate(s) detected and skipped`);
     }
     if (invalidDateCount > 0) {
-      userNotifications.errors.push(`${invalidDateCount} estimate(s) have invalid dates (outside 1900-2100 range)`);
+      userNotifications.errors.push(`${invalidDateCount} estimate(s) have invalid dates (outside 2000-2100 range)`);
     }
     if (unrecognizedStatusCount > 0) {
       userNotifications.warnings.push(`${unrecognizedStatusCount} estimate(s) have unrecognized status values (defaulted to 'lost')`);

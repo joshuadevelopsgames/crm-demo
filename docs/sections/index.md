@@ -106,6 +106,20 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (diagnostic scripts exist, unit tests needed)
 
+### Year Selector
+- **Name**: Year Selector
+- **Slug**: `year-selector`
+- **Spec Path**: `docs/sections/year-selector.md`
+- **Primary Code Locations**:
+  - `src/contexts/YearSelectorContext.jsx` - Core context provider and year calculation logic
+  - `src/pages/Reports.jsx` - Uses year selector for filtering
+  - `src/pages/Accounts.jsx` - Uses year selector for revenue calculations
+  - `src/utils/revenueSegmentCalculator.js` - Uses year selector for current year determination
+  - `src/utils/reportCalculations.js` - Uses year selector for year filtering
+  - `src/components/account/TotalWork.jsx` - Uses year selector for revenue display
+- **Owner**: Product Owner
+- **Test Coverage Status**: None (new section)
+
 ---
 
 ## Adding New Sections

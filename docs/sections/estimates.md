@@ -91,7 +91,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 3. **Date Normalization**:
    - Accept formats: Excel serial dates, ISO strings, MM/DD/YYYY, timestamps
    - Convert all to: YYYY-MM-DD date-only strings
-   - Validate: Dates must be between 1900-2100
+   - Validate: Dates must be between 2000-2100
    - Invalid dates: Log error, notify user, skip date parsing
 
 4. **Account Linking** (Priority Order):
@@ -150,7 +150,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 **R9**: Unrecognized status values are logged as warnings, default to 'lost', and user is notified in import summary with count and list of unrecognized statuses.
 
-**R10**: Invalid dates (outside 1900-2100 range or unparseable) are logged as errors, user is notified, and date parsing is skipped (estimate still imported if other validations pass).
+**R10**: Invalid dates (outside 2000-2100 range or unparseable) are logged as errors, user is notified, and date parsing is skipped (estimate still imported if other validations pass).
 
 **R11**: Status determination priority: `pipeline_status` field is checked first (if "sold" → won), then `status` field is used as fallback.
 
@@ -160,7 +160,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 **R14**: Account linking uses confidence scoring - store `_link_method` and `_link_confidence` for tracking (no manual review required for fuzzy matches).
 
-**R15**: Date validation: All dates must be between 1900-2100. Dates outside this range are invalid and trigger error notification.
+**R15**: Date validation: All dates must be between 2000-2100. Dates outside this range are invalid and trigger error notification.
 
 ## Precedence and Conflict Resolution
 
@@ -310,7 +310,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 ```
 **Output:**
 - Result: Date parsing skipped, estimate still imported
-- Log: "Invalid date '1899-01-01' for estimate '12345' - outside valid range (1900-2100)"
+- Log: "Invalid date '1899-01-01' for estimate '12345' - outside valid range (2000-2100)"
 - Import summary: "X estimates with invalid dates - review recommended"
 - **Rule IDs**: R10, R15
 
