@@ -56,14 +56,19 @@ export const mappingRules = [
     data_field: 'revenue',
     mapping_function: (account, estimates) => {
       // Use contract-year allocation logic for current year revenue
-      // Helper to get current year (respects test mode)
+      // Helper to get current year (respects year selector) - REQUIRED, no fallback
+      // Per user requirement: Never fall back to current year, only ever go by selected year
       function getCurrentYearForCalculation() {
         // Use window function if available (set by TestModeProvider)
         if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
           return window.__testModeGetCurrentYear();
         }
-        // Fallback to actual year
-        return new Date().getFullYear();
+        // Fallback to YearSelectorContext
+        if (typeof window !== 'undefined' && window.__getCurrentYear) {
+          return window.__getCurrentYear();
+        }
+        // No fallback - selected year is required
+        throw new Error('scorecardMappings.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
       }
       const currentYear = getCurrentYearForCalculation();
       

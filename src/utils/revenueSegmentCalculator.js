@@ -240,14 +240,19 @@ function getEstimateYearData(estimate, currentYear) {
   };
 }
 
-// Server-safe getCurrentYear (for serverless functions where localStorage/context isn't available)
-// In serverless context, always use current year since there's no user session
+// Get current year from YearSelectorContext - REQUIRED, no fallback
+// Per Year Selection System spec R6: All revenue calculations MUST use getCurrentYear() from YearSelectorContext
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function getCurrentYearForCalculation() {
-  // In serverless functions, we don't have access to user's selected year
-  // Default to current year - this is fine since cache refresh runs for all users
-  // In browser context, this will be overridden by the actual getCurrentYear from context
-  // but for serverless, we just use current year
-  return new Date().getFullYear();
+  // In browser context, use the global getCurrentYear function from YearSelectorContext
+  // This respects the user's selected year
+  if (typeof window !== 'undefined' && window.__getCurrentYear) {
+    return window.__getCurrentYear();
+  }
+  // No fallback - selected year is required
+  // If this is called in a context where window.__getCurrentYear is not available,
+  // it means the YearSelectorContext is not initialized, which is an error
+  throw new Error('getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
 }
 
 /**

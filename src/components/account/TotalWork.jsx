@@ -194,7 +194,8 @@ function getReadableEstimateId(estimate) {
   return 'Unknown';
 }
 
-// Helper to get current year (respects test mode)
+// Helper to get current year (respects year selector) - REQUIRED, no fallback
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function getCurrentYearForCalculation() {
   try {
     return getCurrentYear();
@@ -203,7 +204,12 @@ function getCurrentYearForCalculation() {
     if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
       return window.__testModeGetCurrentYear();
     }
-    return new Date().getFullYear();
+    // Fallback to YearSelectorContext
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      return window.__getCurrentYear();
+    }
+    // No fallback - selected year is required
+    throw new Error('TotalWork.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
   }
 }
 
@@ -425,7 +431,7 @@ export default function TotalWork({ account, estimates = [] }) {
                   variant="outline"
                   size="sm"
                   onClick={async () => {
-                    const currentYear = new Date().getFullYear();
+                    const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : (() => { throw new Error('TotalWork: YearSelectorContext not initialized. Selected year is required.'); })();
                     let text = `Total Work Breakdown - ${currentYear}\n`;
                     text += `Generated: ${new Date().toLocaleString()}\n\n`;
                     

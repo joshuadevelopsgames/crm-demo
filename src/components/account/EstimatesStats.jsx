@@ -5,7 +5,8 @@ import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { getYearFromDateString } from '@/utils/dateFormatter';
 import { isWonStatus } from '@/utils/reportCalculations';
 
-// Helper to get current year (respects test mode)
+// Helper to get current year (respects year selector) - REQUIRED, no fallback
+// Per user requirement: Never fall back to current year, only ever go by selected year
 function getCurrentYearForCalculation() {
   try {
     return getCurrentYear();
@@ -14,7 +15,8 @@ function getCurrentYearForCalculation() {
     if (typeof window !== 'undefined' && window.__getCurrentYear) {
       return window.__getCurrentYear();
     }
-    return new Date().getFullYear();
+    // No fallback - selected year is required
+    throw new Error('EstimatesStats.getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
   }
 }
 

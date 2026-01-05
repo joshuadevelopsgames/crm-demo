@@ -55,7 +55,21 @@ async function recalculateSegments(supabase) {
     // Update all accounts with their calculated segments (non-blocking, don't wait for all updates)
     // Update both segment_by_year and revenue_segment (for backward compatibility)
     const updatePromises = updatedAccounts.map(account => {
-      const selectedYear = new Date().getFullYear(); // Use current year as default
+      // Use the most recent year from segment_by_year, or fallback to current year
+      // This ensures revenue_segment matches the most recent data
+      const selectedYear = (() => {
+        if (account.segment_by_year && typeof account.segment_by_year === 'object') {
+          const years = Object.keys(account.segment_by_year)
+            .map(y => parseInt(y))
+            .filter(y => !isNaN(y) && y >= 2000 && y <= 2100)
+            .sort((a, b) => b - a); // Descending (most recent first)
+          if (years.length > 0) {
+            return years[0]; // Most recent year with segment data
+          }
+        }
+        // Fallback: use current year only if no segment_by_year data exists
+        return new Date().getFullYear();
+      })();
       const selectedYearSegment = account.segment_by_year?.[selectedYear.toString()] || account.revenue_segment || 'C';
       
       return supabase

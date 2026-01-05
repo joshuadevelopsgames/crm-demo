@@ -315,7 +315,7 @@ export default function Settings() {
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
       // Count segments for logging (use selected year's segment)
-      const currentYearForLogging = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
+      const currentYearForLogging = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : (() => { throw new Error('Settings: YearSelectorContext not initialized. Selected year is required.'); })();
       const segmentCounts = updatedAccounts.reduce((acc, account) => {
         const segment = account.segment_by_year?.[currentYearForLogging.toString()] || account.revenue_segment || 'null';
         acc[segment] = (acc[segment] || 0) + 1;
