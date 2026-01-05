@@ -785,11 +785,11 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
 
     // Calculate revenue from won estimates per spec R25: calculate for ALL years
     // Import calculation functions from revenueSegmentCalculator (per spec R1-R22)
-    // Helper to get current year (respects test mode)
+    // Helper to get current year (respects year selector)
     function getCurrentYearForCalculation() {
-      // Use window function if available (set by TestModeProvider)
-      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-        return window.__testModeGetCurrentYear();
+      // Use window function if available (set by YearSelectorProvider)
+      if (typeof window !== 'undefined' && window.__getCurrentYear) {
+        return window.__getCurrentYear();
       }
       // Fallback to actual year
       return new Date().getFullYear();

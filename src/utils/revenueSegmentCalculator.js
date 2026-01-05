@@ -137,8 +137,8 @@ function getEstimateYearData(estimate, currentYear) {
     totalPrice = totalPriceWithTax;
   }
   
-  // Debug logging for test mode
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear && currentYear === 2025) {
+  // Debug logging for year selector
+  if (typeof window !== 'undefined' && window.__getCurrentYear && currentYear === 2025) {
     const debugInfo = {
       estimateId: estimate.id || estimate.lmn_estimate_id,
       currentYear,
@@ -248,16 +248,16 @@ import { getCurrentYear } from '@/contexts/YearSelectorContext';
 function getCurrentYearForCalculation() {
   try {
     const year = getCurrentYear();
-    // Debug: log the year being used when test mode is active
-    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+    // Debug: log the year being used
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
       console.log('[getCurrentYearForCalculation] Using year:', year, 'from getCurrentYear()');
     }
     return year;
   } catch (error) {
     // Fallback if context not initialized yet
-    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-      const year = window.__testModeGetCurrentYear();
-      console.log('[getCurrentYearForCalculation] Using year:', year, 'from window.__testModeGetCurrentYear (fallback)');
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      const year = window.__getCurrentYear();
+      console.log('[getCurrentYearForCalculation] Using year:', year, 'from window.__getCurrentYear (fallback)');
       return year;
     }
     const year = new Date().getFullYear();
@@ -275,7 +275,7 @@ function getCurrentYearForCalculation() {
 export function calculateRevenueFromEstimates(estimates = []) {
   const currentYear = getCurrentYearForCalculation();
   
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+  if (typeof window !== 'undefined' && window.__getCurrentYear) {
     console.log(`[calculateRevenueFromEstimates] Using year: ${currentYear} for ${estimates.length} estimates`);
   }
   
@@ -310,8 +310,8 @@ export function getAccountRevenue(account, estimates = []) {
   
   const currentYear = getCurrentYearForCalculation();
   
-  // Debug logging for test mode
-  if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+  // Debug logging
+  if (typeof window !== 'undefined' && window.__getCurrentYear) {
     console.log(`[getAccountRevenue] Account: ${account.name}, Year: ${currentYear}, Estimates: ${estimates.length}`);
   }
   
@@ -325,7 +325,7 @@ export function getAccountRevenue(account, estimates = []) {
       }
       const yearData = getEstimateYearData(est, currentYear);
       if (yearData && yearData.appliesToCurrentYear) {
-        if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+        if (typeof window !== 'undefined' && window.__getCurrentYear) {
           console.log(`[getAccountRevenue] Found won estimate for ${currentYear}:`, {
             estimateId: est.id,
             status: est.status,
@@ -343,12 +343,12 @@ export function getAccountRevenue(account, estimates = []) {
     if (hasWonEstimatesForCurrentYear) {
       // We have won estimates that apply to current year, return calculated revenue
       // (even if 0, because that's the actual revenue from won estimates)
-      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+      if (typeof window !== 'undefined' && window.__getCurrentYear) {
         console.log(`[getAccountRevenue] Revenue for ${account.name}: $${calculatedRevenue}`);
       }
       return calculatedRevenue;
     } else {
-      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
+      if (typeof window !== 'undefined' && window.__getCurrentYear) {
         console.log(`[getAccountRevenue] No won estimates for ${currentYear} for account ${account.name}`);
         // Log all estimates to see what we have
         estimates.forEach(est => {
