@@ -1087,7 +1087,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
       // Force refetch all active queries
       await queryClient.refetchQueries({ type: 'active' });
       
-      // Calculate and assign revenue segments based on current year revenue
+      // Calculate and assign revenue segments based on selected year revenue (per spec R1, R14)
       try {
         console.log('📊 Calculating revenue segments for all accounts...');
         const allAccounts = await base44.entities.Account.list();

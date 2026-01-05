@@ -199,9 +199,9 @@ export default function EditAccountDialog({ open, onClose, account }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A">Segment A (≥15%)</SelectItem>
+                  <SelectItem value="A">Segment A (&gt;15%)</SelectItem>
                   <SelectItem value="B">Segment B (5-15%)</SelectItem>
-                  <SelectItem value="C">Segment C (0-5%)</SelectItem>
+                  <SelectItem value="C">Segment C (&lt;5%)</SelectItem>
                   <SelectItem value="D">Segment D (Project Only)</SelectItem>
                 </SelectContent>
               </Select>

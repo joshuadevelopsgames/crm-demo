@@ -284,7 +284,7 @@ export default function Settings() {
   };
 
   const handleRecalculateSegments = async () => {
-    if (!window.confirm('Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months)? This will update all accounts.')) {
+    if (!window.confirm('Recalculate revenue segments for all accounts based on selected year revenue percentages (year-based, not rolling 12 months)? This will update all accounts.')) {
       return;
     }
 
@@ -689,7 +689,7 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Recalculate revenue segments for all accounts based on current year revenue percentages (year-based, not rolling 12 months).
+                  Recalculate revenue segments for all accounts based on selected year revenue percentages (year-based, not rolling 12 months).
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Segments are automatically recalculated on import. Use this to manually trigger recalculation if needed.
