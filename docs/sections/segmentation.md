@@ -10,7 +10,7 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 - **Accounts Table** (`accounts`):
   - `revenue_segment` (text): Segment classification ('A', 'B', 'C', or 'D')
-  - `annual_revenue` (numeric): Stored revenue value for selected year (calculated during import)
+  - `revenue_by_year` (jsonb): Historical revenue by year `{ "2024": 50000, "2025": 75000, ... }` (calculated during import)
   - `id` (text, PK): Account identifier
 
 - **Estimates Table** (`estimates`):
@@ -24,7 +24,7 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 ### Fields Used
 
 **Required Fields:**
-- `annual_revenue`: Used for percentage calculation (revenue for selected year)
+- `revenue_by_year`: Used for percentage calculation (revenue for selected year from `revenue_by_year[selectedYear]`)
 - `revenue_segment`: Storage field for segment classification
 
 **Optional Fields:**
@@ -41,8 +41,8 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 ### Nullability Assumptions
 
 - `revenue_segment`: Defaults to 'C' if missing or no revenue data
-- `annual_revenue`: Can be `null` if account has no won estimates for selected year
-- If `annual_revenue` is `null` or `0`, segment defaults to 'C'
+- `revenue_by_year`: Can be `null` or missing selected year if account has no won estimates for selected year
+- If `revenue_by_year[selectedYear]` is `null`, `undefined`, or `0`, segment defaults to 'C'
 
 ## Logic
 
@@ -53,8 +53,8 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
    - Default to current calendar year if context unavailable
 
 2. **Calculate Total Revenue**
-   - Sum of all accounts' `annual_revenue` fields for selected year
-   - Uses stored `annual_revenue` values (not recalculated from estimates)
+   - Sum of all accounts' `revenue_by_year[selectedYear]` values for selected year
+   - Uses stored `revenue_by_year` values (not recalculated from estimates)
    - If `totalRevenue <= 0`, all accounts default to segment 'C'
 
 3. **For Each Account, Calculate Segment**
@@ -66,7 +66,7 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
       - If account has ANY Service estimates → proceed to percentage calculation
 
    b. **Percentage Calculation** (for A/B/C, uses selected year):
-      - `accountRevenue = account.annual_revenue` (revenue for selected year)
+      - `accountRevenue = account.revenue_by_year[selectedYear]` (revenue for selected year)
       - `revenuePercentage = (accountRevenue / totalRevenue) * 100`
       - If `accountRevenue <= 0` or `totalRevenue <= 0` → default to 'C'
 
@@ -78,7 +78,7 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 ### Transformations in Sequence
 
-1. **Total Revenue Aggregation**: Sum all accounts' `annual_revenue` for selected year
+1. **Total Revenue Aggregation**: Sum all accounts' `revenue_by_year[selectedYear]` for selected year
 2. **Segment D Classification**: Check if account has ANY Service estimates for selected year
 3. **Revenue Percentage**: Calculate `(accountRevenue / totalRevenue) * 100`
 4. **Threshold Comparison**: Compare percentage to segment thresholds (15%, 5%)
@@ -88,12 +88,12 @@ The Segmentation section classifies accounts into revenue segments (A, B, C, D) 
 
 **Revenue Percentage:**
 ```
-revenuePercentage = (account.annual_revenue / totalRevenue) * 100
+revenuePercentage = (account.revenue_by_year[selectedYear] / totalRevenue) * 100
 ```
 
 **Total Revenue:**
 ```
-totalRevenue = sum of all accounts.annual_revenue for selected year
+totalRevenue = sum of all accounts.revenue_by_year[selectedYear] for selected year
 ```
 
 **Segment Assignment:**
@@ -121,7 +121,7 @@ else → 'C'
 
 **R4**: Segment D check uses only won estimates for the selected year. Historical years do not affect Segment D classification.
 
-**R5**: Revenue percentage calculation: `(account.annual_revenue / totalRevenue) * 100`, where `totalRevenue` is sum of all accounts' `annual_revenue` for selected year.
+**R5**: Revenue percentage calculation: `(account.revenue_by_year[selectedYear] / totalRevenue) * 100`, where `totalRevenue` is sum of all accounts' `revenue_by_year[selectedYear]` for selected year.
 
 **R6**: Segment A: Account represents more than 15% of total company revenue by year (`revenuePercentage > 15%`).
 
@@ -133,11 +133,11 @@ else → 'C'
 
 **R10**: If `totalRevenue <= 0`, all accounts default to segment 'C'.
 
-**R11**: If `account.annual_revenue` is `null` or `0`, segment defaults to 'C'.
+**R11**: If `account.revenue_by_year[selectedYear]` is `null`, `undefined`, or `0`, segment defaults to 'C'.
 
 **R12**: Segments are always read-only in all UI contexts. No manual override is available.
 
-**R13**: Segment calculation uses stored `annual_revenue` field (revenue for selected year), not recalculated from estimates.
+**R13**: Segment calculation uses stored `revenue_by_year[selectedYear]` field (revenue for selected year), not recalculated from estimates.
 
 **R14**: Selected year is determined by YearSelectorContext (site-wide, user-selectable, persists in user profile).
 
@@ -179,12 +179,12 @@ else → 'C'
 - **Resolution**: Has Service estimates → calculate percentage from ALL won estimates ($15k total) → assign A/B/C based on percentage (not D)
 
 **Example 2: Zero Total Revenue**
-- All accounts have `annual_revenue = 0` or `null` for selected year
+- All accounts have `revenue_by_year[selectedYear] = 0` or `null` for selected year
 - **Resolution**: `totalRevenue = 0` → all accounts default to segment 'C' (R10)
 
 **Example 3: Missing Revenue Data**
-- Account has no won estimates for selected year, `annual_revenue = null`
-- **Resolution**: `annual_revenue` is null → segment defaults to 'C' (R11)
+- Account has no won estimates for selected year, `revenue_by_year[selectedYear] = null` or `undefined`
+- **Resolution**: `revenue_by_year[selectedYear]` is null/undefined → segment defaults to 'C' (R11)
 
 **Example 4: Historical Data Doesn't Affect Segment D**
 - Account has Standard estimates in 2024, Service estimates in 2025, selected year = 2025
@@ -210,7 +210,7 @@ else → 'C'
 ```json
 Account: {
   "id": "acc-001",
-  "annual_revenue": 100000
+  "revenue_by_year": { "2025": 100000 }
 }
 Total Revenue: $500000
 Selected Year: 2025
@@ -231,7 +231,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-002",
-  "annual_revenue": 50000
+  "revenue_by_year": { "2025": 50000 }
 }
 Total Revenue: $500000
 Selected Year: 2025
@@ -251,7 +251,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-003",
-  "annual_revenue": 20000
+  "revenue_by_year": { "2025": 20000 }
 }
 Total Revenue: $500000
 Selected Year: 2025
@@ -271,7 +271,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-004",
-  "annual_revenue": 20000
+  "revenue_by_year": { "2025": 20000 }
 }
 Estimates (selected year 2025): [
   {
@@ -303,7 +303,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-005",
-  "annual_revenue": 30000
+  "revenue_by_year": { "2025": 30000 }
 }
 Estimates (selected year 2025): [
   {
@@ -336,14 +336,14 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-006",
-  "annual_revenue": null
+  "revenue_by_year": { "2025": null }
 }
 Total Revenue: $500000
 Selected Year: 2025
 ```
 
 **Process:**
-1. `annual_revenue` is null → default to 'C'
+1. `revenue_by_year[selectedYear]` is null/undefined → default to 'C'
 
 **Output:**
 - Revenue segment: 'C'
@@ -354,10 +354,10 @@ Selected Year: 2025
 **Input:**
 ```json
 Accounts: [
-  { "id": "acc-007", "annual_revenue": 10000 },
-  { "id": "acc-008", "annual_revenue": 5000 }
+  { "id": "acc-007", "revenue_by_year": { "2025": 10000 } },
+  { "id": "acc-008", "revenue_by_year": { "2025": 5000 } }
 ]
-Total Revenue: $0 (all accounts have annual_revenue = 0 or null)
+Total Revenue: $0 (all accounts have revenue_by_year[selectedYear] = 0 or null)
 Selected Year: 2025
 ```
 
@@ -374,7 +374,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-009",
-  "annual_revenue": 100000
+  "revenue_by_year": { "2025": 100000 }
 }
 Estimates (selected year 2025): [
   {
@@ -407,7 +407,7 @@ Selected Year: 2025
 ```json
 Account: {
   "id": "acc-010",
-  "annual_revenue": 75000
+  "revenue_by_year": { "2025": 75000 }
 }
 Total Revenue: $500000
 Selected Year: 2025
@@ -439,7 +439,7 @@ Selected Year: 2025
 
 **AC8**: Segments are always read-only in all UI contexts. No manual override is available. (R12)
 
-**AC9**: Segment calculation uses stored `annual_revenue` field (revenue for selected year), not recalculated from estimates. (R13)
+**AC9**: Segment calculation uses stored `revenue_by_year[selectedYear]` field (revenue for selected year), not recalculated from estimates. (R13)
 
 **AC10**: Selected year is determined by YearSelectorContext and applies site-wide. (R14)
 
@@ -463,14 +463,14 @@ Selected Year: 2025
 
 - **Zero Revenue**: Accounts with no won estimates for selected year default to Segment C
 - **Exact Thresholds**: Exactly 15% → B (not A, because A requires > 15%), exactly 5% → B, 4.99% → C
-- **Stale Data**: If `annual_revenue` is stale, segments may be incorrect until recalculation
+- **Stale Data**: If `revenue_by_year[selectedYear]` is stale, segments may be incorrect until recalculation
 - **Year Change**: When selected year changes, segments should be recalculated (requires revenue recalculation first)
 - **No Estimates**: Account with no estimates defaults to 'C' (not D, because D requires Standard estimates)
 
 ### Exceptions
 
 - **Import Failure**: If segment recalculation fails during import, import continues but user is notified
-- **Missing Data**: If `annual_revenue` is missing, segment defaults to 'C' (no error thrown)
+- **Missing Data**: If `revenue_by_year[selectedYear]` is missing, segment defaults to 'C' (no error thrown)
 - **Read-Only Enforcement**: Segments cannot be manually edited in any UI context
 
 ### Backward Compatibility
@@ -510,7 +510,7 @@ Selected Year: 2025
 ### Error Conditions
 
 - Segment recalculation failures (log account IDs and errors)
-- Missing `annual_revenue` data (log but default to C)
+- Missing `revenue_by_year[selectedYear]` data (log but default to C)
 - Zero total revenue (log but default all to C)
 - Invalid segment values (should not occur, but log if happens)
 
@@ -518,7 +518,7 @@ Selected Year: 2025
 
 ~~All questions answered by product owner:~~
 
-1. **Revenue Terminology**: ✅ **ANSWERED**: `annual_revenue` stores revenue for selected year (not necessarily current calendar year). Total revenue is sum of all accounts' revenue for selected year. (R1, R5, R13)
+1. **Revenue Terminology**: ✅ **ANSWERED**: `revenue_by_year[selectedYear]` stores revenue for selected year (not necessarily current calendar year). Total revenue is sum of all accounts' revenue for selected year. (R1, R5, R13)
 
 2. **Manual Recalculation Access**: ✅ **ANSWERED**: Only admins can trigger manual recalculation. Regular users cannot. (R18, R19, AC14, AC15)
 

@@ -993,17 +993,12 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       }
     });
     
-    // Per spec R11: Current year revenue (for annual_revenue field)
-    const currentYearRevenue = revenueByYear[currentYear.toString()] || 0;
-
     // Count jobsites for this account (now using account_id field from jobsites)
     const accountJobsites = jobsitesWithAccountId.filter(jobsite => 
       jobsite.account_id === account.id
     );
 
     // Per spec R25: Update account with calculated revenue
-    // annual_revenue stores current year value
-    account.annual_revenue = currentYearRevenue > 0 ? currentYearRevenue : null;
     // revenue_by_year stores all years (JSONB field)
     account.revenue_by_year = Object.keys(revenueByYear).length > 0 ? revenueByYear : null;
     

@@ -323,12 +323,12 @@ export default function NeglectedAccounts() {
                       {(() => {
                         const revenue = getRevenueForYear(account, selectedYear);
                         return revenue > 0 ? (
-                          <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Annual Revenue</p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
+                        <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Annual Revenue</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
                               ${revenue.toLocaleString()}
-                            </p>
-                          </div>
+                          </p>
+                        </div>
                         ) : null;
                       })()}
                     </div>

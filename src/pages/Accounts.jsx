@@ -375,10 +375,9 @@ export default function Accounts() {
 
   const handleCreateAccount = () => {
     // Ensure account has a segment before creating (default to C if not set)
-    // annual_revenue will be calculated automatically from won estimates
+    // revenue_by_year will be calculated automatically from won estimates during import
     const accountData = {
       ...newAccount,
-      annual_revenue: null, // Will be calculated from won estimates
       revenue_segment: newAccount.revenue_segment || 'C'
     };
     createAccountMutation.mutate(accountData);
@@ -1483,12 +1482,12 @@ export default function Accounts() {
                         {(() => {
                           const revenue = getRevenueForYear(account, selectedYear);
                           return revenue > 0 ? (
-                            <div className="flex items-center justify-between text-sm mt-2">
-                              <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                              <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
+                          <div className="flex items-center justify-between text-sm mt-2">
+                            <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
+                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                                 ${revenue.toLocaleString()}
-                              </span>
-                            </div>
+                            </span>
+                          </div>
                           ) : null;
                         })()}
                       </div>

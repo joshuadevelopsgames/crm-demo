@@ -79,8 +79,7 @@ export function parseLmnCsv(csvText) {
           website: row[columnMap.website]?.trim() || '',
           phone: row[columnMap.phone]?.trim() || row[columnMap.phone1]?.trim() || '',
           address: buildAddress(row, columnMap),
-          industry: row[columnMap.industry]?.trim() || '',
-          annual_revenue: columnMap.revenue ? parseCurrency(row[columnMap.revenue]) : null
+          industry: row[columnMap.industry]?.trim() || ''
         });
       }
 

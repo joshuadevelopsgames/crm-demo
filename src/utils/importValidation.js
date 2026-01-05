@@ -575,7 +575,7 @@ export function compareWithExisting(
 function findAccountDifferences(imported, existing) {
   const differences = [];
   const fieldsToCompare = [
-    'name', 'account_type', 'status', 'annual_revenue', 'industry',
+    'name', 'account_type', 'status', 'industry',
     'website', 'phone', 'address_1', 'address_2', 'city', 'state',
     'postal_code', 'country', 'classification'
   ];

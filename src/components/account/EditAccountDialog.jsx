@@ -117,7 +117,7 @@ export default function EditAccountDialog({ open, onClose, account }) {
   const handleSubmit = () => {
     const updateData = {
       ...formData
-      // annual_revenue is calculated automatically from won estimates, not manually entered
+      // revenue_by_year is calculated automatically from won estimates during import, not manually entered
     };
     // If setting to N/A, also clear last_interaction_date
     if (updateData.icp_status === 'na') {

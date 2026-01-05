@@ -374,7 +374,6 @@ async function parseAccountsFromAllData() {
         status: row[headers.indexOf('Status')] || 'active',
         classification: row[headers.indexOf('Classification')] || '',
         revenue_segment: row[headers.indexOf('Revenue Segment')] || '',
-        annual_revenue: row[headers.indexOf('Annual Revenue')] || '',
         organization_score: row[headers.indexOf('Organization Score')] || null,
         tags: row[headers.indexOf('Account Tags')] || '',
         address_1: row[headers.indexOf('Account Address 1')] || '',
@@ -458,7 +457,6 @@ async function parseImportedAccounts() {
           'Status': 'status',
           'Classification': 'classification',
           'Revenue Segment': 'revenue_segment',
-          'Annual Revenue': 'annual_revenue',
           'Organization Score': 'organization_score',
           'Tags': 'tags',
           'Address 1': 'address_1',
@@ -477,7 +475,7 @@ async function parseImportedAccounts() {
         const fieldName = fieldMap[header] || header.toLowerCase().replace(/\s+/g, '_');
         
         // Parse special types
-        if (fieldName === 'annual_revenue' || fieldName === 'organization_score') {
+        if (fieldName === 'organization_score') {
           account[fieldName] = value ? parseFloat(value) : null;
         } else if (fieldName === 'archived') {
           account[fieldName] = value === 'TRUE' || value === true || value === 'true';
