@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { useUser } from '@/contexts/UserContext';
-import { useTestMode } from '@/contexts/TestModeContext';
 import { X, AlertCircle, AlertTriangle, Info, CheckCircle, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +30,6 @@ const PRIORITY_ICONS = {
 
 export default function AnnouncementBanner() {
   const { user, profile, isLoading: userLoading } = useUser();
-  const { isTestMode } = useTestMode();
   const supabase = getSupabaseAuth();
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState(() => {
     // Load dismissed announcements from localStorage
@@ -224,9 +222,7 @@ export default function AnnouncementBanner() {
         className={`border-b ${PRIORITY_COLORS[announcement.priority] || PRIORITY_COLORS.normal} fixed left-0 right-0 w-full backdrop-blur-sm`}
         style={{
           // Position below nav (nav is 64px/4rem tall)
-          // If test mode: below test mode (40px) + nav (64px) = 104px
-          // If no test mode: below nav (64px) = 64px
-          top: isTestMode ? '104px' : '64px', // Below nav (64px) + test mode banner (40px) if active
+          top: '64px', // Below nav (64px)
           zIndex: 55, // Above nav (z-50) to ensure content doesn't scroll through it
           backgroundColor: 'inherit', // Ensure background is opaque
         }}
