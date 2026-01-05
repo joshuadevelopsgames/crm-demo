@@ -95,10 +95,11 @@ The Accounts section provides the central hub for managing all company accounts 
 1. **Data Fetching** (Accounts page load)
    - Fetch all accounts from `/api/data/accounts` (paginated, max 100k accounts)
    - Fetch all contacts to determine accounts with contacts
-   - Fetch all estimates for revenue calculation and user filtering
+   - Fetch all estimates for user filtering (revenue comes from stored `revenue_by_year` field)
    - Fetch all scorecards to determine accounts with completed scorecards
    - If filtering by at-risk: Fetch from `/api/notifications?type=at-risk-accounts`
    - If filtering by at-risk: Fetch notification snoozes
+   - Cache settings: `staleTime: 60 minutes`, `gcTime: 2 hours` (data only changes on import)
 
 2. **Archive Status Filtering** (First filter applied)
    - Determine if account is archived: `account.archived === true` OR `account.status === 'archived'`
@@ -138,22 +139,16 @@ The Accounts section provides the central hub for managing all company accounts 
 8. **Sorting**
    - `name`: Alphabetical by `account.name`
    - `score`: Descending by `organization_score` (only accounts with completed scorecards)
-   - `revenue`: Descending by calculated revenue from won estimates
+   - `revenue`: Descending by stored revenue from `revenue_by_year[selectedYear]` field
    - `last_interaction`: Accounts with contacts prioritized, then by `last_interaction_date` descending
 
-9. **Revenue Calculation** (For display and segment assignment)
-   - Source: Won estimates for current year (year-based, not rolling 12 months)
-   - Year determination priority (per Estimates spec R2):
-     1. `contract_end` (primary)
-     2. `contract_start` (fallback)
-     3. `estimate_date` (fallback)
-     4. `created_date` (fallback)
-     5. If none: Assumes current year
-   - Price field priority:
-     1. `total_price_with_tax` (preferred)
-     2. `total_price` (fallback if total_price_with_tax missing/zero)
-   - Multi-year contracts: Annualized (total price divided by contract years)
-   - Contract years calculation: See Contract Duration section
+9. **Revenue Display** (For Accounts page)
+   - Source: Stored `revenue_by_year` JSONB field (calculated during import, not real-time)
+   - Format: `{ "2024": 50000, "2025": 75000, ... }`
+   - Retrieval: Uses `getRevenueForYear(account, selectedYear)` which reads from `account.revenue_by_year[selectedYear]`
+   - Performance: No calculation on render - instant year switching
+   - Fallback: Returns 0 (displays as "-") if `revenue_by_year` is missing or year not found
+   - Note: Revenue is calculated and stored during import only. See Revenue Logic spec for calculation details.
 
 10. **Revenue Segment Assignment**
     - Segment A: ≥15% of total revenue (current year)
@@ -215,15 +210,15 @@ Contract duration is calculated in whole months before converting to years.
 - **R3**: Archived accounts are excluded from at-risk filtering
 - **R4**: Archived accounts can be viewed in separate "Archived" tab
 
-### Revenue Calculation Rules
+### Revenue Display Rules
 
-- **R5**: Revenue is calculated only from won estimates (case-insensitive status check)
-- **R6**: Only estimates applying to current year are included (year-based, not rolling 12 months)
-- **R7**: Use `total_price_with_tax` if available and > 0
-- **R8**: If `total_price_with_tax` is missing/zero but `total_price` exists and > 0, use `total_price` as fallback
-- **R9**: If fallback to `total_price` is used, notify user once per session (toast notification)
-- **R10**: Multi-year contracts are annualized (total price divided by contract years)
-- **R11**: Revenue display shows calculated revenue from won estimates, or "-" if none
+- **R5**: Revenue display uses stored `revenue_by_year[selectedYear]` field (not calculated in real-time)
+- **R6**: Revenue is calculated and stored during import only (see Revenue Logic spec for calculation details)
+- **R7**: Year switching is instant - data already stored for all years in `revenue_by_year` JSONB field
+- **R8**: If `revenue_by_year` is missing or year not found, displays "-" (zero revenue)
+- **R9**: Cache settings: `staleTime: 60 minutes`, `gcTime: 2 hours` (data only changes on import)
+- **R10**: Revenue calculation details (year determination, price fields, annualization) are in Revenue Logic spec
+- **R11**: Revenue display shows stored revenue from `revenue_by_year[selectedYear]`, or "-" if none
 
 ### Revenue Segment Rules
 
@@ -311,17 +306,16 @@ Contract duration is calculated in whole months before converting to years.
 ### Example 1: Basic Account Display
 
 **Input**:
-- Account: `{ id: 'acc-1', name: 'Acme Corp', account_type: 'customer', status: 'active', revenue_segment: 'A', organization_score: 85 }`
-- Estimates: `[{ account_id: 'acc-1', status: 'won', total_price_with_tax: 50000, contract_start: '2024-01-01', contract_end: '2024-12-31' }]`
-- Current year: 2024
+- Account: `{ id: 'acc-1', name: 'Acme Corp', account_type: 'customer', status: 'active', revenue_segment: 'A', organization_score: 85, revenue_by_year: { "2024": 50000 } }`
+- Selected year: 2024
 
 **Output**:
-- Revenue: $50,000
+- Revenue: $50,000 (from `revenue_by_year["2024"]`)
 - Segment: A
 - Score: 85/100
 - Type: Customer
 
-**Rules**: R5, R6, R7, R12
+**Rules**: R5, R6, R7, R12a (revenue from stored field, not calculated)
 
 ### Example 2: Multi-Year Contract Annualization
 
@@ -412,17 +406,17 @@ Contract duration is calculated in whole months before converting to years.
 ## Acceptance Criteria
 
 - **AC1**: Accounts page displays all non-archived accounts by default (R1, R3)
-- **AC2**: Revenue is calculated from won estimates for current year only (R5, R6)
-- **AC3**: Multi-year contracts are annualized correctly (R10, R21, R22)
-- **AC4**: Revenue segments are assigned based on current year revenue percentages (R12-R15)
+- **AC2**: Revenue display uses stored `revenue_by_year[selectedYear]` field (R5, R6, R12a)
+- **AC3**: Revenue is calculated and stored during import for all years (R10, R21, R22, R12)
+- **AC4**: Revenue segments are assigned based on selected year revenue percentages (R12-R15)
 - **AC5**: Segment D is assigned to project-only accounts (R15, R16)
-- **AC6**: Price fallback uses `total_price` when `total_price_with_tax` missing (R8, R9)
+- **AC6**: Price fallback uses `total_price` when `total_price_with_tax` missing (during import only) (R8, R9)
 - **AC7**: Archive status uses boolean flag preferentially (R1, R2)
 - **AC8**: User filter matches accounts with salesperson OR estimator (R29)
 - **AC9**: At-risk filtering uses notification cache, excludes archived/snoozed (R31, R32)
 - **AC10**: Typo detection flags contracts 1 month over exact year boundary (R24, R25, R26)
 - **AC11**: Segment recalculation auto-triggers on import (R19)
-- **AC12**: Test mode affects all revenue calculations consistently (R37, R38, R39)
+- **AC12**: Year switching is instant - revenue data stored for all years in `revenue_by_year` (R7, R12a)
 
 ## Special Considerations
 
@@ -444,8 +438,10 @@ Contract duration is calculated in whole months before converting to years.
 ### Performance Considerations
 
 - Account fetching uses pagination (1000 per page, max 100 pages = 100k accounts)
-- Estimates are grouped by account_id for efficient revenue calculation
+- Revenue display uses stored `revenue_by_year` field (no calculation on render - instant year switching)
+- Estimates are grouped by account_id for user filtering only (not for revenue calculation)
 - Notification cache reduces database queries for at-risk filtering
+- React Query cache: `staleTime: 60 minutes`, `gcTime: 2 hours` (data only changes on import)
 
 ### Test Mode
 

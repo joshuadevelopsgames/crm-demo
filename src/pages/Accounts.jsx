@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { calculateRevenueSegment, calculateTotalRevenue, getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -102,8 +102,8 @@ export default function Accounts() {
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
     enabled: !userLoading && !!user, // Wait for user to load before fetching
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
+    staleTime: 60 * 60 * 1000, // 60 minutes (data only changes on import)
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours (keep in cache longer)
     refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
   });
@@ -113,8 +113,8 @@ export default function Accounts() {
     queryKey: ['contacts'],
     queryFn: () => base44.entities.Contact.list(),
     enabled: !userLoading && !!user, // Wait for user to load before fetching
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 60 * 60 * 1000, // 60 minutes (data only changes on import)
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
   });
@@ -140,8 +140,8 @@ export default function Accounts() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 60 * 60 * 1000, // 60 minutes (data only changes on import)
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
     enabled: !userLoading && !!user, // Wait for user to load before fetching
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
@@ -157,8 +157,8 @@ export default function Accounts() {
       return result.success ? (result.data || []) : [];
     },
     enabled: !userLoading && !!user, // Wait for user to load before fetching
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 60 * 60 * 1000, // 60 minutes (data only changes on import)
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
   });
@@ -308,7 +308,8 @@ export default function Accounts() {
     return result;
   }, [allEstimates]);
 
-  // Group estimates by account_id for revenue calculation
+  // Group estimates by account_id for user filtering (not for revenue calculation)
+  // Revenue now comes from account.revenue_by_year stored field
   const estimatesByAccountId = useMemo(() => {
     const grouped = {};
     allEstimates.forEach(est => {
@@ -614,8 +615,8 @@ export default function Accounts() {
       return (b.organization_score || 0) - (a.organization_score || 0);
     }
     if (sortBy === 'revenue') {
-      const aRevenue = getAccountRevenue(a, estimatesByAccountId[a.id] || []);
-      const bRevenue = getAccountRevenue(b, estimatesByAccountId[b.id] || []);
+      const aRevenue = getRevenueForYear(a, selectedYear);
+      const bRevenue = getRevenueForYear(b, selectedYear);
       return bRevenue - aRevenue;
     }
     if (sortBy === 'last_interaction') {
@@ -995,8 +996,7 @@ export default function Accounts() {
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
                           {(() => {
-                            const estimates = estimatesByAccountId[account.id] || [];
-                            const revenue = getAccountRevenue(account, estimates);
+                            const revenue = getRevenueForYear(account, selectedYear);
                             
                             // Debug logging - log first 5 accounts
                             if (process.env.NODE_ENV === 'development') {
@@ -1005,19 +1005,9 @@ export default function Accounts() {
                                 console.log(`[Accounts Table Row ${accountIndex}]`, {
                                   accountName: account.name,
                                   accountId: account.id,
-                                  estimatesCount: estimates.length,
-                                  wonEstimates: estimates.filter(e => isWonStatus(e)).length,
                                   revenue,
                                   currentYear: getCurrentYear(),
-                                  sampleEstimates: estimates.slice(0, 3).map(est => ({
-                                    id: est.id,
-                                    status: est.status,
-                                    contract_start: est.contract_start,
-                                    contract_end: est.contract_end,
-                                    estimate_date: est.estimate_date,
-                                    created_date: est.created_date,
-                                    total_price_with_tax: est.total_price_with_tax
-                                  }))
+                                  revenue_by_year: account.revenue_by_year
                                 });
                               }
                             }
@@ -1179,7 +1169,7 @@ export default function Accounts() {
                         </span>
                       </div>
                       {(() => {
-                        const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                        const revenue = getRevenueForYear(account, selectedYear);
                         return revenue > 0 ? (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
@@ -1439,7 +1429,7 @@ export default function Accounts() {
                           </td>
                           <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
                             {(() => {
-                              const revenue = getAccountRevenue(account, estimatesByAccountId[account.id] || []);
+                              const revenue = getRevenueForYear(account, selectedYear);
                               return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
                             })()}
                           </td>

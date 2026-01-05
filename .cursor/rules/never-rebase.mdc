@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+---
+
+# Never Rebase
+
+**CRITICAL RULE: NEVER use git rebase in this project.**
+
+## Why
+- Rebasing rewrites commit history, which can cause issues with shared branches
+- Rebasing can create duplicate commits when pushing to remotes
+- Rebasing makes it harder to track the actual history of changes
+- This project uses merge-based workflow for safety and clarity
+
+## What to Do Instead
+
+### When pulling changes:
+- Use `git pull` (which merges by default)
+- Or explicitly: `git pull --no-rebase`
+- Or: `git fetch` followed by `git merge`
+
+### When branches diverge:
+- Always use merge, never rebase
+- Example: `git pull origin main` (creates a merge commit)
+- If you see "divergent branches", use merge to reconcile
+
+### If you accidentally rebased:
+- Do NOT push
+- Use `git reflog` to find the commit before rebase
+- Reset to that commit: `git reset --hard <commit-hash>`
+- Then use merge instead
+
+## Commands to Avoid
+- ❌ `git pull --rebase`
+- ❌ `git rebase`
+- ❌ `git rebase -i` (interactive rebase)
+- ❌ `git pull --rebase` in any form
+
+## Commands to Use
+- ✅ `git pull` (default merge)
+- ✅ `git pull --no-rebase`
+- ✅ `git fetch` then `git merge`
+- ✅ `git merge <branch>` for merging branches
+
+## Exception
+There are NO exceptions to this rule. Always use merge, never rebase.

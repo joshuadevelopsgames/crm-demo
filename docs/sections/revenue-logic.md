@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines how revenue is calculated, displayed, and used for segment assignment across the application. Revenue calculations determine account financial value, drive revenue segment classification (A/B/C/D), and support reporting and analytics.
+This document defines how revenue is calculated, stored, displayed, and used for segment assignment across the application. Revenue is calculated during import and stored in `revenue_by_year` JSONB field. The Accounts page displays revenue by reading from this stored field (not calculating in real-time). Revenue calculations determine account financial value, drive revenue segment classification (A/B/C/D), and support reporting and analytics.
 
 ## Data Contract
 
@@ -102,21 +102,28 @@ This document defines how revenue is calculated, displayed, and used for segment
    - If only `contract_start` exists: use full price for that year
    - If no contract dates: use full price for determined year
 
-8. **Calculate Account Revenue**
-   - Sum all annualized values for won estimates that apply to current year
-   - If no won estimates for current year → return 0
+8. **Calculate Account Revenue** (during import only)
+   - Sum all annualized values for won estimates that apply to each year
+   - Calculated for ALL years (not just current year)
+   - If no won estimates for a year → 0 for that year
 
-9. **Calculate Total Revenue**
-   - Sum of all accounts' `annual_revenue` fields (stored values, not recalculated)
+9. **Store Revenue by Year** (during import only)
+   - Store calculated revenue in `revenue_by_year` JSONB field: `{ "2024": 50000, "2025": 75000, ... }`
+   - Each account has revenue stored for all years that have won estimates
+   - `annual_revenue` field stores value for current year only (backward compatibility)
 
-10. **Calculate Historical Revenue** (during import only)
-    - For each account, calculate revenue for ALL years (not just current year)
-    - Store results in `revenue_by_year` JSONB field: `{ "2024": 50000, "2025": 75000, ... }`
-    - `annual_revenue` field stores value for current year only
+10. **Display Revenue** (Accounts page)
+    - Read from stored `revenue_by_year[selectedYear]` field (not calculated in real-time)
+    - Uses `getRevenueForYear(account, selectedYear)` function
+    - Instant year switching - data already stored for all years
+    - Returns 0 (displays as "-") if year not found in `revenue_by_year`
 
-11. **Assign Revenue Segment**
+11. **Calculate Total Revenue** (for segment calculation)
+    - Sum of all accounts' `revenue_by_year[selectedYear]` fields (stored values, not recalculated)
+
+12. **Assign Revenue Segment**
     - Check for Segment D first (project-only accounts)
-    - If not D, calculate percentage: `(accountRevenue / totalRevenue) * 100` (using ALL won estimates)
+    - If not D, calculate percentage: `(accountRevenue / totalRevenue) * 100` (using stored revenue from `revenue_by_year[selectedYear]`)
     - Assign A/B/C based on percentage thresholds
 
 ### Transformations in Sequence
@@ -185,13 +192,19 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R10**: If estimate applies to current year, include annualized value; otherwise exclude (value = 0).
 
-**R11**: Account revenue is sum of annualized values for all won estimates that apply to current year.
+**R11**: Account revenue is calculated during import only - sum of annualized values for all won estimates that apply to each year.
 
-**R12**: If account has no won estimates for current year, revenue = 0 (displays as "-" in UI).
+**R12**: Calculated revenue is stored in `revenue_by_year` JSONB field for all years during import.
 
-**R13**: `annual_revenue` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
+**R12a**: Revenue display on Accounts page reads from stored `revenue_by_year[selectedYear]` field (not calculated in real-time).
 
-**R14**: Total revenue is sum of all accounts' stored `annual_revenue` fields (not recalculated from estimates).
+**R12b**: If account has no won estimates for selected year, stored revenue = 0 (displays as "-" in UI).
+
+**R13**: `revenue_by_year` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
+
+**R13a**: `annual_revenue` field stores value for current year only (backward compatibility, also calculated during import).
+
+**R14**: Total revenue for segment calculation is sum of all accounts' stored `revenue_by_year[selectedYear]` fields (not recalculated from estimates).
 
 **R15**: Segment D assignment: Account has "Standard" type won estimates AND no "Service" type won estimates (current year only). If account has BOTH Standard and Service, it gets A/B/C based on revenue percentage calculated from ALL won estimates (not just Service).
 
@@ -283,7 +296,7 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 ## Examples
 
-### Example 1: Single-Year Won Estimate
+### Example 1: Single-Year Won Estimate (During Import)
 
 **Input:**
 ```json
@@ -297,19 +310,24 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
   "account_id": "acc-001"
 }
 ```
-Current year: 2024
 
-**Process:**
+**Process (During Import):**
 1. Status is "won" → included
-2. Year determination: `contract_end = 2025` (Priority 1, per Estimates spec R2) → does NOT apply to 2024
+2. Year determination: `contract_end = 2025` (Priority 1, per Estimates spec R2)
 3. Price: `total_price_with_tax = 50000`
 4. Contract duration: 12 months → 1 year
 5. Annualization: `50000 / 1 = 50000`
-6. Allocation: 2024 gets $50000
+6. Allocation: 2024 gets $50000 (from contract_start)
+7. Store in `revenue_by_year`: `{ "2024": 50000 }`
 
-**Output:**
-- Account revenue: $50,000
-- Rules: R1, R2, R3, R6, R7, R8, R9, R10, R11
+**Output (Stored):**
+- `account.revenue_by_year`: `{ "2024": 50000 }`
+- Rules: R1, R2, R3, R6, R7, R8, R9, R10, R11, R12
+
+**Display (Accounts Page):**
+- Selected year: 2024
+- Revenue displayed: $50,000 (from `revenue_by_year["2024"]`)
+- Rules: R12a (reads from stored field, no calculation)
 
 ### Example 2: Multi-Year Contract
 
@@ -325,22 +343,25 @@ Current year: 2024
   "account_id": "acc-002"
 }
 ```
-Current year: 2025
 
-**Process:**
+**Process (During Import):**
 1. Status is "won" → included
-2. Year determination: `contract_end = 2027` (Priority 1, per Estimates spec R2) → does NOT apply to 2025
-3. **Wait**: Check contract allocation
-4. Contract duration: 35 months → 3 years
-5. Annualization: `300000 / 3 = 100000`
-6. Allocation: [2024, 2025, 2026] → 2025 is included
-7. Use contract allocation: 2025 gets $100,000
+2. Year determination: `contract_end = 2027` (Priority 1, per Estimates spec R2)
+3. Contract duration: 35 months → 3 years
+4. Annualization: `300000 / 3 = 100000`
+5. Allocation: [2024, 2025, 2026] → all years get $100,000
+6. Store in `revenue_by_year`: `{ "2024": 100000, "2025": 100000, "2026": 100000 }`
 
-**Output:**
-- Account revenue: $100,000
-- Rules: R1, R2, R6, R7, R8, R9, R10, R11
+**Output (Stored):**
+- `account.revenue_by_year`: `{ "2024": 100000, "2025": 100000, "2026": 100000 }`
+- Rules: R1, R2, R6, R7, R8, R9, R10, R11, R12
 
-### Example 3: Price Fallback
+**Display (Accounts Page):**
+- Selected year: 2025
+- Revenue displayed: $100,000 (from `revenue_by_year["2025"]`)
+- Rules: R12a (reads from stored field, instant year switching)
+
+### Example 3: Price Fallback (During Import)
 
 **Input:**
 ```json
@@ -355,19 +376,24 @@ Current year: 2025
   "account_id": "acc-003"
 }
 ```
-Current year: 2024
 
-**Process:**
+**Process (During Import):**
 1. Status is "won" → included
 2. Year determination: `contract_end` and `contract_start` are null, so uses `estimate_date = 2024` (Priority 3, per Estimates spec R2) → applies to 2024
 3. Price: `total_price_with_tax = 0` → fallback to `total_price = 75000`
-4. Show toast: "Some estimates are missing tax-inclusive prices..."
+4. Show toast: "Some estimates are missing tax-inclusive prices..." (once per session during import)
 5. No contract dates → use full price
+6. Store in `revenue_by_year`: `{ "2024": 75000 }`
 
-**Output:**
-- Account revenue: $75,000
-- Toast notification shown (once per session)
-- Rules: R1, R2, R3, R4, R11
+**Output (Stored):**
+- `account.revenue_by_year`: `{ "2024": 75000 }`
+- Toast notification shown (once per session during import)
+- Rules: R1, R2, R3, R4, R11, R12
+
+**Display (Accounts Page):**
+- Selected year: 2024
+- Revenue displayed: $75,000 (from `revenue_by_year["2024"]`)
+- Rules: R12a (reads from stored field)
 
 ### Example 4: Segment D (Project Only)
 
@@ -472,26 +498,19 @@ Current year: 2024
 ```json
 Account: {
   "id": "acc-008",
-  "annual_revenue": 0
+  "revenue_by_year": null
 }
-Estimates: [
-  {
-    "status": "lost",
-    "contract_end": null,
-    "contract_start": null,
-    "estimate_date": "2024-03-01"
-  }
-]
 ```
-Current year: 2024
+Selected year: 2024
 
-**Process:**
-1. No won estimates → revenue = 0
-2. Display as "-" in UI
+**Process (Display):**
+1. `revenue_by_year` is null or missing "2024" key
+2. `getRevenueForYear()` returns 0
+3. Display as "-" in UI
 
 **Output:**
 - Account revenue: 0 (displays as "-")
-- Rules: R1, R11, R12
+- Rules: R12a, R12b (reads from stored field, returns 0 if missing)
 
 ## Acceptance Criteria
 
@@ -511,13 +530,17 @@ Current year: 2024
 
 **AC8**: Multi-year contract revenue is allocated to sequential calendar years starting from contract start year. (R9)
 
-**AC9**: Account revenue is sum of annualized values for won estimates that apply to current year. (R11)
+**AC9**: Account revenue is calculated during import and stored in `revenue_by_year` for all years. (R11, R12)
 
-**AC10**: Accounts with no won estimates for current year have revenue = 0 (displays as "-"). (R12)
+**AC10**: Revenue display on Accounts page reads from stored `revenue_by_year[selectedYear]` field (not calculated in real-time). (R12a)
 
-**AC11**: `annual_revenue` field is calculated and stored during import only, not updated by triggers. (R13)
+**AC10a**: Accounts with no won estimates for selected year have stored revenue = 0 (displays as "-"). (R12b)
 
-**AC12**: Total revenue is sum of all accounts' stored `annual_revenue` fields. (R14)
+**AC11**: `revenue_by_year` field is calculated and stored during import only, not updated by triggers. (R13)
+
+**AC11a**: `annual_revenue` field stores value for current year only (backward compatibility). (R13a)
+
+**AC12**: Total revenue for segment calculation is sum of all accounts' stored `revenue_by_year[selectedYear]` fields. (R14)
 
 **AC13**: Segment D is assigned to accounts with "Standard" won estimates and no "Service" won estimates (current year only). (R15)
 
@@ -544,9 +567,11 @@ Current year: 2024
 ### Edge Cases
 
 - **Zero Revenue**: Accounts with no won estimates display "-" in UI, default to Segment C
+- **Missing revenue_by_year**: If field is null or missing year, displays "-" (returns 0)
+- **Year Switching**: Instant - data already stored for all years in `revenue_by_year` field
 - **Exact Year Boundaries**: Contracts ending exactly on start date + N years are calculated as N years (not N+1)
 - **Typo Detection**: Advisory only, does not affect calculations
-- **Price Fallback**: Toast notification shown once per session to avoid spam
+- **Price Fallback**: Toast notification shown once per session to avoid spam (during import calculation only)
 
 ### Exceptions
 
@@ -556,11 +581,12 @@ Current year: 2024
 
 ### Backward Compatibility
 
-- `annual_revenue` field must be recalculated on import if estimates change
+- `revenue_by_year` field is calculated and stored during import - existing accounts will have it populated on next import
+- `annual_revenue` field stores value for current year only (backward compatibility, also calculated during import)
 - Revenue segment defaults to 'C' if missing (preserves existing behavior)
-- Test mode will be replaced with year selector (behavior change requires spec approval)
-- `revenue_by_year` field is new - existing accounts will have it populated on next import
-- Manual recalculation button is new feature - existing behavior (import-only) remains default
+- Year selector replaces test mode (behavior change requires spec approval)
+- Manual recalculation button is available for admins - existing behavior (import-only) remains default
+- Accounts page now uses stored `revenue_by_year` instead of real-time calculation (performance improvement, same data source)
 
 ### Locale Considerations
 
