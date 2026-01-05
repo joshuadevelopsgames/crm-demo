@@ -197,163 +197,61 @@ ${bugReport.consoleLogs.map(log =>
       // Don't re-throw - we want to continue and create notification even if email fails
     }
 
-    // Create notification for admin user (jrsschroeder@gmail.com)
-    // This should ALWAYS happen, even if email fails
+    // Skip notification creation for jrsschroeder@gmail.com - bug reports are emailed
+    // No need to store notifications since they get the full report via email
     let notificationCreated = false;
     let notificationError = null;
-
-    try {
-      console.log('🔔 Attempting to create notification for bug report');
-      const supabase = getSupabase();
-      
-      if (!supabase) {
-        notificationError = 'Supabase not configured (missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY)';
-        console.error('❌', notificationError);
-      } else {
-        console.log('✅ Supabase client initialized');
-        
-        // Find user by email
-        console.log('🔍 Looking up user: jrsschroeder@gmail.com');
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .eq('email', 'jrsschroeder@gmail.com')
-          .single();
-
-        if (profileError) {
-          notificationError = `Profile lookup error: ${profileError.message}`;
-          console.error('❌', notificationError, profileError);
-        } else if (!profile) {
-          notificationError = 'User jrsschroeder@gmail.com not found in profiles table';
-          console.error('❌', notificationError);
-        } else {
-          console.log(`✅ Found user profile: ${profile.id} (${profile.email})`);
-          
-          // Create notification with full bug report data stored as JSON
-          const notificationTitle = '🐛 New Bug Report';
-          const notificationMessage = bugReport.description.length > 100 
-            ? bugReport.description.substring(0, 100) + '...'
-            : bugReport.description;
-
-          // Store full bug report data as JSON in message field (for full debugging info)
-          // Format: Short preview + JSON data
-          const fullBugReportData = {
-            description: bugReport.description,
-            userEmail: bugReport.userEmail,
-            priority: bugReport.priority || 'medium',
-            selectedElement: bugReport.selectedElement,
-            consoleLogs: bugReport.consoleLogs,
-            userInfo: bugReport.userInfo
-          };
-          
-          // Store as: "Preview text\n\n---FULL_DATA---\n{JSON}"
-          const messageWithData = `${notificationMessage}\n\n---FULL_DATA---\n${JSON.stringify(fullBugReportData, null, 2)}`;
-
-          console.log('📝 Creating notification:', {
-            user_id: profile.id,
-            type: 'bug_report',
-            title: notificationTitle,
-            messagePreview: notificationMessage.substring(0, 50) + '...',
-            hasFullData: true
-          });
-
-          const { data: notificationData, error: notificationInsertError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: profile.id,
-              type: 'bug_report',
-              title: notificationTitle,
-              message: messageWithData,
-              is_read: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (notificationInsertError) {
-            notificationError = `Notification insert error: ${notificationInsertError.message}`;
-            console.error('❌', notificationError, notificationInsertError);
-          } else {
-            notificationCreated = true;
-            console.log('✅ Notification created successfully:', notificationData?.id);
-          }
-        }
-      }
-    } catch (error) {
-      notificationError = `Exception creating notification: ${error.message}`;
-      console.error('❌', notificationError, error);
+    
+    // Check if recipient is jrsschroeder@gmail.com - if so, skip notification
+    if (recipientEmail === 'jrsschroeder@gmail.com') {
+      console.log('ℹ️ Skipping notification creation for jrsschroeder@gmail.com (reports are emailed)');
+      notificationCreated = false; // Not an error, just skipped
+    } else {
+      // For other recipients, create notification (if needed in future)
+      console.log('ℹ️ Notification creation skipped (only email is sent)');
     }
 
-    // Return success if either email or notification succeeded
-    // Log warnings if one failed
-    if (!emailSent && !notificationCreated) {
-      console.error('❌ CRITICAL: Both email and notification failed:', {
+    // Return success if email was sent
+    // For jrsschroeder@gmail.com, notification is intentionally skipped
+    if (!emailSent) {
+      console.error('❌ CRITICAL: Email failed:', {
         emailError,
-        notificationError,
         emailService,
         recipientEmail,
         envCheck: {
           hasResendKey: !!process.env.RESEND_API_KEY,
-          hasResendFrom: !!process.env.RESEND_FROM_EMAIL,
-          hasSupabaseUrl: !!process.env.SUPABASE_URL,
-          hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+          hasResendFrom: !!process.env.RESEND_FROM_EMAIL
         }
       });
       return res.status(500).json({ 
         success: false,
-        error: 'Failed to send bug report. Email and notification creation both failed.',
+        error: 'Failed to send bug report email.',
         details: {
           emailError,
-          notificationError,
           emailService,
           recipientEmail
         }
       });
     }
 
-    // Return success with warnings if one method failed
-    const warnings = [];
-    if (!emailSent) {
-      const emailWarning = emailError 
-        ? `Email could not be sent: ${emailError}` 
-        : 'Email could not be sent (check email service configuration)';
-      warnings.push(emailWarning);
-    }
-    if (!notificationCreated) {
-      const notificationWarning = notificationError
-        ? `Notification could not be created: ${notificationError}`
-        : 'Notification could not be created (check Supabase configuration)';
-      warnings.push(notificationWarning);
-    }
-
+    // Return success - notification is skipped for jrsschroeder@gmail.com
     const responseData = { 
       success: true,
       message: 'Bug report processed successfully',
-      emailSent,
-      notificationCreated
+      emailSent: true,
+      notificationCreated: false // Intentionally skipped for jrsschroeder@gmail.com
     };
     
-    if (warnings.length > 0) {
-      responseData.warnings = warnings;
-      responseData.emailError = !emailSent ? emailError : undefined;
-      responseData.notificationError = !notificationCreated ? notificationError : undefined;
-      console.warn('⚠️ Bug report sent with warnings:', warnings);
-      if (emailError) {
-        console.error('❌ Email error details:', emailError);
-      }
-      if (notificationError) {
-        console.error('❌ Notification error details:', notificationError);
-      }
+    if (emailError) {
+      console.error('❌ Email error details:', emailError);
     }
     
     console.log('✅ Bug report processed:', {
-      emailSent,
-      notificationCreated,
+      emailSent: true,
+      notificationCreated: false,
       recipientEmail,
       emailService,
-      emailError: emailError || 'none',
-      notificationError: notificationError || 'none'
+      emailError: emailError || 'none'
     });
     
     return res.status(200).json(responseData);

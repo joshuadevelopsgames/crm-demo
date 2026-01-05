@@ -256,9 +256,7 @@ function getCurrentYearForCalculation() {
 export function calculateRevenueFromEstimates(estimates = []) {
   const currentYear = getCurrentYearForCalculation();
   
-  if (typeof window !== 'undefined' && window.__getCurrentYear) {
-    console.log(`[calculateRevenueFromEstimates] Using year: ${currentYear} for ${estimates.length} estimates`);
-  }
+  // Removed individual log - will be grouped in getAccountRevenue instead
   
   return estimates
     .filter(est => {
@@ -308,13 +306,18 @@ export function getAccountRevenue(account, estimates = []) {
   
   const currentYear = getCurrentYearForCalculation();
   
-  // Debug logging
-  if (typeof window !== 'undefined' && window.__getCurrentYear) {
-    console.log(`[getAccountRevenue] Account: ${account.name}, Year: ${currentYear}, Estimates: ${estimates.length}`);
+  // Group all logs for this account in a collapsed group
+  const shouldLog = typeof window !== 'undefined' && window.__getCurrentYear;
+  if (shouldLog) {
+    console.groupCollapsed(`[getAccountRevenue] ${account.name} (Year: ${currentYear}, Estimates: ${estimates.length})`);
   }
   
   if (estimates && estimates.length > 0) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
+    
+    if (shouldLog) {
+      console.log(`Using year: ${currentYear} for ${estimates.length} estimates`);
+    }
     
     // Per spec R1, R11: Check if we have won estimates that apply to the current year
     const hasWonEstimatesForCurrentYear = estimates.some(est => {
@@ -323,8 +326,8 @@ export function getAccountRevenue(account, estimates = []) {
       }
       const yearData = getEstimateYearData(est, currentYear);
       if (yearData && yearData.appliesToCurrentYear) {
-        if (typeof window !== 'undefined' && window.__getCurrentYear) {
-          console.log(`[getAccountRevenue] Found won estimate for ${currentYear}:`, {
+        if (shouldLog) {
+          console.log(`✓ Found won estimate:`, {
             estimateId: est.id,
             status: est.status,
             contractStart: est.contract_start,
@@ -341,19 +344,36 @@ export function getAccountRevenue(account, estimates = []) {
     if (hasWonEstimatesForCurrentYear) {
       // We have won estimates that apply to current year, return calculated revenue
       // (even if 0, because that's the actual revenue from won estimates)
-      if (typeof window !== 'undefined' && window.__getCurrentYear) {
-        console.log(`[getAccountRevenue] Revenue for ${account.name}: $${calculatedRevenue}`);
+      if (shouldLog) {
+        console.log(`Revenue: $${calculatedRevenue.toLocaleString()}`);
+        console.groupEnd();
       }
       return calculatedRevenue;
     } else {
-      if (typeof window !== 'undefined' && window.__getCurrentYear) {
-        console.log(`[getAccountRevenue] No won estimates for ${currentYear} for account ${account.name}`);
-        // Log all estimates to see what we have
-        estimates.forEach(est => {
-          const yearData = getEstimateYearData(est, currentYear);
-          console.log(`  Estimate ${est.id}: status=${est.status}, appliesTo${currentYear}=${yearData?.appliesToCurrentYear}, contractStart=${est.contract_start}, contractEnd=${est.contract_end}, estimate_date=${est.estimate_date}, created_date=${est.created_date}`);
-        });
+      if (shouldLog) {
+        console.log(`No won estimates for ${currentYear}`);
+        // Only log estimate details if there are estimates but none are won
+        if (estimates.length > 0) {
+          const estimateSummary = estimates.map(est => {
+            const yearData = getEstimateYearData(est, currentYear);
+            return {
+              id: est.id,
+              status: est.status,
+              [`appliesTo${currentYear}`]: yearData?.appliesToCurrentYear || false,
+              contractStart: est.contract_start,
+              contractEnd: est.contract_end,
+              estimate_date: est.estimate_date
+            };
+          });
+          console.log(`Estimates:`, estimateSummary);
+        }
+        console.groupEnd();
       }
+    }
+  } else {
+    if (shouldLog) {
+      console.log(`No estimates`);
+      console.groupEnd();
     }
   }
   
