@@ -202,12 +202,10 @@ ${bugReport.consoleLogs.map(log =>
     const notificationCreated = false;
     const notificationError = null;
     
-    // Check if recipient is jrsschroeder@gmail.com - if so, skip notification
+    // Log that notifications are skipped (reports are emailed only)
     if (recipientEmail === 'jrsschroeder@gmail.com') {
       console.log('ℹ️ Skipping notification creation for jrsschroeder@gmail.com (reports are emailed)');
-      notificationCreated = false; // Not an error, just skipped
     } else {
-      // For other recipients, create notification (if needed in future)
       console.log('ℹ️ Notification creation skipped (only email is sent)');
     }
 
