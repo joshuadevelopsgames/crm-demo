@@ -1007,19 +1007,9 @@ export default function Accounts() {
                                 console.log(`[Accounts Table Row ${accountIndex}]`, {
                                   accountName: account.name,
                                   accountId: account.id,
-                                  estimatesCount: estimates.length,
-                                  wonEstimates: estimates.filter(e => isWonStatus(e)).length,
                                   revenue,
                                   currentYear: getCurrentYear(),
-                                  sampleEstimates: estimates.slice(0, 3).map(est => ({
-                                    id: est.id,
-                                    status: est.status,
-                                    contract_start: est.contract_start,
-                                    contract_end: est.contract_end,
-                                    estimate_date: est.estimate_date,
-                                    created_date: est.created_date,
-                                    total_price_with_tax: est.total_price_with_tax
-                                  }))
+                                  revenue_by_year: account.revenue_by_year
                                 });
                               }
                             }
