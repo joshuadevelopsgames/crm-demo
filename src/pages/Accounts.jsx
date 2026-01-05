@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue } from '@/utils/revenueSegmentCalculator';
+import { calculateRevenueSegment, calculateTotalRevenue, getAccountRevenue, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -1480,14 +1480,17 @@ export default function Accounts() {
                             {neglectStatus.label}
                           </span>
                         </div>
-                        {account.annual_revenue && (
-                          <div className="flex items-center justify-between text-sm mt-2">
-                            <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
-                              ${account.annual_revenue.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const revenue = getRevenueForYear(account, selectedYear);
+                          return revenue > 0 ? (
+                            <div className="flex items-center justify-between text-sm mt-2">
+                              <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
+                              <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
+                                ${revenue.toLocaleString()}
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
 
                       {/* Warnings */}

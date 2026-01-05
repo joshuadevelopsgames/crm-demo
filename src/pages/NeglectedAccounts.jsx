@@ -10,12 +10,15 @@ import { format, differenceInDays } from 'date-fns';
 import { createPageUrl } from '@/utils';
 import SnoozeDialog from '@/components/SnoozeDialog';
 import { snoozeNotification } from '@/services/notificationService';
+import { useYearSelector } from '@/contexts/YearSelectorContext';
+import { getRevenueForYear } from '@/utils/revenueSegmentCalculator';
 
 export default function NeglectedAccounts() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'card'
+  const { selectedYear, getCurrentYear } = useYearSelector();
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -231,7 +234,10 @@ export default function NeglectedAccounts() {
                           )}
                         </td>
                         <td className="px-4 py-4 text-sm text-slate-900 dark:text-[#ffffff] font-medium">
-                          {account.annual_revenue ? `$${account.annual_revenue.toLocaleString()}` : '-'}
+                          {(() => {
+                            const revenue = getRevenueForYear(account, selectedYear);
+                            return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
+                          })()}
                         </td>
                         <td className="px-4 py-4">
                           {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
@@ -314,14 +320,17 @@ export default function NeglectedAccounts() {
                           {daysSince} days ago
                         </Badge>
                       )}
-                      {account.annual_revenue && (
-                        <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Annual Revenue</p>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
-                            ${account.annual_revenue.toLocaleString()}
-                          </p>
-                        </div>
-                      )}
+                      {(() => {
+                        const revenue = getRevenueForYear(account, selectedYear);
+                        return revenue > 0 ? (
+                          <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Annual Revenue</p>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-[#ffffff]">
+                              ${revenue.toLocaleString()}
+                            </p>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

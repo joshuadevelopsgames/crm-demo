@@ -294,6 +294,27 @@ export function calculateRevenueFromEstimates(estimates = []) {
 }
 
 /**
+ * Get revenue for selected year from account's revenue_by_year field
+ * Falls back to annual_revenue if revenue_by_year is not available (backward compatibility)
+ * @param {Object} account - Account object
+ * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
+ * @returns {number} - Revenue for selected year, or 0 if not available
+ */
+export function getRevenueForYear(account, selectedYear = null) {
+  const year = selectedYear || getCurrentYearForCalculation();
+  
+  if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
+    const yearRevenue = account.revenue_by_year[year.toString()];
+    return typeof yearRevenue === 'number' ? yearRevenue : parseFloat(yearRevenue) || 0;
+  }
+  
+  // Fallback to annual_revenue if revenue_by_year not available (backward compatibility)
+  return typeof account.annual_revenue === 'number' 
+    ? account.annual_revenue 
+    : parseFloat(account.annual_revenue) || 0;
+}
+
+/**
  * Get account revenue - total revenue from selected year
  * @param {Object} account - Account object
  * @param {Array} estimates - Array of estimate objects for this account (optional)
@@ -362,9 +383,9 @@ export function getAccountRevenue(account, estimates = []) {
 
 /**
  * Calculate revenue segment for a single account
- * Uses stored annual_revenue directly (already calculated for selected year)
+ * Uses revenue_by_year[selectedYear] for account revenue, falls back to annual_revenue if not available
  * @param {Object} account - The account object
- * @param {number} totalRevenue - Total revenue across all accounts (sum of annual_revenue for selected year)
+ * @param {number} totalRevenue - Total revenue across all accounts (sum of revenue for selected year)
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
  * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
@@ -416,11 +437,21 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
     }
   }
   
-  // Use stored annual_revenue directly (already calculated for selected year from won estimates)
-  // annual_revenue should be updated whenever estimates change, so we can use it directly here
-  const accountRevenue = typeof account.annual_revenue === 'number' 
-    ? account.annual_revenue 
-    : parseFloat(account.annual_revenue) || 0;
+  // Per spec R1, R13: Use revenue for selected year from revenue_by_year JSONB field
+  // If revenue_by_year is not available, fall back to annual_revenue (for backward compatibility)
+  const selectedYear = getCurrentYearForCalculation();
+  let accountRevenue = 0;
+  
+  if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
+    // Use revenue_by_year for selected year (per spec R1: all segment info based on selected year)
+    const yearRevenue = account.revenue_by_year[selectedYear.toString()];
+    accountRevenue = typeof yearRevenue === 'number' ? yearRevenue : parseFloat(yearRevenue) || 0;
+  } else {
+    // Fallback to annual_revenue if revenue_by_year not available (backward compatibility)
+    accountRevenue = typeof account.annual_revenue === 'number' 
+      ? account.annual_revenue 
+      : parseFloat(account.annual_revenue) || 0;
+  }
   
   if (accountRevenue <= 0 || !totalRevenue || totalRevenue <= 0) {
     return 'C'; // Default to C if no revenue data
@@ -444,17 +475,29 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 
 /**
  * Calculate total revenue across all accounts (selected year total)
- * Uses stored annual_revenue directly from each account
+ * Uses revenue_by_year[selectedYear] from each account, falls back to annual_revenue if not available
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, not used anymore)
- * @returns {number} - Total revenue from selected year (sum of all accounts' annual_revenue)
+ * @returns {number} - Total revenue from selected year (sum of all accounts' revenue for selected year)
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
+  // Per spec R1: All segment information is based on total revenue for the selected year
+  const selectedYear = getCurrentYearForCalculation();
+  
   return accounts.reduce((total, account) => {
-    // Use stored annual_revenue directly (already calculated for selected year)
-    const revenue = typeof account.annual_revenue === 'number' 
-      ? account.annual_revenue 
-      : parseFloat(account.annual_revenue) || 0;
+    // Use revenue_by_year for selected year (per spec R1)
+    // If revenue_by_year is not available, fall back to annual_revenue (for backward compatibility)
+    let revenue = 0;
+    
+    if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
+      const yearRevenue = account.revenue_by_year[selectedYear.toString()];
+      revenue = typeof yearRevenue === 'number' ? yearRevenue : parseFloat(yearRevenue) || 0;
+    } else {
+      // Fallback to annual_revenue if revenue_by_year not available (backward compatibility)
+      revenue = typeof account.annual_revenue === 'number' 
+        ? account.annual_revenue 
+        : parseFloat(account.annual_revenue) || 0;
+    }
     
     return total + revenue;
   }, 0);
@@ -462,14 +505,14 @@ export function calculateTotalRevenue(accounts, estimatesByAccountId = {}) {
 
 /**
  * Auto-assign revenue segments for all accounts based on selected year revenue percentages
- * Uses stored annual_revenue directly (already calculated for selected year)
+ * Uses revenue_by_year[selectedYear] for each account, falls back to annual_revenue if not available
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, only used for Segment D check)
  * @returns {Array} - Array of accounts with updated revenue_segment
  */
 export function autoAssignRevenueSegments(accounts, estimatesByAccountId = {}) {
   // Calculate total revenue from selected year across all accounts
-  // Uses stored annual_revenue directly - no need to recalculate from estimates
+  // Uses revenue_by_year[selectedYear] - no need to recalculate from estimates
   const totalRevenue = calculateTotalRevenue(accounts, estimatesByAccountId);
   
   if (totalRevenue <= 0) {
