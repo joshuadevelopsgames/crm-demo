@@ -306,18 +306,8 @@ export function getAccountRevenue(account, estimates = []) {
   
   const currentYear = getCurrentYearForCalculation();
   
-  // Group all logs for this account in a collapsed group
-  const shouldLog = typeof window !== 'undefined' && window.__getCurrentYear;
-  if (shouldLog) {
-    console.groupCollapsed(`[getAccountRevenue] ${account.name} (Year: ${currentYear}, Estimates: ${estimates.length})`);
-  }
-  
   if (estimates && estimates.length > 0) {
     const calculatedRevenue = calculateRevenueFromEstimates(estimates);
-    
-    if (shouldLog) {
-      console.log(`Using year: ${currentYear} for ${estimates.length} estimates`);
-    }
     
     // Per spec R1, R11: Check if we have won estimates that apply to the current year
     const hasWonEstimatesForCurrentYear = estimates.some(est => {
@@ -325,59 +315,17 @@ export function getAccountRevenue(account, estimates = []) {
         return false;
       }
       const yearData = getEstimateYearData(est, currentYear);
-      if (yearData && yearData.appliesToCurrentYear) {
-        if (shouldLog) {
-          console.log(`✓ Found won estimate:`, {
-            estimateId: est.id,
-            status: est.status,
-            contractStart: est.contract_start,
-            contractEnd: est.contract_end,
-            estimateDate: est.estimate_date,
-            value: yearData.value
-          });
-        }
-        return true;
-      }
-      return false;
+      return yearData && yearData.appliesToCurrentYear;
     });
     
     if (hasWonEstimatesForCurrentYear) {
       // We have won estimates that apply to current year, return calculated revenue
       // (even if 0, because that's the actual revenue from won estimates)
-      if (shouldLog) {
-        console.log(`Revenue: $${calculatedRevenue.toLocaleString()}`);
-        console.groupEnd();
-      }
       return calculatedRevenue;
-    } else {
-      if (shouldLog) {
-        console.log(`No won estimates for ${currentYear}`);
-        // Only log estimate details if there are estimates but none are won
-        if (estimates.length > 0) {
-          const estimateSummary = estimates.map(est => {
-            const yearData = getEstimateYearData(est, currentYear);
-            return {
-              id: est.id,
-              status: est.status,
-              [`appliesTo${currentYear}`]: yearData?.appliesToCurrentYear || false,
-              contractStart: est.contract_start,
-              contractEnd: est.contract_end,
-              estimate_date: est.estimate_date
-            };
-          });
-          console.log(`Estimates:`, estimateSummary);
-        }
-        console.groupEnd();
-      }
-    }
-  } else {
-    if (shouldLog) {
-      console.log(`No estimates`);
-      console.groupEnd();
     }
   }
   
-  // No won estimates for current year - return 0 (will display as "-" in UI)
+  // No estimates or no won estimates for current year - return 0 (will display as "-" in UI)
   return 0;
 }
 

@@ -321,35 +321,17 @@ export default function Accounts() {
       }
     });
     
-    // Debug: Log estimate grouping
-    if (process.env.NODE_ENV === 'development') {
-      const wonEstimates = allEstimates.filter(e => isWonStatus(e));
-      console.log('[Accounts] Grouped estimates:', {
-        totalEstimates: allEstimates.length,
-        wonEstimates: wonEstimates.length,
-        accountsWithEstimates: Object.keys(grouped).length,
-        sampleEstimates: allEstimates.slice(0, 10).map(est => ({
-          id: est.id,
-          account_id: est.account_id,
-          status: est.status,
-          contract_start: est.contract_start,
-          contract_end: est.contract_end,
-          estimate_date: est.estimate_date,
-          created_date: est.created_date,
-          total_price_with_tax: est.total_price_with_tax,
-          total_price: est.total_price,
-          allDateFields: Object.keys(est).filter(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('start') || k.toLowerCase().includes('end'))
-        })),
-        sampleWonEstimates: wonEstimates.slice(0, 5).map(est => ({
-          id: est.id,
-          account_id: est.account_id,
-          status: est.status,
-          contract_start: est.contract_start,
-          contract_end: est.contract_end,
-          estimate_date: est.estimate_date,
-          created_date: est.created_date,
-          total_price_with_tax: est.total_price_with_tax
-        }))
+    // Single summary log for revenue calculation
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      const accountsWithEstimates = Object.keys(grouped).length;
+      const totalEstimates = allEstimates.length;
+      const wonEstimates = allEstimates.filter(e => isWonStatus(e)).length;
+      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
+      
+      console.log(`[getAccountRevenue] Summary for ${currentYear}:`, {
+        accountsWithEstimates,
+        totalEstimates,
+        wonEstimates
       });
     }
     
