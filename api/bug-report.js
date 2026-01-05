@@ -199,8 +199,8 @@ ${bugReport.consoleLogs.map(log =>
 
     // Skip notification creation for jrsschroeder@gmail.com - bug reports are emailed
     // No need to store notifications since they get the full report via email
-    let notificationCreated = false;
-    let notificationError = null;
+    const notificationCreated = false;
+    const notificationError = null;
     
     // Check if recipient is jrsschroeder@gmail.com - if so, skip notification
     if (recipientEmail === 'jrsschroeder@gmail.com') {
