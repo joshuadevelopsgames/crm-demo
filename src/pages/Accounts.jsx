@@ -66,7 +66,7 @@ export default function Accounts() {
   const [filterType, setFilterType] = useState('all');
   const [filterSegment, setFilterSegment] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [sortBy, setSortBy] = useState('score');
+  const [sortBy, setSortBy] = useState('revenue');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   // Default to card view on mobile, list view on desktop
