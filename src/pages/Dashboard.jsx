@@ -42,14 +42,7 @@ import { formatDateString } from '@/utils/dateFormatter';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { selectedYear, setYear } = useYearSelector();
-  
-  // Generate year options (current year ± 5 years)
-  const baseYear = new Date().getFullYear();
-  const yearOptions = [];
-  for (let i = -5; i <= 5; i++) {
-    yearOptions.push(baseYear + i);
-  }
+  const { selectedYear, setYear, yearOptions } = useYearSelector();
   const queryClient = useQueryClient();
   const { user, isLoading: userLoading } = useUser();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
