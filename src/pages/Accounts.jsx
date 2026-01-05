@@ -27,7 +27,7 @@ import {
   BellOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { isWonStatus } from '@/utils/reportCalculations';
+import { isWonStatus, filterEstimatesByYear } from '@/utils/reportCalculations';
 import {
   Select,
   SelectContent,
@@ -60,20 +60,32 @@ export default function Accounts() {
   // Debug: Log year selection status and verify data updates
   useEffect(() => {
     const currentYear = getCurrentYear();
-    console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
-      selectedYear,
-      currentYear: getCurrentYear(),
-      accountsCount: accounts.length,
-      sampleAccounts: accounts.slice(0, 3).map(acc => ({
-        id: acc.id,
-        name: acc.name,
-        revenue_by_year: acc.revenue_by_year,
-        revenue_for_2024: getRevenueForYear(acc, 2024),
-        revenue_for_2025: getRevenueForYear(acc, 2025),
-        revenue_for_selected_year: getRevenueForYear(acc, selectedYear),
-        segment_for_selected_year: getSegmentForYear(acc, selectedYear)
-      }))
-    });
+    if (accounts.length > 0) {
+      const sampleAccount = accounts[0];
+      console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
+        selectedYear,
+        currentYear: getCurrentYear(),
+        accountsCount: accounts.length,
+        sampleAccount: {
+          id: sampleAccount.id,
+          name: sampleAccount.name,
+          revenue_by_year: sampleAccount.revenue_by_year,
+          segment_by_year: sampleAccount.segment_by_year,
+          revenue_for_2024: getRevenueForYear(sampleAccount, 2024),
+          revenue_for_2025: getRevenueForYear(sampleAccount, 2025),
+          revenue_for_2026: getRevenueForYear(sampleAccount, 2026),
+          revenue_for_selected_year: getRevenueForYear(sampleAccount, selectedYear),
+          segment_for_2024: getSegmentForYear(sampleAccount, 2024),
+          segment_for_2025: getSegmentForYear(sampleAccount, 2025),
+          segment_for_2026: getSegmentForYear(sampleAccount, 2026),
+          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear)
+        },
+        accountsWithRevenueData: accounts.filter(acc => {
+          const revenue = getRevenueForYear(acc, selectedYear);
+          return revenue > 0;
+        }).length
+      });
+    }
   }, [selectedYear, getCurrentYear, accounts]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -146,11 +158,12 @@ export default function Accounts() {
     return accountIds;
   }, [contacts]);
 
-  // Fetch all estimates to calculate actual revenue from won estimates
-  // Include selectedYear in query key so it refetches when year selection changes
+  // Fetch all estimates - include selectedYear in query key to trigger re-render when year changes
+  // We filter by year client-side using filterEstimatesByYear, but including selectedYear in key
+  // ensures React Query treats it as a different query and component re-renders
   // Per Year Selection System spec R6, R8: All data must filter by selected year
   const { data: allEstimates = [] } = useQuery({
-    queryKey: ['estimates', selectedYear], // Include selectedYear so it refetches when year changes
+    queryKey: ['estimates', selectedYear], // Include selectedYear to trigger re-render when year changes
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
       if (!response.ok) return [];
@@ -325,10 +338,14 @@ export default function Accounts() {
     return result;
   }, [allEstimates]);
 
-  // Group estimates by account_id for revenue calculation
+  // Filter estimates by selected year, then group by account_id
+  // Per Year Selection System spec R6, R8: All data must filter by selected year
   const estimatesByAccountId = useMemo(() => {
+    // Filter estimates by selected year first
+    const yearFilteredEstimates = filterEstimatesByYear(allEstimates, selectedYear, true, false);
+    
     const grouped = {};
-    allEstimates.forEach(est => {
+    yearFilteredEstimates.forEach(est => {
       if (est.account_id) {
         if (!grouped[est.account_id]) {
           grouped[est.account_id] = [];
@@ -337,24 +354,21 @@ export default function Accounts() {
       }
     });
     
-    // Single summary log for revenue calculation
-    if (typeof window !== 'undefined' && window.__getCurrentYear) {
-      const accountsWithEstimates = Object.keys(grouped).length;
-      const totalEstimates = allEstimates.length;
-      const wonEstimates = allEstimates.filter(e => isWonStatus(e)).length;
-      const currentYear = typeof window !== 'undefined' && window.__getCurrentYear ? window.__getCurrentYear() : new Date().getFullYear();
-      
-      // Note: Revenue now comes from stored revenue_by_year field, not calculated on-the-fly
-      console.log(`[Accounts] Summary for ${currentYear}:`, {
-        accountsWithEstimates,
-        totalEstimates,
-        wonEstimates,
-        note: 'Revenue is read from stored revenue_by_year field, not calculated from estimates'
-      });
-    }
+    // Debug log showing year-filtered estimates
+    const accountsWithEstimates = Object.keys(grouped).length;
+    const totalEstimates = yearFilteredEstimates.length;
+    const wonEstimates = yearFilteredEstimates.filter(e => isWonStatus(e)).length;
+    
+    console.log(`[getAccountRevenue] Summary for ${selectedYear}:`, {
+      accountsWithEstimates,
+      totalEstimates,
+      wonEstimates,
+      allEstimatesCount: allEstimates.length,
+      note: 'Estimates filtered by selected year. Revenue is read from stored revenue_by_year field.'
+    });
     
     return grouped;
-  }, [allEstimates]);
+  }, [allEstimates, selectedYear]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
