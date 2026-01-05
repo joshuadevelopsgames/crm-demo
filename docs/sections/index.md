@@ -90,6 +90,20 @@ This document serves as the master index of all major application sections and t
 - **Owner**: Product Owner
 - **Test Coverage Status**: Partial (test mode exists, unit tests needed)
 
+### Segmentation
+- **Name**: Segmentation
+- **Slug**: `segmentation`
+- **Spec Path**: `docs/sections/segmentation.md`
+- **Primary Code Locations**:
+  - `src/utils/revenueSegmentCalculator.js` - Core segment calculation logic (calculateRevenueSegment, autoAssignRevenueSegments)
+  - `src/pages/Accounts.jsx` - Segment display, filtering, and badges
+  - `src/pages/Settings.jsx` - Manual segment recalculation (admin only)
+  - `src/components/ImportLeadsDialog.jsx` - Automatic segment recalculation on import
+  - `src/components/account/EditAccountDialog.jsx` - Read-only segment display in edit form
+  - `api/data/accounts.js` - Default segment value handling on create/update
+- **Owner**: Product Owner
+- **Test Coverage Status**: Partial (calculation logic exists, unit tests needed)
+
 ### Estimates
 - **Name**: Estimates
 - **Slug**: `estimates`

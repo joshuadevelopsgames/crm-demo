@@ -18,6 +18,75 @@ async function calculateAtRiskAccountsForImport(accounts, estimates, snoozes) {
   }
 }
 
+// Recalculate segments for all accounts (per spec R16: segments recalculated when estimates are updated)
+async function recalculateSegments(supabase) {
+  try {
+    // Dynamic import for server-side compatibility
+    const { autoAssignRevenueSegments } = await import('../../src/utils/revenueSegmentCalculator.js');
+    
+    // Fetch all accounts and estimates
+    const [accountsRes, estimatesRes] = await Promise.all([
+      supabase.from('accounts').select('*').eq('archived', false),
+      supabase.from('estimates').select('*').eq('archived', false)
+    ]);
+    
+    if (accountsRes.error || estimatesRes.error) {
+      console.error('Error fetching data for segment recalculation:', accountsRes.error || estimatesRes.error);
+      return { success: false, error: accountsRes.error || estimatesRes.error };
+    }
+    
+    const accounts = accountsRes.data || [];
+    const allEstimates = estimatesRes.data || [];
+    
+    // Group estimates by account_id
+    const estimatesByAccountId = {};
+    allEstimates.forEach(est => {
+      if (est.account_id) {
+        if (!estimatesByAccountId[est.account_id]) {
+          estimatesByAccountId[est.account_id] = [];
+        }
+        estimatesByAccountId[est.account_id].push(est);
+      }
+    });
+    
+    // Calculate segments for all accounts
+    const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
+    
+    // Update all accounts with their calculated segments (non-blocking, don't wait for all updates)
+    const updatePromises = updatedAccounts.map(account => {
+      const segment = account.revenue_segment || 'C';
+      return supabase
+        .from('accounts')
+        .update({ revenue_segment: segment })
+        .eq('id', account.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error(`Failed to update segment for account ${account.id}:`, error);
+            return { success: false, accountId: account.id, error: error.message };
+          }
+          return { success: true, accountId: account.id, segment };
+        });
+    });
+    
+    // Wait for all updates (but don't block the API response)
+    const results = await Promise.all(updatePromises);
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+    
+    if (failedCount > 0) {
+      console.warn(`⚠️ ${failedCount} accounts failed to update segments during recalculation`);
+    }
+    
+    console.log(`✅ Segment recalculation: ${successCount} successful, ${failedCount} failed`);
+    
+    return { success: true, updated: successCount, failed: failedCount };
+  } catch (error) {
+    console.error('Error recalculating segments:', error);
+    // Don't throw - segment recalculation failure shouldn't break estimate updates
+    return { success: false, error: error.message };
+  }
+}
+
 function getSupabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -181,6 +250,11 @@ export default async function handler(req, res) {
           
           if (updateError) throw updateError;
           
+          // Per spec R16: Recalculate segments when estimates are updated (non-blocking)
+          recalculateSegments(supabase).catch(err => {
+            console.error('Background segment recalculation failed:', err);
+          });
+          
           return res.status(200).json({
             success: true,
             data: updated,
@@ -195,6 +269,11 @@ export default async function handler(req, res) {
             .single();
           
           if (createError) throw createError;
+          
+          // Per spec R16: Recalculate segments when estimates are created (non-blocking)
+          recalculateSegments(supabase).catch(err => {
+            console.error('Background segment recalculation failed:', err);
+          });
           
           return res.status(201).json({
             success: true,
@@ -511,6 +590,11 @@ export default async function handler(req, res) {
           error: error.message
         });
       }
+      
+      // Per spec R16: Recalculate segments when estimates are deleted (non-blocking)
+      recalculateSegments(supabase).catch(err => {
+        console.error('Background segment recalculation failed:', err);
+      });
       
       return res.status(200).json({
         success: true,

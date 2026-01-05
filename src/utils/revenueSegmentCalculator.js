@@ -1,15 +1,17 @@
 /**
- * Calculate revenue segment based on current year revenue percentage (year-based, not rolling 12 months)
+ * Calculate revenue segment based on selected year revenue percentage (year-based, not rolling 12 months)
+ * Per Segmentation Spec: docs/sections/segmentation.md
  * 
- * Segment A: >= 15% of total revenue (current year)
- * Segment B: 5-15% of total revenue (current year)
- * Segment C: 0-5% of total revenue (current year)
- * Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
+ * Segment A: > 15% of total revenue (selected year) - per spec R6
+ * Segment B: 5-15% of total revenue (selected year) - per spec R7
+ * Segment C: < 5% of total revenue (selected year) - per spec R8
+ * Segment D: No Service estimates (Standard only or no estimates) - per spec R2, R9
  *   - "Standard" = project (one-time)
  *   - "Service" = ongoing/recurring
- *   - If account has BOTH Standard and Service, it gets A/B/C based on revenue (not D)
+ *   - A/B/C can have Standard revenue, but D cannot have Service estimates - per spec R3
  * 
- * Revenue is calculated from won estimates for the current year only (year-based calculation)
+ * Revenue is calculated from won estimates for the selected year only (year-based calculation)
+ * Per spec R1: All segment information is based on total revenue for the selected year
  * Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
  * Per spec R1, R11: Status determination uses isWonStatus() to respect pipeline_status priority
  * 
@@ -400,8 +402,8 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
       est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'service'
     );
     
-    // Segment D: Project only - has "Standard" (project) estimates but NO "Service" (ongoing) estimates
-    // If it has BOTH Standard and Service, it will be A/B/C based on revenue percentage
+    // Segment D: Per spec R2, R9 - Account has NO Service estimates (Standard only or no estimates)
+    // If account has ANY Service estimates, it gets A/B/C based on revenue percentage (per spec R3)
     if (hasStandardEstimates && !hasServiceEstimates) {
       if (typeof window !== 'undefined' && window.__debugSegmentD) {
         console.log(`  ✅ Segment D assigned to ${account.name || account.id}`);
@@ -426,17 +428,17 @@ export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
 
   const revenuePercentage = (accountRevenue / totalRevenue) * 100;
 
-  // Segment A: >= 15% of total revenue
-  if (revenuePercentage >= 15) {
+  // Segment A: > 15% of total revenue (per spec R6)
+  if (revenuePercentage > 15) {
     return 'A';
   }
   
-  // Segment B: 5-15% of total revenue
-  if (revenuePercentage >= 5 && revenuePercentage < 15) {
+  // Segment B: 5-15% of total revenue (per spec R7: 5% <= x <= 15%)
+  if (revenuePercentage >= 5 && revenuePercentage <= 15) {
     return 'B';
   }
   
-  // Segment C: 0-5% of total revenue
+  // Segment C: < 5% of total revenue (per spec R8)
   return 'C';
 }
 

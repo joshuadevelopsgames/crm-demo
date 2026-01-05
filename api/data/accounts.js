@@ -142,11 +142,10 @@ export default async function handler(req, res) {
         }
         
         if (existing) {
-          // Update existing - preserve existing segment if new data doesn't have one
-          if (!accountData.revenue_segment && existing.revenue_segment) {
-            accountData.revenue_segment = existing.revenue_segment;
-          } else if (!accountData.revenue_segment) {
-            accountData.revenue_segment = 'C'; // Default to 'C' if missing
+          // Update existing - per spec R16: segments are recalculated when estimates change, not preserved
+          // If segment is not provided in update, default to 'C' (will be recalculated during next import/estimate update)
+          if (!accountData.revenue_segment) {
+            accountData.revenue_segment = 'C'; // Default to 'C' if missing (per spec R15)
           }
           
           const { data: updated, error: updateError } = await supabase
