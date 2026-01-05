@@ -413,7 +413,7 @@ export default function Accounts() {
     }
     
     try {
-      await snoozeNotification('at-risk-account', account.id, snoozedUntil);
+      await snoozeNotification(notificationType, account.id, snoozedUntil);
       queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
       queryClient.invalidateQueries({ queryKey: ['at-risk-accounts'] });
       setSnoozeAccount(null);
