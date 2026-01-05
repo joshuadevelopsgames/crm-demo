@@ -57,11 +57,24 @@ export default function Accounts() {
   const { selectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
   const navigate = useNavigate();
 
-  // Debug: Log year selection status
+  // Debug: Log year selection status and verify data updates
   useEffect(() => {
     const currentYear = getCurrentYear();
-    console.log('[Accounts] Selected year:', selectedYear, 'Current year:', getCurrentYear());
-  }, [selectedYear, getCurrentYear]);
+    console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
+      selectedYear,
+      currentYear: getCurrentYear(),
+      accountsCount: accounts.length,
+      sampleAccounts: accounts.slice(0, 3).map(acc => ({
+        id: acc.id,
+        name: acc.name,
+        revenue_by_year: acc.revenue_by_year,
+        revenue_for_2024: getRevenueForYear(acc, 2024),
+        revenue_for_2025: getRevenueForYear(acc, 2025),
+        revenue_for_selected_year: getRevenueForYear(acc, selectedYear),
+        segment_for_selected_year: getSegmentForYear(acc, selectedYear)
+      }))
+    });
+  }, [selectedYear, getCurrentYear, accounts]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -98,10 +111,11 @@ export default function Accounts() {
 
   const { user, isLoading: userLoading } = useUser();
 
-  // Include selectedYear in query key so revenue/segment calculations update when year changes
+  // Accounts data includes revenue_by_year for all years, so we don't need to refetch when year changes
+  // The useMemo for filteredAccounts includes selectedYear, so it will recalculate when year changes
   // Per Year Selection System spec R6, R8: All revenue calculations use selected year
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['accounts', selectedYear], // Include selectedYear so revenue/segments recalculate when year changes
+    queryKey: ['accounts'], // Don't include selectedYear - data is the same for all years
     queryFn: () => base44.entities.Account.list(),
     enabled: !userLoading && !!user, // Wait for user to load before fetching
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -619,6 +633,19 @@ export default function Accounts() {
       return 0;
     });
     
+    // Debug: Log when filteredAccounts recalculates
+    if (sorted.length > 0) {
+      console.log('[Accounts] filteredAccounts recalculated for year:', selectedYear, {
+        filteredCount: sorted.length,
+        sampleAccount: {
+          name: sorted[0].name,
+          revenue: getRevenueForYear(sorted[0], selectedYear),
+          segment: getSegmentForYear(sorted[0], selectedYear),
+          revenue_by_year: sorted[0].revenue_by_year
+        }
+      });
+    }
+    
     return sorted;
   }, [accountsByStatus, searchTerm, filterType, filterSegment, selectedUsers, estimatesByAccountId, sortBy, selectedYear, accountsWithScorecards, accountsWithContacts]);
 
@@ -919,6 +946,8 @@ export default function Accounts() {
                 </thead>
                 <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                   {filteredAccounts.map((account) => {
+                    // Include selectedYear in key to force re-render when year changes
+                    const rowKey = `${account.id}-${selectedYear}`;
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
                     // Get at-risk data for this account
                     const atRiskData = statusFilter === 'at_risk' 
@@ -926,7 +955,7 @@ export default function Accounts() {
                       : null;
                     return (
                       <tr 
-                        key={account.id} 
+                        key={rowKey} 
                         onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
                         className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
@@ -1085,6 +1114,8 @@ export default function Accounts() {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAccounts.map((account) => {
+            // Include selectedYear in key to force re-render when year changes
+            const rowKey = `${account.id}-${selectedYear}`;
             const neglectStatus = getNeglectStatus(account.last_interaction_date);
             // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
         const isArchived = account.archived === true || account.status === 'archived';
@@ -1093,7 +1124,7 @@ export default function Accounts() {
               ? atRiskAccountsData.find(record => record.account_id === account.id)
               : null;
             return (
-              <div key={account.id} className="relative">
+              <div key={rowKey} className="relative">
               <Link to={createPageUrl(`AccountDetail?id=${account.id}`)}>
                   <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''} ${statusFilter === 'at_risk' ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20' : ''}`}>
                   <div className="space-y-4">
@@ -1375,12 +1406,14 @@ export default function Accounts() {
                   </thead>
                   <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
                     {filteredAccounts.map((account) => {
+                      // Include selectedYear in key to force re-render when year changes
+                      const rowKey = `${account.id}-${selectedYear}`;
                       const neglectStatus = getNeglectStatus(account.last_interaction_date);
                       // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
         const isArchived = account.archived === true || account.status === 'archived';
                       return (
                         <tr 
-                          key={account.id} 
+                          key={rowKey} 
                           onClick={() => navigate(createPageUrl(`AccountDetail?id=${account.id}`))}
                           className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                         >
@@ -1456,11 +1489,13 @@ export default function Accounts() {
             /* Accounts Card View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAccounts.map((account) => {
+                // Include selectedYear in key to force re-render when year changes
+                const rowKey = `${account.id}-${selectedYear}`;
                 const neglectStatus = getNeglectStatus(account.last_interaction_date);
                 // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
         const isArchived = account.archived === true || account.status === 'archived';
                 return (
-                <Link key={account.id} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
+                <Link key={rowKey} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
                   <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
                     <div className="space-y-4">
                       {/* Header */}
