@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, Target } from 'lucide-react';
-import { getCurrentYear } from '@/contexts/TestModeContext';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { getYearFromDateString } from '@/utils/dateFormatter';
 
 // Helper to get current year (respects test mode)
@@ -10,8 +10,8 @@ function getCurrentYearForCalculation() {
     return getCurrentYear();
   } catch (error) {
     // Fallback if context not initialized yet
-    if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-      return window.__testModeGetCurrentYear();
+    if (typeof window !== 'undefined' && window.__getCurrentYear) {
+      return window.__getCurrentYear();
     }
     return new Date().getFullYear();
   }

@@ -4,7 +4,7 @@
  */
 
 import { findMappingRule, applyMappingRule } from './scorecardMappings';
-import { getCurrentYear } from '@/contexts/TestModeContext';
+import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 /**
  * Auto-score an account using the primary scorecard template
@@ -27,8 +27,8 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
       return getCurrentYear();
     } catch (error) {
       // Fallback if context not initialized yet
-      if (typeof window !== 'undefined' && window.__testModeGetCurrentYear) {
-        return window.__testModeGetCurrentYear();
+      if (typeof window !== 'undefined' && window.__getCurrentYear) {
+        return window.__getCurrentYear();
       }
       return new Date().getFullYear();
     }
