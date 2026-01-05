@@ -102,7 +102,7 @@ export default function SnoozeDialog({ account, notificationType, open, onOpenCh
             <p className="text-sm text-slate-600">
               {unit === 'forever' ? (
                 <span>
-                  Account will <span className="font-semibold text-slate-900">never appear as {getNotificationTypeLabel()}</span>
+                  This account will be <span className="font-semibold text-slate-900">snoozed indefinitely</span>
                 </span>
               ) : (
                 <span>
