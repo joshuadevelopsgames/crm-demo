@@ -98,8 +98,10 @@ export default function Accounts() {
 
   const { user, isLoading: userLoading } = useUser();
 
+  // Include selectedYear in query key so revenue/segment calculations update when year changes
+  // Per Year Selection System spec R6, R8: All revenue calculations use selected year
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['accounts'],
+    queryKey: ['accounts', selectedYear], // Include selectedYear so revenue/segments recalculate when year changes
     queryFn: () => base44.entities.Account.list(),
     enabled: !userLoading && !!user, // Wait for user to load before fetching
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -131,10 +133,10 @@ export default function Accounts() {
   }, [contacts]);
 
   // Fetch all estimates to calculate actual revenue from won estimates
-  // Include current year in query key so it refetches when test mode changes
-  const currentYear = getCurrentYear();
+  // Include selectedYear in query key so it refetches when year selection changes
+  // Per Year Selection System spec R6, R8: All data must filter by selected year
   const { data: allEstimates = [] } = useQuery({
-    queryKey: ['estimates', currentYear], // Include year so it refetches when test mode changes
+    queryKey: ['estimates', selectedYear], // Include selectedYear so it refetches when year changes
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
       if (!response.ok) return [];
@@ -551,26 +553,74 @@ export default function Accounts() {
     return false;
   };
 
-  const filteredAccounts = accountsByStatus.filter(account => {
-    const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = accountMatchesType(account, filterType);
-    const accountSegment = getSegmentForYear(account, selectedYear);
-    const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
+  // Filter and sort accounts - MUST include selectedYear in dependencies so it updates when year changes
+  // Per Year Selection System spec R6, R8: All revenue/segment calculations use selected year
+  const filteredAccounts = useMemo(() => {
+    const filtered = accountsByStatus.filter(account => {
+      const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = accountMatchesType(account, filterType);
+      const accountSegment = getSegmentForYear(account, selectedYear);
+      const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
+      
+      // User filter: if users are selected, only show accounts that have estimates with those users
+      let matchesUser = true;
+      if (selectedUsers.length > 0) {
+        const accountEstimates = estimatesByAccountId[account.id] || [];
+        const hasMatchingUser = accountEstimates.some(est => {
+          const salesperson = est.salesperson?.trim();
+          const estimator = est.estimator?.trim();
+          return selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
+        });
+        matchesUser = hasMatchingUser;
+      }
+      
+      return matchesSearch && matchesType && matchesSegment && matchesUser;
+    });
+
+    // Sort the filtered accounts
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortBy === 'score') {
+        // Only sort by score if both accounts have completed scorecards
+        const aHasScorecard = accountsWithScorecards.has(a.id);
+        const bHasScorecard = accountsWithScorecards.has(b.id);
+        if (!aHasScorecard && !bHasScorecard) return 0;
+        if (!aHasScorecard) return 1; // Accounts without scorecards go to end
+        if (!bHasScorecard) return -1; // Accounts without scorecards go to end
+        return (b.organization_score || 0) - (a.organization_score || 0);
+      }
+      if (sortBy === 'revenue') {
+        const aRevenue = getRevenueForYear(a, selectedYear);
+        const bRevenue = getRevenueForYear(b, selectedYear);
+        return bRevenue - aRevenue;
+      }
+      if (sortBy === 'last_interaction') {
+        // When sorting by "last contact", prioritize accounts with contacts
+        const aHasContacts = accountsWithContacts.has(a.id);
+        const bHasContacts = accountsWithContacts.has(b.id);
+        
+        // Accounts without contacts go to the end
+        if (!aHasContacts && !bHasContacts) {
+          // Both have no contacts - sort by date if available, otherwise equal
+          if (!a.last_interaction_date && !b.last_interaction_date) return 0;
+          if (!a.last_interaction_date) return 1;
+          if (!b.last_interaction_date) return -1;
+          return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
+        }
+        if (!aHasContacts) return 1; // a has no contacts, goes to end
+        if (!bHasContacts) return -1; // b has no contacts, goes to end
+        
+        // Both have contacts - sort by last_interaction_date
+        if (!a.last_interaction_date && !b.last_interaction_date) return 0;
+        if (!a.last_interaction_date) return 1; // a has no date, goes to end
+        if (!b.last_interaction_date) return -1; // b has no date, goes to end
+        return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
+      }
+      return 0;
+    });
     
-    // User filter: if users are selected, only show accounts that have estimates with those users
-    let matchesUser = true;
-    if (selectedUsers.length > 0) {
-      const accountEstimates = estimatesByAccountId[account.id] || [];
-      const hasMatchingUser = accountEstimates.some(est => {
-        const salesperson = est.salesperson?.trim();
-        const estimator = est.estimator?.trim();
-        return selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
-      });
-      matchesUser = hasMatchingUser;
-    }
-    
-    return matchesSearch && matchesType && matchesSegment && matchesUser;
-  });
+    return sorted;
+  }, [accountsByStatus, searchTerm, filterType, filterSegment, selectedUsers, estimatesByAccountId, sortBy, selectedYear, accountsWithScorecards, accountsWithContacts]);
 
   // Debug logging for segment and status filtering
   useEffect(() => {
@@ -591,6 +641,7 @@ export default function Accounts() {
         filterSegment,
         filterType,
         statusFilter,
+        selectedYear,
         segmentCounts,
         statusCounts,
         accountsWithSegmentB: accounts.filter(a => getSegmentForYear(a, selectedYear) === 'B').length,
@@ -603,48 +654,7 @@ export default function Accounts() {
         }))
       });
     }
-  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter]);
-
-  filteredAccounts.sort((a, b) => {
-    if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
-    if (sortBy === 'score') {
-      // Only sort by score if both accounts have completed scorecards
-      const aHasScorecard = accountsWithScorecards.has(a.id);
-      const bHasScorecard = accountsWithScorecards.has(b.id);
-      if (!aHasScorecard && !bHasScorecard) return 0;
-      if (!aHasScorecard) return 1; // Accounts without scorecards go to end
-      if (!bHasScorecard) return -1; // Accounts without scorecards go to end
-      return (b.organization_score || 0) - (a.organization_score || 0);
-    }
-    if (sortBy === 'revenue') {
-      const aRevenue = getRevenueForYear(a, selectedYear);
-      const bRevenue = getRevenueForYear(b, selectedYear);
-      return bRevenue - aRevenue;
-    }
-    if (sortBy === 'last_interaction') {
-      // When sorting by "last contact", prioritize accounts with contacts
-      const aHasContacts = accountsWithContacts.has(a.id);
-      const bHasContacts = accountsWithContacts.has(b.id);
-      
-      // Accounts without contacts go to the end
-      if (!aHasContacts && !bHasContacts) {
-        // Both have no contacts - sort by date if available, otherwise equal
-        if (!a.last_interaction_date && !b.last_interaction_date) return 0;
-        if (!a.last_interaction_date) return 1;
-        if (!b.last_interaction_date) return -1;
-        return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
-      }
-      if (!aHasContacts) return 1; // a has no contacts, goes to end
-      if (!bHasContacts) return -1; // b has no contacts, goes to end
-      
-      // Both have contacts - sort by last_interaction_date
-      if (!a.last_interaction_date && !b.last_interaction_date) return 0;
-      if (!a.last_interaction_date) return 1; // a has no date, goes to end
-      if (!b.last_interaction_date) return -1; // b has no date, goes to end
-      return new Date(b.last_interaction_date) - new Date(a.last_interaction_date);
-    }
-    return 0;
-  });
+  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter, selectedYear]);
 
   const getAccountTypeColor = (type) => {
     const colors = {
