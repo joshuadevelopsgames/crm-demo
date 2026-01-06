@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, FileText } from 'lucide-react';
 import { calculateOverallStats, calculateAccountStats, formatCurrency, enhanceAccountStatsWithMetadata } from '@/utils/reportCalculations';
-import { Badge } from '@/components/ui/badge';
 
 export default function WinLossReport({ estimates, accounts, selectedYear, interactionStatsMap, scorecardStatsMap }) {
   const overallStats = calculateOverallStats(estimates);
