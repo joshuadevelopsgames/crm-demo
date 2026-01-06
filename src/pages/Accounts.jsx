@@ -111,8 +111,15 @@ export default function Accounts() {
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'archived'
   const [statusFilter, setStatusFilter] = useState(null); // Filter by status (e.g., 'at_risk')
   const [snoozeAccount, setSnoozeAccount] = useState(null);
+  // Force re-render key that changes when selectedYear changes
+  const [renderKey, setRenderKey] = useState(0);
   
   const queryClient = useQueryClient();
+  
+  // Force re-render when selectedYear changes
+  useEffect(() => {
+    setRenderKey(prev => prev + 1);
+  }, [selectedYear]);
 
   // Check URL parameters for status filter
   useEffect(() => {
@@ -932,7 +939,7 @@ export default function Accounts() {
           step={2}
           position="bottom"
         >
-          <Card className="overflow-hidden" key={`accounts-list-${selectedYear}`}>
+          <Card className="overflow-hidden" key={`accounts-list-${selectedYear}-${renderKey}`}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px]" key={`table-${selectedYear}`}>
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -970,15 +977,34 @@ export default function Accounts() {
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
+                <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border" key={`tbody-${selectedYear}-${renderKey}`}>
                   {filteredAccounts.map((account) => {
                     // Include selectedYear in key to force re-render when year changes
                     const rowKey = `${account.id}-${selectedYear}`;
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
+                    // Calculate revenue for selected year - do this in map so React detects the change
+                    const revenue = getRevenueForYear(account, selectedYear);
                     // Get at-risk data for this account
                     const atRiskData = statusFilter === 'at_risk' 
                       ? atRiskAccountsData.find(record => record.account_id === account.id)
                       : null;
+                    
+                    // Debug logging - log first 5 accounts
+                    if (process.env.NODE_ENV === 'development') {
+                      const accountIndex = filteredAccounts.findIndex(a => a.id === account.id);
+                      if (accountIndex < 5) {
+                        console.log(`[Accounts Table Row ${accountIndex}]`, {
+                          accountName: account.name,
+                          accountId: account.id,
+                          revenue,
+                          selectedYear, // Explicitly log selectedYear
+                          currentYear: getCurrentYear(),
+                          revenue_by_year: account.revenue_by_year,
+                          revenue_for_selected_year: account.revenue_by_year?.[selectedYear.toString()]
+                        });
+                      }
+                    }
+                    
                     return (
                       <tr 
                         key={rowKey} 
@@ -1062,27 +1088,7 @@ export default function Accounts() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-sm text-slate-900 dark:text-white font-medium">
-                          {(() => {
-                            const revenue = getRevenueForYear(account, selectedYear);
-                            
-                            // Debug logging - log first 5 accounts
-                            if (process.env.NODE_ENV === 'development') {
-                              const accountIndex = filteredAccounts.findIndex(a => a.id === account.id);
-                              if (accountIndex < 5) {
-                                console.log(`[Accounts Table Row ${accountIndex}]`, {
-                                  accountName: account.name,
-                                  accountId: account.id,
-                                  revenue,
-                                  selectedYear, // Explicitly log selectedYear
-                                  currentYear: getCurrentYear(),
-                                  revenue_by_year: account.revenue_by_year,
-                                  revenue_for_selected_year: account.revenue_by_year?.[selectedYear.toString()]
-                                });
-                              }
-                            }
-                            
-                            return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
-                          })()}
+                          {revenue > 0 ? `$${revenue.toLocaleString()}` : '-'}
                         </td>
                         {statusFilter === 'at_risk' && (
                           <td className="px-4 py-4">
@@ -1140,13 +1146,15 @@ export default function Accounts() {
           step={2}
           position="bottom"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-${selectedYear}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-${selectedYear}-${renderKey}`}>
           {filteredAccounts.map((account) => {
             // Include selectedYear in key to force re-render when year changes
             const rowKey = `${account.id}-${selectedYear}`;
             const neglectStatus = getNeglectStatus(account.last_interaction_date);
             // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
-        const isArchived = account.archived === true || account.status === 'archived';
+            const isArchived = account.archived === true || account.status === 'archived';
+            // Calculate revenue for selected year - do this in map so React detects the change
+            const revenue = getRevenueForYear(account, selectedYear);
             // Get at-risk data for this account
             const atRiskData = statusFilter === 'at_risk' 
               ? atRiskAccountsData.find(record => record.account_id === account.id)
@@ -1239,17 +1247,14 @@ export default function Accounts() {
                           {neglectStatus.label}
                         </span>
                       </div>
-                      {(() => {
-                        const revenue = getRevenueForYear(account, selectedYear);
-                        return revenue > 0 ? (
-                          <div className="flex items-center justify-between text-sm mt-2">
-                            <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
-                            <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
-                              ${revenue.toLocaleString()}
-                            </span>
-                          </div>
-                        ) : null;
-                      })()}
+                      {revenue > 0 ? (
+                        <div className="flex items-center justify-between text-sm mt-2">
+                          <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
+                          <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
+                            ${revenue.toLocaleString()}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Renewal Date (for at-risk accounts) */}
@@ -1404,9 +1409,9 @@ export default function Accounts() {
 
           {/* Accounts List/Card View for Archived Tab */}
           {viewMode === 'list' ? (
-            <Card className="overflow-hidden" key={`accounts-list-archived-${selectedYear}`}>
+            <Card className="overflow-hidden" key={`accounts-list-archived-${selectedYear}-${renderKey}`}>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]" key={`table-archived-${selectedYear}`}>
+                <table className="w-full min-w-[800px]" key={`table-archived-${selectedYear}-${renderKey}`}>
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -1432,13 +1437,15 @@ export default function Accounts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border">
+                  <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border" key={`tbody-archived-${selectedYear}-${renderKey}`}>
                     {filteredAccounts.map((account) => {
                       // Include selectedYear in key to force re-render when year changes
                       const rowKey = `${account.id}-${selectedYear}`;
                       const neglectStatus = getNeglectStatus(account.last_interaction_date);
                       // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
-        const isArchived = account.archived === true || account.status === 'archived';
+                      const isArchived = account.archived === true || account.status === 'archived';
+                      // Calculate revenue for selected year - do this in map so React detects the change
+                      const revenue = getRevenueForYear(account, selectedYear);
                       return (
                         <tr 
                           key={rowKey} 
@@ -1501,10 +1508,7 @@ export default function Accounts() {
                             </div>
                           </td>
                           <td className={`px-6 py-4 text-right text-sm font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
-                            {(() => {
-                              const revenue = getRevenueForYear(account, selectedYear);
-                              return revenue > 0 ? `$${revenue.toLocaleString()}` : '-';
-                            })()}
+                            {revenue > 0 ? `$${revenue.toLocaleString()}` : '-'}
                           </td>
                         </tr>
                       );
@@ -1515,13 +1519,15 @@ export default function Accounts() {
             </Card>
           ) : (
             /* Accounts Card View */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-archived-${selectedYear}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-archived-${selectedYear}-${renderKey}`}>
               {filteredAccounts.map((account) => {
                 // Include selectedYear in key to force re-render when year changes
                 const rowKey = `${account.id}-${selectedYear}`;
                 const neglectStatus = getNeglectStatus(account.last_interaction_date);
                 // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
-        const isArchived = account.archived === true || account.status === 'archived';
+                const isArchived = account.archived === true || account.status === 'archived';
+                // Calculate revenue for selected year - do this in map so React detects the change
+                const revenue = getRevenueForYear(account, selectedYear);
                 return (
                 <Link key={rowKey} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
                   <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
@@ -1582,17 +1588,14 @@ export default function Accounts() {
                             {neglectStatus.label}
                           </span>
                         </div>
-                        {(() => {
-                          const revenue = getRevenueForYear(account, selectedYear);
-                          return revenue > 0 ? (
+                        {revenue > 0 ? (
                           <div className="flex items-center justify-between text-sm mt-2">
                             <span className={isArchived ? 'text-slate-400' : 'text-slate-600'}>Annual value:</span>
                             <span className={`font-medium ${isArchived ? 'text-slate-500 dark:text-text-muted' : 'text-slate-900 dark:text-white'}`}>
-                                ${revenue.toLocaleString()}
+                              ${revenue.toLocaleString()}
                             </span>
                           </div>
-                          ) : null;
-                        })()}
+                        ) : null}
                       </div>
 
                       {/* Warnings */}
