@@ -595,6 +595,7 @@ export default function Accounts() {
 
   // Filter and sort accounts - MUST include selectedYear in dependencies so it updates when year changes
   // Per Year Selection System spec R6, R8: All revenue/segment calculations use selected year
+  // IMPORTANT: Enrich accounts with revenue for selected year to ensure React detects changes
   const filteredAccounts = useMemo(() => {
     const filtered = accountsByStatus.filter(account => {
       const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -617,8 +618,17 @@ export default function Accounts() {
       return matchesSearch && matchesType && matchesSegment && matchesUser;
     });
 
-    // Sort the filtered accounts
-    const sorted = [...filtered].sort((a, b) => {
+    // Enrich accounts with revenue for selected year - this creates new object references
+    // which helps React detect changes when selectedYear changes
+    const enriched = filtered.map(account => ({
+      ...account,
+      _revenueForSelectedYear: getRevenueForYear(account, selectedYear),
+      _segmentForSelectedYear: getSegmentForYear(account, selectedYear),
+      _selectedYear: selectedYear // Include selectedYear to force new reference
+    }));
+
+    // Sort the enriched accounts
+    const sorted = [...enriched].sort((a, b) => {
       if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
       if (sortBy === 'score') {
         // Only sort by score if both accounts have completed scorecards
@@ -630,9 +640,8 @@ export default function Accounts() {
         return (b.organization_score || 0) - (a.organization_score || 0);
       }
       if (sortBy === 'revenue') {
-        const aRevenue = getRevenueForYear(a, selectedYear);
-        const bRevenue = getRevenueForYear(b, selectedYear);
-        return bRevenue - aRevenue;
+        // Use pre-calculated revenue
+        return (b._revenueForSelectedYear || 0) - (a._revenueForSelectedYear || 0);
       }
       if (sortBy === 'last_interaction') {
         // When sorting by "last contact", prioritize accounts with contacts
@@ -665,9 +674,10 @@ export default function Accounts() {
         filteredCount: sorted.length,
         sampleAccount: {
           name: sorted[0].name,
-          revenue: getRevenueForYear(sorted[0], selectedYear),
-          segment: getSegmentForYear(sorted[0], selectedYear),
-          revenue_by_year: sorted[0].revenue_by_year
+          revenue: sorted[0]._revenueForSelectedYear,
+          segment: sorted[0]._segmentForSelectedYear,
+          revenue_by_year: sorted[0].revenue_by_year,
+          selectedYear: sorted[0]._selectedYear
         }
       });
     }
@@ -980,10 +990,10 @@ export default function Accounts() {
                 <tbody className="bg-white dark:bg-surface-1 divide-y divide-slate-200 dark:divide-border" key={`tbody-${selectedYear}-${renderKey}`}>
                   {filteredAccounts.map((account) => {
                     // Include selectedYear in key to force re-render when year changes
-                    const rowKey = `${account.id}-${selectedYear}`;
+                    const rowKey = `${account.id}-${selectedYear}-${renderKey}`;
                     const neglectStatus = getNeglectStatus(account.last_interaction_date);
-                    // Calculate revenue for selected year - do this in map so React detects the change
-                    const revenue = getRevenueForYear(account, selectedYear);
+                    // Use pre-calculated revenue from enriched account object
+                    const revenue = account._revenueForSelectedYear || 0;
                     // Get at-risk data for this account
                     const atRiskData = statusFilter === 'at_risk' 
                       ? atRiskAccountsData.find(record => record.account_id === account.id)
@@ -997,10 +1007,10 @@ export default function Accounts() {
                           accountName: account.name,
                           accountId: account.id,
                           revenue,
-                          selectedYear, // Explicitly log selectedYear
-                          currentYear: getCurrentYear(),
+                          selectedYear: account._selectedYear,
                           revenue_by_year: account.revenue_by_year,
-                          revenue_for_selected_year: account.revenue_by_year?.[selectedYear.toString()]
+                          revenue_for_selected_year: account.revenue_by_year?.[account._selectedYear?.toString()],
+                          enrichedRevenue: account._revenueForSelectedYear
                         });
                       }
                     }
@@ -1035,7 +1045,7 @@ export default function Accounts() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {getSegmentForYear(account, selectedYear) || '-'}
+                          {account._segmentForSelectedYear || '-'}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
                           {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
@@ -1149,12 +1159,12 @@ export default function Accounts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-${selectedYear}-${renderKey}`}>
           {filteredAccounts.map((account) => {
             // Include selectedYear in key to force re-render when year changes
-            const rowKey = `${account.id}-${selectedYear}`;
+            const rowKey = `${account.id}-${selectedYear}-${renderKey}`;
             const neglectStatus = getNeglectStatus(account.last_interaction_date);
             // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
             const isArchived = account.archived === true || account.status === 'archived';
-            // Calculate revenue for selected year - do this in map so React detects the change
-            const revenue = getRevenueForYear(account, selectedYear);
+            // Use pre-calculated revenue from enriched account object
+            const revenue = account._revenueForSelectedYear || 0;
             // Get at-risk data for this account
             const atRiskData = statusFilter === 'at_risk' 
               ? atRiskAccountsData.find(record => record.account_id === account.id)
@@ -1195,9 +1205,9 @@ export default function Accounts() {
                         <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                         {account.status}
                       </Badge>
-                      {getSegmentForYear(account, selectedYear) && (
+                      {account._segmentForSelectedYear && (
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
-                          {getSegmentForYear(account, selectedYear)}
+                          {account._segmentForSelectedYear}
                         </Badge>
                       )}
                       {/* User role badges when filtered */}
@@ -1484,7 +1494,7 @@ export default function Accounts() {
                             </Badge>
                           </td>
                           <td className={`px-6 py-4 text-sm ${isArchived ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {getSegmentForYear(account, selectedYear) || '-'}
+                            {account._segmentForSelectedYear || '-'}
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4">
                             {accountsWithScorecards.has(account.id) && account.organization_score !== null && account.organization_score !== undefined ? (
@@ -1563,9 +1573,9 @@ export default function Accounts() {
                         <Badge className={`${getStatusColor(account.status)} ${isArchived ? 'opacity-60' : ''}`}>
                           {account.status}
                         </Badge>
-                        {getSegmentForYear(account, selectedYear) && (
+                        {account._segmentForSelectedYear && (
                           <Badge variant="outline" className={`${isArchived ? 'text-slate-400 border-slate-300' : 'text-slate-600 border-slate-300'}`}>
-                            {getSegmentForYear(account, selectedYear)}
+                            {account._segmentForSelectedYear}
                           </Badge>
                         )}
                       </div>
