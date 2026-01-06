@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, PlayCircle, Loader2 } from 'lucide-react';
@@ -27,6 +27,15 @@ export default function ScribeEmbed({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  // Set a timeout to hide loading state if onLoad doesn't fire
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000); // Hide loading after 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!scribeUrl) {
     return (
@@ -127,10 +136,11 @@ export default function ScribeEmbed({
                 style={{ 
                   height: height,
                   minHeight: '400px',
-                  display: isLoading ? 'none' : 'block'
+                  opacity: isLoading ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out'
                 }}
                 title={title}
-                allow="clipboard-read; clipboard-write"
+                allow="clipboard-read; clipboard-write; fullscreen"
                 onLoad={handleLoad}
                 onError={handleError}
                 loading="lazy"
