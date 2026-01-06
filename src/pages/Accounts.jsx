@@ -355,6 +355,34 @@ export default function Accounts() {
     return grouped;
   }, [allEstimates, selectedYear]);
 
+  // Calculate total revenue ONCE for all accounts (performance optimization)
+  // This avoids recalculating total revenue for every account in getSegmentForYear
+  // Moved before useEffect that uses it to avoid TDZ error
+  const totalRevenueForYear = useMemo(() => {
+    return calculateTotalRevenue(accounts, estimatesByAccountId, selectedYear);
+  }, [accounts, estimatesByAccountId, selectedYear]);
+
+  // Pre-calculate revenue and segments for all accounts (performance optimization)
+  // This avoids recalculating the same values multiple times during filtering/enrichment
+  // Moved before useEffect that uses it to avoid TDZ error
+  const accountsWithRevenueAndSegment = useMemo(() => {
+    return accounts.map(account => {
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+      const segment = calculateRevenueSegmentForYear(
+        account,
+        selectedYear,
+        totalRevenueForYear,
+        accountEstimates
+      );
+      return {
+        account,
+        revenue,
+        segment
+      };
+    });
+  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear]);
+
   // Debug: Log year selection status and verify data updates
   // Moved after estimatesByAccountId declaration to avoid TDZ error
   useEffect(() => {
@@ -607,32 +635,6 @@ export default function Accounts() {
     
     return false;
   };
-
-  // Calculate total revenue ONCE for all accounts (performance optimization)
-  // This avoids recalculating total revenue for every account in getSegmentForYear
-  const totalRevenueForYear = useMemo(() => {
-    return calculateTotalRevenue(accounts, estimatesByAccountId, selectedYear);
-  }, [accounts, estimatesByAccountId, selectedYear]);
-
-  // Pre-calculate revenue and segments for all accounts (performance optimization)
-  // This avoids recalculating the same values multiple times during filtering/enrichment
-  const accountsWithRevenueAndSegment = useMemo(() => {
-    return accounts.map(account => {
-      const accountEstimates = estimatesByAccountId[account.id] || [];
-      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
-      const segment = calculateRevenueSegmentForYear(
-        account,
-        selectedYear,
-        totalRevenueForYear,
-        accountEstimates
-      );
-      return {
-        account,
-        revenue,
-        segment
-      };
-    });
-  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear]);
 
   // Filter and sort accounts - MUST include selectedYear in dependencies so it updates when year changes
   // Per Year Selection System spec R6, R8: All revenue/segment calculations use selected year
