@@ -1454,6 +1454,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-white">File 1: Contacts Export</p>
+                          <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
@@ -1536,6 +1537,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-white">File 2: Leads List</p>
+                          <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                             Drag & drop or click to upload
                           </p>
