@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,11 +47,10 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
   // Calculate position
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
+  useEffect(() => {
+    if (!isOpen || !triggerRef.current) return;
 
-    if (!triggerRef.current) return;
-    
+    // Calculate initial position
     const trigger = triggerRef.current;
     const rect = trigger.getBoundingClientRect();
     setPosition({
@@ -59,32 +58,33 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       left: rect.left,
       width: rect.width
     });
-  }, []);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Update position when dropdown opens
-    updatePosition();
-
-    // Update position on scroll
+    // Close dropdown on scroll (better UX than trying to track position)
     const handleScroll = () => {
-      updatePosition();
+      setIsOpen(false);
     };
 
     // Update position on window resize
     const handleResize = () => {
-      updatePosition();
+      if (triggerRef.current) {
+        const newRect = triggerRef.current.getBoundingClientRect();
+        setPosition({
+          top: newRect.bottom + 4,
+          left: newRect.left,
+          width: newRect.width
+        });
+      }
     };
 
-    window.addEventListener('scroll', handleScroll, true); // Use capture phase to catch all scroll events
-    window.addEventListener('resize', handleResize);
+    // Use passive listeners for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    window.addEventListener('resize', handleResize, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
       window.removeEventListener('resize', handleResize);
     };
-  }, [isOpen, updatePosition]);
+  }, [isOpen]);
 
   const handleToggleUser = (userName) => {
     const newSelection = selectedUsers.includes(userName)
