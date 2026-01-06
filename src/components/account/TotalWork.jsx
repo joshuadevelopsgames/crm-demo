@@ -230,12 +230,6 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Calculate won value using annualized values (matching totalEstimated calculation)
-  // This ensures value-based percentage uses consistent calculation method
-  const totalWonValue = useMemo(() => {
-    return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
-  }, [soldBreakdown]);
-  
   // Filter estimates that apply to current year (excluding archived)
   const yearFilteredEstimates = useMemo(() => {
     return estimates.filter(est => {
@@ -326,6 +320,13 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     
     return { included, excluded };
   }, [estimates, currentYear]);
+
+  // Calculate won value using annualized values (matching totalEstimated calculation)
+  // This ensures value-based percentage uses consistent calculation method
+  // Must be defined AFTER soldBreakdown to avoid temporal dead zone error
+  const totalWonValue = useMemo(() => {
+    return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
+  }, [soldBreakdown]);
   
   // Calculate totals for current year
   const totalEstimated = useMemo(() => {
