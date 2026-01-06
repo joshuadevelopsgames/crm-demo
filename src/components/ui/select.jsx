@@ -47,12 +47,35 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
 SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
-const SelectContent = React.forwardRef(({ className, children, position = "popper", ...props }, ref) => {
+const SelectContent = React.forwardRef(({ className, children, position = "item-aligned", ...props }, ref) => {
   const contentRef = React.useRef(null);
   
   // Use callback ref
   const setRefs = React.useCallback((node) => {
     contentRef.current = node;
+    
+    // Override Radix UI's inline transform styles that cause flying animation
+    // This runs after Radix UI applies its transforms via Floating UI
+    if (node) {
+      // Use requestAnimationFrame to override after Radix UI applies styles
+      requestAnimationFrame(() => {
+        if (node && node.style) {
+          // Remove any scale or translateY transforms that cause animation
+          const currentTransform = node.style.transform || '';
+          if (currentTransform) {
+            // Remove scale and translateY (animation transforms) but keep translateX/translate for positioning
+            const cleaned = currentTransform
+              .replace(/scale\([^)]*\)/g, '')
+              .replace(/translateY\([^)]*\)/g, '')
+              .trim();
+            // Only set to 'none' if we removed something, otherwise keep positioning
+            if (cleaned !== currentTransform) {
+              node.style.transform = cleaned || 'none';
+            }
+          }
+        }
+      });
+    }
     
     // Call the original ref if provided
     if (typeof ref === 'function') {
