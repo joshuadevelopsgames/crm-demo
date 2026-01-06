@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
 import { isWonStatus } from '@/utils/reportCalculations';
+import { getEstimateYearData, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -61,7 +62,7 @@ function normalizeDepartment(division) {
   return 'Uncategorized';
 }
 
-export default function EstimatesTab({ estimates = [], accountId, selectedYear: propSelectedYear = null }) {
+export default function EstimatesTab({ estimates = [], accountId, account = null, selectedYear: propSelectedYear = null }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   
@@ -272,38 +273,26 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
     return (won / departmentEstimates.length) * 100;
   };
 
-  // Filter estimates by year only (for Overall Win Rate card - respects year selection)
-  // Per Year Selection System spec R1, R2, R7: Use full date priority for year filtering
+  // Filter estimates by year using contract-year allocation logic (for Overall Win Rate card)
+  // This matches the logic used in Total Work card to ensure consistency
+  // Per Year Selection System spec R1, R2, R7-R9: Use contract-year allocation for multi-year contracts
   const yearFilteredEstimates = useMemo(() => {
+    if (effectiveFilterYear === 'all') {
+      // If "all years" selected, return all non-archived estimates
+      return estimates.filter(est => !est.archived);
+    }
+    
+    const selectedYear = parseInt(effectiveFilterYear);
     return estimates.filter(est => {
       // Per spec R2: Exclude archived estimates
       if (est.archived) {
         return false;
       }
       
-      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
-      if (effectiveFilterYear !== 'all') {
-        let dateToUse = null;
-        if (est.contract_end) {
-          dateToUse = est.contract_end;
-        } else if (est.contract_start) {
-          dateToUse = est.contract_start;
-        } else if (est.estimate_date) {
-          dateToUse = est.estimate_date;
-        } else if (est.created_date) {
-          dateToUse = est.created_date;
-        }
-        
-        if (dateToUse) {
-          const year = getYearFromDateString(dateToUse);
-          if (year && year.toString() !== effectiveFilterYear) return false;
-        } else {
-          // No valid date field - exclude from year filtering
-          return false;
-        }
-      }
-      
-      return true;
+      // Use getEstimateYearData to check if estimate applies to selected year
+      // This handles multi-year contracts with annualization
+      const yearData = getEstimateYearData(est, selectedYear);
+      return yearData && yearData.appliesToCurrentYear;
     });
   }, [estimates, effectiveFilterYear]);
 
@@ -314,21 +303,56 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
     return (won / yearFilteredEstimates.length) * 100;
   }, [yearFilteredEstimates]);
 
-  // Calculate won value and total estimated value for year-filtered estimates (for Overall Win Rate card)
+  // Calculate won value using stored revenue (matches Total Work card logic)
+  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
+  // This ensures consistency with Total Work card
   const totalWonValue = useMemo(() => {
-    const wonEstimates = yearFilteredEstimates.filter(est => isWonStatus(est));
+    if (effectiveFilterYear === 'all') {
+      // For "all years", sum all won estimates (full value, not annualized)
+      const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
+      return wonEstimates.reduce((sum, est) => {
+        const amount = est.total_price_with_tax || est.total_price || 0;
+        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      }, 0);
+    }
+    
+    // Use stored revenue from account.revenue_by_year (matches Total Work card)
+    // If account is not available, fall back to on-the-fly calculation
+    if (account) {
+      const selectedYear = parseInt(effectiveFilterYear);
+      return getRevenueForYear(account, selectedYear);
+    }
+    
+    // Fallback: calculate on-the-fly if account not available
+    const selectedYear = parseInt(effectiveFilterYear);
+    const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
     return wonEstimates.reduce((sum, est) => {
-      const amount = est.total_price_with_tax || est.total_price || 0;
-      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      const yearData = getEstimateYearData(est, selectedYear);
+      if (yearData && yearData.appliesToCurrentYear) {
+        return sum + (yearData.value || 0);
+      }
+      return sum;
     }, 0);
-  }, [yearFilteredEstimates]);
+  }, [estimates, effectiveFilterYear, account]);
 
   const totalEstimatedValue = useMemo(() => {
-    return yearFilteredEstimates.reduce((sum, est) => {
-      const amount = est.total_price_with_tax || est.total_price || 0;
-      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    if (effectiveFilterYear === 'all') {
+      // For "all years", sum all estimates (full value, not annualized)
+      return estimates.filter(est => !est.archived).reduce((sum, est) => {
+        const amount = est.total_price_with_tax || est.total_price || 0;
+        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      }, 0);
+    }
+    
+    const selectedYear = parseInt(effectiveFilterYear);
+    return estimates.filter(est => !est.archived).reduce((sum, est) => {
+      const yearData = getEstimateYearData(est, selectedYear);
+      if (yearData && yearData.appliesToCurrentYear) {
+        return sum + (yearData.value || 0);
+      }
+      return sum;
     }, 0);
-  }, [yearFilteredEstimates]);
+  }, [estimates, effectiveFilterYear]);
 
   const totalEstimates = statusFilteredEstimates.length;
 

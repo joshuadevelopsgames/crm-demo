@@ -571,7 +571,7 @@ export default function AccountDetail() {
 
         {/* Estimates Tab */}
         <TabsContent value="estimates">
-          <EstimatesTab estimates={estimates} accountId={accountId} selectedYear={accountSelectedYear} />
+          <EstimatesTab estimates={estimates} accountId={accountId} account={account} selectedYear={accountSelectedYear} />
         </TabsContent>
 
         {/* Communication History Tab (formerly Interactions) */}
