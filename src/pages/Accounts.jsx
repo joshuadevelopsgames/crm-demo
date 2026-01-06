@@ -57,8 +57,34 @@ export default function Accounts() {
   const { selectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
   const navigate = useNavigate();
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:57',message:'Component entry - hooks initialized',data:{selectedYear,hasGetCurrentYear:typeof getCurrentYear==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
+  const { user, isLoading: userLoading } = useUser();
+
+  // Accounts data includes revenue_by_year for all years, so we don't need to refetch when year changes
+  // The useMemo for filteredAccounts includes selectedYear, so it will recalculate when year changes
+  // Per Year Selection System spec R6, R8: All revenue calculations use selected year
+  const { data: accounts = [], isLoading } = useQuery({
+    queryKey: ['accounts'], // Don't include selectedYear - data is the same for all years
+    queryFn: () => base44.entities.Account.list(),
+    enabled: !userLoading && !!user, // Wait for user to load before fetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
+    placeholderData: (previousData) => previousData, // Keep previous data while refetching
+  });
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:141',message:'accounts declared via useQuery',data:{accountsLength:accounts?.length||0,isLoading,accountsDefined:typeof accounts!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
   // Debug: Log year selection status and verify data updates
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:148',message:'useEffect entry - checking accounts access',data:{accountsDefined:typeof accounts!=='undefined',accountsLength:accounts?.length||0,selectedYear},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const currentYear = getCurrentYear();
     console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
       selectedYear,
@@ -91,6 +117,9 @@ export default function Accounts() {
         }).length
       });
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:178',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   }, [selectedYear, getCurrentYear, accounts]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,21 +161,6 @@ export default function Accounts() {
       }
     }
   }, [searchParams]);
-
-  const { user, isLoading: userLoading } = useUser();
-
-  // Accounts data includes revenue_by_year for all years, so we don't need to refetch when year changes
-  // The useMemo for filteredAccounts includes selectedYear, so it will recalculate when year changes
-  // Per Year Selection System spec R6, R8: All revenue calculations use selected year
-  const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['accounts'], // Don't include selectedYear - data is the same for all years
-    queryFn: () => base44.entities.Account.list(),
-    enabled: !userLoading && !!user, // Wait for user to load before fetching
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
-    refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
-    placeholderData: (previousData) => previousData, // Keep previous data while refetching
-  });
 
   // Fetch contacts to check which accounts have contacts
   const { data: contacts = [] } = useQuery({
