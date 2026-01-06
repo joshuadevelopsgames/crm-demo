@@ -77,47 +77,8 @@ export default function Accounts() {
   });
 
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:141',message:'accounts declared via useQuery',data:{accountsLength:accounts?.length||0,isLoading,accountsDefined:typeof accounts!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:79',message:'accounts declared via useQuery',data:{accountsLength:accounts?.length||0,isLoading,accountsDefined:typeof accounts!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
-
-  // Debug: Log year selection status and verify data updates
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:148',message:'useEffect entry - checking accounts access',data:{accountsDefined:typeof accounts!=='undefined',accountsLength:accounts?.length||0,selectedYear},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    const currentYear = getCurrentYear();
-    console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
-      selectedYear,
-      currentYear: getCurrentYear(),
-      accountsCount: accounts.length
-    });
-    if (accounts.length > 0 && estimatesByAccountId) {
-      const sampleAccount = accounts[0];
-      const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
-      const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
-      console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
-        selectedYear,
-        currentYear: getCurrentYear(),
-        accountsCount: accounts.length,
-        sampleAccount: {
-          id: sampleAccount.id,
-          name: sampleAccount.name,
-          revenue_by_year: sampleAccount.revenue_by_year,
-          segment_by_year: sampleAccount.segment_by_year,
-          revenue_for_selected_year: sampleRevenue,
-          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear, accounts, estimatesByAccountId)
-        },
-        accountsWithRevenueData: accounts.filter(acc => {
-          const accEstimates = estimatesByAccountId[acc.id] || [];
-          const revenue = calculateRevenueFromWonEstimates(acc, accEstimates, selectedYear);
-          return revenue > 0;
-        }).length
-      });
-    }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:178',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -393,6 +354,46 @@ export default function Accounts() {
     
     return grouped;
   }, [allEstimates, selectedYear]);
+
+  // Debug: Log year selection status and verify data updates
+  // Moved after estimatesByAccountId declaration to avoid TDZ error
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:395',message:'useEffect entry - checking accounts access',data:{accountsDefined:typeof accounts!=='undefined',accountsLength:accounts?.length||0,selectedYear,hasEstimatesByAccountId:typeof estimatesByAccountId!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    const currentYear = getCurrentYear();
+    console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
+      selectedYear,
+      currentYear: getCurrentYear(),
+      accountsCount: accounts.length
+    });
+    if (accounts.length > 0 && estimatesByAccountId) {
+      const sampleAccount = accounts[0];
+      const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
+      const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
+      console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
+        selectedYear,
+        currentYear: getCurrentYear(),
+        accountsCount: accounts.length,
+        sampleAccount: {
+          id: sampleAccount.id,
+          name: sampleAccount.name,
+          revenue_by_year: sampleAccount.revenue_by_year,
+          segment_by_year: sampleAccount.segment_by_year,
+          revenue_for_selected_year: sampleRevenue,
+          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear, accounts, estimatesByAccountId)
+        },
+        accountsWithRevenueData: accounts.filter(acc => {
+          const accEstimates = estimatesByAccountId[acc.id] || [];
+          const revenue = calculateRevenueFromWonEstimates(acc, accEstimates, selectedYear);
+          return revenue > 0;
+        }).length
+      });
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:425',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
