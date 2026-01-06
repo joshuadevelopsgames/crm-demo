@@ -139,14 +139,18 @@ export default function ScribeEmbed({
                 className="w-full border-0"
                 style={{ 
                   height: height,
-                  minHeight: '400px',
+                  minHeight: '480px',
                   display: 'block',
-                  width: '100%'
+                  width: '100%',
+                  aspectRatio: '1 / 1'
                 }}
                 title={title}
-                allow="clipboard-read; clipboard-write; fullscreen"
+                allow="fullscreen"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
                 onLoad={handleLoad}
                 onError={handleError}
+                loading="eager"
               />
               <div className="p-2 border-t bg-slate-50 dark:bg-slate-900 flex justify-end">
                 <Button
