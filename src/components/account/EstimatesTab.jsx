@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
 import { isWonStatus } from '@/utils/reportCalculations';
-import { getEstimateYearData, calculateRevenueFromWonEstimates } from '@/utils/revenueSegmentCalculator';
+import { getEstimateYearData } from '@/utils/revenueSegmentCalculator';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -303,22 +303,18 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     return (won / yearFilteredEstimates.length) * 100;
   }, [yearFilteredEstimates]);
 
-  // Calculate won value on-the-fly from won estimates (matches Accounts page logic)
-  // Uses calculateRevenueFromWonEstimates which handles contract-year allocation
+  // Calculate won value as sum of won estimates' dollar values for selected year
+  // Simple sum - no contract-year allocation, just sum the dollar values
   const totalWonValue = useMemo(() => {
-    if (effectiveFilterYear === 'all') {
-      // For "all years", sum all won estimates (full value, not annualized)
-      const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
-      return wonEstimates.reduce((sum, est) => {
-        const amount = est.total_price_with_tax || est.total_price || 0;
-        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
-      }, 0);
-    }
+    // Filter for won estimates from year-filtered estimates
+    const wonEstimates = yearFilteredEstimates.filter(est => isWonStatus(est));
     
-    // Calculate revenue on-the-fly from won estimates (same logic as Accounts page)
-    const selectedYear = parseInt(effectiveFilterYear);
-    return calculateRevenueFromWonEstimates(account, estimates, selectedYear);
-  }, [estimates, effectiveFilterYear, account]);
+    // Sum their dollar values
+    return wonEstimates.reduce((sum, est) => {
+      const amount = est.total_price_with_tax || est.total_price || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    }, 0);
+  }, [yearFilteredEstimates]);
 
   const totalEstimatedValue = useMemo(() => {
     if (effectiveFilterYear === 'all') {
