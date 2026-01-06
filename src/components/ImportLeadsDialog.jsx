@@ -3164,57 +3164,57 @@ export default function ImportLeadsDialog({ open, onClose }) {
           {/* Success */}
           {importStatus === 'success' && importResults && (
             <div className="flex flex-col items-center text-center space-y-4 py-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
               
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                   Import Complete!
                 </h3>
-                <p className="text-slate-600 text-sm">
+                <p className="text-slate-600 dark:text-slate-400 text-sm">
                   Your LMN data has been imported into LECRM
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
-                <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <p className="text-2xl font-bold text-emerald-600">{importResults.accountsCreated}</p>
-                  <p className="text-xs text-slate-600 mt-1">Accounts Created</p>
+                <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{importResults.accountsCreated}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Accounts Created</p>
                   {importResults.accountsUpdated > 0 && (
-                    <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.accountsUpdated} Updated</p>
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1">{importResults.accountsUpdated} Updated</p>
                   )}
                 </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-2xl font-bold text-purple-600">{importResults.contactsCreated}</p>
-                  <p className="text-xs text-slate-600 mt-1">Contacts Created</p>
+                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{importResults.contactsCreated}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Contacts Created</p>
                   {importResults.contactsUpdated > 0 && (
-                    <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.contactsUpdated} Updated</p>
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1">{importResults.contactsUpdated} Updated</p>
                   )}
                 </div>
                 {(importResults.estimatesCreated > 0 || importResults.estimatesUpdated > 0) && (
-                  <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p className="text-2xl font-bold text-amber-600">{importResults.estimatesCreated}</p>
-                    <p className="text-xs text-slate-600 mt-1">Estimates Created</p>
+                  <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{importResults.estimatesCreated}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Estimates Created</p>
                     {importResults.estimatesUpdated > 0 && (
-                      <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.estimatesUpdated} Updated</p>
+                      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1">{importResults.estimatesUpdated} Updated</p>
                     )}
                   </div>
                 )}
                 {(importResults.jobsitesCreated > 0 || importResults.jobsitesUpdated > 0) && (
-                  <div className="text-center p-3 bg-teal-50 rounded-lg border border-teal-200">
-                    <p className="text-2xl font-bold text-teal-600">{importResults.jobsitesCreated}</p>
-                    <p className="text-xs text-slate-600 mt-1">Jobsites Created</p>
+                  <div className="text-center p-3 bg-teal-50 dark:bg-teal-900/30 rounded-lg border border-teal-200 dark:border-teal-800">
+                    <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{importResults.jobsitesCreated}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Jobsites Created</p>
                     {importResults.jobsitesUpdated > 0 && (
-                      <p className="text-sm font-semibold text-blue-600 mt-1">{importResults.jobsitesUpdated} Updated</p>
+                      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-1">{importResults.jobsitesUpdated} Updated</p>
                     )}
                   </div>
                 )}
               </div>
 
               {(importResults.accountsFailed > 0 || importResults.contactsFailed > 0 || importResults.estimatesFailed > 0 || importResults.jobsitesFailed > 0) && (
-                <Card className="p-3 bg-amber-50 border-amber-200 w-full max-w-sm">
-                  <p className="text-sm text-amber-800">
+                <Card className="p-3 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 w-full max-w-sm">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
                     {[
                       importResults.accountsFailed > 0 && `${importResults.accountsFailed} accounts failed`,
                       importResults.contactsFailed > 0 && `${importResults.contactsFailed} contacts failed`,
@@ -3227,32 +3227,32 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
               {/* Data Quality Irregularities */}
               {importResults.irregularities && importResults.irregularities.length > 0 && (
-                <Card className="p-4 bg-amber-50 border-amber-200 w-full max-w-2xl">
+                <Card className="p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 w-full max-w-2xl">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="font-semibold text-amber-900 mb-1">
+                      <p className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
                         🔍 Data Quality Irregularities Found
                       </p>
-                      <p className="text-sm text-amber-700 mb-3">
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
                         Found {importResults.irregularities.length} irregularity(ies) during import. These were handled automatically but should be reviewed to ensure data quality.
                       </p>
                       <div className="max-h-60 overflow-y-auto space-y-2">
                         {importResults.irregularities.slice(0, 10).map((irregularity, idx) => (
-                          <div key={idx} className="text-xs bg-white p-2 rounded border border-amber-200">
-                            <p className="font-medium text-amber-900">
+                          <div key={idx} className="text-xs bg-white dark:bg-slate-800 p-2 rounded border border-amber-200 dark:border-amber-800">
+                            <p className="font-medium text-amber-900 dark:text-amber-200">
                               {irregularity.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </p>
-                            <p className="text-amber-700 mt-1">{irregularity.message}</p>
+                            <p className="text-amber-700 dark:text-amber-300 mt-1">{irregularity.message}</p>
                             {irregularity.estimate && (
-                              <p className="text-amber-600 mt-1 italic">
+                              <p className="text-amber-600 dark:text-amber-400 mt-1 italic">
                                 Estimate: {irregularity.estimate.lmn_estimate_id || irregularity.estimate.id || irregularity.estimate.estimate_number || 'Unknown'}
                               </p>
                             )}
                           </div>
                         ))}
                         {importResults.irregularities.length > 10 && (
-                          <p className="text-xs text-amber-600 italic">
+                          <p className="text-xs text-amber-600 dark:text-amber-400 italic">
                             ... and {importResults.irregularities.length - 10} more irregularities
                           </p>
                         )}
@@ -3264,19 +3264,19 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
               {/* Errors and Warnings */}
               {((importResults.errors && importResults.errors.length > 0) || (importResults.warnings && importResults.warnings.length > 0)) && (
-                <Card className="p-4 bg-red-50 border-red-200 w-full max-w-2xl">
+                <Card className="p-4 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 w-full max-w-2xl">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="font-semibold text-red-900 mb-2">⚠️ Errors & Warnings</p>
+                      <p className="font-semibold text-red-900 dark:text-red-200 mb-2">⚠️ Errors & Warnings</p>
                       <div className="max-h-60 overflow-y-auto space-y-1">
                         {importResults.errors && importResults.errors.map((err, idx) => (
-                          <p key={idx} className="text-xs text-red-800">
+                          <p key={idx} className="text-xs text-red-800 dark:text-red-200">
                             ❌ {err.message || err}
                           </p>
                         ))}
                         {importResults.warnings && importResults.warnings.map((warn, idx) => (
-                          <p key={idx} className="text-xs text-red-700">
+                          <p key={idx} className="text-xs text-red-700 dark:text-red-300">
                             ⚠️ {warn.message || warn}
                           </p>
                         ))}
@@ -3288,26 +3288,26 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
               {/* Notification for new contacts created from Leads without Contact ID */}
               {importResults.newContactsFromLeads && importResults.newContactsFromLeads.count > 0 && (
-                <Card className="p-4 bg-blue-50 border-blue-200 w-full max-w-2xl mt-4">
+                <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 w-full max-w-2xl mt-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-blue-600 text-sm font-bold">ℹ️</span>
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">ℹ️</span>
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-blue-900 mb-2">
+                      <p className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
                         {importResults.newContactsFromLeads.count} New Contact{importResults.newContactsFromLeads.count !== 1 ? 's' : ''} Created (No Contact ID)
                       </p>
-                      <p className="text-sm text-blue-800 mb-3">
+                      <p className="text-sm text-blue-800 dark:text-blue-300 mb-3">
                         The following contact{importResults.newContactsFromLeads.count !== 1 ? 's were' : ' was'} created from the Leads sheet but {importResults.newContactsFromLeads.count !== 1 ? 'do not have' : 'does not have'} a Contact ID. {importResults.newContactsFromLeads.count !== 1 ? 'They have been' : 'It has been'} attributed to {importResults.newContactsFromLeads.count !== 1 ? 'their respective' : 'its'} account{importResults.newContactsFromLeads.count !== 1 ? 's' : ''}:
                       </p>
                       <div className="max-h-48 overflow-y-auto space-y-2">
                         {importResults.newContactsFromLeads.contacts.map((contact, idx) => (
-                          <div key={idx} className="p-2 bg-white rounded border border-blue-200">
-                            <p className="text-sm font-medium text-blue-900">
+                          <div key={idx} className="p-2 bg-white dark:bg-slate-800 rounded border border-blue-200 dark:border-blue-800">
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
                               {contact.contact_name || 'Unknown Contact'}
-                              {contact.email && <span className="text-blue-700 font-normal"> ({contact.email})</span>}
+                              {contact.email && <span className="text-blue-700 dark:text-blue-300 font-normal"> ({contact.email})</span>}
                             </p>
-                            <p className="text-xs text-blue-700 mt-1">
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                               → Attributed to: <span className="font-semibold">{contact.account_name}</span>
                             </p>
                           </div>
@@ -3318,7 +3318,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                 </Card>
               )}
 
-              <Button onClick={handleClose} className="bg-slate-900 mt-4">
+              <Button onClick={handleClose} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 mt-4">
                 Done
               </Button>
             </div>
