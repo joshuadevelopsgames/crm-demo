@@ -74,6 +74,10 @@ export default function AccountDetail() {
   const canManageInteractions = permissions['manage_interactions'] === true;
   const { selectedYear: globalSelectedYear, availableYears: globalAvailableYears } = useYearSelector();
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountDetail.jsx:75',message:'useYearSelector result',data:{globalSelectedYear:globalSelectedYear,globalAvailableYearsType:typeof globalAvailableYears,globalAvailableYearsLength:globalAvailableYears?.length,globalAvailableYearsIsArray:Array.isArray(globalAvailableYears)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   // Local year selector for this account page (defaults to global selected year)
   const [accountSelectedYear, setAccountSelectedYear] = useState(globalSelectedYear);
   
@@ -81,25 +85,6 @@ export default function AccountDetail() {
   useEffect(() => {
     setAccountSelectedYear(globalSelectedYear);
   }, [globalSelectedYear]);
-  
-  // Get available years from estimates for this account
-  const accountAvailableYears = useMemo(() => {
-    const years = new Set();
-    estimates.forEach(est => {
-      if (est.archived) return;
-      const dateToUse = est.contract_end || est.contract_start || est.estimate_date || est.created_date;
-      if (dateToUse) {
-        const year = new Date(dateToUse).getFullYear();
-        if (year >= 2000 && year <= 2100) {
-          years.add(year);
-        }
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [estimates]);
-  
-  // Use account-specific years if available, otherwise use global years
-  const availableYears = accountAvailableYears.length > 0 ? accountAvailableYears : globalAvailableYears;
 
   const queryClient = useQueryClient();
 
@@ -168,6 +153,39 @@ export default function AccountDetail() {
     },
     enabled: !!accountId && !!account
   });
+
+  // Get available years from estimates for this account
+  // Moved here to avoid TDZ error - must be after estimates declaration
+  const accountAvailableYears = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountDetail.jsx:189',message:'accountAvailableYears useMemo entry',data:{estimatesType:typeof estimates,estimatesLength:estimates?.length,estimatesIsArray:Array.isArray(estimates)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    const years = new Set();
+    estimates.forEach(est => {
+      if (est.archived) return;
+      const dateToUse = est.contract_end || est.contract_start || est.estimate_date || est.created_date;
+      if (dateToUse) {
+        const year = new Date(dateToUse).getFullYear();
+        if (year >= 2000 && year <= 2100) {
+          years.add(year);
+        }
+      }
+    });
+    const result = Array.from(years).sort((a, b) => b - a);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountDetail.jsx:202',message:'accountAvailableYears useMemo exit',data:{resultLength:result.length,resultIsArray:Array.isArray(result)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    return result;
+  }, [estimates]);
+  
+  // Use account-specific years if available, otherwise use global years
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountDetail.jsx:205',message:'BEFORE availableYears declaration',data:{accountAvailableYearsType:typeof accountAvailableYears,accountAvailableYearsLength:accountAvailableYears?.length,globalAvailableYearsType:typeof globalAvailableYears,globalAvailableYearsLength:globalAvailableYears?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const availableYears = accountAvailableYears.length > 0 ? accountAvailableYears : globalAvailableYears;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AccountDetail.jsx:207',message:'AFTER availableYears declaration',data:{availableYearsType:typeof availableYears,availableYearsLength:availableYears?.length,availableYearsIsArray:Array.isArray(availableYears)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   // Fetch jobsites for this account (server-side filtering for accuracy)
   const { data: jobsites = [] } = useQuery({
