@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
@@ -36,7 +37,8 @@ import {
   User,
   Link as LinkIcon,
   Trash2,
-  Info
+  Info,
+  BookOpen
 } from 'lucide-react';
 import {
   Select,
@@ -59,6 +61,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function ImportLeadsDialog({ open, onClose }) {
+  const navigate = useNavigate();
+  
   // File 1: Contacts Export
   const [contactsFile, setContactsFile] = useState(null);
   const [contactsData, setContactsData] = useState(null);
@@ -1377,7 +1381,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
               <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800 dark:text-blue-200">
+                  <div className="flex-1 text-sm text-blue-800 dark:text-blue-200">
                     <p className="font-semibold mb-1">Required files (XLSX):</p>
                     <ol className="list-decimal list-inside space-y-1 ml-2">
                       <li><strong>Contacts Export</strong> - Has CRM IDs, Contact IDs, Tags, Archived status</li>
@@ -1386,6 +1390,20 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       <li><strong>Jobsite Export</strong> - Has Jobsite IDs, Addresses, Contact links (required)</li>
                     </ol>
                     <p className="mt-2">All four files are required. Estimates and Jobsites are needed to calculate revenue and account scores. XLSX format is required.</p>
+                    <div className="mt-3 pt-3 border-t border-blue-300 dark:border-blue-700">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          onClose();
+                          navigate('/tutorial?step=13');
+                        }}
+                        className="bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                      >
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        View Import Tutorial
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>
