@@ -70,8 +70,8 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
   // Check for both null and undefined to handle cases where prop might not be passed
   const hasYearProp = propSelectedYear !== null && propSelectedYear !== undefined;
   const effectiveFilterYear = hasYearProp ? propSelectedYear.toString() : filterYear;
-  // Initialize with all divisions expanded, including Uncategorized
-  const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DIVISION_CATEGORIES, 'Uncategorized']));
+  // Initialize with all divisions collapsed by default
+  const [expandedDepartments, setExpandedDepartments] = useState(new Set());
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
 
