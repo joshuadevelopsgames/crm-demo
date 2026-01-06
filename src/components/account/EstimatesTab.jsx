@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
 import { isWonStatus } from '@/utils/reportCalculations';
-import { getEstimateYearData, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
+import { getEstimateYearData, calculateRevenueFromWonEstimates } from '@/utils/revenueSegmentCalculator';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -303,9 +303,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     return (won / yearFilteredEstimates.length) * 100;
   }, [yearFilteredEstimates]);
 
-  // Calculate won value using stored revenue (matches Total Work card logic)
-  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
-  // This ensures consistency with Total Work card
+  // Calculate won value on-the-fly from won estimates (matches Accounts page logic)
+  // Uses calculateRevenueFromWonEstimates which handles contract-year allocation
   const totalWonValue = useMemo(() => {
     if (effectiveFilterYear === 'all') {
       // For "all years", sum all won estimates (full value, not annualized)
@@ -316,23 +315,9 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       }, 0);
     }
     
-    // Use stored revenue from account.revenue_by_year (matches Total Work card)
-    // If account is not available, fall back to on-the-fly calculation
-    if (account) {
-      const selectedYear = parseInt(effectiveFilterYear);
-      return getRevenueForYear(account, selectedYear);
-    }
-    
-    // Fallback: calculate on-the-fly if account not available
+    // Calculate revenue on-the-fly from won estimates (same logic as Accounts page)
     const selectedYear = parseInt(effectiveFilterYear);
-    const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
-    return wonEstimates.reduce((sum, est) => {
-      const yearData = getEstimateYearData(est, selectedYear);
-      if (yearData && yearData.appliesToCurrentYear) {
-        return sum + (yearData.value || 0);
-      }
-      return sum;
-    }, 0);
+    return calculateRevenueFromWonEstimates(account, estimates, selectedYear);
   }, [estimates, effectiveFilterYear, account]);
 
   const totalEstimatedValue = useMemo(() => {
