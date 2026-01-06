@@ -925,37 +925,26 @@ export default function Tutorial() {
             ))}
           </div>
 
-          <Button
-            onClick={handleNext}
-            disabled={safeStep === tutorialSteps.length - 1}
-          >
-            {safeStep === tutorialSteps.length - 1 ? (
-              <>
-                <Home className="w-4 h-4 mr-2" />
-                Finish
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Quick Links */}
-        {safeStep === tutorialSteps.length - 1 && (
-          <div className="mt-8 flex gap-4 justify-center">
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
+          {safeStep === tutorialSteps.length - 1 ? (
+            <Button
+              onClick={() => {
+                exitTutorial();
+                navigate('/dashboard');
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
               <Home className="w-4 h-4 mr-2" />
-              Go to Dashboard
+              Finish
             </Button>
-            <Button variant="outline" onClick={() => navigate('/accounts')}>
-              <Building2 className="w-4 h-4 mr-2" />
-              View Accounts
+          ) : (
+            <Button
+              onClick={handleNext}
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
-          </div>
-        )}
+          )}
+        </div>
         </div>
       </div>
     </>
