@@ -355,12 +355,13 @@ body {
 /* Smooth dropdown animations - consistent across all dropdowns */
 .select-dropdown[data-state="open"],
 [data-radix-select-content][data-state="open"] {
-  animation: slideInFade 0.15s ease-out;
+  animation: slideInFade 0.15s ease-out !important;
   opacity: 1 !important;
   visibility: visible !important;
   display: flex !important;
   pointer-events: auto !important;
-  transform-origin: top center;
+  transform-origin: top left !important;
+  transform: none !important;
 }
 
 /* Ensure item-aligned dropdowns are visible */
@@ -368,9 +369,14 @@ body {
   position: absolute !important;
 }
 
-.select-dropdown[data-state="closed"],
+/* Disable Radix UI's built-in animations */
+[data-radix-select-content] {
+  animation-duration: 0s !important;
+  transition: none !important;
+}
+
 [data-radix-select-content][data-state="closed"] {
-  animation: slideOutFade 0.1s ease-in;
+  animation: slideOutFade 0.1s ease-in !important;
 }
 
 @keyframes slideInFade {
