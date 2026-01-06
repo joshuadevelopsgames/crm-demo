@@ -91,8 +91,10 @@ export default function Accounts() {
       currentYear: getCurrentYear(),
       accountsCount: accounts.length
     });
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && estimatesByAccountId) {
       const sampleAccount = accounts[0];
+      const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
+      const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
       console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
         selectedYear,
         currentYear: getCurrentYear(),
@@ -102,17 +104,12 @@ export default function Accounts() {
           name: sampleAccount.name,
           revenue_by_year: sampleAccount.revenue_by_year,
           segment_by_year: sampleAccount.segment_by_year,
-          revenue_for_2024: getRevenueForYear(sampleAccount, 2024),
-          revenue_for_2025: getRevenueForYear(sampleAccount, 2025),
-          revenue_for_2026: getRevenueForYear(sampleAccount, 2026),
-          revenue_for_selected_year: getRevenueForYear(sampleAccount, selectedYear),
-          segment_for_2024: getSegmentForYear(sampleAccount, 2024),
-          segment_for_2025: getSegmentForYear(sampleAccount, 2025),
-          segment_for_2026: getSegmentForYear(sampleAccount, 2026),
-          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear)
+          revenue_for_selected_year: sampleRevenue,
+          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear, accounts, estimatesByAccountId)
         },
         accountsWithRevenueData: accounts.filter(acc => {
-          const revenue = getRevenueForYear(acc, selectedYear);
+          const accEstimates = estimatesByAccountId[acc.id] || [];
+          const revenue = calculateRevenueFromWonEstimates(acc, accEstimates, selectedYear);
           return revenue > 0;
         }).length
       });
@@ -120,7 +117,7 @@ export default function Accounts() {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:178',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
-  }, [selectedYear, getCurrentYear, accounts]);
+  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -615,7 +612,7 @@ export default function Accounts() {
     const filtered = accountsByStatus.filter(account => {
       const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = accountMatchesType(account, filterType);
-      const accountSegment = getSegmentForYear(account, selectedYear);
+      const accountSegment = getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId);
       const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
       
       // User filter: if users are selected, only show accounts that have estimates with those users
@@ -642,7 +639,7 @@ export default function Accounts() {
       return {
         ...account,
         _revenueForSelectedYear: revenue,
-        _segmentForSelectedYear: getSegmentForYear(account, selectedYear),
+        _segmentForSelectedYear: getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId),
         _selectedYear: selectedYear // Include selectedYear to force new reference
       };
     });
@@ -711,7 +708,7 @@ export default function Accounts() {
       const segmentCounts = {};
       const statusCounts = {};
       accounts.forEach(acc => {
-        const segment = getSegmentForYear(acc, selectedYear) || 'null';
+        const segment = getSegmentForYear(acc, selectedYear, accounts, estimatesByAccountId) || 'null';
         const status = acc.status || 'null';
         segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
         statusCounts[status] = (statusCounts[status] || 0) + 1;
@@ -727,17 +724,17 @@ export default function Accounts() {
         selectedYear,
         segmentCounts,
         statusCounts,
-        accountsWithSegmentB: accounts.filter(a => getSegmentForYear(a, selectedYear) === 'B').length,
+        accountsWithSegmentB: accounts.filter(a => getSegmentForYear(a, selectedYear, accounts, estimatesByAccountId) === 'B').length,
         accountsWithAtRiskStatus: accounts.filter(a => a.status === 'at_risk').length,
         sampleAccounts: accounts.slice(0, 5).map(a => ({
           name: a.name,
-          revenue_segment: getSegmentForYear(a, selectedYear),
+          revenue_segment: getSegmentForYear(a, selectedYear, accounts, estimatesByAccountId),
           status: a.status,
           archived: a.archived
         }))
       });
     }
-  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter, selectedYear]);
+  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter, selectedYear, estimatesByAccountId]);
 
   const getAccountTypeColor = (type) => {
     const colors = {
