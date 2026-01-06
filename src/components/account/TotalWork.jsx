@@ -224,8 +224,9 @@ function getCurrentYearForCalculation() {
   }
 }
 
-export default function TotalWork({ account, estimates = [] }) {
-  const currentYear = getCurrentYearForCalculation();
+export default function TotalWork({ account, estimates = [], selectedYear: propSelectedYear = null }) {
+  // Use propSelectedYear if provided (from account page), otherwise use context
+  const currentYear = propSelectedYear !== null ? propSelectedYear : getCurrentYearForCalculation();
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
   

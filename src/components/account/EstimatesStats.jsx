@@ -19,8 +19,9 @@ function getCurrentYearForCalculation() {
   }
 }
 
-export default function EstimatesStats({ estimates = [], account = null }) {
-  const currentYear = getCurrentYearForCalculation();
+export default function EstimatesStats({ estimates = [], account = null, selectedYear: propSelectedYear = null }) {
+  // Use propSelectedYear if provided (from account page), otherwise use context
+  const currentYear = propSelectedYear !== null ? propSelectedYear : getCurrentYearForCalculation();
   
   // Per Estimates spec R20-R23: Use pre-calculated total_estimates_by_year
   // This avoids on-the-fly filtering and improves performance

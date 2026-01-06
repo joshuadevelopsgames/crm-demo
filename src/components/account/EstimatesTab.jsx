@@ -61,9 +61,13 @@ function normalizeDepartment(division) {
   return 'Uncategorized';
 }
 
-export default function EstimatesTab({ estimates = [], accountId }) {
+export default function EstimatesTab({ estimates = [], accountId, selectedYear: propSelectedYear = null }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
+  
+  // Use propSelectedYear if provided (from account page), otherwise use internal filterYear
+  // When propSelectedYear is provided, always filter by that year (no "all" option)
+  const effectiveFilterYear = propSelectedYear !== null ? propSelectedYear.toString() : filterYear;
   // Initialize with all divisions expanded, including Uncategorized
   const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DIVISION_CATEGORIES, 'Uncategorized']));
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -142,7 +146,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
       if (filterStatus !== 'all' && normalizedStatus !== filterStatus) return false;
       
       // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
-      if (filterYear !== 'all') {
+      if (effectiveFilterYear !== 'all') {
         let dateToUse = null;
         if (est.contract_end) {
           dateToUse = est.contract_end;
@@ -156,7 +160,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
         
         if (dateToUse) {
           const year = getYearFromDateString(dateToUse);
-          if (year && year.toString() !== filterYear) return false;
+          if (year && year.toString() !== effectiveFilterYear) return false;
         } else {
           // No valid date field - exclude from year filtering
           return false;
@@ -182,7 +186,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
     });
     
     return filtered;
-  }, [estimates, filterStatus, filterYear, selectedUsers]);
+  }, [estimates, filterStatus, effectiveFilterYear, selectedUsers]);
 
   // Group estimates by department
   const estimatesByDepartment = useMemo(() => {
@@ -306,18 +310,20 @@ export default function EstimatesTab({ estimates = [], accountId }) {
           Estimates ({totalEstimates})
         </h3>
         <div className="flex gap-3">
-          <Select value={filterYear} onValueChange={setFilterYear}>
-            <SelectTrigger className="w-32">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="All Years" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Years</SelectItem>
-              {availableYears.map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {propSelectedYear === null && (
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger className="w-32">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Years" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={filterDepartment} onValueChange={setFilterDepartment}>
             <SelectTrigger className="w-48">
               <Filter className="w-4 h-4 mr-2" />
@@ -549,7 +555,7 @@ export default function EstimatesTab({ estimates = [], accountId }) {
           <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No estimates found</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
-            {filterStatus !== 'all' || filterDepartment !== 'all' || filterYear !== 'all'
+            {filterStatus !== 'all' || filterDepartment !== 'all' || effectiveFilterYear !== 'all'
               ? 'No estimates match the selected filters'
               : 'No estimates found for this account'}
           </p>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +52,13 @@ import TutorialTooltip from '../components/TutorialTooltip';
 import GmailConnection from '../components/GmailConnection';
 import SnoozeDialog from '../components/SnoozeDialog';
 import { snoozeNotification } from '@/services/notificationService';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AccountDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -65,7 +72,34 @@ export default function AccountDetail() {
   const { user: currentUser } = useUser();
   const { permissions } = useUserPermissions();
   const canManageInteractions = permissions['manage_interactions'] === true;
-  const { selectedYear } = useYearSelector();
+  const { selectedYear: globalSelectedYear, availableYears: globalAvailableYears } = useYearSelector();
+  
+  // Local year selector for this account page (defaults to global selected year)
+  const [accountSelectedYear, setAccountSelectedYear] = useState(globalSelectedYear);
+  
+  // Update local year when global year changes
+  useEffect(() => {
+    setAccountSelectedYear(globalSelectedYear);
+  }, [globalSelectedYear]);
+  
+  // Get available years from estimates for this account
+  const accountAvailableYears = useMemo(() => {
+    const years = new Set();
+    estimates.forEach(est => {
+      if (est.archived) return;
+      const dateToUse = est.contract_end || est.contract_start || est.estimate_date || est.created_date;
+      if (dateToUse) {
+        const year = new Date(dateToUse).getFullYear();
+        if (year >= 2000 && year <= 2100) {
+          years.add(year);
+        }
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [estimates]);
+  
+  // Use account-specific years if available, otherwise use global years
+  const availableYears = accountAvailableYears.length > 0 ? accountAvailableYears : globalAvailableYears;
 
   const queryClient = useQueryClient();
 
@@ -335,9 +369,9 @@ export default function AccountDetail() {
               <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
                 {account.account_type}
               </Badge>
-              {getSegmentForYear(account, selectedYear) && (
+              {getSegmentForYear(account, accountSelectedYear) && (
                 <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
-                  {getSegmentForYear(account, selectedYear)}
+                  {getSegmentForYear(account, accountSelectedYear)}
                 </Badge>
               )}
               <Badge variant="outline" className="text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs">
@@ -347,6 +381,25 @@ export default function AccountDetail() {
           </div>
         </div>
         <div className="flex gap-3">
+          <Select 
+            value={accountSelectedYear.toString()} 
+            onValueChange={(value) => {
+              const newYear = parseInt(value, 10);
+              setAccountSelectedYear(newYear);
+            }}
+          >
+            <SelectTrigger className="w-32">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue>{accountSelectedYear}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button 
             variant="outline" 
             onClick={() => setShowSnoozeDialog(true)}
@@ -420,8 +473,8 @@ export default function AccountDetail() {
           {/* Top Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <KeyDates account={account} />
-            <EstimatesStats estimates={estimates} account={account} />
-            <TotalWork account={account} estimates={estimates} />
+            <EstimatesStats estimates={estimates} account={account} selectedYear={accountSelectedYear} />
+            <TotalWork account={account} estimates={estimates} selectedYear={accountSelectedYear} />
           </div>
 
           {/* General Information and Tracking */}
@@ -486,7 +539,7 @@ export default function AccountDetail() {
 
         {/* Estimates Tab */}
         <TabsContent value="estimates">
-          <EstimatesTab estimates={estimates} accountId={accountId} />
+          <EstimatesTab estimates={estimates} accountId={accountId} selectedYear={accountSelectedYear} />
         </TabsContent>
 
         {/* Communication History Tab (formerly Interactions) */}
