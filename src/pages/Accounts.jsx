@@ -244,21 +244,27 @@ export default function Accounts() {
       // Track salesperson
       if (hasSalesperson) {
         const name = est.salesperson.trim();
-        if (!userMap.has(name)) {
-          userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+        // Only add non-empty names
+        if (name) {
+          if (!userMap.has(name)) {
+            userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+          }
+          userMap.get(name).accounts.add(accountId);
+          userMap.get(name).roles.add('salesperson');
         }
-        userMap.get(name).accounts.add(accountId);
-        userMap.get(name).roles.add('salesperson');
       }
       
       // Track estimator
       if (hasEstimator) {
         const name = est.estimator.trim();
-        if (!userMap.has(name)) {
-          userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+        // Only add non-empty names
+        if (name) {
+          if (!userMap.has(name)) {
+            userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+          }
+          userMap.get(name).accounts.add(accountId);
+          userMap.get(name).roles.add('estimator');
         }
-        userMap.get(name).accounts.add(accountId);
-        userMap.get(name).roles.add('estimator');
       }
     });
     
