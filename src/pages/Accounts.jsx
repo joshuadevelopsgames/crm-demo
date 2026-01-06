@@ -216,13 +216,19 @@ export default function Accounts() {
   });
 
   // Extract unique users from estimates with counts
+  // Only includes users from estimates linked to accounts (have account_id)
+  // Excludes archived estimates for consistency with filtering logic
   const usersWithCounts = useMemo(() => {
     const userMap = new Map();
     let estimatesWithUsers = 0;
     let estimatesWithoutUsers = 0;
     
-    allEstimates.forEach(est => {
+    // Filter out archived estimates (consistent with estimatesByAccountId)
+    const activeEstimates = allEstimates.filter(est => !est.archived);
+    
+    activeEstimates.forEach(est => {
       // Count accounts per user (salesperson or estimator)
+      // Only process estimates linked to accounts
       const accountId = est.account_id;
       if (!accountId) return;
       
@@ -257,12 +263,13 @@ export default function Accounts() {
     });
     
     // Debug logging
-    if (userMap.size === 0 && allEstimates.length > 0) {
+    if (userMap.size === 0 && activeEstimates.length > 0) {
       console.warn('[Accounts] No users found in estimates:', {
         totalEstimates: allEstimates.length,
+        activeEstimates: activeEstimates.length,
         estimatesWithUsers,
         estimatesWithoutUsers,
-        sampleEstimates: allEstimates.slice(0, 5).map(e => ({
+        sampleEstimates: activeEstimates.slice(0, 5).map(e => ({
           id: e.id,
           salesperson: e.salesperson,
           estimator: e.estimator,
