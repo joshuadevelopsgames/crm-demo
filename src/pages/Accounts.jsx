@@ -217,13 +217,13 @@ export default function Accounts() {
 
   // Extract unique users from estimates with counts
   // Only includes users from estimates linked to accounts (have account_id)
-  // Excludes archived estimates for consistency with filtering logic
+  // Excludes archived estimates for user dropdown (only show active users)
   const usersWithCounts = useMemo(() => {
     const userMap = new Map();
     let estimatesWithUsers = 0;
     let estimatesWithoutUsers = 0;
     
-    // Filter out archived estimates (consistent with estimatesByAccountId)
+    // Filter out archived estimates for user dropdown (only show users from active estimates)
     const activeEstimates = allEstimates.filter(est => !est.archived);
     
     activeEstimates.forEach(est => {
@@ -356,13 +356,14 @@ export default function Accounts() {
 
   // Group all estimates by account_id (not filtered by year - needed for revenue calculation)
   // Year filtering is handled by getEstimateYearData which handles multi-year contracts correctly
+  // NOTE: For revenue calculation, we include ALL estimates (including archived) to match stored revenue_by_year
+  // which was calculated during import without filtering archived estimates
   const estimatesByAccountId = useMemo(() => {
     const grouped = {};
     
-    // Filter out archived estimates only
-    const activeEstimates = allEstimates.filter(est => !est.archived);
-    
-    activeEstimates.forEach(est => {
+    // Include all estimates (including archived) for revenue calculation to match stored revenue_by_year
+    // Archived estimates are only excluded for display/filtering purposes, not for revenue calculation
+    allEstimates.forEach(est => {
       if (est.account_id) {
         if (!grouped[est.account_id]) {
           grouped[est.account_id] = [];
