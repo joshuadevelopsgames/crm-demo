@@ -28,10 +28,6 @@ export default function ScribeEmbed({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Debug: Log when component renders
-  useEffect(() => {
-    console.log('ScribeEmbed rendered with URL:', scribeUrl);
-  }, [scribeUrl]);
 
   // Set a timeout to hide loading state if onLoad doesn't fire
   useEffect(() => {
@@ -43,6 +39,7 @@ export default function ScribeEmbed({
   }, [scribeUrl]); // Re-run when URL changes
 
   if (!scribeUrl) {
+    console.warn('ScribeEmbed: No scribeUrl provided');
     return (
       <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/30">
         <CardContent className="p-4">
@@ -53,6 +50,8 @@ export default function ScribeEmbed({
       </Card>
     );
   }
+
+  console.log('ScribeEmbed: Rendering with URL:', scribeUrl);
 
   // Extract embed URL from Scribe share link if needed
   // Scribe URLs typically look like: https://scribehow.com/shared/... or https://scribehow.com/embed/...
@@ -142,13 +141,12 @@ export default function ScribeEmbed({
                   height: height,
                   minHeight: '400px',
                   display: 'block',
-                  visibility: isLoading ? 'hidden' : 'visible'
+                  width: '100%'
                 }}
                 title={title}
                 allow="clipboard-read; clipboard-write; fullscreen"
                 onLoad={handleLoad}
                 onError={handleError}
-                loading="lazy"
               />
               <div className="p-2 border-t bg-slate-50 dark:bg-slate-900 flex justify-end">
                 <Button

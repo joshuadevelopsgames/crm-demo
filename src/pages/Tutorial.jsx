@@ -878,16 +878,20 @@ export default function Tutorial() {
           <CardContent className="space-y-6">
             {step.content}
             
-            {step.scribeUrl && (
-              <div className="pt-4 border-t">
-                <ScribeEmbed 
-                  scribeUrl={step.scribeUrl}
-                  title={step.scribeTitle || `${step.title} - Interactive Guide`}
-                  description={step.scribeDescription}
-                  height={step.scribeHeight || '600px'}
-                />
-              </div>
-            )}
+            {(() => {
+              // Debug: Log step info
+              console.log('Tutorial step:', step.id, 'has scribeUrl:', !!step.scribeUrl, 'scribeUrl:', step.scribeUrl);
+              return step.scribeUrl ? (
+                <div className="pt-4 border-t">
+                  <ScribeEmbed 
+                    scribeUrl={step.scribeUrl}
+                    title={step.scribeTitle || `${step.title} - Interactive Guide`}
+                    description={step.scribeDescription}
+                    height={step.scribeHeight || '600px'}
+                  />
+                </div>
+              ) : null;
+            })()}
             
             {step.action && (
               <div className="pt-4 border-t">
