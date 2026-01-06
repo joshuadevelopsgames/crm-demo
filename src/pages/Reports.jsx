@@ -714,16 +714,6 @@ export default function Reports() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
           <p className="text-slate-600 mt-1">End of year analysis and performance metrics</p>
-          
-          {/* Data Source Indicator */}
-          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              📊 <strong>Using Database Data</strong> - Reports from accounts, contacts, and estimates in database
-            </p>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-              Source: Supabase database ({estimates.length} estimates, {accounts.length} accounts, {contacts.length} contacts)
-            </p>
-          </div>
         </div>
         <div className="flex gap-2">
           <Button
@@ -874,7 +864,7 @@ export default function Reports() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 font-medium">Total Value</p>
+                <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                   {formatCurrency(stats.totalValue)}
                 </p>
