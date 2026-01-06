@@ -638,7 +638,7 @@ const tutorialSteps = [
     scribeUrl: 'https://scribehow.com/embed/Export_Estimates_List_from_LMN__h6KEyY45TrK-D5Un_2vf3A',
     scribeTitle: 'Export Estimates List from LMN',
     scribeDescription: 'Learn where to find and export the Estimates List sheet from LMN',
-    scribeHeight: '679px'
+    scribeHeight: '551px'
   },
   {
     id: 'lmn-import-sheet-2',
