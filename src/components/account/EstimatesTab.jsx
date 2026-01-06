@@ -272,28 +272,63 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
     return (won / departmentEstimates.length) * 100;
   };
 
-  // Calculate total win percentage for all estimates (not filtered - for account overall)
-  const totalWinPercentage = useMemo(() => {
-    if (estimates.length === 0) return 0;
-    const won = estimates.filter(est => isWonStatus(est)).length;
-    return (won / estimates.length) * 100;
-  }, [estimates]);
+  // Filter estimates by year only (for Overall Win Rate card - respects year selection)
+  // Per Year Selection System spec R1, R2, R7: Use full date priority for year filtering
+  const yearFilteredEstimates = useMemo(() => {
+    return estimates.filter(est => {
+      // Per spec R2: Exclude archived estimates
+      if (est.archived) {
+        return false;
+      }
+      
+      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      if (effectiveFilterYear !== 'all') {
+        let dateToUse = null;
+        if (est.contract_end) {
+          dateToUse = est.contract_end;
+        } else if (est.contract_start) {
+          dateToUse = est.contract_start;
+        } else if (est.estimate_date) {
+          dateToUse = est.estimate_date;
+        } else if (est.created_date) {
+          dateToUse = est.created_date;
+        }
+        
+        if (dateToUse) {
+          const year = getYearFromDateString(dateToUse);
+          if (year && year.toString() !== effectiveFilterYear) return false;
+        } else {
+          // No valid date field - exclude from year filtering
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [estimates, effectiveFilterYear]);
 
-  // Calculate won value and total estimated value for all estimates (not filtered - for account overall)
+  // Calculate total win percentage for year-filtered estimates (for Overall Win Rate card)
+  const totalWinPercentage = useMemo(() => {
+    if (yearFilteredEstimates.length === 0) return 0;
+    const won = yearFilteredEstimates.filter(est => isWonStatus(est)).length;
+    return (won / yearFilteredEstimates.length) * 100;
+  }, [yearFilteredEstimates]);
+
+  // Calculate won value and total estimated value for year-filtered estimates (for Overall Win Rate card)
   const totalWonValue = useMemo(() => {
-    const wonEstimates = estimates.filter(est => isWonStatus(est));
+    const wonEstimates = yearFilteredEstimates.filter(est => isWonStatus(est));
     return wonEstimates.reduce((sum, est) => {
       const amount = est.total_price_with_tax || est.total_price || 0;
       return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
     }, 0);
-  }, [estimates]);
+  }, [yearFilteredEstimates]);
 
   const totalEstimatedValue = useMemo(() => {
-    return estimates.reduce((sum, est) => {
+    return yearFilteredEstimates.reduce((sum, est) => {
       const amount = est.total_price_with_tax || est.total_price || 0;
       return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
     }, 0);
-  }, [estimates]);
+  }, [yearFilteredEstimates]);
 
   const totalEstimates = statusFilteredEstimates.length;
 
@@ -313,7 +348,7 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
                   {totalWinPercentage.toFixed(1)}%
                 </p>
                 <p className="text-xs text-emerald-600 mt-1">
-                  {estimates.filter(est => isWonStatus(est)).length} won / {estimates.length} total
+                  {yearFilteredEstimates.filter(est => isWonStatus(est)).length} won / {yearFilteredEstimates.length} total
                 </p>
                 <p className="text-xs text-emerald-600 mt-1 font-medium">
                   ${totalWonValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} won / ${totalEstimatedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} estimated
