@@ -367,21 +367,23 @@ export default function Accounts() {
       currentYear: getCurrentYear(),
       accountsCount: accounts.length
     });
-    if (accounts.length > 0 && estimatesByAccountId) {
+    if (accounts.length > 0 && estimatesByAccountId && totalRevenueForYear !== undefined) {
       const sampleAccount = accounts[0];
       const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
       const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
+      const sampleSegment = calculateRevenueSegmentForYear(sampleAccount, selectedYear, totalRevenueForYear, sampleAccountEstimates);
       console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
         selectedYear,
         currentYear: getCurrentYear(),
         accountsCount: accounts.length,
+        totalRevenueForYear,
         sampleAccount: {
           id: sampleAccount.id,
           name: sampleAccount.name,
           revenue_by_year: sampleAccount.revenue_by_year,
           segment_by_year: sampleAccount.segment_by_year,
           revenue_for_selected_year: sampleRevenue,
-          segment_for_selected_year: getSegmentForYear(sampleAccount, selectedYear, accounts, estimatesByAccountId)
+          segment_for_selected_year: sampleSegment
         },
         accountsWithRevenueData: accounts.filter(acc => {
           const accEstimates = estimatesByAccountId[acc.id] || [];
