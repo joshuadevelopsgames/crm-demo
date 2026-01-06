@@ -28,14 +28,19 @@ export default function ScribeEmbed({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Debug: Log when component renders
+  useEffect(() => {
+    console.log('ScribeEmbed rendered with URL:', scribeUrl);
+  }, [scribeUrl]);
+
   // Set a timeout to hide loading state if onLoad doesn't fire
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 3000); // Hide loading after 3 seconds
+    }, 2000); // Hide loading after 2 seconds
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [scribeUrl]); // Re-run when URL changes
 
   if (!scribeUrl) {
     return (
@@ -106,7 +111,7 @@ export default function ScribeEmbed({
         
         <div className="relative" style={{ minHeight: height }}>
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900 z-10">
               <div className="text-center">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
                 <p className="text-sm text-slate-600 dark:text-slate-400">Loading guide...</p>
@@ -136,8 +141,8 @@ export default function ScribeEmbed({
                 style={{ 
                   height: height,
                   minHeight: '400px',
-                  opacity: isLoading ? 0 : 1,
-                  transition: 'opacity 0.3s ease-in-out'
+                  display: 'block',
+                  visibility: isLoading ? 'hidden' : 'visible'
                 }}
                 title={title}
                 allow="clipboard-read; clipboard-write; fullscreen"
