@@ -89,17 +89,20 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       <Button
         ref={triggerRef}
         variant="outline"
-        className="w-40 h-9 justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        className={cn(
+          "w-40 h-9 justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+          selectedUsers.length === 0 && "text-muted-foreground"
+        )}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={cn("truncate", selectedUsers.length === 0 && "text-muted-foreground")}>{displayText}</span>
-        <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform shrink-0", isOpen && "rotate-180")} />
+        <span className="truncate">{displayText}</span>
+        <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
       </Button>
 
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[99999] min-w-[var(--dropdown-width)] max-h-[60vh] overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 duration-150"
+          className="fixed z-[9999] min-w-[var(--dropdown-width)] max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 duration-150"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
@@ -107,13 +110,13 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
             '--dropdown-width': `${position.width}px`
           }}
         >
-          <div className="p-2">
-            <div className="flex items-center justify-between mb-2 pb-2 border-b">
+          <div className="p-1">
+            <div className="flex items-center justify-between mb-1 pb-1 border-b border-slate-200 dark:border-slate-700">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                className="h-7 text-xs"
+                className="h-7 text-xs px-2"
               >
                 {selectedUsers.length === users.length ? 'Deselect All' : 'Select All'}
               </Button>
@@ -122,13 +125,13 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
                   variant="ghost"
                   size="sm"
                   onClick={handleClearAll}
-                  className="h-7 text-xs"
+                  className="h-7 text-xs px-2"
                 >
                   Clear
                 </Button>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {users.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   No users found. Users are extracted from estimates with salesperson or estimator fields.
@@ -139,7 +142,7 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
                   return (
                     <div
                       key={user.name}
-                      className="flex items-center gap-2 p-2 rounded-sm hover:bg-accent cursor-pointer"
+                      className="flex items-center gap-2 py-1.5 pl-2 pr-2 rounded-sm hover:bg-accent cursor-pointer"
                       onClick={() => handleToggleUser(user.name)}
                     >
                       <Checkbox
