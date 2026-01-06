@@ -1447,32 +1447,13 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent 
-        className={`max-w-5xl max-h-[90vh] overflow-y-auto ${globalDragging ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30' : ''}`}
-        onDragOver={handleGlobalDragOver}
-        onDragLeave={handleGlobalDragLeave}
-        onDrop={handleGlobalDrop}
-      >
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Import from LMN</DialogTitle>
           <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-            Upload LMN export files to import accounts, contacts, estimates, and jobsites. You can drag and drop all four files at once anywhere in this dialog.
+            Drag and drop all four XLSX files at once. Files will be automatically identified and assigned.
           </p>
         </DialogHeader>
-
-        {globalDragging && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500/20 backdrop-blur-sm pointer-events-none">
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-8 shadow-xl border-2 border-blue-500 border-dashed">
-              <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-              <p className="text-xl font-semibold text-slate-900 dark:text-white text-center">
-                Drop all files here
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-400 text-center mt-2">
-                Files will be automatically identified and assigned
-              </p>
-            </div>
-          </div>
-        )}
         
         <div className="space-y-6 py-4">
           {/* Validating State */}
@@ -1540,17 +1521,38 @@ export default function ImportLeadsDialog({ open, onClose }) {
                 </div>
               </Card>
 
-              {/* Four Upload Sections */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Single Large Drop Zone with 4 Quadrants */}
+              <div
+                onDragOver={handleGlobalDragOver}
+                onDragLeave={handleGlobalDragLeave}
+                onDrop={handleGlobalDrop}
+                className={`relative border-2 border-dashed rounded-lg p-4 transition-all min-h-[500px] ${
+                  globalDragging 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' 
+                    : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
+                }`}
+              >
+                {globalDragging && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-blue-500/10 rounded-lg">
+                    <div className="text-center">
+                      <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4 animate-bounce" />
+                      <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                        Drop all files here
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                        Files will be automatically identified and assigned
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4 h-full">
                 {/* File 1: Contacts Export */}
                 <div
-                  onDragOver={handleContactsDragOver}
-                  onDragLeave={handleContactsDragLeave}
-                  onDrop={handleContactsDrop}
-                  className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    contactsDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
-                    contactsFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
-                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
+                  className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
+                    contactsFile 
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -1588,7 +1590,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           <p className="font-semibold text-slate-900 dark:text-white">File 1: Contacts Export</p>
                           <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            Drag & drop or click to upload
+                            Click to upload
                           </p>
                         </div>
                         <input
@@ -1627,13 +1629,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 2: Leads List */}
                 <div
-                  onDragOver={handleLeadsDragOver}
-                  onDragLeave={handleLeadsDragLeave}
-                  onDrop={handleLeadsDrop}
-                  className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    leadsDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
-                    leadsFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
-                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
+                  className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
+                    leadsFile 
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -1671,7 +1670,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           <p className="font-semibold text-slate-900 dark:text-white">File 2: Leads List</p>
                           <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            Drag & drop or click to upload
+                            Click to upload
                           </p>
                         </div>
                         <input
@@ -1710,13 +1709,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 3: Estimates List */}
                 <div
-                  onDragOver={handleEstimatesDragOver}
-                  onDragLeave={handleEstimatesDragLeave}
-                  onDrop={handleEstimatesDrop}
-                  className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    estimatesDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
-                    estimatesFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
-                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
+                  className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
+                    estimatesFile 
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -1755,7 +1751,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           <p className="font-semibold text-slate-900 dark:text-white">File 3: Estimates List</p>
                           <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            Drag & drop or click to upload
+                            Click to upload
                           </p>
                         </div>
                         <input
@@ -1794,13 +1790,10 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 4: Jobsite Export */}
                 <div
-                  onDragOver={handleJobsitesDragOver}
-                  onDragLeave={handleJobsitesDragLeave}
-                  onDrop={handleJobsitesDrop}
-                  className={`border-2 border-dashed rounded-lg p-6 transition-all ${
-                    jobsitesDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 
-                    jobsitesFile ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' : 
-                    'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
+                  className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
+                    jobsitesFile 
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -1839,7 +1832,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           <p className="font-semibold text-slate-900 dark:text-white">File 4: Jobsite Export</p>
                           <p className="text-xs text-red-600 dark:text-red-400 font-semibold">(Required)</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            Drag & drop or click to upload
+                            Click to upload
                           </p>
                         </div>
                         <input
@@ -1874,6 +1867,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                       </>
                     )}
                   </div>
+                </div>
                 </div>
               </div>
 
