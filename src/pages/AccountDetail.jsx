@@ -382,7 +382,7 @@ export default function AccountDetail() {
         </div>
         <div className="flex gap-3">
           <Select 
-            value={accountSelectedYear.toString()} 
+            value={(accountSelectedYear || globalSelectedYear).toString()} 
             onValueChange={(value) => {
               const newYear = parseInt(value, 10);
               setAccountSelectedYear(newYear);
@@ -390,14 +390,28 @@ export default function AccountDetail() {
           >
             <SelectTrigger className="w-32">
               <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue>{accountSelectedYear}</SelectValue>
+              <SelectValue>{accountSelectedYear || globalSelectedYear}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {availableYears.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
+              {availableYears && availableYears.length > 0 ? (
+                availableYears.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))
+              ) : (
+                globalAvailableYears && globalAvailableYears.length > 0 ? (
+                  globalAvailableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value={globalSelectedYear.toString()}>
+                    {globalSelectedYear}
+                  </SelectItem>
+                )
+              )}
             </SelectContent>
           </Select>
           <Button 

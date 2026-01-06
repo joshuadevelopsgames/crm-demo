@@ -67,7 +67,9 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
   
   // Use propSelectedYear if provided (from account page), otherwise use internal filterYear
   // When propSelectedYear is provided, always filter by that year (no "all" option)
-  const effectiveFilterYear = propSelectedYear !== null ? propSelectedYear.toString() : filterYear;
+  // Check for both null and undefined to handle cases where prop might not be passed
+  const hasYearProp = propSelectedYear !== null && propSelectedYear !== undefined;
+  const effectiveFilterYear = hasYearProp ? propSelectedYear.toString() : filterYear;
   // Initialize with all divisions expanded, including Uncategorized
   const [expandedDepartments, setExpandedDepartments] = useState(new Set([...DIVISION_CATEGORIES, 'Uncategorized']));
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -310,7 +312,7 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
           Estimates ({totalEstimates})
         </h3>
         <div className="flex gap-3">
-          {propSelectedYear === null && (
+          {!hasYearProp && (
             <Select value={filterYear} onValueChange={setFilterYear}>
               <SelectTrigger className="w-32">
                 <Calendar className="w-4 h-4 mr-2" />
