@@ -899,11 +899,35 @@ export default function NotificationBell() {
 
   const deleteNotificationMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.delete(id),
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+      
+      // Snapshot the previous value
+      const previousNotifications = queryClient.getQueryData(['notifications', currentUserId]);
+      
+      // Optimistically remove the deleted notification from cache
+      queryClient.setQueryData(['notifications', currentUserId], (old) => {
+        if (!old || !old.notifications) return old;
+        return {
+          ...old,
+          notifications: old.notifications.filter(n => n.id !== deletedId)
+        };
+      });
+      
+      // Return context with snapshot
+      return { previousNotifications };
+    },
     onSuccess: () => {
+      // Invalidate to ensure server state is synced, but optimistic update already handled UI
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success('✓ Notification deleted');
     },
-    onError: (error) => {
+    onError: (error, deletedId, context) => {
+      // Rollback to previous state on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(['notifications', currentUserId], context.previousNotifications);
+      }
       console.error('Error deleting notification:', error);
       toast.error(error.message || 'Failed to delete notification');
     }
@@ -1251,6 +1275,8 @@ export default function NotificationBell() {
                                           <BellOff className="w-3 h-3" />
                                         </Button>
                                       )}
+                                      {/* Only allow deleting individual notifications, not groups */}
+                                      {/* Single notification can be deleted from here */}
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1268,6 +1294,8 @@ export default function NotificationBell() {
                                       </Button>
                                     </>
                                   )}
+                                  {/* Never show delete button on group header when multiple notifications exist */}
+                                  {/* Users must expand the group and delete individual notifications */}
                                 </div>
                               </div>
                               {hasMultiple && (
