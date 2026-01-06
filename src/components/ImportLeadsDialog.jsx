@@ -117,6 +117,89 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
   // State for manually linking orphaned jobsites
   const [orphanedJobsiteLinks, setOrphanedJobsiteLinks] = useState({});
+  
+  // Global drop zone state
+  const [globalDragging, setGlobalDragging] = useState(false);
+
+  // Identify file type by checking headers
+  const identifyFileType = async (file) => {
+    try {
+      const rows = await convertXlsxToRows(file);
+      if (!rows || rows.length < 1) return null;
+      
+      const headers = rows[0];
+      if (!Array.isArray(headers)) return null;
+      
+      // Convert headers to lowercase for comparison
+      const headerStrings = headers.map(h => h?.toString().trim().toLowerCase() || '');
+      
+      // Check for Contacts Export: has "CRM ID" and "Contact ID"
+      if (headerStrings.some(h => h.includes('crm id')) && 
+          headerStrings.some(h => h.includes('contact id'))) {
+        return 'contacts';
+      }
+      
+      // Check for Leads List: has "Lead Name"
+      if (headerStrings.some(h => h.includes('lead name'))) {
+        return 'leads';
+      }
+      
+      // Check for Estimates List: has "Estimate ID" or "Estimate #" or "Estimate Number"
+      if (headerStrings.some(h => h.includes('estimate id') || h.includes('estimate #') || h.includes('estimate number'))) {
+        return 'estimates';
+      }
+      
+      // Check for Jobsite Export: has "Jobsite ID"
+      if (headerStrings.some(h => h.includes('jobsite id'))) {
+        return 'jobsites';
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('Error identifying file type:', err);
+      return null;
+    }
+  };
+
+  // Handle multiple files dropped at once
+  const handleMultipleFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    
+    const fileArray = Array.from(files);
+    const results = [];
+    
+    // Identify each file
+    for (const file of fileArray) {
+      const fileType = await identifyFileType(file);
+      if (fileType) {
+        results.push({ file, type: fileType });
+      } else {
+        setError(`Could not identify file type for: ${file.name}. Please ensure it's a valid LMN export file.`);
+      }
+    }
+    
+    // Process each identified file
+    for (const { file, type } of results) {
+      try {
+        switch (type) {
+          case 'contacts':
+            await processContactsFile(file);
+            break;
+          case 'leads':
+            await processLeadsFile(file);
+            break;
+          case 'estimates':
+            await processEstimatesFile(file);
+            break;
+          case 'jobsites':
+            await processJobsitesFile(file);
+            break;
+        }
+      } catch (err) {
+        setError(`Error processing ${file.name}: ${err.message}`);
+      }
+    }
+  };
 
   // Convert XLSX file to array of arrays (same format as parser expects)
   const convertXlsxToRows = (file) => {
@@ -1332,16 +1415,65 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
   const allFilesUploaded = contactsFile && leadsFile && estimatesFile && jobsitesFile;
 
+  // Global drop zone handlers
+  const handleGlobalDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGlobalDragging(true);
+  };
+
+  const handleGlobalDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if we're leaving the dialog area
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setGlobalDragging(false);
+    }
+  };
+
+  const handleGlobalDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGlobalDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+    );
+    
+    if (files.length > 0) {
+      await handleMultipleFiles(files);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className={`max-w-5xl max-h-[90vh] overflow-y-auto ${globalDragging ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30' : ''}`}
+        onDragOver={handleGlobalDragOver}
+        onDragLeave={handleGlobalDragLeave}
+        onDrop={handleGlobalDrop}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl">Import from LMN</DialogTitle>
           <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-            Upload LMN export files to import accounts, contacts, estimates, and jobsites
+            Upload LMN export files to import accounts, contacts, estimates, and jobsites. You can drag and drop all four files at once anywhere in this dialog.
           </p>
         </DialogHeader>
 
+        {globalDragging && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500/20 backdrop-blur-sm pointer-events-none">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-8 shadow-xl border-2 border-blue-500 border-dashed">
+              <Upload className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+              <p className="text-xl font-semibold text-slate-900 dark:text-white text-center">
+                Drop all files here
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 text-center mt-2">
+                Files will be automatically identified and assigned
+              </p>
+            </div>
+          </div>
+        )}
+        
         <div className="space-y-6 py-4">
           {/* Validating State */}
           {importStatus === 'validating' && (
