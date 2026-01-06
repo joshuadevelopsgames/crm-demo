@@ -619,7 +619,7 @@ const tutorialSteps = [
     description: 'Learn how to export data from LMN and import it into LECRM',
     content: (
       <div className="space-y-6">
-        <p>You can import accounts, contacts, estimates, and jobsites directly from LMN (golmn.com) into LECRM using CSV files.</p>
+        <p>You can import accounts, contacts, estimates, and jobsites directly from LMN (golmn.com) into LECRM using XLSX files.</p>
         
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -701,7 +701,7 @@ const tutorialSteps = [
             <CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-semibold">Upload & Import</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Select your CSV file, preview the data, then click the blue import button to complete</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Select your XLSX file, preview the data, then click the blue import button to complete</p>
             </div>
           </div>
         </div>
