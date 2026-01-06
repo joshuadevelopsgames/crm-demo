@@ -36,21 +36,6 @@ import { useTutorial } from '../contexts/TutorialContext';
 import ScribeEmbed from '../components/ScribeEmbed';
 
 const tutorialSteps = [
-  // Example: How to add a Scribe guide to a tutorial step
-  // {
-  //   id: 'example-with-scribe',
-  //   title: 'Example Step with Scribe',
-  //   description: 'This shows how to integrate Scribe guides',
-  //   content: (
-  //     <div className="space-y-4">
-  //       <p>Follow the interactive guide below to learn this feature.</p>
-  //     </div>
-  //   ),
-  //   scribeUrl: 'https://scribehow.com/embed/your-guide-id-here',
-  //   scribeTitle: 'Optional: Custom Title',
-  //   scribeDescription: 'Optional: Description of the guide',
-  //   scribeHeight: '600px', // Optional: Custom height
-  // },
   {
     id: 'welcome',
     title: 'Welcome to Your CRM!',
