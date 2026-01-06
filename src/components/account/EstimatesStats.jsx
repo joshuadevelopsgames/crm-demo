@@ -25,16 +25,29 @@ export default function EstimatesStats({ estimates = [], account = null, selecte
   const currentYear = propSelectedYear !== null ? propSelectedYear : getCurrentYearForCalculation();
   
   // Per Estimates spec R20-R23: Use pre-calculated total_estimates_by_year
-  // This avoids on-the-fly filtering and improves performance
+  // Fallback to on-the-fly calculation if stored value is missing or 0
   const thisYearEstimatesCount = useMemo(() => {
-    // Account and total_estimates_by_year are required
-    if (!account || !account.total_estimates_by_year || typeof account.total_estimates_by_year !== 'object') {
-      return 0;
+    // Try to use pre-calculated value first
+    if (account && account.total_estimates_by_year && typeof account.total_estimates_by_year === 'object') {
+      const yearCount = account.total_estimates_by_year[currentYear.toString()];
+      const storedCount = typeof yearCount === 'number' ? yearCount : parseInt(yearCount) || 0;
+      
+      // If stored value exists and is > 0, use it
+      if (storedCount > 0) {
+        return storedCount;
+      }
     }
     
-    const yearCount = account.total_estimates_by_year[currentYear.toString()];
-    return typeof yearCount === 'number' ? yearCount : parseInt(yearCount) || 0;
-  }, [account, currentYear]);
+    // Fallback: Calculate on-the-fly if stored value is missing or 0
+    // Filter estimates that apply to current year (excluding archived)
+    const yearEstimates = estimates.filter(est => {
+      if (est.archived) return false;
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+    
+    return yearEstimates.length;
+  }, [account, currentYear, estimates]);
 
   // Per spec R1, R11: Calculate win percentage using isWonStatus to respect pipeline_status priority
   // Calculate win rate for selected year estimates only

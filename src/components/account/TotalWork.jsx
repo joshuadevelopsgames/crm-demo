@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
-import { detectContractTypo, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
+import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
 import { getYearFromDateString } from '@/utils/dateFormatter';
@@ -230,12 +230,23 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Get stored revenue for WON VALUE (calculated during import, not on-the-fly)
-  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
-  const storedWonRevenue = useMemo(() => {
-    if (!account) return 0;
-    return getRevenueForYear(account, currentYear);
-  }, [account, currentYear]);
+  // Calculate won value as simple sum of won estimates' dollar values for selected year
+  // Matches EstimatesTab logic - no contract-year allocation, just sum dollar values
+  const totalWonValue = useMemo(() => {
+    // Filter estimates that apply to current year
+    const yearEstimates = estimates.filter(est => {
+      if (est.archived) return false;
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+    
+    // Filter for won estimates and sum their dollar values
+    const wonEstimates = yearEstimates.filter(est => isWonStatus(est));
+    return wonEstimates.reduce((sum, est) => {
+      const amount = est.total_price_with_tax || est.total_price || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    }, 0);
+  }, [estimates, currentYear]);
   
   // Calculate breakdown for ESTIMATED
   const estimatedBreakdown = useMemo(() => {
@@ -324,10 +335,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     return estimatedBreakdown.included.reduce((sum, item) => sum + item.value, 0);
   }, [estimatedBreakdown]);
 
-  // Use stored revenue for WON VALUE (calculated during import, not on-the-fly)
-  // Per spec: Revenue is stored in revenue_by_year during import, not calculated in real-time
-  // The breakdown calculation is kept for display/transparency, but the total comes from stored data
-  const totalSold = storedWonRevenue;
+  // Use calculated won value (simple sum of dollar values)
+  const totalSold = totalWonValue;
   
   // Detect typo estimates (per spec R24-R27)
   const estimatesWithTypo = useMemo(() => {
@@ -476,7 +485,7 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
                     }
                     
                     text += `\n=== SOLD BREAKDOWN (Won Estimates Only) ===\n\n`;
-                    text += `STORED REVENUE (from revenue_by_year[${currentYear}]): $${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n`;
+                    text += `WON VALUE (sum of won estimates for ${currentYear}): $${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\n`;
                     text += `INCLUDED (${soldBreakdown.included.length} estimates):\n`;
                     soldBreakdown.included.forEach((item, idx) => {
                       text += `${idx + 1}. Estimate ID: ${getReadableEstimateId(item.estimate)}\n`;
