@@ -60,6 +60,11 @@ export default function Accounts() {
   // Debug: Log year selection status and verify data updates
   useEffect(() => {
     const currentYear = getCurrentYear();
+    console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
+      selectedYear,
+      currentYear: getCurrentYear(),
+      accountsCount: accounts.length
+    });
     if (accounts.length > 0) {
       const sampleAccount = accounts[0];
       console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
@@ -745,7 +750,14 @@ export default function Accounts() {
             tip="Select the year to view site-wide data. Revenue calculations, segments, and reports will use this year. Your selection persists across sessions."
             position="bottom"
           >
-            <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
+            <Select 
+              value={selectedYear.toString()} 
+              onValueChange={(value) => {
+                const newYear = parseInt(value, 10);
+                console.log('[Accounts] Year selector changed:', { oldYear: selectedYear, newYear });
+                setYear(newYear);
+              }}
+            >
               <SelectTrigger className="w-[120px]">
                 <SelectValue>{selectedYear}</SelectValue>
               </SelectTrigger>
@@ -920,9 +932,9 @@ export default function Accounts() {
           step={2}
           position="bottom"
         >
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden" key={`accounts-list-${selectedYear}`}>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[800px]" key={`table-${selectedYear}`}>
                 <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -1061,8 +1073,10 @@ export default function Accounts() {
                                   accountName: account.name,
                                   accountId: account.id,
                                   revenue,
+                                  selectedYear, // Explicitly log selectedYear
                                   currentYear: getCurrentYear(),
-                                  revenue_by_year: account.revenue_by_year
+                                  revenue_by_year: account.revenue_by_year,
+                                  revenue_for_selected_year: account.revenue_by_year?.[selectedYear.toString()]
                                 });
                               }
                             }
@@ -1126,7 +1140,7 @@ export default function Accounts() {
           step={2}
           position="bottom"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-${selectedYear}`}>
           {filteredAccounts.map((account) => {
             // Include selectedYear in key to force re-render when year changes
             const rowKey = `${account.id}-${selectedYear}`;
@@ -1390,9 +1404,9 @@ export default function Accounts() {
 
           {/* Accounts List/Card View for Archived Tab */}
           {viewMode === 'list' ? (
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden" key={`accounts-list-archived-${selectedYear}`}>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]">
+                <table className="w-full min-w-[800px]" key={`table-archived-${selectedYear}`}>
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-slate-700 dark:text-foreground uppercase tracking-wider">
@@ -1501,7 +1515,7 @@ export default function Accounts() {
             </Card>
           ) : (
             /* Accounts Card View */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={`accounts-cards-archived-${selectedYear}`}>
               {filteredAccounts.map((account) => {
                 // Include selectedYear in key to force re-render when year changes
                 const rowKey = `${account.id}-${selectedYear}`;
