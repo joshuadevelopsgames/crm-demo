@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,17 +47,44 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
   // Calculate position
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
 
-  useEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
 
+    if (!triggerRef.current) return;
+    
     const trigger = triggerRef.current;
     const rect = trigger.getBoundingClientRect();
     setPosition({
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX,
+      top: rect.bottom + 4, // Use viewport coordinates for fixed positioning
+      left: rect.left,
       width: rect.width
     });
-  }, [isOpen]);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Update position when dropdown opens
+    updatePosition();
+
+    // Update position on scroll
+    const handleScroll = () => {
+      updatePosition();
+    };
+
+    // Update position on window resize
+    const handleResize = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('scroll', handleScroll, true); // Use capture phase to catch all scroll events
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isOpen, updatePosition]);
 
   const handleToggleUser = (userName) => {
     const newSelection = selectedUsers.includes(userName)
