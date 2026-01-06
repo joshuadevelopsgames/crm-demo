@@ -248,6 +248,15 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     }, 0);
   }, [estimates, currentYear]);
   
+  // Filter estimates that apply to current year (excluding archived)
+  const yearFilteredEstimates = useMemo(() => {
+    return estimates.filter(est => {
+      if (est.archived) return false;
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+  }, [estimates, currentYear]);
+
   // Calculate breakdown for ESTIMATED
   const estimatedBreakdown = useMemo(() => {
     const included = [];
@@ -423,10 +432,7 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
               )}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {soldBreakdown.included.length} won estimate{soldBreakdown.included.length !== 1 ? 's' : ''} for {currentYear}
-              {totalSold !== allTimeSold && (
-                <span> • {estimates.filter(est => isWonStatus(est)).length} total</span>
-              )}
+              {soldBreakdown.included.length} won / {yearFilteredEstimates.length} total
             </p>
           </div>
           
