@@ -340,7 +340,7 @@ export function getRevenueForYear(account, selectedYear = null) {
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
  * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
  */
-function calculateRevenueSegmentForYear(account, year, totalRevenue, estimates = []) {
+export function calculateRevenueSegmentForYear(account, year, totalRevenue, estimates = []) {
   // Segment D check (uses estimates for this specific year)
   if (estimates && estimates.length > 0) {
     const wonEstimates = estimates.filter(est => {

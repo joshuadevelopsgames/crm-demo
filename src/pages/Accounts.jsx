@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue, calculateRevenueSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -393,7 +393,7 @@ export default function Accounts() {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:425',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
-  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId]);
+  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId, totalRevenueForYear]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -606,14 +606,48 @@ export default function Accounts() {
     return false;
   };
 
+  // Calculate total revenue ONCE for all accounts (performance optimization)
+  // This avoids recalculating total revenue for every account in getSegmentForYear
+  const totalRevenueForYear = useMemo(() => {
+    return calculateTotalRevenue(accounts, estimatesByAccountId, selectedYear);
+  }, [accounts, estimatesByAccountId, selectedYear]);
+
+  // Pre-calculate revenue and segments for all accounts (performance optimization)
+  // This avoids recalculating the same values multiple times during filtering/enrichment
+  const accountsWithRevenueAndSegment = useMemo(() => {
+    return accounts.map(account => {
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+      const segment = calculateRevenueSegmentForYear(
+        account,
+        selectedYear,
+        totalRevenueForYear,
+        accountEstimates
+      );
+      return {
+        account,
+        revenue,
+        segment
+      };
+    });
+  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear]);
+
   // Filter and sort accounts - MUST include selectedYear in dependencies so it updates when year changes
   // Per Year Selection System spec R6, R8: All revenue/segment calculations use selected year
   // IMPORTANT: Enrich accounts with revenue for selected year to ensure React detects changes
   const filteredAccounts = useMemo(() => {
+    // Create a map for O(1) lookup
+    const revenueSegmentMap = new Map();
+    accountsWithRevenueAndSegment.forEach(({ account, revenue, segment }) => {
+      revenueSegmentMap.set(account.id, { revenue, segment });
+    });
+
     const filtered = accountsByStatus.filter(account => {
       const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = accountMatchesType(account, filterType);
-      const accountSegment = getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId);
+      
+      // Get pre-calculated segment from map
+      const { segment: accountSegment } = revenueSegmentMap.get(account.id) || { segment: 'C' };
       const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
       
       // User filter: if users are selected, only show accounts that have estimates with those users
@@ -633,14 +667,13 @@ export default function Accounts() {
 
     // Enrich accounts with revenue for selected year - this creates new object references
     // which helps React detect changes when selectedYear changes
-    // Calculate revenue from won estimates for the selected year (on-the-fly calculation)
+    // Use pre-calculated revenue and segment from map
     const enriched = filtered.map(account => {
-      const accountEstimates = estimatesByAccountId[account.id] || [];
-      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+      const { revenue, segment } = revenueSegmentMap.get(account.id) || { revenue: 0, segment: 'C' };
       return {
         ...account,
         _revenueForSelectedYear: revenue,
-        _segmentForSelectedYear: getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId),
+        _segmentForSelectedYear: segment,
         _selectedYear: selectedYear // Include selectedYear to force new reference
       };
     });
@@ -701,15 +734,21 @@ export default function Accounts() {
     }
     
     return sorted;
-  }, [accountsByStatus, searchTerm, filterType, filterSegment, selectedUsers, estimatesByAccountId, sortBy, selectedYear, accountsWithScorecards, accountsWithContacts]);
+  }, [accountsByStatus, searchTerm, filterType, filterSegment, selectedUsers, estimatesByAccountId, sortBy, selectedYear, accountsWithScorecards, accountsWithContacts, accountsWithRevenueAndSegment]);
 
   // Debug logging for segment and status filtering
+  // Use pre-calculated segments from accountsWithRevenueAndSegment for performance
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && accountsWithRevenueAndSegment.length > 0) {
       const segmentCounts = {};
       const statusCounts = {};
+      const segmentMap = new Map();
+      accountsWithRevenueAndSegment.forEach(({ account, segment }) => {
+        segmentMap.set(account.id, segment);
+      });
+      
       accounts.forEach(acc => {
-        const segment = getSegmentForYear(acc, selectedYear, accounts, estimatesByAccountId) || 'null';
+        const segment = segmentMap.get(acc.id) || 'null';
         const status = acc.status || 'null';
         segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
         statusCounts[status] = (statusCounts[status] || 0) + 1;
@@ -725,17 +764,17 @@ export default function Accounts() {
         selectedYear,
         segmentCounts,
         statusCounts,
-        accountsWithSegmentB: accounts.filter(a => getSegmentForYear(a, selectedYear, accounts, estimatesByAccountId) === 'B').length,
+        accountsWithSegmentB: accounts.filter(a => segmentMap.get(a.id) === 'B').length,
         accountsWithAtRiskStatus: accounts.filter(a => a.status === 'at_risk').length,
         sampleAccounts: accounts.slice(0, 5).map(a => ({
           name: a.name,
-          revenue_segment: getSegmentForYear(a, selectedYear, accounts, estimatesByAccountId),
+          revenue_segment: segmentMap.get(a.id) || 'C',
           status: a.status,
           archived: a.archived
         }))
       });
     }
-  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter, selectedYear, estimatesByAccountId]);
+  }, [accounts, accountsByStatus, filteredAccounts, filterSegment, filterType, statusFilter, selectedYear, accountsWithRevenueAndSegment]);
 
   const getAccountTypeColor = (type) => {
     const colors = {
