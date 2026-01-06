@@ -355,12 +355,12 @@ body {
 /* Smooth dropdown animations - consistent across all dropdowns */
 .select-dropdown[data-state="open"],
 [data-radix-select-content][data-state="open"] {
-  animation: slideInFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideInFade 0.15s ease-out;
   opacity: 1 !important;
   visibility: visible !important;
   display: flex !important;
   pointer-events: auto !important;
-  transform-origin: var(--radix-select-content-transform-origin);
+  transform-origin: top center;
 }
 
 /* Ensure item-aligned dropdowns are visible */
@@ -370,28 +370,24 @@ body {
 
 .select-dropdown[data-state="closed"],
 [data-radix-select-content][data-state="closed"] {
-  animation: slideOutFade 0.15s cubic-bezier(0.4, 0, 1, 1);
+  animation: slideOutFade 0.1s ease-in;
 }
 
 @keyframes slideInFade {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes slideOutFade {
   from {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateY(4px) scale(0.98);
   }
 }
 
