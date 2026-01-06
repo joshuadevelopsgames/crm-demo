@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getRevenueForYear, getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -364,14 +364,15 @@ export default function Accounts() {
     return result;
   }, [allEstimates]);
 
-  // Filter estimates by selected year, then group by account_id
-  // Per Year Selection System spec R6, R8: All data must filter by selected year
+  // Group all estimates by account_id (not filtered by year - needed for revenue calculation)
+  // Year filtering is handled by getEstimateYearData which handles multi-year contracts correctly
   const estimatesByAccountId = useMemo(() => {
-    // Filter estimates by selected year first
-    const yearFilteredEstimates = filterEstimatesByYear(allEstimates, selectedYear, true, false);
-    
     const grouped = {};
-    yearFilteredEstimates.forEach(est => {
+    
+    // Filter out archived estimates only
+    const activeEstimates = allEstimates.filter(est => !est.archived);
+    
+    activeEstimates.forEach(est => {
       if (est.account_id) {
         if (!grouped[est.account_id]) {
           grouped[est.account_id] = [];
@@ -380,17 +381,17 @@ export default function Accounts() {
       }
     });
     
-    // Debug log showing year-filtered estimates
+    // Debug log
     const accountsWithEstimates = Object.keys(grouped).length;
-    const totalEstimates = yearFilteredEstimates.length;
-    const wonEstimates = yearFilteredEstimates.filter(e => isWonStatus(e)).length;
+    const totalEstimates = activeEstimates.length;
+    const wonEstimates = activeEstimates.filter(e => isWonStatus(e)).length;
     
     console.log(`[getAccountRevenue] Summary for ${selectedYear}:`, {
       accountsWithEstimates,
       totalEstimates,
       wonEstimates,
       allEstimatesCount: allEstimates.length,
-      note: 'Estimates filtered by selected year. Revenue is read from stored revenue_by_year field.'
+      note: 'All estimates grouped by account. Revenue calculated from won estimates for selected year.'
     });
     
     return grouped;
@@ -634,12 +635,17 @@ export default function Accounts() {
 
     // Enrich accounts with revenue for selected year - this creates new object references
     // which helps React detect changes when selectedYear changes
-    const enriched = filtered.map(account => ({
-      ...account,
-      _revenueForSelectedYear: getRevenueForYear(account, selectedYear),
-      _segmentForSelectedYear: getSegmentForYear(account, selectedYear),
-      _selectedYear: selectedYear // Include selectedYear to force new reference
-    }));
+    // Calculate revenue from won estimates for the selected year (on-the-fly calculation)
+    const enriched = filtered.map(account => {
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+      return {
+        ...account,
+        _revenueForSelectedYear: revenue,
+        _segmentForSelectedYear: getSegmentForYear(account, selectedYear),
+        _selectedYear: selectedYear // Include selectedYear to force new reference
+      };
+    });
 
     // Sort the enriched accounts
     const sorted = [...enriched].sort((a, b) => {

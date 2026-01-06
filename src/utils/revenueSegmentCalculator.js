@@ -101,7 +101,7 @@ export function detectContractTypo(durationMonths, contractYears) {
  * @param {number} currentYear - Selected year (e.g., 2025) from YearSelectorContext
  * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
  */
-function getEstimateYearData(estimate, currentYear) {
+export function getEstimateYearData(estimate, currentYear) {
   // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -263,6 +263,43 @@ function getCurrentYearForCalculation() {
   // If this is called in a context where window.__getCurrentYear is not available,
   // it means the YearSelectorContext is not initialized, which is an error
   throw new Error('getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
+}
+
+/**
+ * Calculate revenue from won estimates for a specific account and year
+ * 
+ * This function calculates revenue on-the-fly from won estimates, not from stored revenue_by_year.
+ * Per spec R1, R11: Only won estimates are included in revenue calculations.
+ * Per spec R2: Year determination uses priority order: contract_end → contract_start → estimate_date → created_date
+ * Per spec R8-R9: Multi-year contracts are annualized and allocated to sequential calendar years
+ * 
+ * @param {Object} account - Account object
+ * @param {Array} estimates - Array of estimate objects for this account
+ * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
+ * @returns {number} - Revenue for selected year from won estimates, or 0 if no won estimates
+ */
+export function calculateRevenueFromWonEstimates(account, estimates = [], selectedYear = null) {
+  const year = selectedYear || getCurrentYearForCalculation();
+  
+  if (!estimates || estimates.length === 0) {
+    return 0;
+  }
+  
+  // Filter for won estimates only (per spec R1, R11)
+  const wonEstimates = estimates.filter(est => isWonStatus(est));
+  
+  if (wonEstimates.length === 0) {
+    return 0;
+  }
+  
+  // Calculate revenue from won estimates for the selected year
+  const revenue = wonEstimates.reduce((sum, est) => {
+    const yearData = getEstimateYearData(est, year);
+    if (!yearData || !yearData.appliesToCurrentYear) return sum;
+    return sum + (isNaN(yearData.value) ? 0 : yearData.value);
+  }, 0);
+  
+  return revenue;
 }
 
 /**
