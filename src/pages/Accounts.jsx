@@ -263,6 +263,22 @@ export default function Accounts() {
     });
     
     // Debug logging
+    console.log('[Accounts] usersWithCounts calculation:', {
+      totalEstimates: allEstimates.length,
+      activeEstimates: activeEstimates.length,
+      estimatesWithAccountId: activeEstimates.filter(e => e.account_id).length,
+      estimatesWithUsers,
+      estimatesWithoutUsers,
+      uniqueUsersFound: userMap.size,
+      sampleEstimates: activeEstimates.slice(0, 5).map(e => ({
+        id: e.id,
+        salesperson: e.salesperson,
+        estimator: e.estimator,
+        account_id: e.account_id,
+        archived: e.archived
+      }))
+    });
+    
     if (userMap.size === 0 && activeEstimates.length > 0) {
       console.warn('[Accounts] No users found in estimates:', {
         totalEstimates: allEstimates.length,
@@ -279,13 +295,16 @@ export default function Accounts() {
     }
     
     // Convert to array and sort by name
-    return Array.from(userMap.values())
+    const result = Array.from(userMap.values())
       .map(u => ({
         name: u.name,
         count: u.accounts.size,
         roles: Array.from(u.roles)
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    
+    console.log('[Accounts] usersWithCounts result:', result);
+    return result;
   }, [allEstimates]);
 
   // Map of account_id to user roles (for displaying role badges)
