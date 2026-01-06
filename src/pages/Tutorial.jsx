@@ -27,12 +27,30 @@ import {
   Lock,
   GitBranch,
   Calendar,
-  Tag
+  Tag,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTutorial } from '../contexts/TutorialContext';
+import ScribeEmbed from '../components/ScribeEmbed';
 
 const tutorialSteps = [
+  // Example: How to add a Scribe guide to a tutorial step
+  // {
+  //   id: 'example-with-scribe',
+  //   title: 'Example Step with Scribe',
+  //   description: 'This shows how to integrate Scribe guides',
+  //   content: (
+  //     <div className="space-y-4">
+  //       <p>Follow the interactive guide below to learn this feature.</p>
+  //     </div>
+  //   ),
+  //   scribeUrl: 'https://scribehow.com/embed/your-guide-id-here',
+  //   scribeTitle: 'Optional: Custom Title',
+  //   scribeDescription: 'Optional: Description of the guide',
+  //   scribeHeight: '600px', // Optional: Custom height
+  // },
   {
     id: 'welcome',
     title: 'Welcome to Your CRM!',
@@ -611,6 +629,110 @@ const tutorialSteps = [
     )
   },
   {
+    id: 'lmn-import',
+    title: 'Importing from LMN',
+    description: 'Learn how to export data from LMN and import it into LECRM',
+    content: (
+      <div className="space-y-6">
+        <p>You can import accounts, contacts, estimates, and jobsites directly from LMN (golmn.com) into LECRM using CSV files.</p>
+        
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            <strong>💡 Tip:</strong> Follow the interactive guides below to see exactly where to find and export each sheet in LMN, then learn how to import them into LECRM.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Step 1: Export Estimates List from LMN</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            The Estimates List contains account information and estimate data. Follow the guide below to export it from LMN.
+          </p>
+        </div>
+      </div>
+    ),
+    scribeUrl: 'https://scribehow.com/embed/Export_Estimates_List_from_LMN__h6KEyY45TrK-D5Un_2vf3A',
+    scribeTitle: 'Export Estimates List from LMN',
+    scribeDescription: 'Learn where to find and export the Estimates List sheet from LMN',
+    scribeHeight: '679px'
+  },
+  {
+    id: 'lmn-import-sheet-2',
+    title: 'Export Jobsite and Contact Lists from LMN',
+    description: 'Learn how to export both Jobsite and Contact reports from LMN',
+    content: (
+      <div className="space-y-4">
+        <p>This guide shows you how to export both the <strong>Jobsite</strong> and <strong>Contact</strong> reports from LMN. These are two important sheets you'll need for importing into LECRM.</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Building2 className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Jobsite Report</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Contains jobsite location and address information</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Users className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Contact Report</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Contains contact information for people at your accounts</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            <strong>💡 Tip:</strong> Follow the interactive guide below to see exactly where to find and export both reports from LMN.
+          </p>
+        </div>
+      </div>
+    ),
+    scribeUrl: 'https://scribehow.com/embed/Export_Jobsite_and_Contact_Reports__88R9A89yRHqNlJEnTpAKrQ',
+    scribeTitle: 'Export Jobsite and Contact Reports from LMN',
+    scribeDescription: 'Learn where to find and export both the Jobsite and Contact reports from LMN',
+    scribeHeight: '679px'
+  },
+  {
+    id: 'lmn-import-final',
+    title: 'Export Leads Sheet and Import into LECRM',
+    description: 'Find the Leads sheet in LMN and import it using the blue import button',
+    content: (
+      <div className="space-y-4">
+        <p>This final guide shows you how to export the <strong>Leads</strong> sheet from LMN and then import it into LECRM using the blue "Import from LMN" button.</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <FileSpreadsheet className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Export Leads Sheet</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Find and export the Leads sheet from LMN</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Upload className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Find the Import Button</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Located on the Accounts or Contacts page, next to "New Account" or "New Contact"</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5" />
+            <div>
+              <p className="font-semibold">Upload & Import</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Select your CSV file, preview the data, then click the blue import button to complete</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            <strong>💡 Tip:</strong> Follow the interactive guide below to see the complete process from exporting in LMN to importing into LECRM.
+          </p>
+        </div>
+      </div>
+    ),
+    scribeUrl: 'https://scribehow.com/embed/Export_Last_Leads_Sheet_From_LMN_and_Import_to_LECRM__CrTyqBJNSbSllvGhyzDuQA',
+    scribeTitle: 'Export Leads Sheet from LMN and Import to LECRM',
+    scribeDescription: 'Complete guide: Find the Leads sheet in LMN, export it, and import it into LECRM using the blue import button',
+    scribeHeight: '679px'
+  },
+  {
     id: 'complete',
     title: 'You\'re All Set!',
     description: 'Ready to start using your CRM',
@@ -755,6 +877,17 @@ export default function Tutorial() {
           </CardHeader>
           <CardContent className="space-y-6">
             {step.content}
+            
+            {step.scribeUrl && (
+              <div className="pt-4 border-t">
+                <ScribeEmbed 
+                  scribeUrl={step.scribeUrl}
+                  title={step.scribeTitle || `${step.title} - Interactive Guide`}
+                  description={step.scribeDescription}
+                  height={step.scribeHeight || '600px'}
+                />
+              </div>
+            )}
             
             {step.action && (
               <div className="pt-4 border-t">
