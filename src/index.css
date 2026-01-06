@@ -11,6 +11,8 @@
 html {
   background-color: #ffffff;
   height: 100%;
+  /* Prevent page shift when scrollbar appears/disappears */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -20,6 +22,8 @@ body {
   background-color: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent page shift when scrollbar appears/disappears */
+  overflow-y: scroll;
 }
 
 /* Mobile app specific styles - only apply in native app */
