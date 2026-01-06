@@ -368,3 +368,274 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
   });
 }
 
+/**
+ * Calculate interaction statistics per account for a given year
+ * @param {Array} interactions - Array of interaction objects
+ * @param {number} year - Year to filter by
+ * @returns {Map} Map of account_id to interaction stats
+ */
+export function calculateInteractionStats(interactions, year) {
+  const statsMap = new Map();
+  
+  // Filter interactions by year
+  const yearInteractions = interactions.filter(interaction => {
+    if (!interaction.interaction_date) return false;
+    const interactionYear = new Date(interaction.interaction_date).getFullYear();
+    return interactionYear === year;
+  });
+  
+  // Group by account_id
+  yearInteractions.forEach(interaction => {
+    const accountId = interaction.account_id;
+    if (!accountId) return;
+    
+    if (!statsMap.has(accountId)) {
+      statsMap.set(accountId, {
+        accountId,
+        interactionCount: 0,
+        positiveCount: 0,
+        neutralCount: 0,
+        negativeCount: 0,
+        lastInteractionDate: null,
+        avgSentimentScore: 0
+      });
+    }
+    
+    const stats = statsMap.get(accountId);
+    stats.interactionCount++;
+    
+    // Track sentiment
+    const sentiment = (interaction.sentiment || '').toLowerCase();
+    if (sentiment === 'positive') {
+      stats.positiveCount++;
+    } else if (sentiment === 'negative') {
+      stats.negativeCount++;
+    } else {
+      stats.neutralCount++;
+    }
+    
+    // Track latest interaction date
+    if (interaction.interaction_date) {
+      const interactionDate = new Date(interaction.interaction_date);
+      if (!stats.lastInteractionDate || interactionDate > stats.lastInteractionDate) {
+        stats.lastInteractionDate = interactionDate;
+      }
+    }
+  });
+  
+  // Calculate average sentiment score (-1 to 1)
+  statsMap.forEach(stats => {
+    const total = stats.interactionCount;
+    if (total > 0) {
+      stats.avgSentimentScore = (stats.positiveCount - stats.negativeCount) / total;
+    }
+  });
+  
+  return statsMap;
+}
+
+/**
+ * Calculate scorecard statistics per account
+ * @param {Array} scorecards - Array of scorecard response objects
+ * @returns {Map} Map of account_id to scorecard stats
+ */
+export function calculateScorecardStats(scorecards) {
+  const statsMap = new Map();
+  
+  scorecards.forEach(scorecard => {
+    const accountId = scorecard.account_id;
+    if (!accountId) return;
+    
+    // Get latest scorecard for each account (by completed_date or scorecard_date)
+    if (!statsMap.has(accountId)) {
+      statsMap.set(accountId, {
+        accountId,
+        latestScore: null,
+        normalizedScore: null,
+        isPass: null,
+        hasScorecard: false,
+        latestScorecardDate: null
+      });
+    }
+    
+    const stats = statsMap.get(accountId);
+    stats.hasScorecard = true;
+    
+    // Determine which date to use for comparison
+    const scorecardDate = scorecard.completed_date 
+      ? new Date(scorecard.completed_date)
+      : (scorecard.scorecard_date ? new Date(scorecard.scorecard_date) : null);
+    
+    // Update if this is the latest scorecard
+    if (scorecardDate && (!stats.latestScorecardDate || scorecardDate > stats.latestScorecardDate)) {
+      stats.latestScorecardDate = scorecardDate;
+      stats.latestScore = scorecard.total_score;
+      stats.normalizedScore = scorecard.normalized_score;
+      stats.isPass = scorecard.is_pass;
+    } else if (!stats.latestScorecardDate && scorecard.total_score !== null) {
+      // If no date, use first scorecard found
+      stats.latestScore = scorecard.total_score;
+      stats.normalizedScore = scorecard.normalized_score;
+      stats.isPass = scorecard.is_pass;
+    }
+  });
+  
+  return statsMap;
+}
+
+/**
+ * Calculate days since a given date
+ * @param {Date|string|null} date - Date to calculate from
+ * @returns {number|null} Days since date, or null if date is invalid
+ */
+export function calculateDaysSince(date) {
+  if (!date) return null;
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) return null;
+    const now = new Date();
+    const diffTime = now - dateObj;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Enhance account stats with additional account data (organization_score, revenue_segment, etc.)
+ * @param {Array} accountStats - Array of account statistics from calculateAccountStats
+ * @param {Array} accounts - Array of account objects
+ * @param {Map} interactionStatsMap - Map from calculateInteractionStats
+ * @param {Map} scorecardStatsMap - Map from calculateScorecardStats
+ * @param {number} selectedYear - Selected year for segment lookup
+ * @returns {Array} Enhanced account statistics
+ */
+export function enhanceAccountStatsWithMetadata(accountStats, accounts, interactionStatsMap, scorecardStatsMap, selectedYear) {
+  const accountLookup = new Map();
+  accounts.forEach(acc => {
+    accountLookup.set(acc.id, acc);
+  });
+  
+  return accountStats.map(stat => {
+    const account = accountLookup.get(stat.accountId);
+    const interactionStats = interactionStatsMap.get(stat.accountId);
+    const scorecardStats = scorecardStatsMap.get(stat.accountId);
+    
+    // Get revenue segment for selected year
+    let revenueSegment = account?.revenue_segment || null;
+    if (account?.segment_by_year && typeof account.segment_by_year === 'object') {
+      revenueSegment = account.segment_by_year[selectedYear.toString()] || revenueSegment;
+    }
+    
+    return {
+      ...stat,
+      // Account metadata
+      organizationScore: account?.organization_score || null,
+      revenueSegment: revenueSegment,
+      accountType: account?.account_type || null,
+      accountStatus: account?.status || null,
+      lastInteractionDate: account?.last_interaction_date || null,
+      daysSinceLastInteraction: calculateDaysSince(account?.last_interaction_date),
+      renewalDate: account?.renewal_date || null,
+      tags: account?.tags || [],
+      
+      // Interaction stats
+      interactionCount: interactionStats?.interactionCount || 0,
+      avgSentimentScore: interactionStats?.avgSentimentScore || 0,
+      lastInteractionDateFromInteractions: interactionStats?.lastInteractionDate || null,
+      
+      // Scorecard stats
+      hasScorecard: scorecardStats?.hasScorecard || false,
+      latestScore: scorecardStats?.latestScore || null,
+      normalizedScore: scorecardStats?.normalizedScore || null,
+      isPass: scorecardStats?.isPass || null,
+      latestScorecardDate: scorecardStats?.latestScorecardDate || null
+    };
+  });
+}
+
+/**
+ * Calculate department-level metadata (avg organization score, segment distribution, etc.)
+ * @param {Array} deptStats - Array of department statistics from calculateDepartmentStats
+ * @param {Array} estimates - Array of estimate objects
+ * @param {Array} accounts - Array of account objects
+ * @param {Map} interactionStatsMap - Map from calculateInteractionStats
+ * @param {number} selectedYear - Selected year for segment lookup
+ * @returns {Array} Enhanced department statistics
+ */
+export function enhanceDepartmentStatsWithMetadata(deptStats, estimates, accounts, interactionStatsMap, selectedYear) {
+  const accountLookup = new Map();
+  accounts.forEach(acc => {
+    accountLookup.set(acc.id, acc);
+  });
+  
+  // Get unique account IDs per department
+  const deptAccountsMap = new Map();
+  deptStats.forEach(dept => {
+    const accountIds = new Set();
+    dept.estimates.forEach(est => {
+      if (est.account_id) {
+        accountIds.add(est.account_id);
+      }
+    });
+    deptAccountsMap.set(dept.division, Array.from(accountIds));
+  });
+  
+  return deptStats.map(dept => {
+    const accountIds = deptAccountsMap.get(dept.division) || [];
+    const deptAccounts = accountIds.map(id => accountLookup.get(id)).filter(Boolean);
+    
+    // Calculate average organization score
+    const scores = deptAccounts
+      .map(acc => acc.organization_score)
+      .filter(score => score !== null && score !== undefined);
+    const avgOrganizationScore = scores.length > 0
+      ? scores.reduce((sum, score) => sum + parseFloat(score), 0) / scores.length
+      : null;
+    
+    // Calculate segment distribution
+    const segmentCounts = { A: 0, B: 0, C: 0, D: 0 };
+    deptAccounts.forEach(acc => {
+      let segment = acc.revenue_segment;
+      if (acc.segment_by_year && typeof acc.segment_by_year === 'object') {
+        segment = acc.segment_by_year[selectedYear.toString()] || segment;
+      }
+      if (segment && ['A', 'B', 'C', 'D'].includes(segment)) {
+        segmentCounts[segment]++;
+      }
+    });
+    
+    // Calculate average days since last interaction
+    const interactionDays = deptAccounts
+      .map(acc => {
+        const interactionStats = interactionStatsMap.get(acc.id);
+        if (interactionStats?.lastInteractionDate) {
+          return calculateDaysSince(interactionStats.lastInteractionDate);
+        }
+        if (acc.last_interaction_date) {
+          return calculateDaysSince(acc.last_interaction_date);
+        }
+        return null;
+      })
+      .filter(days => days !== null);
+    const avgDaysSinceInteraction = interactionDays.length > 0
+      ? interactionDays.reduce((sum, days) => sum + days, 0) / interactionDays.length
+      : null;
+    
+    // Calculate total interactions
+    const totalInteractions = accountIds.reduce((sum, accountId) => {
+      const interactionStats = interactionStatsMap.get(accountId);
+      return sum + (interactionStats?.interactionCount || 0);
+    }, 0);
+    
+    return {
+      ...dept,
+      avgOrganizationScore: avgOrganizationScore !== null ? parseFloat(avgOrganizationScore.toFixed(1)) : null,
+      segmentDistribution: segmentCounts,
+      avgDaysSinceInteraction: avgDaysSinceInteraction !== null ? Math.round(avgDaysSinceInteraction) : null,
+      totalInteractions
+    };
+  });
+}
+

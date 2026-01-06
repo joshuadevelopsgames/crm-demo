@@ -7,11 +7,20 @@ import { format } from 'date-fns';
 import { formatDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
+import { calculateAccountStats, formatCurrency, enhanceAccountStatsWithMetadata } from '@/utils/reportCalculations';
 
-export default function AccountPerformanceReport({ estimates, accounts, selectedYear }) {
+export default function AccountPerformanceReport({ estimates, accounts, selectedYear, interactionStatsMap, scorecardStatsMap }) {
   const navigate = useNavigate();
-  const accountStats = calculateAccountStats(estimates, accounts);
+  const baseAccountStats = calculateAccountStats(estimates, accounts);
+  
+  // Enhance account stats with metadata (organization_score, revenue_segment, interactions, scorecards)
+  const accountStats = enhanceAccountStatsWithMetadata(
+    baseAccountStats,
+    accounts,
+    interactionStatsMap || new Map(),
+    scorecardStatsMap || new Map(),
+    selectedYear
+  );
   const [expandedAccounts, setExpandedAccounts] = useState(new Set());
   
   const toggleAccount = (accountId) => {
@@ -106,6 +115,9 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total Value</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won Value</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Est. vs Won</th>
+                  <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Segment</th>
+                  <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Score</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Interactions</th>
                   <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Actions</th>
                 </tr>
               </thead>
@@ -165,7 +177,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                       {/* Expanded Estimates List */}
                       {isExpanded && accountEstimates.length > 0 && (
                         <tr>
-                          <td colSpan="10" className="p-0 bg-slate-50">
+                          <td colSpan="13" className="p-0 bg-slate-50">
                             <div className="p-4">
                               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                                 Estimates for {account.accountName}
@@ -229,7 +241,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                 })}
                 {accountStats.length === 0 && (
                   <tr>
-                    <td colSpan="10" className="p-8 text-center text-slate-500">
+                    <td colSpan="13" className="p-8 text-center text-slate-500">
                       No account data available for {selectedYear}
                     </td>
                   </tr>

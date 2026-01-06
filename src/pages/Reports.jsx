@@ -21,7 +21,15 @@ import {
   Building2,
   AlertCircle
 } from 'lucide-react';
-import { filterEstimatesByYear, formatCurrency, isWonStatus } from '@/utils/reportCalculations';
+import { 
+  filterEstimatesByYear, 
+  formatCurrency, 
+  isWonStatus,
+  calculateInteractionStats,
+  calculateScorecardStats,
+  enhanceAccountStatsWithMetadata,
+  enhanceDepartmentStatsWithMetadata
+} from '@/utils/reportCalculations';
 import { exportToXLSX, exportToPDF } from '@/utils/reportExports';
 import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
@@ -110,6 +118,46 @@ export default function Reports() {
       const result = await response.json();
       return result.success ? (result.data || []) : [];
     }
+  });
+
+  // Fetch interactions from database for report enhancements
+  const { data: interactions = [] } = useQuery({
+    queryKey: ['interactions'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/data/interactions');
+        if (!response.ok) {
+          console.warn('⚠️ Interactions API failed');
+          return [];
+        }
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
+      } catch (error) {
+        console.error('📊 Reports: ❌ Error fetching interactions', error);
+        return [];
+      }
+    },
+    enabled: true
+  });
+
+  // Fetch scorecards from database for report enhancements
+  const { data: scorecards = [] } = useQuery({
+    queryKey: ['scorecards'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/data/scorecards');
+        if (!response.ok) {
+          console.warn('⚠️ Scorecards API failed');
+          return [];
+        }
+        const result = await response.json();
+        return result.success ? (result.data || []) : [];
+      } catch (error) {
+        console.error('📊 Reports: ❌ Error fetching scorecards', error);
+        return [];
+      }
+    },
+    enabled: true
   });
 
 
@@ -579,6 +627,16 @@ export default function Reports() {
     return filtered;
   }, [yearWonEstimates, selectedAccount, selectedDepartment, selectedYear]);
 
+  // Calculate interaction stats for selected year
+  const interactionStatsMap = useMemo(() => {
+    return calculateInteractionStats(interactions, selectedYear);
+  }, [interactions, selectedYear]);
+
+  // Calculate scorecard stats
+  const scorecardStatsMap = useMemo(() => {
+    return calculateScorecardStats(scorecards);
+  }, [scorecards]);
+
   // Calculate basic stats (use filteredYearEstimates - already filtered by year and account/department)
   const stats = useMemo(() => {
     const total = filteredYearEstimates.length;
@@ -853,6 +911,8 @@ export default function Reports() {
             estimates={filteredYearEstimates} 
             accounts={accounts}
             selectedYear={selectedYear}
+            interactionStatsMap={interactionStatsMap}
+            scorecardStatsMap={scorecardStatsMap}
           />
         </TabsContent>
         
@@ -866,6 +926,8 @@ export default function Reports() {
           <DepartmentReport 
             estimates={filteredYearEstimates}
             accounts={accounts}
+            selectedYear={selectedYear}
+            interactionStatsMap={interactionStatsMap}
           />
         </TabsContent>
         
@@ -874,6 +936,8 @@ export default function Reports() {
             estimates={filteredYearEstimates}
             accounts={accounts}
             selectedYear={selectedYear}
+            interactionStatsMap={interactionStatsMap}
+            scorecardStatsMap={scorecardStatsMap}
           />
         </TabsContent>
       </Tabs>

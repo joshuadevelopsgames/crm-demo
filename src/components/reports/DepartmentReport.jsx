@@ -6,11 +6,20 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Building2, TrendingUp, ChevronRight, ChevronDown, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { calculateDepartmentStats, calculateDepartmentAccountStats, formatCurrency, isWonStatus } from '@/utils/reportCalculations';
+import { calculateDepartmentStats, calculateDepartmentAccountStats, formatCurrency, isWonStatus, enhanceDepartmentStatsWithMetadata } from '@/utils/reportCalculations';
 
-export default function DepartmentReport({ estimates, accounts = [] }) {
+export default function DepartmentReport({ estimates, accounts = [], selectedYear, interactionStatsMap }) {
   const navigate = useNavigate();
-  const deptStats = calculateDepartmentStats(estimates);
+  const baseDeptStats = calculateDepartmentStats(estimates);
+  
+  // Enhance department stats with metadata (avg organization_score, segment distribution, etc.)
+  const deptStats = enhanceDepartmentStatsWithMetadata(
+    baseDeptStats,
+    estimates,
+    accounts,
+    interactionStatsMap || new Map(),
+    selectedYear || new Date().getFullYear()
+  );
   const [expandedDepartments, setExpandedDepartments] = useState(new Set());
   
   const toggleDepartment = (division) => {
@@ -236,12 +245,61 @@ export default function DepartmentReport({ estimates, accounts = [] }) {
                           {formatCurrency(dept.lostValue)}
                         </td>
                         <td className="p-3 text-right text-slate-600">{dept.estimatesVsWonRatio}%</td>
+                        <td className="p-3 text-center">
+                          {dept.avgOrganizationScore !== null ? (
+                            <Badge 
+                              variant="outline"
+                              className={
+                                dept.avgOrganizationScore >= 75 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                                dept.avgOrganizationScore >= 50 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              }
+                            >
+                              {Math.round(dept.avgOrganizationScore)}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center text-xs">
+                          {dept.segmentDistribution ? (
+                            <div className="flex gap-1 justify-center">
+                              {['A', 'B', 'C', 'D'].map(seg => (
+                                dept.segmentDistribution[seg] > 0 && (
+                                  <Badge key={seg} variant="outline" className="text-xs">
+                                    {seg}: {dept.segmentDistribution[seg]}
+                                  </Badge>
+                                )
+                              ))}
+                              {Object.values(dept.segmentDistribution).every(v => v === 0) && (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right text-slate-600 text-sm">
+                          {dept.avgDaysSinceInteraction !== null ? (
+                            dept.avgDaysSinceInteraction === 0 ? (
+                              <span className="text-emerald-600">Today</span>
+                            ) : dept.avgDaysSinceInteraction < 30 ? (
+                              <span>{dept.avgDaysSinceInteraction} days</span>
+                            ) : dept.avgDaysSinceInteraction < 90 ? (
+                              <span className="text-amber-600">{dept.avgDaysSinceInteraction} days</span>
+                            ) : (
+                              <span className="text-red-600">{dept.avgDaysSinceInteraction} days</span>
+                            )
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
                       </tr>
                       
                       {/* Expanded Account Breakdown */}
                       {isExpanded && accountStats.length > 0 && (
                         <tr>
-                          <td colSpan="10" className="p-0 bg-slate-50 dark:bg-slate-900">
+                          <td colSpan="13" className="p-0 bg-slate-50 dark:bg-slate-900">
                             <div className="p-4">
                               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                                 Clients in {dept.division}
@@ -305,7 +363,7 @@ export default function DepartmentReport({ estimates, accounts = [] }) {
                 })}
                 {deptStats.length === 0 && (
                   <tr>
-                    <td colSpan="10" className="p-8 text-center text-slate-500">
+                    <td colSpan="13" className="p-8 text-center text-slate-500">
                       No department data available
                     </td>
                   </tr>

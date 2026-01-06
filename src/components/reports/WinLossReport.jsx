@@ -3,11 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, FileText } from 'lucide-react';
-import { calculateOverallStats, calculateAccountStats, formatCurrency } from '@/utils/reportCalculations';
+import { calculateOverallStats, calculateAccountStats, formatCurrency, enhanceAccountStatsWithMetadata } from '@/utils/reportCalculations';
+import { Badge } from '@/components/ui/badge';
 
-export default function WinLossReport({ estimates, accounts, selectedYear }) {
+export default function WinLossReport({ estimates, accounts, selectedYear, interactionStatsMap, scorecardStatsMap }) {
   const overallStats = calculateOverallStats(estimates);
-  const accountStats = calculateAccountStats(estimates, accounts);
+  const baseAccountStats = calculateAccountStats(estimates, accounts);
+  
+  // Enhance account stats with metadata (organization_score, revenue_segment, interactions, scorecards)
+  const accountStats = enhanceAccountStatsWithMetadata(
+    baseAccountStats,
+    accounts,
+    interactionStatsMap || new Map(),
+    scorecardStatsMap || new Map(),
+    selectedYear
+  );
   
   // Data for pie chart
   const pieData = [
@@ -175,6 +185,9 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Total Value</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Won Value</th>
                   <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Est. vs Won</th>
+                  <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Segment</th>
+                  <th className="text-center p-3 font-semibold text-slate-900 dark:text-white">Score</th>
+                  <th className="text-right p-3 font-semibold text-slate-900 dark:text-white">Last Interaction</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,11 +212,61 @@ export default function WinLossReport({ estimates, accounts, selectedYear }) {
                       {formatCurrency(account.wonValue)}
                     </td>
                     <td className="p-3 text-right text-slate-600">{account.estimatesVsWonRatio}%</td>
+                    <td className="p-3 text-center">
+                      {account.revenueSegment ? (
+                        <Badge 
+                          variant="outline"
+                          className={
+                            account.revenueSegment === 'A' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            account.revenueSegment === 'B' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            account.revenueSegment === 'C' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                          }
+                        >
+                          {account.revenueSegment}
+                        </Badge>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center">
+                      {account.latestScore !== null && account.latestScore !== undefined ? (
+                        <Badge 
+                          variant="outline"
+                          className={
+                            account.latestScore >= 75 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                            account.latestScore >= 50 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }
+                        >
+                          {Math.round(account.latestScore)}
+                        </Badge>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right text-slate-600 text-sm">
+                      {account.daysSinceLastInteraction !== null ? (
+                        account.daysSinceLastInteraction === 0 ? (
+                          <span className="text-emerald-600">Today</span>
+                        ) : account.daysSinceLastInteraction === 1 ? (
+                          <span className="text-emerald-600">1 day</span>
+                        ) : account.daysSinceLastInteraction < 30 ? (
+                          <span>{account.daysSinceLastInteraction} days</span>
+                        ) : account.daysSinceLastInteraction < 90 ? (
+                          <span className="text-amber-600">{account.daysSinceLastInteraction} days</span>
+                        ) : (
+                          <span className="text-red-600">{account.daysSinceLastInteraction} days</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {accountStats.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-500">
+                    <td colSpan="11" className="p-8 text-center text-slate-500">
                       No account data available for {selectedYear}
                     </td>
                   </tr>
