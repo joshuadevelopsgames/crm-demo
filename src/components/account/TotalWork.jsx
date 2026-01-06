@@ -396,12 +396,12 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
           <div>
             <p className="text-sm text-slate-600 dark:text-slate-400">ESTIMATED VALUE</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-[#ffffff] mt-1">
-              ${allTimeEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${totalEstimated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {estimates.length} total estimate{estimates.length !== 1 ? 's' : ''}
+              {estimatedBreakdown.included.length} estimate{estimatedBreakdown.included.length !== 1 ? 's' : ''} for {currentYear}
               {totalEstimated !== allTimeEstimated && (
-                <span> • {estimatedBreakdown.included.length} for {currentYear}</span>
+                <span> • {estimates.length} total</span>
               )}
             </p>
           </div>
@@ -409,14 +409,14 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
             <p className="text-sm text-slate-600 dark:text-slate-400">WON VALUE</p>
             <p className="text-2xl font-semibold text-emerald-600 mt-1">
               ${totalSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {allTimeEstimated > 0 && (
-                <span className="text-base ml-2">({allTimeSoldPercentage}%)</span>
+              {totalEstimated > 0 && (
+                <span className="text-base ml-2">({soldPercentage}%)</span>
               )}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {estimates.filter(est => isWonStatus(est)).length} won estimate{estimates.filter(est => isWonStatus(est)).length !== 1 ? 's' : ''}
+              {soldBreakdown.included.length} won estimate{soldBreakdown.included.length !== 1 ? 's' : ''} for {currentYear}
               {totalSold !== allTimeSold && (
-                <span> • {soldBreakdown.included.length} for {currentYear}</span>
+                <span> • {estimates.filter(est => isWonStatus(est)).length} total</span>
               )}
             </p>
           </div>

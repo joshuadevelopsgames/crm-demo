@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, Target } from 'lucide-react';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { isWonStatus } from '@/utils/reportCalculations';
+import { getEstimateYearData } from '@/utils/revenueSegmentCalculator';
 
 // Helper to get current year (respects year selector) - REQUIRED, no fallback
 // Per user requirement: Never fall back to current year, only ever go by selected year
@@ -36,11 +37,16 @@ export default function EstimatesStats({ estimates = [], account = null, selecte
   }, [account, currentYear]);
 
   // Per spec R1, R11: Calculate win percentage using isWonStatus to respect pipeline_status priority
+  // Calculate win rate for selected year estimates only
   const winPercentage = useMemo(() => {
-    if (estimates.length === 0) return 0;
-    const won = estimates.filter(est => isWonStatus(est)).length;
-    return (won / estimates.length) * 100;
-  }, [estimates]);
+    const yearEstimates = estimates.filter(est => {
+      const yearData = getEstimateYearData(est, currentYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+    if (yearEstimates.length === 0) return 0;
+    const won = yearEstimates.filter(est => isWonStatus(est)).length;
+    return (won / yearEstimates.length) * 100;
+  }, [estimates, currentYear]);
 
   return (
     <Card>
@@ -55,7 +61,7 @@ export default function EstimatesStats({ estimates = [], account = null, selecte
       <CardContent>
         <div className="space-y-3">
           <div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">THIS YEAR</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{currentYear}</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-[#ffffff] mt-1">
               {thisYearEstimatesCount}
             </p>
