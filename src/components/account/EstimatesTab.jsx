@@ -251,7 +251,9 @@ export default function EstimatesTab({ estimates = [], accountId }) {
   };
 
   const calculateDepartmentTotal = (departmentEstimates) => {
-    return departmentEstimates.reduce((sum, est) => {
+    // Only calculate revenue from won estimates
+    const wonEstimates = departmentEstimates.filter(est => isWonStatus(est));
+    return wonEstimates.reduce((sum, est) => {
       const amount = est.total_price_with_tax || est.total_price || 0;
       return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
     }, 0);
