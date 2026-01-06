@@ -956,13 +956,16 @@ const base44Instance = {
         if (!userId) {
           throw new Error('markAllAsRead requires userId parameter');
         }
-        // Fetch notifications for this user only (server-side filtering)
+        
+        // Mark all regular notifications as read
         const response = await fetch(`/api/data/notifications?user_id=${encodeURIComponent(userId)}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch notifications: ${response.statusText}`);
         }
         const result = await response.json();
         const userNotifications = result.success ? (result.data || []) : [];
+        
+        // Mark all regular notifications as read
         await Promise.all(
           userNotifications.map(n => 
             fetch('/api/data/notifications', {
@@ -972,6 +975,28 @@ const base44Instance = {
             })
           )
         );
+        
+        // Mark all JSONB notifications (neglected_account, renewal_reminder) as read
+        try {
+          const markAllJsonbResponse = await fetch('/api/data/userNotificationStates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'mark_all_read',
+              data: {
+                user_id: userId
+              }
+            })
+          });
+          
+          if (!markAllJsonbResponse.ok) {
+            console.error('Failed to mark all JSONB notifications as read:', markAllJsonbResponse.statusText);
+          }
+        } catch (error) {
+          console.error('Error marking JSONB notifications as read:', error);
+          // Don't throw - regular notifications were already marked
+        }
+        
         return userNotifications;
       },
       delete: async (id) => {

@@ -241,6 +241,64 @@ export default async function handler(req, res) {
         });
       }
       
+      if (action === 'mark_all_read') {
+        const { user_id } = requestData;
+        
+        if (!user_id) {
+          return res.status(400).json({
+            success: false,
+            error: 'user_id is required'
+          });
+        }
+        
+        // Get current state
+        const { data: currentState, error: fetchError } = await supabase
+          .from('user_notification_states')
+          .select('notifications')
+          .eq('user_id', user_id)
+          .single();
+        
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Supabase error:', fetchError);
+          return res.status(500).json({
+            success: false,
+            error: fetchError.message
+          });
+        }
+        
+        const notifications = currentState?.notifications || [];
+        // Mark all notifications as read
+        const updatedNotifications = notifications.map(notif => ({
+          ...notif,
+          is_read: true
+        }));
+        
+        const { data, error } = await supabase
+          .from('user_notification_states')
+          .upsert({
+            user_id: user_id,
+            notifications: updatedNotifications,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          return res.status(500).json({
+            success: false,
+            error: error.message
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: data
+        });
+      }
+      
       if (action === 'refresh') {
         // Refresh notifications for a user using the optimized SQL function
         // This is called once on page load to ensure notifications are up-to-date
@@ -315,7 +373,7 @@ export default async function handler(req, res) {
       
       return res.status(400).json({
         success: false,
-        error: 'Invalid action. Use "upsert", "update_read", or "refresh"'
+        error: 'Invalid action. Use "upsert", "update_read", "mark_all_read", or "refresh"'
       });
     }
     
