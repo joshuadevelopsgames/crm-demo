@@ -46,7 +46,7 @@ import { useUser } from '@/contexts/UserContext';
 export default function Contacts() {
   const navigate = useNavigate();
   const { user, isLoading: userLoading } = useUser();
-  const { selectedYear, setYear, availableYears } = useYearSelector();
+  const { selectedYear } = useYearSelector();
   const [filterName, setFilterName] = useState('');
   const [filterAccount, setFilterAccount] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -267,18 +267,6 @@ export default function Contacts() {
             <p className="text-slate-600 mt-1">{filteredContacts.length} total contacts</p>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue>{selectedYear}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Button 
               onClick={() => setIsImportDialogOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"

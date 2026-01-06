@@ -16,13 +16,6 @@ import SnoozeDialog from '@/components/SnoozeDialog';
 import ImportLeadsDialog from '../components/ImportLeadsDialog';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
 import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import ICPManagementPanel from '../components/ICPManagementPanel';
 import {
   Building2,
@@ -44,7 +37,7 @@ import toast from 'react-hot-toast';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { selectedYear, setYear, availableYears } = useYearSelector();
+  const { selectedYear } = useYearSelector();
   const queryClient = useQueryClient();
   const { user, isLoading: userLoading } = useUser();
   const [snoozeAccount, setSnoozeAccount] = useState(null);
@@ -676,18 +669,6 @@ export default function Dashboard() {
           <p className="text-slate-600 dark:text-text-muted mt-2 text-sm md:text-base">Overview of your sales pipeline and activities</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedYear.toString()} onValueChange={(value) => setYear(parseInt(value, 10))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue>{selectedYear}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {availableYears.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button 
             onClick={() => setIsImportDialogOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-primary dark:hover:bg-primary-hover dark:active:bg-primary-active dark:text-primary-foreground"
