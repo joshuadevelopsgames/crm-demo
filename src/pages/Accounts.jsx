@@ -374,8 +374,8 @@ export default function Accounts() {
     
     // Debug log
     const accountsWithEstimates = Object.keys(grouped).length;
-    const totalEstimates = activeEstimates.length;
-    const wonEstimates = activeEstimates.filter(e => isWonStatus(e)).length;
+    const totalEstimates = allEstimates.length;
+    const wonEstimates = allEstimates.filter(e => isWonStatus(e)).length;
     
     console.log(`[getAccountRevenue] Summary for ${selectedYear}:`, {
       accountsWithEstimates,
