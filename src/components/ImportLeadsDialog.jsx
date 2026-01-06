@@ -178,26 +178,74 @@ export default function ImportLeadsDialog({ open, onClose }) {
       }
     }
     
-    // Process each identified file
+    // Process each identified file and collect parsed data
+    let newContactsData = null;
+    let newLeadsData = null;
+    let newEstimatesData = null;
+    let newJobsitesData = null;
+    
     for (const { file, type } of results) {
       try {
+        const data = await convertXlsxToRows(file);
+        let parsed = null;
+        
         switch (type) {
           case 'contacts':
-            await processContactsFile(file);
+            parsed = parseContactsExport(data);
+            if (parsed.stats.error) {
+              setError(`Contacts Export: ${parsed.stats.error}`);
+              continue;
+            }
+            setContactsData(parsed);
+            setContactsFile(file);
+            newContactsData = parsed;
             break;
           case 'leads':
-            await processLeadsFile(file);
+            parsed = parseLeadsList(data);
+            if (parsed.stats.error) {
+              setError(`Leads List: ${parsed.stats.error}`);
+              continue;
+            }
+            setLeadsData(parsed);
+            setLeadsFile(file);
+            newLeadsData = parsed;
             break;
           case 'estimates':
-            await processEstimatesFile(file);
+            parsed = parseEstimatesList(data);
+            if (parsed.stats.error) {
+              setError(`Estimates List: ${parsed.stats.error}`);
+              continue;
+            }
+            setEstimatesData(parsed);
+            setEstimatesFile(file);
+            newEstimatesData = parsed;
             break;
           case 'jobsites':
-            await processJobsitesFile(file);
+            parsed = parseJobsiteExport(data);
+            if (parsed.stats.error) {
+              setError(`Jobsite Export: ${parsed.stats.error}`);
+              continue;
+            }
+            setJobsitesData(parsed);
+            setJobsitesFile(file);
+            newJobsitesData = parsed;
             break;
         }
       } catch (err) {
         setError(`Error processing ${file.name}: ${err.message}`);
       }
+    }
+    
+    // After all files are processed, merge using the parsed data (not state, which may not be updated yet)
+    // Use parsed data if available, otherwise fall back to state
+    const finalContacts = newContactsData || contactsData;
+    const finalLeads = newLeadsData || leadsData;
+    const finalEstimates = newEstimatesData || estimatesData;
+    const finalJobsites = newJobsitesData || jobsitesData;
+    
+    // Trigger merge check with all files
+    if (finalContacts && finalLeads && finalEstimates && finalJobsites) {
+      await checkAndMergeAllFiles(finalContacts, finalLeads, finalEstimates, finalJobsites);
     }
   };
 
