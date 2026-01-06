@@ -99,7 +99,7 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[99999] min-w-[var(--dropdown-width)] max-h-[60vh] overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg"
+          className="fixed z-[99999] min-w-[var(--dropdown-width)] max-h-[60vh] overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 duration-150"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
