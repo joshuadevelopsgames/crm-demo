@@ -116,7 +116,7 @@ export function SimpleDropdown({
       ref={dropdownRef}
       className={cn(
         "fixed rounded-md border bg-popover text-popover-foreground shadow-md",
-        "animate-in fade-in-0 slide-in-from-top-2 duration-200",
+        "animate-in fade-in-0 duration-200",
         className
       )}
       style={{
