@@ -364,8 +364,11 @@ body {
   visibility: visible !important;
   display: flex !important;
   pointer-events: auto !important;
-  transform-origin: top left !important;
+  /* Override Radix UI's transform system */
   transform: none !important;
+  transform-origin: top left !important;
+  /* Reset any Radix UI positioning transforms */
+  --radix-select-content-transform-origin: top left !important;
 }
 
 /* Ensure item-aligned dropdowns are visible */
@@ -373,14 +376,17 @@ body {
   position: absolute !important;
 }
 
-/* Disable Radix UI's built-in animations */
+/* Disable Radix UI's built-in animations and transforms */
 [data-radix-select-content] {
   animation-duration: 0s !important;
   transition: none !important;
+  /* Prevent Radix UI from applying transforms */
+  will-change: auto !important;
 }
 
 [data-radix-select-content][data-state="closed"] {
   animation: slideOutFade 0.1s ease-in !important;
+  transform: none !important;
 }
 
 @keyframes slideInFade {
