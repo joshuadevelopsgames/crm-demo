@@ -56,7 +56,7 @@ export default function ScribeEmbed({
     // If it's a regular Scribe URL, try to convert
     if (url.includes('scribehow.com')) {
       // Extract the guide ID and create embed URL
-      const match = url.match(/scribehow\.com\/(?:shared\/)?([^\/\?]+)/);
+      const match = url.match(/scribehow\.com\/(?:shared\/)?([^/?]+)/);
       if (match && match[1]) {
         return `https://scribehow.com/embed/${match[1]}`;
       }
