@@ -279,6 +279,22 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
     return (won / estimates.length) * 100;
   }, [estimates]);
 
+  // Calculate won value and total estimated value for all estimates (not filtered - for account overall)
+  const totalWonValue = useMemo(() => {
+    const wonEstimates = estimates.filter(est => isWonStatus(est));
+    return wonEstimates.reduce((sum, est) => {
+      const amount = est.total_price_with_tax || est.total_price || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    }, 0);
+  }, [estimates]);
+
+  const totalEstimatedValue = useMemo(() => {
+    return estimates.reduce((sum, est) => {
+      const amount = est.total_price_with_tax || est.total_price || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    }, 0);
+  }, [estimates]);
+
   const totalEstimates = statusFilteredEstimates.length;
 
   return (
@@ -298,6 +314,9 @@ export default function EstimatesTab({ estimates = [], accountId, selectedYear: 
                 </p>
                 <p className="text-xs text-emerald-600 mt-1">
                   {estimates.filter(est => isWonStatus(est)).length} won / {estimates.length} total
+                </p>
+                <p className="text-xs text-emerald-600 mt-1 font-medium">
+                  ${totalWonValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} won / ${totalEstimatedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} estimated
                 </p>
               </div>
             </div>
