@@ -7,6 +7,7 @@ import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { detectContractTypo, getRevenueForYear } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
+import { getYearFromDateString } from '@/utils/dateFormatter';
 
 /**
  * Calculate contract duration in months between two dates
@@ -97,29 +98,39 @@ function getEstimateYearData(estimate, currentYear) {
     totalPrice = totalPriceWithTax;
   }
   
-  // Per spec R2: Determine year using priority order
-  let yearDeterminationDate = null;
+  // Per spec R2: Determine year using priority order - extract year from string (avoid timezone issues)
+  let determinationYear = null;
   let yearSource = null;
   // Priority 1: contract_end
-  if (contractEnd && !isNaN(contractEnd.getTime())) {
-    yearDeterminationDate = contractEnd;
-    yearSource = 'contract_end';
+  if (estimate.contract_end) {
+    determinationYear = getYearFromDateString(estimate.contract_end);
+    if (determinationYear !== null) {
+      yearSource = 'contract_end';
+    }
   }
   // Priority 2: contract_start
-  else if (contractStart && !isNaN(contractStart.getTime())) {
-    yearDeterminationDate = contractStart;
-    yearSource = 'contract_start';
+  if (determinationYear === null && estimate.contract_start) {
+    determinationYear = getYearFromDateString(estimate.contract_start);
+    if (determinationYear !== null) {
+      yearSource = 'contract_start';
+    }
   }
   // Priority 3: estimate_date
-  else if (estimateDate && !isNaN(estimateDate.getTime())) {
-    yearDeterminationDate = estimateDate;
-    yearSource = 'estimate_date';
-  } else if (createdDate && !isNaN(createdDate.getTime())) {
-    yearDeterminationDate = createdDate;
-    yearSource = 'created_date';
+  if (determinationYear === null && estimate.estimate_date) {
+    determinationYear = getYearFromDateString(estimate.estimate_date);
+    if (determinationYear !== null) {
+      yearSource = 'estimate_date';
+    }
+  }
+  // Priority 4: created_date
+  if (determinationYear === null && estimate.created_date) {
+    determinationYear = getYearFromDateString(estimate.created_date);
+    if (determinationYear !== null) {
+      yearSource = 'created_date';
+    }
   }
   
-  if (!yearDeterminationDate) {
+  if (determinationYear === null) {
     // Per spec R22: Every estimate has at least one date, but handle gracefully
     return null;
   }
@@ -127,7 +138,8 @@ function getEstimateYearData(estimate, currentYear) {
   // Per spec R9: Multi-year contracts allocate to sequential calendar years starting from contract_start
   // If we have both contract_start and contract_end, use contract allocation (not determination year)
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-    const startYear = contractStart.getFullYear();
+    const startYear = getYearFromDateString(estimate.contract_start);
+    if (startYear === null) return null;
     
     // Per spec R6-R7: Calculate duration and contract years
     const durationMonths = calculateDurationMonths(contractStart, contractEnd);
@@ -159,7 +171,6 @@ function getEstimateYearData(estimate, currentYear) {
   }
   
   // Single-year or no contract dates: use determination year
-  const determinationYear = yearDeterminationDate.getFullYear();
   const appliesToCurrentYear = currentYear === determinationYear;
   
   const determinationMethod = yearSource === 'contract_end' 

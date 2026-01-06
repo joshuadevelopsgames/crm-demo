@@ -27,6 +27,7 @@ import WinLossReport from '@/components/reports/WinLossReport';
 import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
+import { getYearFromDateString } from '@/utils/dateFormatter';
 
 import { getCurrentYear, useYearSelector } from '@/contexts/YearSelectorContext';
 
@@ -359,56 +360,30 @@ export default function Reports() {
         return false; // Skip estimates without any valid date
       }
       
-      // Handle different date formats
+      // Handle different date formats - use getYearFromDateString for consistency
       let estimateYear;
       const dateValue = dateToUse;
       
-      // If it's already a Date object
+      // If it's already a Date object, convert to string first
       if (dateValue instanceof Date) {
-        estimateYear = dateValue.getFullYear();
+        // Convert Date to YYYY-MM-DD string format
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        estimateYear = getYearFromDateString(dateStr);
       } else {
-        // It's a string - try multiple extraction methods
+        // It's a string - use getYearFromDateString
         const dateStr = String(dateValue);
-        
-        // Method 1: Extract year from ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
-        if (dateStr.length >= 4) {
-          const yearStr = dateStr.substring(0, 4);
-          const parsedYear = parseInt(yearStr);
-          
-          // Check if it's a valid year
-          if (!isNaN(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100) {
-            estimateYear = parsedYear;
-          } else {
-            // Method 2: Try Date parsing
-            const dateObj = new Date(dateStr);
-            if (!isNaN(dateObj.getTime())) {
-              estimateYear = dateObj.getFullYear();
-            } else {
-              // Method 3: Try to find year pattern in string (e.g., "2025" anywhere)
-              const yearMatch = dateStr.match(/\b(20[0-9]{2})\b/);
-              if (yearMatch) {
-                estimateYear = parseInt(yearMatch[1]);
-              } else {
-                // All methods failed
-                if (uniqueEstimates.indexOf(estimate) < 5) {
-                  console.warn('📊 Reports: Could not extract year from date:', dateStr, 'for estimate:', estimate.id);
-                }
-                return false;
-              }
-            }
-          }
-        } else {
-          // Date string is too short, try Date parsing
-          const dateObj = new Date(dateStr);
-          if (!isNaN(dateObj.getTime())) {
-            estimateYear = dateObj.getFullYear();
-          } else {
-            if (uniqueEstimates.indexOf(estimate) < 5) {
-              console.warn('📊 Reports: Date string too short:', dateStr, 'for estimate:', estimate.id);
-            }
-            return false;
-          }
+        estimateYear = getYearFromDateString(dateStr);
+      }
+      
+      // Validate year
+      if (estimateYear === null || estimateYear < 2000 || estimateYear > 2100) {
+        if (uniqueEstimates.indexOf(estimate) < 5) {
+          console.warn('📊 Reports: Could not extract valid year from date:', dateValue, 'for estimate:', estimate.id);
         }
+        return false;
       }
       
       // Debug: Log first few estimates to see date format

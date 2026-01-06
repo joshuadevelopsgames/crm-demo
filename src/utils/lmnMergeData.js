@@ -4,6 +4,8 @@
  * Also integrates Estimates List and Jobsite Export to calculate revenue and scores
  */
 
+import { getYearFromDateString } from './dateFormatter';
+
 /**
  * Merge contact data from all CSVs
  */
@@ -841,35 +843,35 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
         totalPrice = totalPriceWithTax;
       }
       
-      // Per spec R2: Year determination priority
-      let yearDeterminationDate = null;
+      // Per spec R2: Year determination priority - extract year from string (avoid timezone issues)
+      let determinationYear = null;
       // Priority 1: contract_end
-      if (contractEnd && !isNaN(contractEnd.getTime())) {
-        yearDeterminationDate = contractEnd;
+      if (estimate.contract_end) {
+        determinationYear = getYearFromDateString(estimate.contract_end);
       }
       // Priority 2: contract_start
-      else if (contractStart && !isNaN(contractStart.getTime())) {
-        yearDeterminationDate = contractStart;
+      else if (estimate.contract_start) {
+        determinationYear = getYearFromDateString(estimate.contract_start);
       }
       // Priority 3: estimate_date
-      else if (estimateDate && !isNaN(estimateDate.getTime())) {
-        yearDeterminationDate = estimateDate;
+      else if (estimate.estimate_date) {
+        determinationYear = getYearFromDateString(estimate.estimate_date);
       }
       // Priority 4: created_date
-      else if (createdDate && !isNaN(createdDate.getTime())) {
-        yearDeterminationDate = createdDate;
+      else if (estimate.created_date) {
+        determinationYear = getYearFromDateString(estimate.created_date);
       }
       
-      if (!yearDeterminationDate) {
+      if (determinationYear === null) {
         // Per spec R22: Every estimate has at least one date, but handle gracefully
         return null;
       }
       
-      const determinationYear = yearDeterminationDate.getFullYear();
-      
       // Per spec R8-R9: Multi-year contract annualization
       if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-        const startYear = contractStart.getFullYear();
+        const startYear = getYearFromDateString(estimate.contract_start);
+        if (startYear === null) return null;
+        
         const durationMonths = calculateDurationMonths(contractStart, contractEnd);
         if (durationMonths <= 0) return null;
         
@@ -948,23 +950,23 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       // Determine year using priority (per spec R2)
       let year = null;
       // Priority 1: contract_end
-      if (contractEnd && !isNaN(contractEnd.getTime())) {
-        year = contractEnd.getFullYear();
+      if (est.contract_end) {
+        year = getYearFromDateString(est.contract_end);
       }
       // Priority 2: contract_start
-      else if (contractStart && !isNaN(contractStart.getTime())) {
-        year = contractStart.getFullYear();
+      else if (est.contract_start) {
+        year = getYearFromDateString(est.contract_start);
       }
       // Priority 3: estimate_date
-      else if (estimateDate && !isNaN(estimateDate.getTime())) {
-        year = estimateDate.getFullYear();
+      else if (est.estimate_date) {
+        year = getYearFromDateString(est.estimate_date);
       }
       // Priority 4: created_date
-      else if (createdDate && !isNaN(createdDate.getTime())) {
-        year = createdDate.getFullYear();
+      else if (est.created_date) {
+        year = getYearFromDateString(est.created_date);
       }
       
-      if (year) {
+      if (year !== null) {
         yearsSet.add(year);
         // For multi-year contracts, add all years in the contract
         if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
@@ -973,8 +975,11 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
             const durationMonths = calculateDurationMonths(contractStart, contractEnd);
             if (durationMonths > 0) {
               const yearsCount = getContractYears(durationMonths);
-              for (let i = 0; i < yearsCount; i++) {
-                yearsSet.add(contractStart.getFullYear() + i);
+              const startYear = getYearFromDateString(est.contract_start);
+              if (startYear !== null) {
+                for (let i = 0; i < yearsCount; i++) {
+                  yearsSet.add(startYear + i);
+                }
               }
             }
           }
@@ -1012,41 +1017,40 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     
     nonArchivedEstimates.forEach(est => {
       // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
-      const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
-      const contractStart = est.contract_start ? new Date(est.contract_start) : null;
-      const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
-      const createdDate = est.created_date ? new Date(est.created_date) : null;
-      
       // Determine year using priority (per spec R2)
       let year = null;
       // Priority 1: contract_end
-      if (contractEnd && !isNaN(contractEnd.getTime())) {
-        year = contractEnd.getFullYear();
+      if (est.contract_end) {
+        year = getYearFromDateString(est.contract_end);
       }
       // Priority 2: contract_start
-      else if (contractStart && !isNaN(contractStart.getTime())) {
-        year = contractStart.getFullYear();
+      else if (est.contract_start) {
+        year = getYearFromDateString(est.contract_start);
       }
       // Priority 3: estimate_date
-      else if (estimateDate && !isNaN(estimateDate.getTime())) {
-        year = estimateDate.getFullYear();
+      else if (est.estimate_date) {
+        year = getYearFromDateString(est.estimate_date);
       }
       // Priority 4: created_date
-      else if (createdDate && !isNaN(createdDate.getTime())) {
-        year = createdDate.getFullYear();
+      else if (est.created_date) {
+        year = getYearFromDateString(est.created_date);
       }
       
-      if (year) {
+      if (year !== null) {
         allEstimatesYearsSet.add(year);
         // For multi-year contracts, add all years in the contract (count once per year they span)
+        const contractStart = est.contract_start ? new Date(est.contract_start) : null;
         if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
           const contractEndDate = new Date(est.contract_end);
           if (!isNaN(contractEndDate.getTime())) {
             const durationMonths = calculateDurationMonths(contractStart, contractEndDate);
             if (durationMonths > 0) {
               const yearsCount = getContractYears(durationMonths);
-              for (let i = 0; i < yearsCount; i++) {
-                allEstimatesYearsSet.add(contractStart.getFullYear() + i);
+              const startYear = getYearFromDateString(est.contract_start);
+              if (startYear !== null) {
+                for (let i = 0; i < yearsCount; i++) {
+                  allEstimatesYearsSet.add(startYear + i);
+                }
               }
             }
           }
@@ -1059,39 +1063,37 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
     allEstimatesYearsSet.forEach(year => {
       const yearCount = nonArchivedEstimates.reduce((count, est) => {
         // Determine if this estimate applies to this year
-        const contractEnd = est.contract_end ? new Date(est.contract_end) : null;
-        const contractStart = est.contract_start ? new Date(est.contract_start) : null;
-        const estimateDate = est.estimate_date ? new Date(est.estimate_date) : null;
-        const createdDate = est.created_date ? new Date(est.created_date) : null;
-        
         // Determine year using priority
         let estimateYear = null;
-        if (contractEnd && !isNaN(contractEnd.getTime())) {
-          estimateYear = contractEnd.getFullYear();
-        } else if (contractStart && !isNaN(contractStart.getTime())) {
-          estimateYear = contractStart.getFullYear();
-        } else if (estimateDate && !isNaN(estimateDate.getTime())) {
-          estimateYear = estimateDate.getFullYear();
-        } else if (createdDate && !isNaN(createdDate.getTime())) {
-          estimateYear = createdDate.getFullYear();
+        if (est.contract_end) {
+          estimateYear = getYearFromDateString(est.contract_end);
+        } else if (est.contract_start) {
+          estimateYear = getYearFromDateString(est.contract_start);
+        } else if (est.estimate_date) {
+          estimateYear = getYearFromDateString(est.estimate_date);
+        } else if (est.created_date) {
+          estimateYear = getYearFromDateString(est.created_date);
         }
         
-        if (!estimateYear) return count;
+        if (estimateYear === null) return count;
         
         // For multi-year contracts, check if this year is in the contract span
+        const contractStart = est.contract_start ? new Date(est.contract_start) : null;
         if (contractStart && !isNaN(contractStart.getTime()) && est.contract_end) {
           const contractEndDate = new Date(est.contract_end);
           if (!isNaN(contractEndDate.getTime())) {
             const durationMonths = calculateDurationMonths(contractStart, contractEndDate);
             if (durationMonths > 0) {
               const yearsCount = getContractYears(durationMonths);
-              const startYear = contractStart.getFullYear();
-              const yearsApplied = [];
-              for (let i = 0; i < yearsCount; i++) {
-                yearsApplied.push(startYear + i);
-              }
-              if (yearsApplied.includes(year)) {
-                return count + 1;
+              const startYear = getYearFromDateString(est.contract_start);
+              if (startYear !== null) {
+                const yearsApplied = [];
+                for (let i = 0; i < yearsCount; i++) {
+                  yearsApplied.push(startYear + i);
+                }
+                if (yearsApplied.includes(year)) {
+                  return count + 1;
+                }
               }
             }
           }

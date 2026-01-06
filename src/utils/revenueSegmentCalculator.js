@@ -22,6 +22,7 @@
  */
 
 import { isWonStatus } from './reportCalculations.js';
+import { getYearFromDateString } from './dateFormatter';
 
 /**
  * Calculate contract duration in months between two dates
@@ -142,13 +143,13 @@ function getEstimateYearData(estimate, currentYear) {
       estimateId: estimate.id || estimate.lmn_estimate_id,
       currentYear,
       contractEndRaw: estimate.contract_end,
-      contractEndParsed: contractEnd ? contractEnd.getFullYear() : null,
+      contractEndParsed: getYearFromDateString(estimate.contract_end),
       contractStartRaw: estimate.contract_start,
-      contractStartParsed: contractStart ? contractStart.getFullYear() : null,
+      contractStartParsed: getYearFromDateString(estimate.contract_start),
       estimateDateRaw: estimate.estimate_date,
-      estimateDateParsed: estimateDate ? estimateDate.getFullYear() : null,
+      estimateDateParsed: getYearFromDateString(estimate.estimate_date),
       createdDateRaw: estimate.created_date,
-      createdDateParsed: createdDate ? createdDate.getFullYear() : null,
+      createdDateParsed: getYearFromDateString(estimate.created_date),
       totalPrice,
       hasContractEnd: !!contractEnd && !isNaN(contractEnd.getTime()),
       hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
@@ -164,35 +165,45 @@ function getEstimateYearData(estimate, currentYear) {
   }
   
   // Per spec R2: Determine which date to use for year calculation
-  let yearDeterminationDate = null;
+  // Extract year from string (avoid timezone issues)
+  let determinationYear = null;
   let yearDeterminationSource = null;
   
   // Priority 1: contract_end
-  if (contractEnd && !isNaN(contractEnd.getTime())) {
-    yearDeterminationDate = contractEnd;
-    yearDeterminationSource = 'contract_end';
+  if (estimate.contract_end) {
+    determinationYear = getYearFromDateString(estimate.contract_end);
+    if (determinationYear !== null) {
+      yearDeterminationSource = 'contract_end';
+    }
   }
   // Priority 2: contract_start
-  else if (contractStart && !isNaN(contractStart.getTime())) {
-    yearDeterminationDate = contractStart;
-    yearDeterminationSource = 'contract_start';
+  if (determinationYear === null && estimate.contract_start) {
+    determinationYear = getYearFromDateString(estimate.contract_start);
+    if (determinationYear !== null) {
+      yearDeterminationSource = 'contract_start';
+    }
   }
   // Priority 3: estimate_date
-  else if (estimateDate && !isNaN(estimateDate.getTime())) {
-    yearDeterminationDate = estimateDate;
-    yearDeterminationSource = 'estimate_date';
+  if (determinationYear === null && estimate.estimate_date) {
+    determinationYear = getYearFromDateString(estimate.estimate_date);
+    if (determinationYear !== null) {
+      yearDeterminationSource = 'estimate_date';
+    }
   }
   // Priority 4: created_date
-  else if (createdDate && !isNaN(createdDate.getTime())) {
-    yearDeterminationDate = createdDate;
-    yearDeterminationSource = 'created_date';
+  if (determinationYear === null && estimate.created_date) {
+    determinationYear = getYearFromDateString(estimate.created_date);
+    if (determinationYear !== null) {
+      yearDeterminationSource = 'created_date';
+    }
   }
   
   // Per spec R9: Multi-year contracts allocate to sequential calendar years starting from contract_start
   // If we have both contract_start and contract_end, use contract allocation (not determination year)
   if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
     // Multi-year contract: annualize the revenue per spec R8
-    const startYear = contractStart.getFullYear();
+    const startYear = getYearFromDateString(estimate.contract_start);
+    if (startYear === null) return null;
     const durationMonths = calculateDurationMonths(contractStart, contractEnd);
     if (durationMonths <= 0) return null;
     
@@ -219,9 +230,8 @@ function getEstimateYearData(estimate, currentYear) {
     };
   }
   
-  // If we have a date for year determination (but no contract dates), use it
-  if (yearDeterminationDate) {
-    const determinationYear = yearDeterminationDate.getFullYear();
+  // If we have a year for determination (but no contract dates), use it
+  if (determinationYear !== null) {
     const appliesToCurrentYear = currentYear === determinationYear;
     
     // Single-year or no contract dates: use full price

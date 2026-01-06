@@ -3,6 +3,8 @@
  * Handles win/loss calculations, department breakdowns, and account performance metrics
  */
 
+import { getYearFromDateString } from './dateFormatter';
+
 /**
  * Format currency value with appropriate suffix (K for thousands, M for millions)
  * @param {number|string} value - The currency value to format
@@ -340,8 +342,12 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     if (dateStr.length >= 4) {
       estimateYear = parseInt(dateStr.substring(0, 4));
     } else {
-      // Fallback to Date parsing if string is too short
-      estimateYear = new Date(dateStr).getFullYear();
+      // Fallback: use getYearFromDateString (which has its own Date fallback)
+      estimateYear = getYearFromDateString(dateStr);
+      if (estimateYear === null) {
+        // Last resort: Date parsing if getYearFromDateString fails
+        estimateYear = new Date(dateStr).getFullYear();
+      }
     }
     
     // Validate year is reasonable (between 2000 and 2100)

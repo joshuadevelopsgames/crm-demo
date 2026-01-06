@@ -6,6 +6,7 @@
 import { findMappingRule, applyMappingRule } from './scorecardMappings';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { isWonStatus } from './reportCalculations';
+import { getYearFromDateString } from './dateFormatter';
 
 /**
  * Auto-score an account using the primary scorecard template
@@ -69,7 +70,9 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
     
     // If we have both contract_start and contract_end, use contract allocation (multi-year)
     if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-      const startYear = contractStart.getFullYear();
+      const startYear = getYearFromDateString(estimate.contract_start);
+      if (startYear === null) return null;
+      
       const durationMonths = calculateDurationMonths(contractStart, contractEnd);
       if (durationMonths <= 0) return null;
       const yearsCount = getContractYears(durationMonths);
@@ -85,21 +88,20 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
       };
     }
     
-    // Per Estimates spec R2: Year determination priority
-    let yearDeterminationDate = null;
-    if (contractEnd && !isNaN(contractEnd.getTime())) {
-      yearDeterminationDate = contractEnd;
-    } else if (contractStart && !isNaN(contractStart.getTime())) {
-      yearDeterminationDate = contractStart;
-    } else if (estimateDate && !isNaN(estimateDate.getTime())) {
-      yearDeterminationDate = estimateDate;
-    } else if (createdDate && !isNaN(createdDate.getTime())) {
-      yearDeterminationDate = createdDate;
+    // Per Estimates spec R2: Year determination priority - extract year from string
+    let determinationYear = null;
+    if (estimate.contract_end) {
+      determinationYear = getYearFromDateString(estimate.contract_end);
+    } else if (estimate.contract_start) {
+      determinationYear = getYearFromDateString(estimate.contract_start);
+    } else if (estimate.estimate_date) {
+      determinationYear = getYearFromDateString(estimate.estimate_date);
+    } else if (estimate.created_date) {
+      determinationYear = getYearFromDateString(estimate.created_date);
     }
     
-    // Per Estimates spec R2: Use year determination date if available
-    if (yearDeterminationDate) {
-      const determinationYear = yearDeterminationDate.getFullYear();
+    // Per Estimates spec R2: Use year determination if available
+    if (determinationYear !== null) {
       return {
         appliesToCurrentYear: currentYear === determinationYear,
         value: totalPrice

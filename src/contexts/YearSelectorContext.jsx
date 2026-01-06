@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo, useEffect, useState, useRef 
 import { useQuery } from '@tanstack/react-query';
 import { useUser } from './UserContext';
 import { getSupabaseAuth } from '@/services/supabaseClient';
+import { getYearFromDateString } from '@/utils/dateFormatter';
 
 const YearSelectorContext = createContext(null);
 
@@ -137,46 +138,34 @@ export function YearSelectorProvider({ children }) {
       
       // Priority 1: contract_end
       if (est.contract_end) {
-        const date = new Date(est.contract_end);
-        if (!isNaN(date.getTime())) {
-          const yearValue = date.getFullYear();
-          // Validate year is reasonable (2000-2100 per spec)
-          if (yearValue >= 2000 && yearValue <= 2100) {
-            year = yearValue;
-          }
+        const yearValue = getYearFromDateString(est.contract_end);
+        // Validate year is reasonable (2000-2100 per spec)
+        if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+          year = yearValue;
         }
       }
       
       // Priority 2: contract_start
       if (!year && est.contract_start) {
-        const date = new Date(est.contract_start);
-        if (!isNaN(date.getTime())) {
-          const yearValue = date.getFullYear();
-          if (yearValue >= 2000 && yearValue <= 2100) {
-            year = yearValue;
-          }
+        const yearValue = getYearFromDateString(est.contract_start);
+        if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+          year = yearValue;
         }
       }
       
       // Priority 3: estimate_date
       if (!year && est.estimate_date) {
-        const date = new Date(est.estimate_date);
-        if (!isNaN(date.getTime())) {
-          const yearValue = date.getFullYear();
-          if (yearValue >= 2000 && yearValue <= 2100) {
-            year = yearValue;
-          }
+        const yearValue = getYearFromDateString(est.estimate_date);
+        if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+          year = yearValue;
         }
       }
       
       // Priority 4: created_date
       if (!year && est.created_date) {
-        const date = new Date(est.created_date);
-        if (!isNaN(date.getTime())) {
-          const yearValue = date.getFullYear();
-          if (yearValue >= 2000 && yearValue <= 2100) {
-            year = yearValue;
-          }
+        const yearValue = getYearFromDateString(est.created_date);
+        if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+          year = yearValue;
         }
       }
       
@@ -233,46 +222,34 @@ export function YearSelectorProvider({ children }) {
         let dateSource = null;
         
         if (est.contract_end) {
-          const date = new Date(est.contract_end);
-          if (!isNaN(date.getTime())) {
-            const yearValue = date.getFullYear();
-            if (yearValue >= 2000 && yearValue <= 2100) {
-              year = yearValue;
-              dateSource = 'contract_end';
-            }
+          const yearValue = getYearFromDateString(est.contract_end);
+          if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+            dateSource = 'contract_end';
           }
         }
         
         if (!year && est.contract_start) {
-          const date = new Date(est.contract_start);
-          if (!isNaN(date.getTime())) {
-            const yearValue = date.getFullYear();
-            if (yearValue >= 2000 && yearValue <= 2100) {
-              year = yearValue;
-              dateSource = 'contract_start';
-            }
+          const yearValue = getYearFromDateString(est.contract_start);
+          if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+            dateSource = 'contract_start';
           }
         }
         
         if (!year && est.estimate_date) {
-          const date = new Date(est.estimate_date);
-          if (!isNaN(date.getTime())) {
-            const yearValue = date.getFullYear();
-            if (yearValue >= 2000 && yearValue <= 2100) {
-              year = yearValue;
-              dateSource = 'estimate_date';
-            }
+          const yearValue = getYearFromDateString(est.estimate_date);
+          if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+            dateSource = 'estimate_date';
           }
         }
         
         if (!year && est.created_date) {
-          const date = new Date(est.created_date);
-          if (!isNaN(date.getTime())) {
-            const yearValue = date.getFullYear();
-            if (yearValue >= 2000 && yearValue <= 2100) {
-              year = yearValue;
-              dateSource = 'created_date';
-            }
+          const yearValue = getYearFromDateString(est.created_date);
+          if (yearValue !== null && yearValue >= 2000 && yearValue <= 2100) {
+            year = yearValue;
+            dateSource = 'created_date';
           }
         }
         

@@ -12,6 +12,7 @@
  */
 
 import { isWonStatus } from './reportCalculations';
+import { getYearFromDateString } from './dateFormatter';
 
 /**
  * Mapping rules for automatically scoring accounts
@@ -110,7 +111,9 @@ export const mappingRules = [
         
         // Case 1: Both contract_start and contract_end exist
         if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-          const startYear = contractStart.getFullYear();
+          const startYear = getYearFromDateString(estimate.contract_start);
+          if (startYear === null) return null;
+          
           const durationMonths = calculateDurationMonths(contractStart, contractEnd);
           if (durationMonths <= 0) return null;
           
@@ -128,13 +131,15 @@ export const mappingRules = [
         
         // Case 2: Only contract_start exists
         if (contractStart && !isNaN(contractStart.getTime())) {
-          const startYear = contractStart.getFullYear();
+          const startYear = getYearFromDateString(estimate.contract_start);
+          if (startYear === null) return null;
           return currentYear === startYear ? totalPrice : 0;
         }
         
         // Case 3: No contract dates, use estimate_date
-        if (estimateDate && !isNaN(estimateDate.getTime())) {
-          const estimateYear = estimateDate.getFullYear();
+        if (estimate.estimate_date) {
+          const estimateYear = getYearFromDateString(estimate.estimate_date);
+          if (estimateYear === null) return null;
           return currentYear === estimateYear ? totalPrice : 0;
         }
         
