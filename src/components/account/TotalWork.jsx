@@ -230,23 +230,11 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // Calculate won value as simple sum of won estimates' dollar values for selected year
-  // Matches EstimatesTab logic - no contract-year allocation, just sum dollar values
+  // Calculate won value using annualized values (matching totalEstimated calculation)
+  // This ensures value-based percentage uses consistent calculation method
   const totalWonValue = useMemo(() => {
-    // Filter estimates that apply to current year
-    const yearEstimates = estimates.filter(est => {
-      if (est.archived) return false;
-      const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
-    });
-    
-    // Filter for won estimates and sum their dollar values
-    const wonEstimates = yearEstimates.filter(est => isWonStatus(est));
-    return wonEstimates.reduce((sum, est) => {
-      const amount = est.total_price_with_tax || est.total_price || 0;
-      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
-    }, 0);
-  }, [estimates, currentYear]);
+    return soldBreakdown.included.reduce((sum, item) => sum + item.value, 0);
+  }, [soldBreakdown]);
   
   // Filter estimates that apply to current year (excluding archived)
   const yearFilteredEstimates = useMemo(() => {
