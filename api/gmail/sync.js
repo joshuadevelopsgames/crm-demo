@@ -160,7 +160,7 @@ function parseGmailMessage(message) {
   
   // Extract body
   let body = '';
-  let snippet = message.snippet || '';
+  const snippet = message.snippet || '';
   
   const extractBody = (part) => {
     if (part.body?.data) {
