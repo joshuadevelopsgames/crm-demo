@@ -120,22 +120,35 @@ export async function isGmailConnected() {
   try {
     const { getSupabaseAuth } = await import('@/services/supabaseClient');
     const supabase = getSupabaseAuth();
-    if (!supabase) return false;
+    if (!supabase) {
+      console.log('❌ isGmailConnected: Supabase not configured');
+      return false;
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return false;
+    if (!session) {
+      console.log('❌ isGmailConnected: No session found');
+      return false;
+    }
 
+    console.log('🔍 isGmailConnected: Checking API endpoint...');
     const response = await fetch('/api/gmail/integration', {
       headers: {
         'Authorization': `Bearer ${session.access_token}`
       }
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.log('❌ isGmailConnected: API response not OK:', response.status, response.statusText);
+      return false;
+    }
+    
     const result = await response.json();
-    return result.success && result.connected === true;
+    const connected = result.success && result.connected === true;
+    console.log('📊 isGmailConnected: API result:', { success: result.success, connected: result.connected, final: connected });
+    return connected;
   } catch (error) {
-    console.error('Error checking Gmail connection:', error);
+    console.error('❌ Error checking Gmail connection:', error);
     return false;
   }
 }
