@@ -66,9 +66,22 @@ export default function GoogleAuthCallback() {
 
         // Supabase automatically processes OAuth callbacks from URL hash fragments
         // Wait a moment for Supabase to process the callback, then check for session
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Also listen for auth state changes to catch provider tokens
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // If no provider token yet, wait a bit more and check again
+        // Supabase may need additional time to process the OAuth callback
+        if (session && !session.provider_token) {
+          console.log('⏳ Waiting for provider token...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (retrySession?.provider_token) {
+            // Update session reference
+            Object.assign(session, retrySession);
+          }
+        }
         
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:63',message:'getSession result',data:{hasSession:!!session,hasError:!!error,errorMessage:error?.message,hasUser:!!session?.user,userEmail:session?.user?.email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
@@ -109,6 +122,37 @@ export default function GoogleAuthCallback() {
 
           // User exists - proceed with login
           console.log('✅ User validated, email exists in profiles');
+          
+          // Check if Gmail scopes were granted and store the token
+          // Supabase provides provider_token and provider_refresh_token in the session
+          if (session.provider_token && session.provider_refresh_token) {
+            try {
+              console.log('📧 Gmail token detected, storing Gmail integration...');
+              const response = await fetch('/api/gmail/integration', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                  access_token: session.provider_token,
+                  refresh_token: session.provider_refresh_token,
+                  expires_in: session.expires_in || 3600 // Default to 1 hour if not specified
+                })
+              });
+
+              if (response.ok) {
+                console.log('✅ Gmail integration stored successfully');
+              } else {
+                console.warn('⚠️ Failed to store Gmail integration:', await response.text());
+                // Don't fail the login if Gmail storage fails
+              }
+            } catch (error) {
+              console.error('❌ Error storing Gmail integration:', error);
+              // Don't fail the login if Gmail storage fails
+            }
+          }
+          
           setStatus('success');
           
           // #region agent log

@@ -131,13 +131,15 @@ export default function Login() {
       console.log('🔐 Initiating Google OAuth sign-in with redirect:', redirectUrl);
       
       // Sign in with Google OAuth
+      // Request Gmail readonly scope during initial login so users can grant Gmail access upfront
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          scopes: 'https://www.googleapis.com/auth/gmail.readonly',
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'consent', // Force consent screen to ensure Gmail scope is requested
           },
         },
       });
