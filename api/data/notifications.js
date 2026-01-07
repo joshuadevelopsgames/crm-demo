@@ -228,7 +228,17 @@ export default async function handler(req, res) {
     
     if (req.method === 'PUT') {
       // Update notification by ID in Supabase
-      const { id, ...updateData } = req.body;
+      const { id, user_id, ...updateData } = req.body;
+      
+      // SECURITY: Require user_id to validate ownership
+      // This ensures users can only update their own notifications
+      if (!user_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'user_id is required for security - users can only update their own notifications'
+        });
+      }
+      
       updateData.updated_at = new Date().toISOString();
       
       // Convert empty strings to null for date fields
@@ -236,10 +246,27 @@ export default async function handler(req, res) {
         updateData.scheduled_for = null;
       }
       
+      // First verify the notification belongs to this user
+      const { data: existing, error: fetchError } = await supabase
+        .from('notifications')
+        .select('id, user_id')
+        .eq('id', id)
+        .eq('user_id', user_id)
+        .single();
+      
+      if (fetchError || !existing) {
+        return res.status(403).json({
+          success: false,
+          error: 'Notification not found or access denied'
+        });
+      }
+      
+      // Now update the notification
       const { data: updated, error } = await supabase
         .from('notifications')
         .update(updateData)
         .eq('id', id)
+        .eq('user_id', user_id) // Double-check: ensure we're only updating this user's notification
         .select()
         .single();
       
