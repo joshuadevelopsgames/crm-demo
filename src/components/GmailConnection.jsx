@@ -8,10 +8,13 @@ import {
   isGmailConnected, 
   disconnectGmail, 
   getLastSyncTimestamp,
-  initGmailAuth 
+  initGmailAuth,
+  storeGmailToken
 } from '../services/gmailService';
 import { syncGmailToCRM } from '../services/gmailSyncService';
 import { base44 } from '@/api/base44Client';
+import { useUser } from '@/contexts/UserContext';
+import { getSupabaseAuth } from '@/services/supabaseClient';
 import toast from 'react-hot-toast';
 
 export default function GmailConnection({ onSyncComplete }) {
@@ -20,17 +23,50 @@ export default function GmailConnection({ onSyncComplete }) {
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const { user } = useUser();
 
   // Check connection status
   useEffect(() => {
     const checkConnection = async () => {
-      const connected = await isGmailConnected();
+      // First check if already connected
+      let connected = await isGmailConnected();
+      
+      // If not connected, check if we have Gmail token in Supabase session
+      if (!connected && user) {
+        const supabase = getSupabaseAuth();
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          // If provider_token exists (Gmail token from initial Google login), try to store it
+          if (session?.provider_token && session?.provider_refresh_token) {
+            try {
+              await storeGmailToken({
+                access_token: session.provider_token,
+                refresh_token: session.provider_refresh_token,
+                expires_in: session.expires_in || 3600
+              });
+              
+              // Check again after storing
+              connected = await isGmailConnected();
+            } catch (error) {
+              console.error('Error storing Gmail token from session:', error);
+            }
+          }
+        }
+      }
+      
       setConnected(connected);
       const syncTime = getLastSyncTimestamp();
       setLastSync(syncTime);
     };
+    
     checkConnection();
-  }, []);
+    
+    // Also check when user changes (in case they just logged in with Google)
+    if (user) {
+      checkConnection();
+    }
+  }, [user]);
 
   // Get current user email
   const { data: currentUser } = useQuery({
@@ -52,22 +88,57 @@ export default function GmailConnection({ onSyncComplete }) {
     queryFn: () => base44.entities.Account.list()
   });
 
-  const handleConnect = () => {
-    toast('Feature Coming Soon!', { icon: 'ℹ️' });
-    return;
+  const handleConnect = async () => {
+    setIsConnecting(true);
     
-    // Original code commented out for coming soon
-    // setIsConnecting(true);
-    // const authUrl = initGmailAuth();
-    // 
-    // if (!authUrl) {
-    //   toast.error('Gmail integration not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
-    //   setIsConnecting(false);
-    //   return;
-    // }
-    //
-    // // Redirect to Gmail OAuth
-    // window.location.href = authUrl;
+    try {
+      // First, check if user logged in with Google and has Gmail token in Supabase session
+      const supabase = getSupabaseAuth();
+      if (supabase && user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Check if provider_token exists (Gmail token from initial Google login)
+        if (session?.provider_token && session?.provider_refresh_token) {
+          console.log('📧 Found Gmail token in Supabase session, storing...');
+          try {
+            await storeGmailToken({
+              access_token: session.provider_token,
+              refresh_token: session.provider_refresh_token,
+              expires_in: session.expires_in || 3600
+            });
+            
+            // Check connection status
+            const isConnected = await isGmailConnected();
+            setConnected(isConnected);
+            
+            if (isConnected) {
+              toast.success('Gmail connected successfully!');
+              setIsConnecting(false);
+              return;
+            }
+          } catch (error) {
+            console.error('Error storing Gmail token from session:', error);
+            // Fall through to separate Gmail OAuth flow
+          }
+        }
+      }
+      
+      // If no token in session, use separate Gmail OAuth flow
+      const authUrl = initGmailAuth();
+      
+      if (!authUrl) {
+        toast.error('Gmail integration not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
+        setIsConnecting(false);
+        return;
+      }
+      
+      // Redirect to Gmail OAuth
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error connecting Gmail:', error);
+      toast.error('Failed to connect Gmail. Please try again.');
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnect = async () => {
