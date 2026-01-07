@@ -145,10 +145,11 @@ export default function GmailConnection({ onSyncComplete }) {
       }
       
       // If no token in session, use separate Gmail OAuth flow
+      // Note: This requires VITE_GOOGLE_CLIENT_ID to be set in environment variables
       const authUrl = initGmailAuth();
       
       if (!authUrl) {
-        toast.error('Gmail integration not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.');
+        toast.error('Gmail integration requires additional setup. Please contact your administrator or try logging in with Google to grant Gmail access during login.');
         setIsConnecting(false);
         return;
       }

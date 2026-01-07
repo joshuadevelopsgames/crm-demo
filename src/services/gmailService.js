@@ -11,10 +11,13 @@ const REDIRECT_URI = window.location.origin + '/gmail-callback';
 
 /**
  * Initialize Gmail OAuth flow
+ * Note: This is a fallback for separate Gmail OAuth.
+ * Primary method is using Gmail scopes from Supabase Google OAuth login.
  */
 export function initGmailAuth() {
   if (!CLIENT_ID) {
-    console.warn('Gmail Client ID not configured. Set VITE_GOOGLE_CLIENT_ID in .env');
+    // Only warn if this is actually being used (not just checked)
+    // The warning will show when user clicks "Connect Gmail" and we need the separate flow
     return null;
   }
 
