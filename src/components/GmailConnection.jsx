@@ -12,6 +12,7 @@ import {
 } from '../services/gmailService';
 import { syncGmailToCRM } from '../services/gmailSyncService';
 import { base44 } from '@/api/base44Client';
+import { useUser } from '@/contexts/UserContext';
 import toast from 'react-hot-toast';
 
 export default function GmailConnection({ onSyncComplete }) {
@@ -20,6 +21,12 @@ export default function GmailConnection({ onSyncComplete }) {
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const { user } = useUser();
+
+  // Check if user logged in with Google
+  const isGoogleUser = user?.app_metadata?.provider === 'google' || 
+                       user?.identities?.some(identity => identity.provider === 'google') ||
+                       false;
 
   // Check connection status
   useEffect(() => {
@@ -114,6 +121,15 @@ export default function GmailConnection({ onSyncComplete }) {
       setIsSyncing(false);
     }
   };
+
+  // If user logged in with Google, Gmail integration is available through their Google account
+  // Hide the "Connect Gmail" button if they're already logged in with Google
+  // (Gmail connection will be handled separately if needed)
+  if (!connected && isGoogleUser) {
+    // User logged in with Google, so Gmail integration is available
+    // Return null to hide the connection prompt
+    return null;
+  }
 
   if (!connected) {
     return (
