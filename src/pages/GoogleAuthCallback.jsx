@@ -41,10 +41,10 @@ export default function GoogleAuthCallback() {
       }
 
       try {
-        // Supabase automatically handles the OAuth callback
-        // Check for error in URL params
-        const errorParam = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
+        // Check for error in URL params (query string or hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const errorParam = searchParams.get('error') || hashParams.get('error');
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
 
         if (errorParam) {
           setStatus('error');
@@ -56,7 +56,10 @@ export default function GoogleAuthCallback() {
           return;
         }
 
-        // Get the session from Supabase (it handles the OAuth callback automatically)
+        // Supabase automatically processes OAuth callbacks from URL hash fragments
+        // Wait a moment for Supabase to process the callback, then check for session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {

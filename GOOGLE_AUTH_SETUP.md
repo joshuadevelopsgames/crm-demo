@@ -15,8 +15,11 @@ This guide will help you set up Google OAuth authentication using Supabase Auth.
 4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
 5. Choose "Web application"
 6. Add authorized redirect URIs:
-   - `https://YOUR_SUPABASE_PROJECT.supabase.co/auth/v1/callback`
-   - `https://YOUR_VERCEL_DOMAIN.vercel.app/google-auth-callback` (for your app)
+   - `https://nyyukbaodgzyvcccpojn.supabase.co/auth/v1/callback`
+   - `https://lecrm.vercel.app/google-auth-callback` (production)
+   - `https://lecrm-stg.vercel.app/google-auth-callback` (staging)
+   - `https://lecrm-dev.vercel.app/google-auth-callback` (dev)
+   - `http://localhost:5173/google-auth-callback` (local development)
 7. Copy the **Client ID** and **Client Secret**
 
 ## Step 2: Configure Supabase Auth
@@ -32,9 +35,9 @@ This guide will help you set up Google OAuth authentication using Supabase Auth.
 Add these environment variables in your Vercel project settings:
 
 ### Required Variables:
-- `VITE_SUPABASE_URL` - Your Supabase project URL (e.g., `https://xxxxx.supabase.co`)
+- `VITE_SUPABASE_URL` - Your Supabase project URL: `https://nyyukbaodgzyvcccpojn.supabase.co`
 - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon/public key
-- `SUPABASE_URL` - Same as VITE_SUPABASE_URL (for server-side)
+- `SUPABASE_URL` - Same as VITE_SUPABASE_URL: `https://nyyukbaodgzyvcccpojn.supabase.co` (for server-side)
 - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (for server-side API routes)
 
 ### Optional (if you want email/password auth):
@@ -86,7 +89,11 @@ This will:
 
 ### "Redirect URI mismatch"
 - Check that your redirect URI in Google Cloud Console matches exactly:
-  - `https://YOUR_SUPABASE_PROJECT.supabase.co/auth/v1/callback`
+  - `https://nyyukbaodgzyvcccpojn.supabase.co/auth/v1/callback`
+  - `https://lecrm.vercel.app/google-auth-callback` (production)
+  - `https://lecrm-stg.vercel.app/google-auth-callback` (staging)
+  - `https://lecrm-dev.vercel.app/google-auth-callback` (dev)
+  - `http://localhost:5173/google-auth-callback` (local development)
 
 ### "No session found"
 - Clear browser cookies and try again
