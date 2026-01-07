@@ -31,6 +31,10 @@ export default function GoogleAuthCallback() {
   const [error, setError] = useState(null);
   const isMobile = Capacitor.isNativePlatform();
 
+  // Read return path immediately on component mount (before any async operations)
+  const returnPathRef = React.useRef(localStorage.getItem('gmail_oauth_return_path') || '/dashboard');
+  console.log('📍 GoogleAuthCallback: Component mounted, return path from localStorage:', returnPathRef.current);
+
   useEffect(() => {
     const handleAuthCallback = async () => {
       // #region agent log
@@ -205,8 +209,10 @@ export default function GoogleAuthCallback() {
                 return;
               }
 
-              // Get the return path from localStorage
-              const returnPath = localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
+              // Use the return path we read on mount (or try localStorage again as fallback)
+              const storedPath = returnPathRef.current || localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
+              const returnPath = storedPath === '/dashboard' ? (localStorage.getItem('gmail_oauth_return_path') || '/dashboard') : storedPath;
+              console.log('📍 GoogleAuthCallback (retry): Will redirect to:', returnPath);
               localStorage.removeItem('gmail_oauth_return_path'); // Clean up
 
               setStatus('success');
