@@ -113,84 +113,79 @@ export default function GmailConnection({ onSyncComplete }) {
     setIsConnecting(true);
     
     try {
-      // First, check if user logged in with Google and has Gmail token in Supabase session
       const supabase = getSupabaseAuth();
-      if (supabase && user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        // Check if provider_token exists (Gmail token from initial Google login)
-        if (session?.provider_token && session?.provider_refresh_token) {
-          console.log('📧 Found Gmail token in Supabase session, storing...');
-          try {
-            await storeGmailToken({
-              access_token: session.provider_token,
-              refresh_token: session.provider_refresh_token,
-              expires_in: session.expires_in || 3600
-            });
-            
-            // Check connection status
-            const isConnected = await isGmailConnected();
-            setConnected(isConnected);
-            
-            if (isConnected) {
-              toast.success('Gmail connected successfully!');
-              setIsConnecting(false);
-              return;
-            }
-          } catch (error) {
-            console.error('Error storing Gmail token from session:', error);
-            // Fall through to re-authentication
-          }
-        }
-        
-        // If no token in session but user logged in with Google, re-authenticate with Gmail scopes
-        const isGoogleUser = user.app_metadata?.provider === 'google' || 
-                           user.user_metadata?.provider === 'google' ||
-                           session?.user?.app_metadata?.provider === 'google';
-        
-        if (isGoogleUser) {
-          console.log('📧 User logged in with Google, re-authenticating with Gmail scopes...');
-          const redirectUrl = window.location.origin + '/google-auth-callback';
-          
-          const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: redirectUrl,
-              scopes: 'https://www.googleapis.com/auth/gmail.readonly',
-              queryParams: {
-                access_type: 'offline',
-                prompt: 'consent', // Force consent screen to ensure Gmail scope is requested
-              },
-            },
-          });
-          
-          if (error) {
-            console.error('Error re-authenticating with Gmail scopes:', error);
-            toast.error('Failed to request Gmail access. Please try again.');
-            setIsConnecting(false);
-            return;
-          }
-          
-          // Redirect to Google OAuth
-          if (data?.url) {
-            window.location.href = data.url;
-            return; // Don't set isConnecting to false, we're redirecting
-          }
-        }
-      }
-      
-      // Fallback: If user didn't log in with Google, try separate Gmail OAuth flow
-      // Note: This requires VITE_GOOGLE_CLIENT_ID to be set in environment variables
-      const authUrl = initGmailAuth();
-      
-      if (!authUrl) {
-        toast.error('To connect Gmail, please log in with Google first. This will allow you to grant Gmail access during login.');
+      if (!supabase) {
+        toast.error('Authentication not available. Please refresh the page.');
         setIsConnecting(false);
         return;
       }
       
-      // Redirect to Gmail OAuth
-      window.location.href = authUrl;
+      // First, quickly check if we already have a Gmail token in the session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.provider_token && session?.provider_refresh_token) {
+        console.log('📧 Found Gmail token in Supabase session, storing...');
+        try {
+          await storeGmailToken({
+            access_token: session.provider_token,
+            refresh_token: session.provider_refresh_token,
+            expires_in: session.expires_in || 3600
+          });
+          
+          const isConnected = await isGmailConnected();
+          setConnected(isConnected);
+          
+          if (isConnected) {
+            toast.success('Gmail connected successfully!');
+            setIsConnecting(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error storing Gmail token from session:', error);
+          // Continue to OAuth flow
+        }
+      }
+      
+      // Open Google OAuth consent screen to request Gmail permissions
+      // This works whether the user is logged in with Google or not
+      const redirectUrl = window.location.origin + '/google-auth-callback';
+      
+      console.log('📧 Opening Google OAuth to request Gmail access...');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent', // Force consent screen to ensure Gmail scope is requested
+          },
+        },
+      });
+      
+      if (error) {
+        console.error('Error initiating Gmail OAuth:', error);
+        toast.error('Failed to open Gmail authorization. Please try again.');
+        setIsConnecting(false);
+        return;
+      }
+      
+      // Redirect to Google OAuth consent screen
+      if (data?.url) {
+        window.location.href = data.url;
+        // Don't set isConnecting to false - we're redirecting
+        return;
+      }
+      
+      // Fallback: If Supabase OAuth fails, try separate Gmail OAuth flow
+      const authUrl = initGmailAuth();
+      if (authUrl) {
+        window.location.href = authUrl;
+        return;
+      }
+      
+      toast.error('Unable to connect Gmail. Please ensure you are logged in.');
+      setIsConnecting(false);
     } catch (error) {
       console.error('Error connecting Gmail:', error);
       toast.error('Failed to connect Gmail. Please try again.');
