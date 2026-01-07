@@ -117,12 +117,12 @@ export default function Login() {
         return;
       }
 
-      // Get the redirect URL - use production domain, not localhost
-      // In production, use the actual domain; in dev, use dev domain
-      const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
-      const redirectUrl = isProduction 
-        ? window.location.origin + '/google-auth-callback'
-        : 'https://lecrm-dev.vercel.app/google-auth-callback'; // Use dev domain for local development
+      // Get the redirect URL - always use the current domain (never localhost)
+      // If on localhost, use dev domain; otherwise use current origin
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1');
+      const redirectUrl = isLocalhost
+        ? 'https://lecrm-dev.vercel.app/google-auth-callback' // Use dev domain for local development
+        : window.location.origin + '/google-auth-callback'; // Use current domain for deployed environments
       
       console.log('🔐 Initiating Google OAuth sign-in with redirect:', redirectUrl);
       
