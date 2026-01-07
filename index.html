@@ -210,28 +210,8 @@
         to { transform: rotate(360deg); }
       }
       
-      /* Dark mode support for loading screen - only if not explicitly set to light */
-      @media (prefers-color-scheme: dark) {
-        html:not([data-theme="light"]):not(.light) #loading-screen {
-          background-color: hsl(222, 22%, 8%) !important;
-        }
-        html:not([data-theme="light"]):not(.light) #loading-screen .loading-text {
-          color: hsl(215, 15%, 70%) !important;
-        }
-        html:not([data-theme="light"]):not(.light) #loading-screen .loading-title {
-          background: linear-gradient(to right, hsl(210, 30%, 96%), hsl(215, 15%, 70%)) !important;
-          -webkit-background-clip: text !important;
-          -webkit-text-fill-color: transparent !important;
-          background-clip: text !important;
-        }
-        html:not([data-theme="light"]):not(.light) #loading-screen .spinner-track {
-          border-color: hsl(222, 20%, 14%) !important;
-        }
-        html:not([data-theme="light"]):not(.light) #loading-screen .spinner-active {
-          border-color: hsl(210, 30%, 96%) !important;
-          border-top-color: transparent !important;
-        }
-      }
+      /* Dark mode support for loading screen - ONLY via explicit theme attribute/class, NOT system preference */
+      /* Removed @media (prefers-color-scheme: dark) to prevent system preference from overriding app setting */
       
       /* Dark mode via class (for localStorage preference) */
       html.dark #loading-screen,
@@ -289,19 +269,72 @@
         const isDarkMode = savedDarkMode === 'true'; // Only true if explicitly set to 'true'
         const bgColor = isDarkMode ? 'hsl(222, 22%, 8%)' : '#ffffff';
         
-        if (document.body) {
-          document.body.style.backgroundColor = bgColor;
-        }
+        // Set theme attribute immediately so CSS can apply correctly
         if (document.documentElement) {
+          if (isDarkMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.classList.remove('dark');
+          }
           document.documentElement.style.backgroundColor = bgColor;
         }
         
-        // Update loading screen background - only dark if dark mode is explicitly enabled
+        if (document.body) {
+          document.body.style.backgroundColor = bgColor;
+        }
+        
+        // Update loading screen background and styles - only dark if dark mode is explicitly enabled
         if (loadingScreen) {
           if (isDarkMode) {
             loadingScreen.style.backgroundColor = bgColor;
+            // Apply dark mode styles to loading screen elements
+            const loadingText = loadingScreen.querySelector('.loading-text');
+            const loadingTitle = loadingScreen.querySelector('.loading-title');
+            const spinnerTrack = loadingScreen.querySelector('.spinner-track');
+            const spinnerActive = loadingScreen.querySelector('.spinner-active');
+            
+            if (loadingText) {
+              loadingText.style.color = 'hsl(215, 15%, 70%)';
+            }
+            if (loadingTitle) {
+              loadingTitle.style.background = 'linear-gradient(to right, hsl(210, 30%, 96%), hsl(215, 15%, 70%))';
+              loadingTitle.style.webkitBackgroundClip = 'text';
+              loadingTitle.style.webkitTextFillColor = 'transparent';
+              loadingTitle.style.backgroundClip = 'text';
+            }
+            if (spinnerTrack) {
+              spinnerTrack.style.borderColor = 'hsl(222, 20%, 14%)';
+            }
+            if (spinnerActive) {
+              spinnerActive.style.borderColor = 'hsl(210, 30%, 96%)';
+              spinnerActive.style.borderTopColor = 'transparent';
+            }
           } else {
             loadingScreen.style.backgroundColor = '#ffffff';
+            // Ensure light mode styles are applied
+            const loadingText = loadingScreen.querySelector('.loading-text');
+            const loadingTitle = loadingScreen.querySelector('.loading-title');
+            const spinnerTrack = loadingScreen.querySelector('.spinner-track');
+            const spinnerActive = loadingScreen.querySelector('.spinner-active');
+            
+            if (loadingText) {
+              loadingText.style.color = '#475569';
+            }
+            if (loadingTitle) {
+              loadingTitle.style.background = 'linear-gradient(to right, #0f172a, #475569)';
+              loadingTitle.style.webkitBackgroundClip = 'text';
+              loadingTitle.style.webkitTextFillColor = 'transparent';
+              loadingTitle.style.backgroundClip = 'text';
+            }
+            if (spinnerTrack) {
+              spinnerTrack.style.borderColor = '#e2e8f0';
+            }
+            if (spinnerActive) {
+              spinnerActive.style.borderColor = '#0f172a';
+              spinnerActive.style.borderTopColor = 'transparent';
+            }
           }
         }
         
