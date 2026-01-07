@@ -178,11 +178,16 @@ export default function GmailConnection({ onSyncComplete }) {
         }
       }
       
+      // Store the current page path so we can redirect back to it after OAuth
+      const currentPath = window.location.pathname + window.location.search;
+      localStorage.setItem('gmail_oauth_return_path', currentPath);
+      
       // Open Google OAuth consent screen to request Gmail permissions
       // This works whether the user is logged in with Google or not
       const redirectUrl = window.location.origin + '/google-auth-callback';
       
       console.log('📧 Opening Google OAuth to request Gmail access...');
+      console.log('📍 Stored return path:', currentPath);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

@@ -155,11 +155,15 @@ export default function GoogleAuthCallback() {
           
           setStatus('success');
           
+          // Get the return path from localStorage (set before OAuth redirect)
+          const returnPath = localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
+          localStorage.removeItem('gmail_oauth_return_path'); // Clean up
+          
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:100',message:'About to redirect after successful login',data:{isMobile,hostname:window.location.hostname,origin:window.location.origin,willNavigateTo:'/dashboard'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:100',message:'About to redirect after successful login',data:{isMobile,hostname:window.location.hostname,origin:window.location.origin,willNavigateTo:returnPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
           // #endregion
           
-          // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
+          // If in mobile app, redirect to app scheme, otherwise navigate to the return path
           if (isMobile) {
             setTimeout(() => {
               // #region agent log
@@ -170,9 +174,9 @@ export default function GoogleAuthCallback() {
           } else {
             setTimeout(() => {
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:110',message:'Web redirect executing navigate',data:{targetPath:'/dashboard',currentOrigin:window.location.origin,currentPathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:110',message:'Web redirect executing navigate',data:{targetPath:returnPath,currentOrigin:window.location.origin,currentPathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
               // #endregion
-              navigate('/dashboard');
+              navigate(returnPath);
             }, 1500);
           }
         } else {
