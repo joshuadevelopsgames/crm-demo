@@ -41,10 +41,10 @@ export default function GoogleAuthCallback() {
       }
 
       try {
-        // Supabase automatically handles the OAuth callback
-        // Check for error in URL params
-        const errorParam = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
+        // Check for error in URL params (query string or hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const errorParam = searchParams.get('error') || hashParams.get('error');
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
 
         if (errorParam) {
           setStatus('error');
@@ -56,14 +56,47 @@ export default function GoogleAuthCallback() {
           return;
         }
 
-        // Get the session from Supabase (it handles the OAuth callback automatically)
+        // Supabase automatically processes OAuth callbacks from URL hash fragments
+        // Wait a moment for Supabase to process the callback, then check for session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
           throw error;
         }
 
-        if (session) {
+        if (session && session.user) {
+          // Validate that the user's email exists in the profiles table
+          const userEmail = session.user.email;
+          console.log('🔍 Validating user email:', userEmail);
+          
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('email', userEmail)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error('❌ Error checking profile:', profileError);
+            // Sign out the user since we can't validate
+            await supabase.auth.signOut();
+            setStatus('error');
+            setError('Unable to verify your account. Please contact support.');
+            return;
+          }
+
+          if (!profile) {
+            // User doesn't exist in profiles table - deny access
+            console.log('❌ User email not found in profiles:', userEmail);
+            await supabase.auth.signOut();
+            setStatus('error');
+            setError('Your email address is not authorized to access this system. Please contact your administrator to create an account.');
+            return;
+          }
+
+          // User exists - proceed with login
+          console.log('✅ User validated, email exists in profiles');
           setStatus('success');
           
           // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
@@ -83,7 +116,22 @@ export default function GoogleAuthCallback() {
             if (retryError) {
               setStatus('error');
               setError(retryError.message || 'Failed to authenticate with Google. Please try again.');
-            } else if (retrySession) {
+            } else if (retrySession && retrySession.user) {
+              // Validate user exists in profiles
+              const userEmail = retrySession.user.email;
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, email')
+                .eq('email', userEmail)
+                .maybeSingle();
+
+              if (!profile) {
+                await supabase.auth.signOut();
+                setStatus('error');
+                setError('Your email address is not authorized to access this system. Please contact your administrator to create an account.');
+                return;
+              }
+
               setStatus('success');
               navigate('/dashboard');
             } else {

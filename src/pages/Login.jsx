@@ -107,7 +107,51 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = async () => {
-    toast.info('Google Sign-In is coming soon!');
+    try {
+      setIsLoading(true);
+      const supabase = getSupabaseAuth();
+      
+      if (!supabase) {
+        toast.error('Authentication is not configured. Please contact support.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Get the redirect URL - use production domain, not localhost
+      // In production, use the actual domain; in dev, use dev domain
+      const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+      const redirectUrl = isProduction 
+        ? window.location.origin + '/google-auth-callback'
+        : 'https://lecrm-dev.vercel.app/google-auth-callback'; // Use dev domain for local development
+      
+      console.log('🔐 Initiating Google OAuth sign-in with redirect:', redirectUrl);
+      
+      // Sign in with Google OAuth
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error('❌ Google OAuth error:', error);
+        toast.error(error.message || 'Failed to initiate Google sign-in. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // If successful, Supabase will redirect to Google, then back to our callback
+      console.log('✅ Google OAuth initiated, redirecting to:', data.url);
+    } catch (error) {
+      console.error('❌ Google sign-in exception:', error);
+      toast.error(error.message || 'Failed to initiate Google sign-in. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   const { isPWA, isMobile, isDesktop, isNativeApp } = useDeviceDetection();
