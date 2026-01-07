@@ -1,14 +1,15 @@
 /**
  * Gmail Sync Service
- * Syncs Gmail emails to CRM interactions
+ * Phase 1: Syncs Gmail emails to database (gmail_messages table)
+ * Then converts important emails to interactions
  */
 
-import { fetchNewEmails, getLastSyncTimestamp, updateLastSyncTimestamp, isGmailConnected } from './gmailService';
-import { matchEmailToCRM, convertEmailToInteraction } from './emailMatchingService';
-import { base44 } from '@/api/base44Client';
+import { isGmailConnected } from './gmailService';
+import { getSupabaseAuth } from './supabaseClient';
 
 /**
- * Sync Gmail emails to CRM interactions
+ * Sync Gmail emails using the new API endpoint
+ * Phase 1: Stores messages in gmail_messages table first
  */
 export async function syncGmailToCRM(contacts = [], accounts = [], currentUserEmail = '') {
   const connected = await isGmailConnected();
@@ -17,97 +18,40 @@ export async function syncGmailToCRM(contacts = [], accounts = [], currentUserEm
   }
 
   try {
-    // Get last sync timestamp
-    const lastSync = getLastSyncTimestamp();
-    
-    // Fetch new emails since last sync
-    const emails = await fetchNewEmails(lastSync);
-    
-    if (emails.length === 0) {
-      return {
-        success: true,
-        synced: 0,
-        skipped: 0,
-        errors: 0,
-        message: 'No new emails to sync'
-      };
+    const supabase = getSupabaseAuth();
+    if (!supabase) {
+      throw new Error('Supabase not configured');
     }
 
-    let synced = 0;
-    let skipped = 0;
-    let errors = 0;
-    const errorsList = [];
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
 
-    // Process each email
-    for (const email of emails) {
-      try {
-        // Match email to contact/account
-        const match = matchEmailToCRM(email, contacts, accounts);
-        
-        // Skip if no match found
-        if (!match.account && !match.contact) {
-          skipped++;
-          continue;
-        }
-
-        // Check if interaction already exists (by Gmail message ID)
-        const existingInteractions = await base44.entities.Interaction.filter({
-          gmail_message_id: email.id
-        });
-
-        if (existingInteractions.length > 0) {
-          skipped++;
-          continue;
-        }
-
-        // Convert email to interaction
-        const interaction = convertEmailToInteraction(
-          email,
-          match.contact,
-          match.account,
-          currentUserEmail
-        );
-
-        // Create interaction in CRM
-        await base44.entities.Interaction.create(interaction);
-
-        // Update account's last interaction date if we have an account
-        if (match.account) {
-          const interactionDate = new Date(interaction.interaction_date);
-          const accountLastInteraction = match.account.last_interaction_date 
-            ? new Date(match.account.last_interaction_date)
-            : null;
-
-          if (!accountLastInteraction || interactionDate > accountLastInteraction) {
-            await base44.entities.Account.update(match.account.id, {
-              last_interaction_date: interactionDate.toISOString().split('T')[0]
-            });
-          }
-        }
-
-        synced++;
-      } catch (error) {
-        errors++;
-        errorsList.push({
-          emailId: email.id,
-          subject: email.subject,
-          error: error.message
-        });
-        console.error('Error syncing email:', error);
+    // Call the sync API endpoint
+    const response = await fetch('/api/gmail/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
       }
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Failed to sync Gmail messages');
     }
 
-    // Update last sync timestamp
-    updateLastSyncTimestamp();
+    const result = await response.json();
+    
+    // After syncing messages, convert important ones to interactions
+    // This is a separate step that can be done asynchronously
+    if (result.success && result.synced > 0) {
+      // TODO: Convert important messages to interactions
+      // This will be implemented after messages are stored
+    }
 
-    return {
-      success: true,
-      synced,
-      skipped,
-      errors,
-      errorsList,
-      message: `Synced ${synced} emails, skipped ${skipped}, ${errors} errors`
-    };
+    return result;
   } catch (error) {
     console.error('Error syncing Gmail:', error);
     return {
