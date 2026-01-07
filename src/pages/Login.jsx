@@ -117,8 +117,12 @@ export default function Login() {
         return;
       }
 
-      // Get the redirect URL based on environment
-      const redirectUrl = window.location.origin + '/google-auth-callback';
+      // Get the redirect URL - use production domain, not localhost
+      // In production, use the actual domain; in dev, use dev domain
+      const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+      const redirectUrl = isProduction 
+        ? window.location.origin + '/google-auth-callback'
+        : 'https://lecrm-dev.vercel.app/google-auth-callback'; // Use dev domain for local development
       
       console.log('🔐 Initiating Google OAuth sign-in with redirect:', redirectUrl);
       
@@ -142,7 +146,6 @@ export default function Login() {
       }
 
       // If successful, Supabase will redirect to Google, then back to our callback
-      // The user will be redirected automatically, so we don't need to do anything here
       console.log('✅ Google OAuth initiated, redirecting to:', data.url);
     } catch (error) {
       console.error('❌ Google sign-in exception:', error);

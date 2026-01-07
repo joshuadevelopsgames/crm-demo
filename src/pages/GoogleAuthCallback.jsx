@@ -66,7 +66,37 @@ export default function GoogleAuthCallback() {
           throw error;
         }
 
-        if (session) {
+        if (session && session.user) {
+          // Validate that the user's email exists in the profiles table
+          const userEmail = session.user.email;
+          console.log('🔍 Validating user email:', userEmail);
+          
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('email', userEmail)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error('❌ Error checking profile:', profileError);
+            // Sign out the user since we can't validate
+            await supabase.auth.signOut();
+            setStatus('error');
+            setError('Unable to verify your account. Please contact support.');
+            return;
+          }
+
+          if (!profile) {
+            // User doesn't exist in profiles table - deny access
+            console.log('❌ User email not found in profiles:', userEmail);
+            await supabase.auth.signOut();
+            setStatus('error');
+            setError('Your email address is not authorized to access this system. Please contact your administrator to create an account.');
+            return;
+          }
+
+          // User exists - proceed with login
+          console.log('✅ User validated, email exists in profiles');
           setStatus('success');
           
           // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
@@ -86,7 +116,22 @@ export default function GoogleAuthCallback() {
             if (retryError) {
               setStatus('error');
               setError(retryError.message || 'Failed to authenticate with Google. Please try again.');
-            } else if (retrySession) {
+            } else if (retrySession && retrySession.user) {
+              // Validate user exists in profiles
+              const userEmail = retrySession.user.email;
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, email')
+                .eq('email', userEmail)
+                .maybeSingle();
+
+              if (!profile) {
+                await supabase.auth.signOut();
+                setStatus('error');
+                setError('Your email address is not authorized to access this system. Please contact your administrator to create an account.');
+                return;
+              }
+
               setStatus('success');
               navigate('/dashboard');
             } else {
