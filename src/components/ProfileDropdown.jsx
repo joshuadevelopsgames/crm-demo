@@ -106,7 +106,21 @@ export default function ProfileDropdown() {
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+            {avatarUrl ? (
+              <img 
+                src={avatarUrl} 
+                alt={displayName}
+                className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
+            <div className={`w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`}>
               <User className="w-4 h-4 text-slate-600" />
             </div>
             <span className="hidden lg:inline">{displayName}</span>
@@ -120,7 +134,21 @@ export default function ProfileDropdown() {
         {/* Profile Info Section */}
         <div className="px-4 py-3 border-b border-slate-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+            {avatarUrl ? (
+              <img 
+                src={avatarUrl} 
+                alt={displayName}
+                className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  e.target.style.display = 'none';
+                  if (e.target.nextSibling) {
+                    e.target.nextSibling.style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
+            <div className={`w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`}>
               <User className="w-5 h-5 text-slate-600" />
             </div>
             <div className="flex-1 min-w-0">

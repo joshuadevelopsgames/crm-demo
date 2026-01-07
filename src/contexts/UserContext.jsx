@@ -76,12 +76,16 @@ export function UserProvider({ children }) {
             // Profile doesn't exist in database - create it
             console.log('🆕 Profile not found, creating new profile with role:', defaultRole);
             try {
+              // Get avatar from Google OAuth metadata (avatar_url or picture)
+              const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
+              
               const { data: newProfile, error: insertError } = await supabase
                 .from('profiles')
                 .insert({
                   id: session.user.id,
                   email: session.user.email,
                   full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                  avatar_url: avatarUrl,
                   role: defaultRole
                 })
                 .select()
@@ -96,6 +100,7 @@ export function UserProvider({ children }) {
                 setProfile({
                   id: session.user.id,
                   email: session.user.email,
+                  avatar_url: avatarUrl,
                   role: defaultRole
                 });
               } else {
@@ -105,11 +110,13 @@ export function UserProvider({ children }) {
             } catch (err) {
               console.error('Error creating profile:', err);
               // Fallback: use in-memory profile
-            setProfile({
-              id: session.user.id,
-              email: session.user.email,
-              role: defaultRole
-            });
+              const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
+              setProfile({
+                id: session.user.id,
+                email: session.user.email,
+                avatar_url: avatarUrl,
+                role: defaultRole
+              });
             }
           }
         } catch (error) {
@@ -120,12 +127,16 @@ export function UserProvider({ children }) {
           // Try to create profile in database
           if (supabase) {
             try {
+              // Get avatar from Google OAuth metadata (avatar_url or picture)
+              const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
+              
               const { data: newProfile, error: insertError } = await supabase
                 .from('profiles')
                 .insert({
                   id: session.user.id,
                   email: session.user.email,
                   full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                  avatar_url: avatarUrl,
                   role: defaultRole
                 })
                 .select()
@@ -141,9 +152,11 @@ export function UserProvider({ children }) {
           }
           
           // Final fallback: use in-memory profile
+          const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
           setProfile({
             id: session.user.id,
             email: session.user.email,
+            avatar_url: avatarUrl,
             role: defaultRole
           });
         }
