@@ -267,13 +267,19 @@ export default async function handler(req, res) {
       ]);
       
       // Extract data from cache results
-      const atRiskAccounts = atRiskCache.data && new Date(atRiskCache.data.expires_at) >= new Date()
+      // Return stale data if cache exists but is expired (better than empty)
+      // This matches the behavior of individual cache endpoints
+      const atRiskAccounts = atRiskCache.data
         ? (atRiskCache.data.cache_data?.accounts || [])
         : [];
       
-      const neglectedAccounts = neglectedCache.data && new Date(neglectedCache.data.expires_at) >= new Date()
+      const neglectedAccounts = neglectedCache.data
         ? (neglectedCache.data.cache_data?.accounts || [])
         : [];
+      
+      // Check if caches are stale (expired but still returned)
+      const atRiskStale = !atRiskCache.data || new Date(atRiskCache.data.expires_at) < new Date();
+      const neglectedStale = !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date();
       
       return res.json({
         success: true,
