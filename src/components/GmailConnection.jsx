@@ -29,10 +29,12 @@ export default function GmailConnection({ onSyncComplete }) {
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    const checkConnection = async () => {
+    const checkConnection = async (forceRetry = false) => {
       try {
-        console.log('🔍 Checking Gmail connection status...');
+        console.log('🔍 Checking Gmail connection status...', { retryCount, forceRetry });
         
         // First check if already connected (checks database)
         let connected = await isGmailConnected();
@@ -75,6 +77,19 @@ export default function GmailConnection({ onSyncComplete }) {
                 // Re-check database in case token was stored by callback but session doesn't have it
                 connected = await isGmailConnected();
                 console.log('📊 Re-check database result:', connected);
+                
+                // If still not connected and we haven't retried too many times, retry after a delay
+                // This handles the case where the callback just stored the token but we're checking too quickly
+                if (!connected && retryCount < maxRetries && !forceRetry) {
+                  retryCount++;
+                  console.log(`🔄 Retrying connection check (${retryCount}/${maxRetries}) in 2 seconds...`);
+                  setTimeout(() => {
+                    if (isMounted) {
+                      checkConnection(true);
+                    }
+                  }, 2000);
+                  return; // Don't update state yet, wait for retry
+                }
               }
             } catch (error) {
               console.error('Error getting Supabase session:', error);
@@ -96,25 +111,38 @@ export default function GmailConnection({ onSyncComplete }) {
       }
     };
     
-    // Initial check
+    // Initial check with a slight delay to allow OAuth callback to complete
     timeoutId = setTimeout(() => {
       checkConnection();
-    }, 100);
+    }, 500); // Increased delay to allow callback to store token
     
     // Also check when page becomes visible (user navigates back)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user?.id) {
         console.log('👁️ Page became visible, re-checking Gmail connection...');
+        retryCount = 0; // Reset retry count on visibility change
         clearTimeout(timeoutId);
-        timeoutId = setTimeout(checkConnection, 100);
+        timeoutId = setTimeout(() => checkConnection(), 100);
+      }
+    };
+    
+    // Also check on focus (user switches back to tab)
+    const handleFocus = () => {
+      if (user?.id) {
+        console.log('👁️ Window focused, re-checking Gmail connection...');
+        retryCount = 0;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => checkConnection(), 100);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
       isMounted = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
