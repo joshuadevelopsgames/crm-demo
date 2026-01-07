@@ -32,8 +32,11 @@ export default function GmailConnection({ onSyncComplete }) {
     
     const checkConnection = async () => {
       try {
-        // First check if already connected
+        console.log('🔍 Checking Gmail connection status...');
+        
+        // First check if already connected (checks database)
         let connected = await isGmailConnected();
+        console.log('📊 Database connection check result:', connected);
         
         // If not connected, check if we have Gmail token in Supabase session
         // This handles cases where user logged in with Google and granted Gmail permissions
@@ -55,6 +58,7 @@ export default function GmailConnection({ onSyncComplete }) {
                   
                   // Check again after storing
                   connected = await isGmailConnected();
+                  console.log('📊 Connection check after storing token:', connected);
                   
                   if (connected) {
                     console.log('✅ Gmail integration stored and verified');
@@ -67,7 +71,10 @@ export default function GmailConnection({ onSyncComplete }) {
                 }
               } else {
                 // No provider_token means no Gmail permissions granted yet
-                console.log('ℹ️ No Gmail token found in session - user needs to grant permissions');
+                console.log('ℹ️ No Gmail token found in session - checking database again...');
+                // Re-check database in case token was stored by callback but session doesn't have it
+                connected = await isGmailConnected();
+                console.log('📊 Re-check database result:', connected);
               }
             } catch (error) {
               console.error('Error getting Supabase session:', error);
@@ -76,6 +83,7 @@ export default function GmailConnection({ onSyncComplete }) {
         }
         
         if (isMounted) {
+          console.log('✅ Setting connected state to:', connected);
           setConnected(connected);
           const syncTime = getLastSyncTimestamp();
           setLastSync(syncTime);
@@ -88,13 +96,25 @@ export default function GmailConnection({ onSyncComplete }) {
       }
     };
     
-    // Debounce the check to avoid running too frequently
+    // Initial check
     timeoutId = setTimeout(() => {
       checkConnection();
     }, 100);
     
+    // Also check when page becomes visible (user navigates back)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        console.log('👁️ Page became visible, re-checking Gmail connection...');
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(checkConnection, 100);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
