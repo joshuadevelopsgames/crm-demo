@@ -27,46 +27,67 @@ export default function GmailConnection({ onSyncComplete }) {
 
   // Check connection status
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId = null;
+    
     const checkConnection = async () => {
-      // First check if already connected
-      let connected = await isGmailConnected();
-      
-      // If not connected, check if we have Gmail token in Supabase session
-      if (!connected && user) {
-        const supabase = getSupabaseAuth();
-        if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          // If provider_token exists (Gmail token from initial Google login), try to store it
-          if (session?.provider_token && session?.provider_refresh_token) {
+      try {
+        // First check if already connected
+        let connected = await isGmailConnected();
+        
+        // If not connected, check if we have Gmail token in Supabase session
+        if (!connected && user?.id) {
+          const supabase = getSupabaseAuth();
+          if (supabase) {
             try {
-              await storeGmailToken({
-                access_token: session.provider_token,
-                refresh_token: session.provider_refresh_token,
-                expires_in: session.expires_in || 3600
-              });
+              const { data: { session } } = await supabase.auth.getSession();
               
-              // Check again after storing
-              connected = await isGmailConnected();
+              // If provider_token exists (Gmail token from initial Google login), try to store it
+              if (session?.provider_token && session?.provider_refresh_token) {
+                try {
+                  await storeGmailToken({
+                    access_token: session.provider_token,
+                    refresh_token: session.provider_refresh_token,
+                    expires_in: session.expires_in || 3600
+                  });
+                  
+                  // Check again after storing
+                  connected = await isGmailConnected();
+                } catch (error) {
+                  console.error('Error storing Gmail token from session:', error);
+                }
+              }
             } catch (error) {
-              console.error('Error storing Gmail token from session:', error);
+              console.error('Error getting Supabase session:', error);
             }
           }
         }
+        
+        if (isMounted) {
+          setConnected(connected);
+          const syncTime = getLastSyncTimestamp();
+          setLastSync(syncTime);
+        }
+      } catch (error) {
+        console.error('Error checking Gmail connection:', error);
+        if (isMounted) {
+          setConnected(false);
+        }
       }
-      
-      setConnected(connected);
-      const syncTime = getLastSyncTimestamp();
-      setLastSync(syncTime);
     };
     
-    checkConnection();
-    
-    // Also check when user changes (in case they just logged in with Google)
-    if (user) {
+    // Debounce the check to avoid running too frequently
+    timeoutId = setTimeout(() => {
       checkConnection();
-    }
-  }, [user]);
+    }, 100);
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
   // Get current user email
   const { data: currentUser } = useQuery({
