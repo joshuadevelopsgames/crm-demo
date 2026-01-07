@@ -202,8 +202,12 @@ export default function GoogleAuthCallback() {
                 return;
               }
 
+              // Get the return path from localStorage
+              const returnPath = localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
+              localStorage.removeItem('gmail_oauth_return_path'); // Clean up
+
               setStatus('success');
-              navigate('/dashboard');
+              navigate(returnPath);
             } else {
               setStatus('error');
               setError('No session found. Please try signing in again.');
