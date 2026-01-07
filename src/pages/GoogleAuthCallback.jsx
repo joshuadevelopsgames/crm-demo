@@ -165,7 +165,7 @@ export default function GoogleAuthCallback() {
           localStorage.removeItem('gmail_oauth_return_path'); // Clean up
           
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:100',message:'About to redirect after successful login',data:{isMobile,hostname:window.location.hostname,origin:window.location.origin,willNavigateTo:returnPath,storedPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:100',message:'About to redirect after successful login',data:{isMobile,hostname:window.location.hostname,origin:window.location.origin,willNavigateTo:returnPath,returnPathFromRef:returnPathRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
           // #endregion
           
           // If in mobile app, redirect to app scheme, otherwise navigate to the return path
