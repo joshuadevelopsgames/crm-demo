@@ -159,12 +159,9 @@ export default function GoogleAuthCallback() {
           
           setStatus('success');
           
-          // Use the return path we read on mount (or try localStorage again as fallback)
-          const storedPath = returnPathRef.current || localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
-          const returnPath = storedPath === '/dashboard' ? (localStorage.getItem('gmail_oauth_return_path') || '/dashboard') : storedPath;
-          console.log('📍 GoogleAuthCallback: Stored return path (from ref):', returnPathRef.current);
-          console.log('📍 GoogleAuthCallback: Stored return path (from localStorage):', localStorage.getItem('gmail_oauth_return_path'));
-          console.log('📍 GoogleAuthCallback: Will redirect to:', returnPath);
+          // Use the return path we read on mount (captured before any async operations)
+          const returnPath = returnPathRef.current;
+          console.log('📍 GoogleAuthCallback: Return path (from ref, read on mount):', returnPath);
           localStorage.removeItem('gmail_oauth_return_path'); // Clean up
           
           // #region agent log
@@ -210,9 +207,8 @@ export default function GoogleAuthCallback() {
                 return;
               }
 
-              // Use the return path we read on mount (or try localStorage again as fallback)
-              const storedPath = returnPathRef.current || localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
-              const returnPath = storedPath === '/dashboard' ? (localStorage.getItem('gmail_oauth_return_path') || '/dashboard') : storedPath;
+              // Use the return path we read on mount
+              const returnPath = returnPathRef.current;
               console.log('📍 GoogleAuthCallback (retry): Will redirect to:', returnPath);
               localStorage.removeItem('gmail_oauth_return_path'); // Clean up
 
