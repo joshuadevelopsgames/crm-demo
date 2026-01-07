@@ -37,7 +37,8 @@ const GOOGLE_AUTH_SCOPES = [
  */
 export function initGoogleSignIn() {
   if (!GOOGLE_CLIENT_ID) {
-    console.warn('Google Client ID not configured. Set VITE_GOOGLE_CLIENT_ID in .env');
+    // No warning - this is only used as a fallback
+    // Primary method uses Supabase OAuth which doesn't need CLIENT_ID
     return null;
   }
 

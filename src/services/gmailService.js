@@ -16,8 +16,8 @@ const REDIRECT_URI = window.location.origin + '/gmail-callback';
  */
 export function initGmailAuth() {
   if (!CLIENT_ID) {
-    // Only warn if this is actually being used (not just checked)
-    // The warning will show when user clicks "Connect Gmail" and we need the separate flow
+    // No warning needed - this is only used as a fallback
+    // Primary method uses Supabase OAuth which doesn't need CLIENT_ID
     return null;
   }
 
