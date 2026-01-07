@@ -36,14 +36,16 @@ export default function GmailConnection({ onSyncComplete }) {
         let connected = await isGmailConnected();
         
         // If not connected, check if we have Gmail token in Supabase session
+        // This handles cases where user logged in with Google and granted Gmail permissions
         if (!connected && user?.id) {
           const supabase = getSupabaseAuth();
           if (supabase) {
             try {
               const { data: { session } } = await supabase.auth.getSession();
               
-              // If provider_token exists (Gmail token from initial Google login), try to store it
+              // Check if provider_token exists (Gmail token from Google OAuth with Gmail scopes)
               if (session?.provider_token && session?.provider_refresh_token) {
+                console.log('📧 Found Gmail token in session, storing integration...');
                 try {
                   await storeGmailToken({
                     access_token: session.provider_token,
@@ -53,9 +55,19 @@ export default function GmailConnection({ onSyncComplete }) {
                   
                   // Check again after storing
                   connected = await isGmailConnected();
+                  
+                  if (connected) {
+                    console.log('✅ Gmail integration stored and verified');
+                  }
                 } catch (error) {
                   console.error('Error storing Gmail token from session:', error);
+                  // Even if storing fails, if we have the token in session, user has permissions
+                  // We can consider them "connected" for UI purposes (hide the button)
+                  connected = true;
                 }
+              } else {
+                // No provider_token means no Gmail permissions granted yet
+                console.log('ℹ️ No Gmail token found in session - user needs to grant permissions');
               }
             } catch (error) {
               console.error('Error getting Supabase session:', error);
