@@ -97,6 +97,12 @@ export default function ProfileDropdown() {
   const displayEmail = profile?.email || user?.email || '';
   const displayPhone = profile?.phone_number || '';
   const displayRole = profile?.role === 'system_admin' || profile?.role === 'admin' ? 'Admin' : 'User';
+  
+  // Get avatar URL from profile or user metadata (Google OAuth provides 'avatar_url' or 'picture')
+  const avatarUrl = profile?.avatar_url || 
+                    user?.user_metadata?.avatar_url || 
+                    user?.user_metadata?.picture || 
+                    null;
 
   // Always render the dropdown, even if user/profile is not available yet
   return (
