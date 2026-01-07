@@ -971,7 +971,7 @@ const base44Instance = {
             fetch('/api/data/notifications', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: n.id, is_read: true })
+              body: JSON.stringify({ id: n.id, user_id: userId, is_read: true })
             })
           )
         );
