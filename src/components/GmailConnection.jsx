@@ -139,17 +139,52 @@ export default function GmailConnection({ onSyncComplete }) {
             }
           } catch (error) {
             console.error('Error storing Gmail token from session:', error);
-            // Fall through to separate Gmail OAuth flow
+            // Fall through to re-authentication
+          }
+        }
+        
+        // If no token in session but user logged in with Google, re-authenticate with Gmail scopes
+        const isGoogleUser = user.app_metadata?.provider === 'google' || 
+                           user.user_metadata?.provider === 'google' ||
+                           session?.user?.app_metadata?.provider === 'google';
+        
+        if (isGoogleUser) {
+          console.log('📧 User logged in with Google, re-authenticating with Gmail scopes...');
+          const redirectUrl = window.location.origin + '/google-auth-callback';
+          
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: redirectUrl,
+              scopes: 'https://www.googleapis.com/auth/gmail.readonly',
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent', // Force consent screen to ensure Gmail scope is requested
+              },
+            },
+          });
+          
+          if (error) {
+            console.error('Error re-authenticating with Gmail scopes:', error);
+            toast.error('Failed to request Gmail access. Please try again.');
+            setIsConnecting(false);
+            return;
+          }
+          
+          // Redirect to Google OAuth
+          if (data?.url) {
+            window.location.href = data.url;
+            return; // Don't set isConnecting to false, we're redirecting
           }
         }
       }
       
-      // If no token in session, use separate Gmail OAuth flow
+      // Fallback: If user didn't log in with Google, try separate Gmail OAuth flow
       // Note: This requires VITE_GOOGLE_CLIENT_ID to be set in environment variables
       const authUrl = initGmailAuth();
       
       if (!authUrl) {
-        toast.error('Gmail integration requires additional setup. Please contact your administrator or try logging in with Google to grant Gmail access during login.');
+        toast.error('To connect Gmail, please log in with Google first. This will allow you to grant Gmail access during login.');
         setIsConnecting(false);
         return;
       }
