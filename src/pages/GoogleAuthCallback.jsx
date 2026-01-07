@@ -33,6 +33,10 @@ export default function GoogleAuthCallback() {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:35',message:'handleAuthCallback entry',data:{hostname:window.location.hostname,origin:window.location.origin,fullUrl:window.location.href,hash:window.location.hash,search:window.location.search},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       const supabase = getSupabaseAuth();
       if (!supabase) {
         setStatus('error');
@@ -45,6 +49,10 @@ export default function GoogleAuthCallback() {
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const errorParam = searchParams.get('error') || hashParams.get('error');
         const errorDescription = searchParams.get('error_description') || hashParams.get('error_description');
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:47',message:'URL params check',data:{errorParam,errorDescription,hashLength:window.location.hash.length,searchLength:window.location.search.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
 
         if (errorParam) {
           setStatus('error');
@@ -61,6 +69,10 @@ export default function GoogleAuthCallback() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:63',message:'getSession result',data:{hasSession:!!session,hasError:!!error,errorMessage:error?.message,hasUser:!!session?.user,userEmail:session?.user?.email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
 
         if (error) {
           throw error;
@@ -99,13 +111,23 @@ export default function GoogleAuthCallback() {
           console.log('✅ User validated, email exists in profiles');
           setStatus('success');
           
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:100',message:'About to redirect after successful login',data:{isMobile,hostname:window.location.hostname,origin:window.location.origin,willNavigateTo:'/dashboard'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
+          
           // If in mobile app, redirect to app scheme, otherwise navigate to dashboard
           if (isMobile) {
             setTimeout(() => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:105',message:'Mobile redirect executing',data:{targetUrl:'com.lecrm.app://dashboard',currentOrigin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
               window.location.href = 'com.lecrm.app://dashboard';
             }, 1000);
           } else {
             setTimeout(() => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:110',message:'Web redirect executing navigate',data:{targetPath:'/dashboard',currentOrigin:window.location.origin,currentPathname:window.location.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              // #endregion
               navigate('/dashboard');
             }, 1500);
           }

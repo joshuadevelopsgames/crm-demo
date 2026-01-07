@@ -124,6 +124,10 @@ export default function Login() {
         ? 'https://lecrm-dev.vercel.app/google-auth-callback' // Use dev domain for local development
         : window.location.origin + '/google-auth-callback'; // Use current domain for deployed environments
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Login.jsx:120',message:'handleGoogleSignIn - redirect URL calculation',data:{hostname:window.location.hostname,origin:window.location.origin,isLocalhost,redirectUrl,fullUrl:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       console.log('🔐 Initiating Google OAuth sign-in with redirect:', redirectUrl);
       
       // Sign in with Google OAuth
@@ -137,6 +141,10 @@ export default function Login() {
           },
         },
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Login.jsx:133',message:'signInWithOAuth response',data:{hasError:!!error,errorMessage:error?.message,hasData:!!data,dataUrl:data?.url,redirectTo:redirectUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
 
       if (error) {
         console.error('❌ Google OAuth error:', error);
