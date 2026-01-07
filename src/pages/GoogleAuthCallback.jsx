@@ -159,10 +159,11 @@ export default function GoogleAuthCallback() {
           
           setStatus('success');
           
-          // Get the return path from localStorage (set before OAuth redirect)
-          const storedPath = localStorage.getItem('gmail_oauth_return_path');
-          const returnPath = storedPath || '/dashboard';
-          console.log('📍 GoogleAuthCallback: Stored return path from localStorage:', storedPath);
+          // Use the return path we read on mount (or try localStorage again as fallback)
+          const storedPath = returnPathRef.current || localStorage.getItem('gmail_oauth_return_path') || '/dashboard';
+          const returnPath = storedPath === '/dashboard' ? (localStorage.getItem('gmail_oauth_return_path') || '/dashboard') : storedPath;
+          console.log('📍 GoogleAuthCallback: Stored return path (from ref):', returnPathRef.current);
+          console.log('📍 GoogleAuthCallback: Stored return path (from localStorage):', localStorage.getItem('gmail_oauth_return_path'));
           console.log('📍 GoogleAuthCallback: Will redirect to:', returnPath);
           localStorage.removeItem('gmail_oauth_return_path'); // Clean up
           
