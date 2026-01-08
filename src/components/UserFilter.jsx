@@ -47,6 +47,21 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
   // Calculate position
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
 
+  // Disable body scroll when dropdown is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store the original overflow style
+      const originalOverflow = document.body.style.overflow;
+      // Disable body scroll
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Restore original overflow when dropdown closes
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen || !triggerRef.current) return;
 
@@ -58,12 +73,6 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       left: rect.left,
       width: rect.width
     });
-
-    // Close dropdown on window scroll (but not on dropdown internal scroll)
-    // The dropdown's onScroll handler stops propagation, so this only fires for window scrolls
-    const handleScroll = () => {
-      setIsOpen(false);
-    };
 
     // Update position on window resize
     const handleResize = () => {
@@ -77,13 +86,9 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       }
     };
 
-    // Use passive listeners for better performance
-    // Listen on window for scroll events (dropdown scrolls are stopped from bubbling)
-    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     window.addEventListener('resize', handleResize, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll, { capture: true });
       window.removeEventListener('resize', handleResize);
     };
   }, [isOpen]);
@@ -137,10 +142,6 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
             left: `${position.left}px`,
             width: `${position.width}px`,
             '--dropdown-width': `${position.width}px`
-          }}
-          onScroll={(e) => {
-            // Stop scroll events from bubbling to window, preventing dropdown from closing
-            e.stopPropagation();
           }}
         >
           <div className="p-1">
