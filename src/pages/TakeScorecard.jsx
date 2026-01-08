@@ -406,7 +406,7 @@ export default function TakeScorecard() {
               <Input
                 type="date"
                 value={scorecardDate}
-                onChange={(e) => setScorecardDate(e.target.value)}
+                readOnly
                 className="w-40"
               />
             </div>
@@ -443,7 +443,19 @@ export default function TakeScorecard() {
           {/* Date and Score Summary */}
           <div className="grid grid-cols-12 gap-2 p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
             <div className="col-span-4 font-medium">Date:</div>
-            <div className="col-span-6">{format(new Date(scorecardDate), 'MMMM d, yyyy')}</div>
+            <div className="col-span-6">
+              {(() => {
+                if (!scorecardDate) return '—';
+                const date = new Date(scorecardDate);
+                if (isNaN(date.getTime())) return '—';
+                try {
+                  return format(date, 'MMMM d, yyyy');
+                } catch (error) {
+                  console.error('Error formatting date:', error, 'scorecardDate:', scorecardDate);
+                  return scorecardDate || '—';
+                }
+              })()}
+            </div>
             <div className="col-span-2 text-right font-bold text-lg">
               {scoreData.normalized > 0 ? scoreData.normalized : '—'}
             </div>
