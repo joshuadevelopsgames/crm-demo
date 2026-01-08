@@ -59,7 +59,8 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
       width: rect.width
     });
 
-    // Close dropdown on scroll (better UX than trying to track position)
+    // Close dropdown on window scroll (but not on dropdown internal scroll)
+    // The dropdown's onScroll handler stops propagation, so this only fires for window scrolls
     const handleScroll = () => {
       setIsOpen(false);
     };
@@ -77,6 +78,7 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
     };
 
     // Use passive listeners for better performance
+    // Listen on window for scroll events (dropdown scrolls are stopped from bubbling)
     window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     window.addEventListener('resize', handleResize, { passive: true });
 
@@ -135,6 +137,10 @@ export function UserFilter({ users, selectedUsers, onSelectionChange, placeholde
             left: `${position.left}px`,
             width: `${position.width}px`,
             '--dropdown-width': `${position.width}px`
+          }}
+          onScroll={(e) => {
+            // Stop scroll events from bubbling to window, preventing dropdown from closing
+            e.stopPropagation();
           }}
         >
           <div className="p-1">
