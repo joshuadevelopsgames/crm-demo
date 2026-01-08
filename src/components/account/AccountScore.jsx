@@ -22,6 +22,46 @@ import {
 } from "@/components/ui/alert-dialog";
 import toast from 'react-hot-toast';
 
+// Convert UUID to 6-digit sequential scorecard ID
+// Gets sequential order based on creation date across all scorecards
+function getScorecardId(uuid, allScorecards) {
+  if (!uuid || !allScorecards || allScorecards.length === 0) {
+    // Fallback: use hash if no scorecards available
+    if (!uuid) return '000000';
+    let hash = 0;
+    for (let i = 0; i < uuid.length; i++) {
+      const char = uuid.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return String(Math.abs(hash) % 1000000 || 1).padStart(6, '0');
+  }
+  
+  // Sort all scorecards by creation date to get sequential order
+  const sortedScorecards = [...allScorecards].sort((a, b) => {
+    const dateA = new Date(a.created_at || a.completed_date || 0);
+    const dateB = new Date(b.created_at || b.completed_date || 0);
+    return dateA - dateB;
+  });
+  
+  // Find index of this scorecard (1-indexed)
+  const index = sortedScorecards.findIndex(sc => sc.id === uuid);
+  
+  if (index === -1) {
+    // Fallback: use hash if scorecard not found
+    let hash = 0;
+    for (let i = 0; i < uuid.length; i++) {
+      const char = uuid.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return String(Math.abs(hash) % 1000000 || 1).padStart(6, '0');
+  }
+  
+  // Return sequential ID (1-indexed, formatted as 6 digits)
+  return String(index + 1).padStart(6, '0');
+}
+
 export default function AccountScore({ accountId, scorecards, currentScore, accountName, account }) {
   const [expandedScorecards, setExpandedScorecards] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -42,6 +82,13 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
   const { data: allTemplates = [] } = useQuery({
     queryKey: ['scorecard-templates'],
     queryFn: () => base44.entities.ScorecardTemplate.list(true) // Include versions
+  });
+
+  // Get all scorecards to calculate sequential IDs
+  const { data: allScorecards = [] } = useQuery({
+    queryKey: ['all-scorecards-for-ids'],
+    queryFn: () => base44.entities.ScorecardResponse.list(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Delete scorecard mutation
@@ -264,7 +311,7 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                           {templateVersion && `ICP Template Version ${templateVersion.version_number || 1} • `}
-                          Scorecard ID: {scorecard.id}
+                          Scorecard ID: {getScorecardId(scorecard.id, allScorecards)}
                         </p>
                         {scorecard.section_scores && Object.keys(scorecard.section_scores).length > 0 && (
                           <>
