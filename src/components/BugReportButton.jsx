@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 import { Bug, X, MousePointer2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -24,6 +26,7 @@ import toast from 'react-hot-toast';
 
 export default function BugReportButton() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
@@ -502,12 +505,36 @@ export default function BugReportButton() {
           toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
         }
       } else {
-      toast.success('✓ Bug report sent successfully!');
+        // Show success message with ticket number if available
+        if (result.ticketNumber) {
+          toast.success(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <div>✓ Bug report submitted!</div>
+                <div className="text-sm font-semibold">Ticket #{result.ticketNumber} created</div>
+                <button
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    navigate(createPageUrl('MyTickets'));
+                  }}
+                  className="text-sm underline text-blue-600 hover:text-blue-800 mt-1"
+                >
+                  View My Tickets
+                </button>
+              </div>
+            ),
+            { duration: 8000 }
+          );
+        } else {
+          toast.success('✓ Bug report sent successfully!');
+        }
       }
       
       console.log('✅ Bug report submitted:', {
         emailSent: result.emailSent,
         notificationCreated: result.notificationCreated,
+        ticketCreated: result.ticketCreated,
+        ticketNumber: result.ticketNumber,
         emailError: result.emailError || 'none',
         notificationError: result.notificationError || 'none'
       });

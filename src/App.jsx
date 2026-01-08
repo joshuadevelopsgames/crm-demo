@@ -22,6 +22,9 @@ import TakeScorecard from './pages/TakeScorecard';
 import BuildScorecard from './pages/BuildScorecard';
 import Permissions from './pages/Permissions';
 import Announcements from './pages/Announcements';
+import MyTickets from './pages/MyTickets';
+import Tickets from './pages/Tickets';
+import TicketDetail from './pages/TicketDetail';
 import Tutorial from './pages/Tutorial';
 import Login from './pages/Login';
 import GmailCallback from './pages/GmailCallback';
@@ -265,6 +268,13 @@ function AppContent() {
               } />
               <Route path={createPageUrl('Settings')} element={<Settings />} />
               <Route path={createPageUrl('Reports')} element={<Reports />} />
+              <Route path={createPageUrl('MyTickets')} element={<MyTickets />} />
+              <Route path={createPageUrl('Tickets')} element={
+                <AdminRoute>
+                  <Tickets />
+                </AdminRoute>
+              } />
+              <Route path={createPageUrl('TicketDetail')} element={<TicketDetail />} />
               <Route path="/test-renewal-notifications" element={<TestRenewalNotifications />} />
               <Route path="/list-divisions" element={<ListDivisions />} />
               <Route path="*" element={<Dashboard />} />

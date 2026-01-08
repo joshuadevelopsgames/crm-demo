@@ -17,7 +17,8 @@ import {
   HelpCircle,
   ChevronDown,
   Settings,
-  Megaphone
+  Megaphone,
+  Ticket
 } from 'lucide-react';
 
 import { base44 } from '@/api/base44Client';
@@ -95,12 +96,14 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Contacts', path: 'Contacts', icon: Users, permission: 'view_all_contacts' },
     { name: 'Tasks', path: 'Tasks', icon: CheckSquare, permission: null }, // Always visible for now
     { name: 'Sequences', path: 'Sequences', icon: GitBranch, permission: null }, // Always visible for now
+    { name: 'My Tickets', path: 'MyTickets', icon: Ticket, permission: null }, // Always visible for all users
   ];
 
   const adminNavigation = [
     { name: 'Scoring', path: 'Scoring', icon: Award, permission: 'access_scoring' },
     { name: 'Users', path: 'Permissions', icon: Shield, permission: 'manage_permissions' },
     { name: 'Announcements', path: 'Announcements', icon: Megaphone, permission: null }, // Always visible for admins
+    { name: 'Tickets', path: 'Tickets', icon: Ticket, permission: null }, // Admin ticket management
   ];
 
   // Filter navigation items based on permissions
@@ -509,60 +512,3 @@ export default function Layout({ children, currentPageName }) {
       <main 
         ref={(el) => {
           if (el && isTutorialMode) {
-            // #region agent log
-            const mainBg = window.getComputedStyle(el).backgroundColor;
-            const mainDisplay = window.getComputedStyle(el).display;
-            const mainVisibility = window.getComputedStyle(el).visibility;
-            const mainZIndex = window.getComputedStyle(el).zIndex;
-            const mainRect = el.getBoundingClientRect();
-            // Check for backdrop/overlay elements
-            const allElements = document.querySelectorAll('*');
-            const backdropElements = Array.from(allElements).filter(el => {
-              const style = window.getComputedStyle(el);
-              const bg = style.backgroundColor;
-              const pos = style.position;
-              const zIdx = parseInt(style.zIndex) || 0;
-              return (bg.includes('rgb(37, 99, 235)') || bg.includes('rgb(79, 70, 229)')) && 
-                     (pos === 'fixed' || pos === 'absolute') && zIdx > 50;
-            });
-            // Check body/html/root backgrounds
-            const bodyBg = window.getComputedStyle(document.body).backgroundColor;
-            const htmlBg = window.getComputedStyle(document.documentElement).backgroundColor;
-            const rootBg = document.getElementById('root') ? window.getComputedStyle(document.getElementById('root')).backgroundColor : 'no root';
-            // Check for any fixed/absolute elements covering the page
-            const allFixed = Array.from(document.querySelectorAll('*')).filter(el => {
-              const style = window.getComputedStyle(el);
-              return (style.position === 'fixed' || style.position === 'absolute') && 
-                     parseInt(style.zIndex) > 50;
-            }).map(el => ({
-              tag: el.tagName,
-              className: el.className,
-              position: window.getComputedStyle(el).position,
-              zIndex: window.getComputedStyle(el).zIndex,
-              bg: window.getComputedStyle(el).backgroundColor,
-              rect: el.getBoundingClientRect()
-            }));
-            // Ref callback for potential future use
-          }
-        }}
-        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} style={(isPWA || isNativeApp) ? {
-        // PWA and native app specific padding (with safe areas)
-        // Account for: nav (4rem) + test mode banner (40px if active) + announcement banner (~50px)
-        paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + 50px + env(safe-area-inset-top, 0px) + 1rem)`,
-        paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
-        backgroundColor: 'hsl(var(--background))',
-        minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - 50px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
-      } : {
-        // Desktop web browser styles - standard padding
-        // Account for: nav (6rem/5rem = 64px/80px) + test mode banner (40px if active) + announcement banner (~50px)
-        paddingTop: isTutorialMode ? '7rem' : (isDesktop ? '7rem' : '6rem'), // 6rem/5rem nav (64px/80px) + 50px announcement
-        backgroundColor: 'hsl(var(--background))'
-      }}>
-        <div className="animate-in fade-in duration-300">
-          {children}
-        </div>
-      </main>
-    </div>
-  );
-}
-

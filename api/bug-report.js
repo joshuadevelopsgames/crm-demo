@@ -111,14 +111,16 @@ export default async function handler(req, res) {
     };
     const priorityEmojiIcon = priorityEmoji[priority] || '🟡';
     
-    const emailSubject = `${priorityEmojiIcon} Bug Report [${priorityLabel.toUpperCase()}] - ${new Date().toLocaleString()}`;
+    // Include ticket number in subject if available
+    const ticketPrefix = ticketNumber ? `[#${ticketNumber}] ` : '';
+    const emailSubject = `${priorityEmojiIcon} ${ticketPrefix}Bug Report [${priorityLabel.toUpperCase()}] - ${new Date().toLocaleString()}`;
     
-    let emailBody = `# Bug Report
+    let emailBody = `# Bug Report${ticketNumber ? ` - ${ticketNumber}` : ''}
 
 ## Priority
 **${priorityEmojiIcon} ${priorityLabel.toUpperCase()}**
 
-## Description
+${ticketNumber ? `## Ticket Number\n**${ticketNumber}**\n\n` : ''}## Description
 ${bugReport.description}
 
 ## Reporter Information
@@ -198,6 +200,78 @@ ${consoleLogs.map(log =>
       // Don't re-throw - we want to continue and create notification even if email fails
     }
 
+    // Create ticket in database
+    let ticketCreated = false;
+    let ticketError = null;
+    let ticketNumber = null;
+
+    try {
+      const supabase = getSupabase();
+      
+      // Get user ID from request (if available)
+      const authHeader = req.headers.authorization;
+      let userId = null;
+      
+      if (supabase && authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (!authError && user) {
+          userId = user.id;
+        }
+      }
+
+      if (supabase) {
+        // If no user ID, try to get from email
+        if (!userId && bugReport.userEmail && bugReport.userEmail !== 'Not provided') {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', bugReport.userEmail)
+            .limit(1);
+          
+          if (profiles && profiles.length > 0) {
+            userId = profiles[0].id;
+          }
+        }
+
+        // Create ticket title from description (first line or first 100 chars)
+        const title = bugReport.description.split('\n')[0].substring(0, 100) || 'Bug Report';
+
+        // Create ticket
+        const { data: ticket, error: ticketErr } = await supabase
+          .from('tickets')
+          .insert({
+            title,
+            description: bugReport.description,
+            priority: bugReport.priority || 'medium',
+            reporter_id: userId || 'anonymous', // Use 'anonymous' if no user ID
+            reporter_email: bugReport.userEmail || null,
+            bug_report_data: {
+              selectedElement: bugReport.selectedElement,
+              consoleLogs: consoleLogs,
+              userInfo: bugReport.userInfo
+            },
+            status: 'open'
+          })
+          .select('ticket_number, id')
+          .single();
+
+        if (ticketErr) {
+          console.error('❌ Error creating ticket:', ticketErr);
+          ticketError = ticketErr.message;
+        } else {
+          ticketCreated = true;
+          ticketNumber = ticket.ticket_number;
+          console.log(`✅ Ticket created: ${ticketNumber} (ID: ${ticket.id})`);
+        }
+      } else {
+        console.warn('⚠️ Supabase not configured, skipping ticket creation');
+      }
+    } catch (error) {
+      console.error('❌ Error creating ticket:', error);
+      ticketError = error.message;
+    }
+
     // Skip notification creation for jrsschroeder@gmail.com - bug reports are emailed
     // No need to store notifications since they get the full report via email
     const notificationCreated = false;
@@ -238,7 +312,10 @@ ${consoleLogs.map(log =>
       success: true,
       message: 'Bug report processed successfully',
       emailSent: true,
-      notificationCreated: false // Intentionally skipped for jrsschroeder@gmail.com
+      notificationCreated: false, // Intentionally skipped for jrsschroeder@gmail.com
+      ticketCreated: ticketCreated,
+      ticketNumber: ticketNumber,
+      ticketError: ticketError || null
     };
     
     if (emailError) {
