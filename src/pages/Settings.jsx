@@ -158,12 +158,12 @@ export default function Settings() {
       return updatedProfile;
     },
     onSuccess: () => {
-      // Invalidate all user-related queries
+      // Invalidate all user-related queries to refresh profile data
       queryClient.invalidateQueries({ queryKey: ['auth-session'] });
       queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      // Force UserContext to refetch
-      window.dispatchEvent(new Event('authStateChange'));
+      // Don't dispatch authStateChange event - that's for actual auth changes, not profile updates
+      // The query invalidation will trigger UserContext to refetch the profile
       toast.success('✓ Profile updated successfully');
     },
     onError: (error) => {
