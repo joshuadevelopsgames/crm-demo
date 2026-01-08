@@ -262,11 +262,10 @@ export default function AccountScore({ accountId, scorecards, currentScore, acco
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                           Date: {scorecardDate} • Completed by {scorecard.completed_by}
                         </p>
-                        {templateVersion && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            ICP Template Version {templateVersion.version_number || 1}
-                          </p>
-                        )}
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          {templateVersion && `ICP Template Version ${templateVersion.version_number || 1} • `}
+                          Scorecard ID: {scorecard.id}
+                        </p>
                         {scorecard.section_scores && Object.keys(scorecard.section_scores).length > 0 && (
                           <>
                           <div className="flex flex-wrap gap-2 mt-2">
