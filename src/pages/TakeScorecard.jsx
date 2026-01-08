@@ -655,12 +655,21 @@ export default function TakeScorecard() {
               </Button>
               <Button
                 size="lg"
-                disabled={!isComplete}
+                disabled={!isComplete || submitScorecardMutation.isPending}
                 onClick={handleSubmit}
                 className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
               >
-                <Check className="w-5 h-5 mr-2" />
-                Submit Scorecard
+                {submitScorecardMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white dark:border-slate-900 mr-2"></div>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 mr-2" />
+                    Submit Scorecard
+                  </>
+                )}
               </Button>
             </div>
           </div>
