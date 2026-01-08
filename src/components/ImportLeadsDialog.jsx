@@ -1597,9 +1597,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
                 <div className="grid grid-cols-2 gap-4 h-full">
                 {/* File 1: Contacts Export */}
                 <div
+                  onDragOver={handleContactsDragOver}
+                  onDragLeave={handleContactsDragLeave}
+                  onDrop={handleContactsDrop}
                   className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
                     contactsFile 
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : contactsDragging
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
@@ -1658,11 +1663,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           className="hidden"
                           id="contacts-file-input"
                         />
-                        <Button asChild size="sm" variant="outline">
-                          <label htmlFor="contacts-file-input" className="cursor-pointer">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Choose File
-                          </label>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('contacts-file-input');
+                            if (input) {
+                              input.click();
+                            }
+                          }}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Choose File
                         </Button>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
@@ -1677,9 +1689,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 2: Leads List */}
                 <div
+                  onDragOver={handleLeadsDragOver}
+                  onDragLeave={handleLeadsDragLeave}
+                  onDrop={handleLeadsDrop}
                   className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
                     leadsFile 
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : leadsDragging
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-400'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
@@ -1738,11 +1755,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           className="hidden"
                           id="leads-file-input"
                         />
-                        <Button asChild size="sm" variant="outline">
-                          <label htmlFor="leads-file-input" className="cursor-pointer">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Choose File
-                          </label>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('leads-file-input');
+                            if (input) {
+                              input.click();
+                            }
+                          }}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Choose File
                         </Button>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
@@ -1757,9 +1781,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 3: Estimates List */}
                 <div
+                  onDragOver={handleEstimatesDragOver}
+                  onDragLeave={handleEstimatesDragLeave}
+                  onDrop={handleEstimatesDrop}
                   className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
                     estimatesFile 
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : estimatesDragging
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-400'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
@@ -1819,11 +1848,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           className="hidden"
                           id="estimates-file-input"
                         />
-                        <Button asChild size="sm" variant="outline">
-                          <label htmlFor="estimates-file-input" className="cursor-pointer">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Choose File
-                          </label>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('estimates-file-input');
+                            if (input) {
+                              input.click();
+                            }
+                          }}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Choose File
                         </Button>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
@@ -1838,9 +1874,14 @@ export default function ImportLeadsDialog({ open, onClose }) {
 
                 {/* File 4: Jobsite Export */}
                 <div
+                  onDragOver={handleJobsitesDragOver}
+                  onDragLeave={handleJobsitesDragLeave}
+                  onDrop={handleJobsitesDrop}
                   className={`border rounded-lg p-6 transition-all h-full flex flex-col items-center justify-center ${
                     jobsitesFile 
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 dark:border-emerald-400' 
+                      : jobsitesDragging
+                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 dark:border-teal-400'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
                   }`}
                 >
@@ -1900,11 +1941,18 @@ export default function ImportLeadsDialog({ open, onClose }) {
                           className="hidden"
                           id="jobsites-file-input"
                         />
-                        <Button asChild size="sm" variant="outline">
-                          <label htmlFor="jobsites-file-input" className="cursor-pointer">
-                            <FileText className="w-3 h-3 mr-1" />
-                            Choose File
-                          </label>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById('jobsites-file-input');
+                            if (input) {
+                              input.click();
+                            }
+                          }}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Choose File
                         </Button>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                           XLSX format
