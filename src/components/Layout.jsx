@@ -512,3 +512,19 @@ export default function Layout({ children, currentPageName }) {
       <main 
         ref={(el) => {
           if (el && isTutorialMode) {
+            // Tutorial mode handling if needed
+          }
+        }}
+        className="flex-1"
+        style={{
+          paddingTop: isTutorialMode ? '3rem' : (isPWA || isNativeApp) 
+            ? 'calc(4rem + env(safe-area-inset-top, 0px))' 
+            : '4rem',
+          minHeight: 'calc(100vh - 4rem)'
+        }}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
