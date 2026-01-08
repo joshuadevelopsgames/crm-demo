@@ -34,6 +34,8 @@ BEGIN
       WHEN EXCLUDED.email = 'jrsschroeder@gmail.com' THEN 'admin'
       ELSE COALESCE(profiles.role, 'user')
     END;
+    -- NOTE: full_name and phone_number are NOT updated here to preserve user's manual edits
+    -- The trigger only runs on NEW user creation (AFTER INSERT), not on subsequent logins
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
