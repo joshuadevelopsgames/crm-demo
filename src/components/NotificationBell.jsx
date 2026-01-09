@@ -1078,7 +1078,7 @@ export default function NotificationBell() {
       navigate(`${createPageUrl('Reports')}?year=${currentYear}`);
       setIsOpen(false);
     } else if (notification.related_ticket_id) {
-      navigate(createPageUrl(`TicketDetail?id=${notification.related_ticket_id}`));
+      navigate(createPageUrl('MyTickets'));
       setIsOpen(false);
     } else if (notification.related_task_id) {
       navigate('/tasks');
