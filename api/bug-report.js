@@ -287,53 +287,69 @@ ${consoleLogs.map(log =>
       console.log('ℹ️ Notification creation skipped (only email is sent)');
     }
 
-    // Return success if email was sent
-    // For jrsschroeder@gmail.com, notification is intentionally skipped
+    // Return success even if email failed, as long as ticket was created
+    // Ticket creation is the primary goal - email is secondary
     if (!emailSent) {
-      console.error('❌ CRITICAL: Email failed:', {
+      console.error('⚠️ Email failed but continuing:', {
         emailError,
         emailService,
         recipientEmail,
+        ticketCreated,
+        ticketNumber,
         envCheck: {
           hasResendKey: !!process.env.RESEND_API_KEY,
           hasResendFrom: !!process.env.RESEND_FROM_EMAIL
         }
       });
-      return res.status(500).json({ 
-        success: false,
-        error: 'Failed to send bug report email.',
-        details: {
-          emailError,
-          emailService,
-          recipientEmail
-        }
-      });
     }
 
-    // Return success - notification is skipped for jrsschroeder@gmail.com
-    const responseData = { 
-      success: true,
-      message: 'Bug report processed successfully',
-      emailSent: true,
-      notificationCreated: false, // Intentionally skipped for jrsschroeder@gmail.com
-      ticketCreated: ticketCreated,
-      ticketNumber: ticketNumber,
-      ticketError: ticketError || null
-    };
-    
-    if (emailError) {
-      console.error('❌ Email error details:', emailError);
+    // If ticket was created, return success even if email failed
+    if (ticketCreated && ticketNumber) {
+      const responseData = { 
+        success: true,
+        message: emailSent 
+          ? 'Bug report processed successfully' 
+          : 'Ticket created successfully (email failed to send)',
+        emailSent: emailSent,
+        emailError: emailError || null,
+        notificationCreated: false, // Intentionally skipped for jrsschroeder@gmail.com
+        ticketCreated: true,
+        ticketNumber: ticketNumber,
+        ticketError: null,
+        warnings: emailSent ? [] : ['Email failed to send, but ticket was created successfully']
+      };
+      
+      console.log('✅ Bug report processed (ticket created):', {
+        emailSent,
+        ticketCreated: true,
+        ticketNumber,
+        notificationCreated: false,
+        recipientEmail,
+        emailService,
+        emailError: emailError || 'none'
+      });
+      
+      return res.status(200).json(responseData);
     }
-    
-    console.log('✅ Bug report processed:', {
-      emailSent: true,
-      notificationCreated: false,
-      recipientEmail,
+
+    // If ticket creation also failed, return error
+    console.error('❌ CRITICAL: Both ticket creation and email failed:', {
+      emailError,
+      ticketError,
       emailService,
-      emailError: emailError || 'none'
+      recipientEmail
     });
     
-    return res.status(200).json(responseData);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Failed to create ticket and send email.',
+      details: {
+        emailError: emailError || null,
+        ticketError: ticketError || null,
+        emailService,
+        recipientEmail
+      }
+    });
 
   } catch (error) {
     console.error('Error processing bug report:', error);

@@ -498,43 +498,51 @@ export default function BugReportButton() {
         throw new Error(errorMessage + details);
       }
 
-      // Check for warnings (e.g., email failed but notification succeeded)
-      if (result.warnings && result.warnings.length > 0) {
-        console.warn('⚠️ Bug report sent with warnings:', result.warnings);
+      // Show ticket number if available, regardless of email status
+      if (result.ticketNumber) {
+        const hasEmailWarning = result.warnings && result.warnings.some(w => w.includes('email'));
+        const emailFailed = !result.emailSent;
         
-        // Show detailed error message if email failed
-        if (!result.emailSent && result.emailError) {
-          console.error('❌ Email error:', result.emailError);
-          toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
-        } else if (!result.emailSent) {
-          toast('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { 
-            duration: 8000,
-            icon: '⚠️'
-          });
-        } else {
-          toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
-        }
+        toast.success(
+          (t) => (
+            <div className="flex flex-col gap-2">
+              <div>✓ Bug report submitted!</div>
+              <div className="text-sm font-semibold">Ticket #{result.ticketNumber} created</div>
+              {emailFailed && (
+                <div className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Email notification failed, but ticket was created successfully
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  navigate(createPageUrl('MyTickets'));
+                }}
+                className="text-sm underline text-blue-600 hover:text-blue-800 mt-1"
+              >
+                View My Tickets
+              </button>
+            </div>
+          ),
+          { duration: 8000 }
+        );
       } else {
-        // Show success message with ticket number if available
-        if (result.ticketNumber) {
-          toast.success(
-            (t) => (
-              <div className="flex flex-col gap-2">
-                <div>✓ Bug report submitted!</div>
-                <div className="text-sm font-semibold">Ticket #{result.ticketNumber} created</div>
-                <button
-                  onClick={() => {
-                    toast.dismiss(t.id);
-                    navigate(createPageUrl('MyTickets'));
-                  }}
-                  className="text-sm underline text-blue-600 hover:text-blue-800 mt-1"
-                >
-                  View My Tickets
-                </button>
-              </div>
-            ),
-            { duration: 8000 }
-          );
+        // No ticket created - check for warnings
+        if (result.warnings && result.warnings.length > 0) {
+          console.warn('⚠️ Bug report sent with warnings:', result.warnings);
+          
+          // Show detailed error message if email failed
+          if (!result.emailSent && result.emailError) {
+            console.error('❌ Email error:', result.emailError);
+            toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
+          } else if (!result.emailSent) {
+            toast('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { 
+              duration: 8000,
+              icon: '⚠️'
+            });
+          } else {
+            toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
+          }
         } else {
           toast.success('✓ Bug report sent successfully!');
         }
