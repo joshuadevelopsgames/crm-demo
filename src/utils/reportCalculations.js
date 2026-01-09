@@ -3,7 +3,7 @@
  * Handles win/loss calculations, department breakdowns, and account performance metrics
  */
 
-import { getYearFromDateString } from './dateFormatter';
+import { getYearFromDateString, parseDateString } from './dateFormatter';
 
 /**
  * Format currency value with appropriate suffix (K for thousands, M for millions)
@@ -336,45 +336,36 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     
     if (!dateToUse) return false;
     
-    // Extract year and month from date string to avoid timezone conversion issues
-    // Use substring to extract first 4 characters (year) - more reliable than regex
+    // Extract year and month from date string using parseDateString for reliable parsing
     const dateStr = String(dateToUse);
     let estimateYear;
     let estimateMonth = null;
     
-    // Try to extract year first
-    if (dateStr.length >= 4) {
-      estimateYear = parseInt(dateStr.substring(0, 4));
-    } else {
-      // Fallback: use getYearFromDateString (which has its own Date fallback)
-      estimateYear = getYearFromDateString(dateStr);
-    }
+    // Use parseDateString which handles multiple date formats (YYYY-MM-DD, MM/DD/YYYY, etc.)
+    const parsedDate = parseDateString(dateStr);
     
-    // If year extraction failed, try Date parsing as last resort
-    if (isNaN(estimateYear) || estimateYear < 2000 || estimateYear > 2100) {
-      try {
-        const dateObj = new Date(dateStr);
-        if (!isNaN(dateObj.getTime())) {
-          estimateYear = dateObj.getFullYear();
-          estimateMonth = dateObj.getMonth() + 1; // getMonth() returns 0-11
-        }
-      } catch (e) {
-        // Ignore parsing errors
-      }
+    if (parsedDate) {
+      estimateYear = parsedDate.year;
+      estimateMonth = parsedDate.month;
     } else {
-      // Year is valid, now try to extract month
-      // Try common date formats: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
-      if (dateStr.length >= 7) {
-        // Try to extract month from positions 5-6 (for YYYY-MM-DD format)
-        const monthStr = dateStr.substring(5, 7);
-        const monthNum = parseInt(monthStr);
-        if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
-          estimateMonth = monthNum;
+      // Fallback: try simple substring extraction for year
+      if (dateStr.length >= 4) {
+        estimateYear = parseInt(dateStr.substring(0, 4));
+        // Try to extract month from YYYY-MM-DD format
+        if (dateStr.length >= 7) {
+          const monthStr = dateStr.substring(5, 7);
+          const monthNum = parseInt(monthStr);
+          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            estimateMonth = monthNum;
+          }
         }
+      } else {
+        // Last resort: use getYearFromDateString
+        estimateYear = getYearFromDateString(dateStr);
       }
       
-      // If month extraction from substring failed, try Date parsing
-      if (estimateMonth === null) {
+      // If still no month, try Date parsing as last resort
+      if (estimateMonth === null && estimateYear) {
         try {
           const dateObj = new Date(dateStr);
           if (!isNaN(dateObj.getTime()) && dateObj.getFullYear() === estimateYear) {
