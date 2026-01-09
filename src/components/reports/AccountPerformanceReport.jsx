@@ -128,7 +128,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                   
                   return (
                     <React.Fragment key={account.accountId}>
-                      <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
                         <td className="p-3">
                           {accountEstimates.length > 0 && (
                             <button
@@ -206,7 +206,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                         return dateB - dateA;
                                       })
                                       .map((estimate) => (
-                                        <tr key={estimate.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800">
+                                        <tr key={estimate.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800/70">
                                           <td className="p-2 text-slate-600 dark:text-slate-300">{estimate.estimate_number || 'N/A'}</td>
                                           <td className="p-2 text-slate-600 dark:text-slate-300">{estimate.project_name || 'N/A'}</td>
                                           <td className="p-2 text-slate-600 dark:text-slate-300">
