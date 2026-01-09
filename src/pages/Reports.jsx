@@ -864,9 +864,9 @@ export default function Reports() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
+                <p className="text-sm text-slate-600 font-medium">Won Value</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                  {formatCurrency(stats.totalValue)}
+                  {formatCurrency(stats.wonValue)}
                 </p>
               </div>
               <BarChart3 className="w-10 h-10 text-amber-500 opacity-80" />
