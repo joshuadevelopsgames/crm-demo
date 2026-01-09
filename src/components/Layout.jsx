@@ -96,7 +96,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Contacts', path: 'Contacts', icon: Users, permission: 'view_all_contacts' },
     { name: 'Tasks', path: 'Tasks', icon: CheckSquare, permission: null }, // Always visible for now
     { name: 'Sequences', path: 'Sequences', icon: GitBranch, permission: null }, // Always visible for now
-    { name: 'My Tickets', path: 'MyTickets', icon: Ticket, permission: null }, // Always visible for all users
   ];
 
   const adminNavigation = [

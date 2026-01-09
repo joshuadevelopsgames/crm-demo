@@ -8,7 +8,8 @@ import {
   LogOut, 
   ChevronDown,
   Phone,
-  Mail
+  Mail,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SimpleDropdown, SimpleDropdownItem } from '@/components/ui/simple-dropdown';
@@ -195,6 +196,15 @@ export default function ProfileDropdown() {
           >
             <FileText className="w-4 h-4" />
             Reports
+          </SimpleDropdownItem>
+          <SimpleDropdownItem
+            onClick={() => {
+              navigate(createPageUrl('MyTickets'));
+            }}
+            className="flex items-center gap-2 px-4 py-2"
+          >
+            <Ticket className="w-4 h-4" />
+            My Tickets
           </SimpleDropdownItem>
           <div className="border-t border-slate-200 my-1" />
           <SimpleDropdownItem
