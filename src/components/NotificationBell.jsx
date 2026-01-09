@@ -1187,10 +1187,10 @@ export default function NotificationBell() {
             top: `calc(4rem + env(safe-area-inset-top, 0px) + 0.5rem)`,
             paddingLeft: `max(1rem, env(safe-area-inset-left, 0px) + 1rem)`,
             paddingRight: `max(1rem, env(safe-area-inset-right, 0px) + 1rem)`,
-            zIndex: 100 // Higher than announcement banner (55) to ensure it appears on top
+            zIndex: 99999 // Very high z-index to ensure it's always on top of everything, including announcement banner
           } : {
             top: '100%',
-            zIndex: 100 // Higher than announcement banner (55) to ensure it appears on top
+            zIndex: 99999 // Very high z-index to ensure it's always on top of everything, including announcement banner
           }}>
             <Card className="max-h-[600px] overflow-y-auto shadow-xl w-full max-w-sm">
             <CardContent className="p-0">
