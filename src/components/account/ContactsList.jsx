@@ -92,6 +92,8 @@ export default function ContactsList({ contacts, accountId, accountName }) {
             <p className="text-slate-600 dark:text-slate-400">No contacts available for this account</p>
           </CardContent>
         </Card>
+
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Contact</DialogTitle>
