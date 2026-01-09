@@ -114,6 +114,20 @@ export default async function handler(req, res) {
           });
         }
 
+        // Get reporter profile information if reporter_id exists and is not 'anonymous'
+        let reporterProfile = null;
+        if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, full_name')
+            .eq('id', ticket.reporter_id)
+            .single();
+          
+          if (profile) {
+            reporterProfile = profile;
+          }
+        }
+
         // Get comments
         const { data: comments, error: commentsError } = await supabase
           .from('ticket_comments')
@@ -134,6 +148,7 @@ export default async function handler(req, res) {
           success: true,
           ticket: {
             ...ticket,
+            reporter_profile: reporterProfile,
             comments: visibleComments
           }
         });
@@ -176,9 +191,32 @@ export default async function handler(req, res) {
         });
       }
 
+      // Get reporter profiles for all tickets
+      const ticketsWithProfiles = await Promise.all(
+        (tickets || []).map(async (ticket) => {
+          let reporterProfile = null;
+          if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, email, full_name')
+              .eq('id', ticket.reporter_id)
+              .single();
+            
+            if (profile) {
+              reporterProfile = profile;
+            }
+          }
+          
+          return {
+            ...ticket,
+            reporter_profile: reporterProfile
+          };
+        })
+      );
+
       return res.status(200).json({
         success: true,
-        tickets: tickets || []
+        tickets: ticketsWithProfiles
       });
     }
 

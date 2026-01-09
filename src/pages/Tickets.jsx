@@ -122,7 +122,9 @@ export default function Tickets() {
         ticket.ticket_number?.toLowerCase().includes(query) ||
         ticket.title?.toLowerCase().includes(query) ||
         ticket.description?.toLowerCase().includes(query) ||
-        ticket.reporter_email?.toLowerCase().includes(query)
+        ticket.reporter_email?.toLowerCase().includes(query) ||
+        ticket.reporter_profile?.full_name?.toLowerCase().includes(query) ||
+        ticket.reporter_profile?.email?.toLowerCase().includes(query)
       );
     }
 
@@ -324,8 +326,11 @@ export default function Tickets() {
                       </p>
                       <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {ticket.reporter_email || 'No email'}
+                          <User className="h-3 w-3" />
+                          {ticket.reporter_profile 
+                            ? (ticket.reporter_profile.full_name || ticket.reporter_profile.email || 'Unknown User')
+                            : (ticket.reporter_email || 'Anonymous')
+                          }
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />

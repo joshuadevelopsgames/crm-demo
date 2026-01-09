@@ -489,9 +489,38 @@ export default function TicketDetail() {
 
               <div>
                 <Label className="text-sm font-semibold mb-1 block">Reporter</Label>
-                <div className="pt-2 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  {ticketData.reporter_email || 'No email provided'}
+                <div className="pt-2 text-sm text-slate-600 dark:text-slate-400">
+                  {ticketData.reporter_profile ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        <span className="font-medium">
+                          {ticketData.reporter_profile.full_name || 'Unknown User'}
+                        </span>
+                      </div>
+                      {ticketData.reporter_profile.email && (
+                        <div className="flex items-center gap-2 ml-5">
+                          <Mail className="h-3 w-3" />
+                          <span>{ticketData.reporter_profile.email}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : ticketData.reporter_email ? (
+                    <div className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      <span>{ticketData.reporter_email}</span>
+                    </div>
+                  ) : ticketData.reporter_id && ticketData.reporter_id !== 'anonymous' ? (
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      <span>User ID: {ticketData.reporter_id.substring(0, 8)}...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      <span>Anonymous</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
