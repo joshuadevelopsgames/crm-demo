@@ -1183,7 +1183,7 @@ export default function NotificationBell() {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className={isNativeApp ? "fixed left-0 right-0 z-50 flex justify-center px-4" : "absolute right-0 z-50 mt-2"} style={isNativeApp ? {
+          <div className={isNativeApp ? "fixed left-0 right-0 z-[60] flex justify-center px-4" : "absolute right-0 z-[60] mt-2"} style={isNativeApp ? {
             top: `calc(4rem + env(safe-area-inset-top, 0px) + 0.5rem)`,
             paddingLeft: `max(1rem, env(safe-area-inset-left, 0px) + 1rem)`,
             paddingRight: `max(1rem, env(safe-area-inset-right, 0px) + 1rem)`
