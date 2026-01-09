@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug, Ticket, MessageSquare, ArchiveBox } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug, Ticket, MessageSquare, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -1114,7 +1114,7 @@ export default function NotificationBell() {
       case 'ticket_assigned':
         return <Ticket className="w-6 h-6 text-green-600" />;
       case 'ticket_archived':
-        return <ArchiveBox className="w-6 h-6 text-amber-600" />;
+        return <Archive className="w-6 h-6 text-amber-600" />;
       default:
         return <Mail className="w-6 h-6 text-slate-600" />;
     }

@@ -26,7 +26,7 @@ import {
   Save,
   Loader2,
   ChevronRight,
-  ArchiveBox,
+  Archive,
   Trash2
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
@@ -684,7 +684,7 @@ export default function TicketDetail() {
                         </>
                       ) : (
                         <>
-                          <ArchiveBox className="h-4 w-4 mr-2" />
+                          <Archive className="h-4 w-4 mr-2" />
                           Archive Ticket
                         </>
                       )}
