@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
 import toast from 'react-hot-toast';
 
 export default function BugReportButton() {
@@ -34,6 +36,7 @@ export default function BugReportButton() {
   const [description, setDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [priority, setPriority] = useState('medium');
+  const [reportType, setReportType] = useState('bug'); // 'bug' or 'feature_request'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const consoleLogRef = useRef([]);
   const originalConsoleRef = useRef(null);
@@ -421,6 +424,7 @@ export default function BugReportButton() {
         description: truncatedDescription,
         userEmail: userEmail || 'Not provided',
         priority,
+        reportType, // 'bug' or 'feature_request'
         selectedElement,
         consoleLogs: currentLogs,
         userInfo,
@@ -542,23 +546,23 @@ export default function BugReportButton() {
         );
       } else {
         // No ticket created - check for warnings
-        if (result.warnings && result.warnings.length > 0) {
-          console.warn('⚠️ Bug report sent with warnings:', result.warnings);
-          
-          // Show detailed error message if email failed
-          if (!result.emailSent && result.emailError) {
-            console.error('❌ Email error:', result.emailError);
-            toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
-          } else if (!result.emailSent) {
-            toast('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { 
-              duration: 8000,
-              icon: '⚠️'
-            });
-          } else {
-            toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
-          }
+      if (result.warnings && result.warnings.length > 0) {
+        console.warn('⚠️ Bug report sent with warnings:', result.warnings);
+        
+        // Show detailed error message if email failed
+        if (!result.emailSent && result.emailError) {
+          console.error('❌ Email error:', result.emailError);
+          toast.error(`Bug report notification created, but email failed: ${result.emailError}`, { duration: 8000 });
+        } else if (!result.emailSent) {
+          toast('✓ Bug report notification created, but email could not be sent. Check Vercel logs for details.', { 
+            duration: 8000,
+            icon: '⚠️'
+          });
         } else {
-          toast.success('✓ Bug report sent successfully!');
+          toast.success('✓ Bug report sent! (Some issues occurred - check console for details)', { duration: 5000 });
+        }
+      } else {
+      toast.success('✓ Bug report sent successfully!');
         }
       }
       
@@ -639,13 +643,34 @@ export default function BugReportButton() {
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Report a Bug</DialogTitle>
+            <DialogTitle>
+              {reportType === 'bug' ? 'Report a Bug' : 'Request a Feature'}
+            </DialogTitle>
             <DialogDescription>
-              Help us improve by reporting any issues you encounter. Click on the problematic feature to highlight it.
+              {reportType === 'bug' 
+                ? 'Help us improve by reporting any issues you encounter. Click on the problematic feature to highlight it.'
+                : 'Share your ideas for new features or improvements. Describe what you\'d like to see added or changed.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Report Type */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Type <span className="text-red-500">*</span>
+              </label>
+              <RadioGroup value={reportType} onValueChange={setReportType} className="flex gap-6">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bug" id="bug" />
+                  <Label htmlFor="bug" className="cursor-pointer">Bug Report</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="feature_request" id="feature_request" />
+                  <Label htmlFor="feature_request" className="cursor-pointer">Feature Request</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* User Email (Optional) */}
             <div>
               <label htmlFor="user-email" className="text-sm font-medium mb-2 block">
@@ -661,21 +686,22 @@ export default function BugReportButton() {
               />
             </div>
 
-            {/* Element Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Problematic Feature
-              </label>
-              {!selectedElement && (
-                <Button
-                  onClick={handleStartInspection}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <MousePointer2 className="h-4 w-4 mr-2" />
-                  Click to Select Feature
-                </Button>
-              )}
+            {/* Element Selection (only for bug reports) */}
+            {reportType === 'bug' && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Select Problematic Feature
+                </label>
+                {!selectedElement && (
+                  <Button
+                    onClick={handleStartInspection}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <MousePointer2 className="h-4 w-4 mr-2" />
+                    Click to Select Feature
+                  </Button>
+                )}
 
               {selectedElement && (
                 <Card className="mt-2">
@@ -704,8 +730,9 @@ export default function BugReportButton() {
                     </div>
                   </CardContent>
                 </Card>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Priority */}
             <div>
@@ -728,12 +755,14 @@ export default function BugReportButton() {
             {/* Description */}
             <div>
               <label htmlFor="description" className="text-sm font-medium mb-2 block">
-                Describe the Problem <span className="text-red-500">*</span>
+                {reportType === 'bug' ? 'Describe the Problem' : 'Describe the Feature'} <span className="text-red-500">*</span>
               </label>
               <Textarea
                 id="description"
                 name="description"
-                placeholder="What went wrong? What were you trying to do? What did you expect to happen?"
+                placeholder={reportType === 'bug' 
+                  ? "What went wrong? What were you trying to do? What did you expect to happen?"
+                  : "What feature would you like to see? How would it help you? What problem would it solve?"}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
@@ -768,7 +797,7 @@ export default function BugReportButton() {
                   Sending...
                 </>
               ) : (
-                'Send Report'
+                reportType === 'bug' ? 'Send Report' : 'Submit Request'
               )}
             </Button>
           </DialogFooter>

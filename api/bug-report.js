@@ -148,7 +148,9 @@ export default async function handler(req, res) {
         }
 
         // Create ticket title from description (first line or first 100 chars)
-        const title = bugReport.description.split('\n')[0].substring(0, 100) || 'Bug Report';
+        const reportType = bugReport.reportType || 'bug';
+        const reportTypeLabel = reportType === 'feature_request' ? 'Feature Request' : 'Bug Report';
+        const title = bugReport.description.split('\n')[0].substring(0, 100) || reportTypeLabel;
 
         // Create ticket
         const { data: ticket, error: ticketErr } = await supabase
@@ -160,6 +162,7 @@ export default async function handler(req, res) {
             reporter_id: userId || 'anonymous', // Use 'anonymous' if no user ID
             reporter_email: bugReport.userEmail || null,
             bug_report_data: {
+              reportType: bugReport.reportType || 'bug',
               selectedElement: bugReport.selectedElement,
               consoleLogs: consoleLogs,
               userInfo: bugReport.userInfo
@@ -190,11 +193,16 @@ export default async function handler(req, res) {
       ticketError = error.message;
     }
     
+    // Determine report type
+    const reportType = bugReport.reportType || 'bug';
+    const reportTypeLabel = reportType === 'feature_request' ? 'Feature Request' : 'Bug Report';
+    const reportTypeEmoji = reportType === 'feature_request' ? '💡' : '🐛';
+    
     // Include ticket number in subject if available
     const ticketPrefix = ticketNumber ? `[#${ticketNumber}] ` : '';
-    const emailSubject = `${priorityEmojiIcon} ${ticketPrefix}Bug Report [${priorityLabel.toUpperCase()}] - ${new Date().toLocaleString()}`;
+    const emailSubject = `${priorityEmojiIcon} ${ticketPrefix}${reportTypeLabel} [${priorityLabel.toUpperCase()}] - ${new Date().toLocaleString()}`;
     
-    let emailBody = `# Bug Report${ticketNumber ? ` - ${ticketNumber}` : ''}
+    let emailBody = `# ${reportTypeLabel}${ticketNumber ? ` - ${ticketNumber}` : ''}
 
 ## Priority
 **${priorityEmojiIcon} ${priorityLabel.toUpperCase()}**
