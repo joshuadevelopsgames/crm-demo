@@ -25,7 +25,9 @@ import {
   MessageSquare,
   Save,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  ArchiveBox,
+  Trash2
 } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { getSupabaseAuth } from '@/services/supabaseClient';
@@ -189,6 +191,74 @@ export default function TicketDetail() {
     }
   });
 
+  // Archive ticket mutation
+  const archiveTicketMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/tickets?id=${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          archived_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to archive ticket');
+      }
+
+      const result = await response.json();
+      return result.ticket;
+    },
+    onSuccess: () => {
+      toast.success('Ticket archived successfully');
+      refetchTicket();
+      queryClient.invalidateQueries(['tickets']);
+      queryClient.invalidateQueries(['my-tickets']);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to archive ticket');
+    }
+  });
+
+  // Delete ticket mutation
+  const deleteTicketMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/tickets?id=${ticketId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to delete ticket');
+      }
+
+      return true;
+    },
+    onSuccess: () => {
+      toast.success('Ticket deleted successfully');
+      navigate(isAdmin ? createPageUrl('Tickets') : createPageUrl('MyTickets'));
+      queryClient.invalidateQueries(['tickets']);
+      queryClient.invalidateQueries(['my-tickets']);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete ticket');
+    }
+  });
+
   const handleSaveChanges = () => {
     const updates = {};
     if (status !== ticketData.status) {
@@ -200,6 +270,18 @@ export default function TicketDetail() {
     
     if (Object.keys(updates).length > 0) {
       updateTicketMutation.mutate(updates);
+    }
+  };
+
+  const handleArchive = () => {
+    if (window.confirm('Are you sure you want to archive this ticket? The reporter will be notified if the ticket is not completed.')) {
+      archiveTicketMutation.mutate();
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to permanently delete this archived ticket? This action cannot be undone.')) {
+      deleteTicketMutation.mutate();
     }
   };
 
@@ -265,6 +347,7 @@ export default function TicketDetail() {
 
   const isResolved = ticketData.status === 'resolved' || ticketData.status === 'closed';
   const canEdit = isAdmin || ticketData.reporter_id === user?.id;
+  const isArchived = !!ticketData.archived_at;
 
   return (
     <div className="space-y-6">
@@ -558,6 +641,56 @@ export default function TicketDetail() {
                     </>
                   )}
                 </Button>
+              )}
+
+              {/* Archive/Delete Actions (Admin only) */}
+              {isAdmin && (
+                <div className="pt-4 border-t space-y-2">
+                  {isArchived ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                        Archived on {format(new Date(ticketData.archived_at), 'MMM d, yyyy h:mm a')}
+                      </div>
+                      <Button
+                        onClick={handleDelete}
+                        disabled={deleteTicketMutation.isPending}
+                        variant="destructive"
+                        className="w-full"
+                      >
+                        {deleteTicketMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Ticket
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleArchive}
+                      disabled={archiveTicketMutation.isPending}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {archiveTicketMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Archiving...
+                        </>
+                      ) : (
+                        <>
+                          <ArchiveBox className="h-4 w-4 mr-2" />
+                          Archive Ticket
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -246,6 +246,7 @@ export default function MyTickets() {
             <div className="space-y-3">
               {ticketsByStatus[activeTab].map((ticket) => {
                 const isResolved = ticket.status === 'resolved' || ticket.status === 'closed';
+                const isArchived = !!ticket.archived_at;
                 
                 return (
                   <Card
@@ -254,6 +255,8 @@ export default function MyTickets() {
                       hover:shadow-lg transition-all cursor-pointer
                       ${isResolved 
                         ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                        : isArchived
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 opacity-75'
                         : 'bg-white dark:bg-surface-1'
                       }
                     `}
@@ -269,6 +272,9 @@ export default function MyTickets() {
                             </span>
                             {getStatusBadge(ticket.status)}
                             {getPriorityBadge(ticket.priority)}
+                            {isArchived && (
+                              <Badge className="bg-amber-500 text-white">Archived</Badge>
+                            )}
                           </div>
                           <h3 className={`font-semibold text-lg mb-1 ${
                             isResolved 

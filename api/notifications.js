@@ -264,7 +264,7 @@ export default async function handler(req, res) {
         supabase.from('notifications')
           .select('*')
           .eq('user_id', user_id)
-          .in('type', ['ticket_comment', 'ticket_status_change', 'ticket_assigned'])
+          .in('type', ['ticket_comment', 'ticket_status_change', 'ticket_assigned', 'ticket_archived'])
           .order('created_at', { ascending: false }),
         
         // Duplicate estimates (unresolved)

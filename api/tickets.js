@@ -306,6 +306,7 @@ export default async function handler(req, res) {
       const statusChanged = updates.status && updates.status !== existingTicket.status;
       const assigneeChanged = updates.assignee_id !== undefined && updates.assignee_id !== existingTicket.assignee_id;
       const previousAssigneeId = existingTicket.assignee_id;
+      const archivedChanged = updates.archived_at !== undefined && !existingTicket.archived_at && updates.archived_at;
 
       // Update ticket
       const { data: ticket, error } = await supabase
@@ -345,6 +346,20 @@ export default async function handler(req, res) {
           console.error('❌ Error creating assignment notification:', err);
         });
       }
+      
+      if (archivedChanged) {
+        // Only notify if ticket was archived before completion
+        const wasCompleted = existingTicket.status === 'resolved' || existingTicket.status === 'closed';
+        if (!wasCompleted) {
+          sendTicketArchivedNotification(ticket, supabase).catch(err => {
+            console.error('❌ Error sending archive notification:', err);
+          });
+          
+          createTicketArchivedNotification(ticket, supabase).catch(err => {
+            console.error('❌ Error creating archive notification:', err);
+          });
+        }
+      }
 
       return res.status(200).json({
         success: true,
@@ -352,7 +367,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // DELETE /api/tickets/:id - Delete ticket (admin only)
+    // DELETE /api/tickets/:id - Delete ticket (admin only, archived tickets only)
     if (req.method === 'DELETE') {
       const { id } = req.query;
 
@@ -367,6 +382,27 @@ export default async function handler(req, res) {
         return res.status(403).json({ 
           success: false, 
           error: 'Admin access required' 
+        });
+      }
+
+      // Check if ticket exists and is archived
+      const { data: ticket, error: fetchError } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !ticket) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Ticket not found' 
+        });
+      }
+
+      if (!ticket.archived_at) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Only archived tickets can be deleted. Please archive the ticket first.' 
         });
       }
 
@@ -478,6 +514,94 @@ async function createTicketAssignmentNotification(ticket, previousAssigneeId, su
     console.log(`✅ Created assignment notification for ticket #${ticket.ticket_number}`);
   } catch (error) {
     console.error('❌ Error in createTicketAssignmentNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create in-app notification when ticket is archived
+ */
+async function createTicketArchivedNotification(ticket, supabase) {
+  try {
+    // Only notify reporter
+    if (!ticket.reporter_id || ticket.reporter_id === 'anonymous') {
+      console.log('📧 No reporter ID for archive notification');
+      return;
+    }
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: ticket.reporter_id,
+        type: 'ticket_archived',
+        title: `Ticket #${ticket.ticket_number} has been archived`,
+        message: `Your ticket "${ticket.title}" has been archived before completion`,
+        related_ticket_id: ticket.id,
+        is_read: false,
+        scheduled_for: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('❌ Error creating archive notification:', error);
+      throw error;
+    }
+    
+    console.log(`✅ Created archive notification for ticket #${ticket.ticket_number}`);
+  } catch (error) {
+    console.error('❌ Error in createTicketArchivedNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email notification when ticket is archived before completion
+ */
+async function sendTicketArchivedNotification(ticket, supabase) {
+  try {
+    // Get reporter email
+    let reporterEmail = null;
+    let reporterName = null;
+
+    if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+      const { data: reporterProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', ticket.reporter_id)
+        .single();
+      
+      if (reporterProfile) {
+        reporterEmail = reporterProfile.email;
+        reporterName = reporterProfile.full_name || reporterProfile.email;
+      }
+    } else if (ticket.reporter_email) {
+      reporterEmail = ticket.reporter_email;
+      reporterName = ticket.reporter_email;
+    }
+
+    if (!reporterEmail) {
+      console.log('📧 No reporter email found for archive notification');
+      return;
+    }
+
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    
+    const subject = `Ticket #${ticket.ticket_number} has been archived`;
+    const body = `Your ticket has been archived:
+
+**Ticket:** #${ticket.ticket_number} - ${ticket.title}
+
+**Status:** ${ticket.status || 'Open'}
+
+This ticket has been archived before completion. If you believe this was done in error, please contact support.
+
+---
+
+View this ticket: ${ticketUrl}`;
+
+    await sendEmail(reporterEmail, subject, body, 'LECRM Tickets');
+    console.log(`✅ Archive notification sent to ${reporterEmail}`);
+  } catch (error) {
+    console.error('❌ Error in sendTicketArchivedNotification:', error);
     throw error;
   }
 }
