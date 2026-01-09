@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug, Ticket, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -93,7 +93,7 @@ export default function NotificationBell() {
         
         if (!result.success) {
           console.error('❌ Failed to fetch notifications:', result.error);
-          return { atRiskAccounts: [], neglectedAccounts: [], taskNotifications: [], systemNotifications: [], duplicateEstimates: [] };
+          return { atRiskAccounts: [], neglectedAccounts: [], taskNotifications: [], systemNotifications: [], ticketNotifications: [], duplicateEstimates: [] };
         }
         
         // Convert at-risk and neglected accounts to notification format
@@ -139,6 +139,7 @@ export default function NotificationBell() {
           ...neglectedNotifications,
           ...result.data.taskNotifications || [],
           ...result.data.systemNotifications || [],
+          ...result.data.ticketNotifications || [],
           ...duplicateNotifications
         ];
         
@@ -852,6 +853,9 @@ export default function NotificationBell() {
       'task_assigned': 4,
       'task_due_today': 5,
       'task_reminder': 6,
+      'ticket_comment': 3.5,      // Ticket comments - high priority
+      'ticket_status_change': 3.5, // Ticket status changes - high priority
+      'ticket_assigned': 3.5,     // Ticket assignments - high priority
       'end_of_year_analysis': 7
     };
     return priorities[type] || 99; // Unknown types go last
@@ -1072,6 +1076,9 @@ export default function NotificationBell() {
       const currentYear = getCurrentYearForCalculation();
       navigate(`${createPageUrl('Reports')}?year=${currentYear}`);
       setIsOpen(false);
+    } else if (notification.related_ticket_id) {
+      navigate(createPageUrl(`TicketDetail?id=${notification.related_ticket_id}`));
+      setIsOpen(false);
     } else if (notification.related_task_id) {
       navigate('/tasks');
       setIsOpen(false);
@@ -1099,6 +1106,12 @@ export default function NotificationBell() {
         return <Clock className="w-6 h-6 text-amber-600" />;
       case 'bug_report':
         return <Bug className="w-6 h-6 text-red-600" />;
+      case 'ticket_comment':
+        return <MessageSquare className="w-6 h-6 text-blue-600" />;
+      case 'ticket_status_change':
+        return <Ticket className="w-6 h-6 text-purple-600" />;
+      case 'ticket_assigned':
+        return <Ticket className="w-6 h-6 text-green-600" />;
       default:
         return <Mail className="w-6 h-6 text-slate-600" />;
     }
@@ -1120,6 +1133,12 @@ export default function NotificationBell() {
         return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
       case 'bug_report':
         return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
+      case 'ticket_comment':
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+      case 'ticket_status_change':
+        return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+      case 'ticket_assigned':
+        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
       default:
         return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }
@@ -1201,6 +1220,9 @@ export default function NotificationBell() {
                                      group.type === 'task_reminder' ? 'Task Reminders' :
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :
                                      group.type === 'task_due_today' ? 'Tasks Due Today' :
+                                     group.type === 'ticket_comment' ? 'Ticket Comments' :
+                                     group.type === 'ticket_status_change' ? 'Ticket Updates' :
+                                     group.type === 'ticket_assigned' ? 'Ticket Assignments' :
                                      group.type === 'end_of_year_analysis' ? 'Reports' :
                                      group.type === 'bug_report' ? 'Bug Reports' :
                                      'Notifications';

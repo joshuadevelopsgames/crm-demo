@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmail } from './utils/emailService.js';
 
 function getSupabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -114,6 +115,13 @@ export default async function handler(req, res) {
       // Only admins can create internal comments
       const internal = isAdmin ? (is_internal || false) : false;
 
+      // Get commenter's profile info
+      const { data: commenterProfile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', userId)
+        .single();
+
       const { data: newComment, error } = await supabase
         .from('ticket_comments')
         .insert({
@@ -130,6 +138,21 @@ export default async function handler(req, res) {
         return res.status(500).json({ 
           success: false, 
           error: 'Failed to create comment' 
+        });
+      }
+
+      // Send email notifications (non-blocking)
+      // Don't notify for internal comments
+      if (!internal) {
+        sendTicketCommentNotification(ticket, comment, commenterProfile, supabase).catch(err => {
+          console.error('❌ Error sending comment notification email:', err);
+          // Don't fail the request if email fails
+        });
+        
+        // Create in-app notifications (non-blocking)
+        createTicketCommentNotifications(ticket, comment, commenterProfile, userId, supabase).catch(err => {
+          console.error('❌ Error creating comment notifications:', err);
+          // Don't fail the request if notification creation fails
         });
       }
 
@@ -208,6 +231,142 @@ export default async function handler(req, res) {
       success: false, 
       error: error.message || 'Internal server error' 
     });
+  }
+}
+
+/**
+ * Create in-app notifications when a comment is added to a ticket
+ */
+async function createTicketCommentNotifications(ticket, comment, commenterProfile, commenterId, supabase) {
+  try {
+    const commenterName = commenterProfile?.full_name || commenterProfile?.email || 'Someone';
+    const commentPreview = comment.length > 100 ? comment.substring(0, 100) + '...' : comment;
+    
+    // Get reporter and assignee user IDs
+    const usersToNotify = [];
+    
+    // Add reporter if different from commenter
+    if (ticket.reporter_id && ticket.reporter_id !== 'anonymous' && ticket.reporter_id !== commenterId) {
+      usersToNotify.push(ticket.reporter_id);
+    }
+    
+    // Add assignee if different from commenter and reporter
+    if (ticket.assignee_id && 
+        ticket.assignee_id !== commenterId && 
+        ticket.assignee_id !== ticket.reporter_id &&
+        !usersToNotify.includes(ticket.assignee_id)) {
+      usersToNotify.push(ticket.assignee_id);
+    }
+    
+    if (usersToNotify.length === 0) {
+      console.log('📧 No users to notify for comment (commenter is the only participant)');
+      return;
+    }
+    
+    // Create notifications for each user
+    const notifications = usersToNotify.map(userId => ({
+      user_id: userId,
+      type: 'ticket_comment',
+      title: `New comment on ticket #${ticket.ticket_number}`,
+      message: `${commenterName} commented: "${commentPreview}"`,
+      related_ticket_id: ticket.id,
+      is_read: false,
+      scheduled_for: new Date().toISOString()
+    }));
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert(notifications);
+    
+    if (error) {
+      console.error('❌ Error creating comment notifications:', error);
+      throw error;
+    }
+    
+    console.log(`✅ Created ${notifications.length} comment notification(s)`);
+  } catch (error) {
+    console.error('❌ Error in createTicketCommentNotifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email notification when a comment is added to a ticket
+ */
+async function sendTicketCommentNotification(ticket, comment, commenterProfile, supabase) {
+  try {
+    // Get reporter and assignee emails
+    const emailsToNotify = [];
+    const namesToNotify = [];
+
+    // Get reporter email
+    if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+      const { data: reporterProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', ticket.reporter_id)
+        .single();
+      
+      if (reporterProfile?.email && reporterProfile.email !== commenterProfile?.email) {
+        emailsToNotify.push(reporterProfile.email);
+        namesToNotify.push(reporterProfile.full_name || reporterProfile.email);
+      }
+    } else if (ticket.reporter_email && ticket.reporter_email !== commenterProfile?.email) {
+      emailsToNotify.push(ticket.reporter_email);
+      namesToNotify.push(ticket.reporter_email);
+    }
+
+    // Get assignee email (if different from reporter and commenter)
+    if (ticket.assignee_id && ticket.assignee_id !== ticket.reporter_id) {
+      const { data: assigneeProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', ticket.assignee_id)
+        .single();
+      
+      if (assigneeProfile?.email && 
+          assigneeProfile.email !== commenterProfile?.email && 
+          !emailsToNotify.includes(assigneeProfile.email)) {
+        emailsToNotify.push(assigneeProfile.email);
+        namesToNotify.push(assigneeProfile.full_name || assigneeProfile.email);
+      }
+    }
+
+    if (emailsToNotify.length === 0) {
+      console.log('📧 No emails to notify for comment (commenter is the only participant)');
+      return;
+    }
+
+    const commenterName = commenterProfile?.full_name || commenterProfile?.email || 'Someone';
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    
+    const subject = `New comment on ticket #${ticket.ticket_number}`;
+    const body = `A new comment has been added to your ticket:
+
+**Ticket:** #${ticket.ticket_number} - ${ticket.title}
+
+**Comment by:** ${commenterName}
+
+**Comment:**
+${comment}
+
+---
+
+View and respond to this ticket: ${ticketUrl}`;
+
+    // Send to all recipients
+    for (const email of emailsToNotify) {
+      try {
+        await sendEmail(email, subject, body, 'LECRM Tickets');
+        console.log(`✅ Comment notification sent to ${email}`);
+      } catch (emailError) {
+        console.error(`❌ Failed to send comment notification to ${email}:`, emailError.message);
+        // Continue with other emails even if one fails
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error in sendTicketCommentNotification:', error);
+    throw error;
   }
 }
 

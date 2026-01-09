@@ -231,6 +231,7 @@ export default async function handler(req, res) {
         neglectedCache,
         taskNotifs,
         systemNotifs,
+        ticketNotifs,
         duplicates
       ] = await Promise.all([
         // At-risk accounts (cached)
@@ -259,6 +260,13 @@ export default async function handler(req, res) {
           .in('type', ['bug_report', 'end_of_year_analysis', 'duplicate_at_risk_estimates'])
           .order('created_at', { ascending: false }),
         
+        // Ticket notifications (individual rows)
+        supabase.from('notifications')
+          .select('*')
+          .eq('user_id', user_id)
+          .in('type', ['ticket_comment', 'ticket_status_change', 'ticket_assigned'])
+          .order('created_at', { ascending: false }),
+        
         // Duplicate estimates (unresolved)
         supabase.from('duplicate_at_risk_estimates')
           .select('*')
@@ -281,6 +289,10 @@ export default async function handler(req, res) {
       const atRiskStale = !atRiskCache.data || new Date(atRiskCache.data.expires_at) < new Date();
       const neglectedStale = !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date();
       
+      // Extract ticket notifications from the results
+      // The ticket notifications query is at index 4 (after atRiskCache, neglectedCache, taskNotifs, systemNotifs)
+      const ticketNotifs = results[4];
+      
       return res.json({
         success: true,
         data: {
@@ -288,6 +300,7 @@ export default async function handler(req, res) {
           neglectedAccounts,
           taskNotifications: taskNotifs.data || [],
           systemNotifications: systemNotifs.data || [],
+          ticketNotifications: ticketNotifs.data || [],
           duplicateEstimates: duplicates.data || []
         },
         cache: {

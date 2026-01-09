@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { sendEmail } from './utils/emailService.js';
 
 // Initialize Supabase client
 function getSupabase() {
@@ -301,6 +302,11 @@ export default async function handler(req, res) {
         delete updates.priority;
       }
 
+      // Track what changed for notifications
+      const statusChanged = updates.status && updates.status !== existingTicket.status;
+      const assigneeChanged = updates.assignee_id !== undefined && updates.assignee_id !== existingTicket.assignee_id;
+      const previousAssigneeId = existingTicket.assignee_id;
+
       // Update ticket
       const { data: ticket, error } = await supabase
         .from('tickets')
@@ -314,6 +320,29 @@ export default async function handler(req, res) {
         return res.status(500).json({ 
           success: false, 
           error: 'Failed to update ticket' 
+        });
+      }
+
+      // Send email notifications (non-blocking)
+      if (statusChanged) {
+        sendTicketStatusChangeNotification(ticket, existingTicket.status, supabase).catch(err => {
+          console.error('❌ Error sending status change notification:', err);
+        });
+        
+        // Create in-app notification
+        createTicketStatusChangeNotification(ticket, existingTicket.status, supabase).catch(err => {
+          console.error('❌ Error creating status change notification:', err);
+        });
+      }
+      
+      if (assigneeChanged) {
+        sendTicketAssignmentNotification(ticket, previousAssigneeId, supabase).catch(err => {
+          console.error('❌ Error sending assignment notification:', err);
+        });
+        
+        // Create in-app notification
+        createTicketAssignmentNotification(ticket, previousAssigneeId, supabase).catch(err => {
+          console.error('❌ Error creating assignment notification:', err);
         });
       }
 
@@ -371,6 +400,193 @@ export default async function handler(req, res) {
       success: false, 
       error: error.message || 'Internal server error' 
     });
+  }
+}
+
+/**
+ * Create in-app notification when ticket status changes
+ */
+async function createTicketStatusChangeNotification(ticket, previousStatus, supabase) {
+  try {
+    // Only notify reporter
+    if (!ticket.reporter_id || ticket.reporter_id === 'anonymous') {
+      console.log('📧 No reporter ID for status change notification');
+      return;
+    }
+    
+    const statusLabels = {
+      'open': 'Open',
+      'in_progress': 'In Progress',
+      'resolved': 'Resolved',
+      'closed': 'Closed'
+    };
+    
+    const previousStatusLabel = statusLabels[previousStatus] || previousStatus;
+    const newStatusLabel = statusLabels[ticket.status] || ticket.status;
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: ticket.reporter_id,
+        type: 'ticket_status_change',
+        title: `Ticket #${ticket.ticket_number} status updated`,
+        message: `Status changed from ${previousStatusLabel} to ${newStatusLabel}`,
+        related_ticket_id: ticket.id,
+        is_read: false,
+        scheduled_for: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('❌ Error creating status change notification:', error);
+      throw error;
+    }
+    
+    console.log(`✅ Created status change notification for ticket #${ticket.ticket_number}`);
+  } catch (error) {
+    console.error('❌ Error in createTicketStatusChangeNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create in-app notification when ticket is assigned
+ */
+async function createTicketAssignmentNotification(ticket, previousAssigneeId, supabase) {
+  try {
+    // Only notify if there's a new assignee
+    if (!ticket.assignee_id || ticket.assignee_id === previousAssigneeId) {
+      return;
+    }
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: ticket.assignee_id,
+        type: 'ticket_assigned',
+        title: `Assigned to ticket #${ticket.ticket_number}`,
+        message: `You've been assigned to: ${ticket.title}`,
+        related_ticket_id: ticket.id,
+        is_read: false,
+        scheduled_for: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('❌ Error creating assignment notification:', error);
+      throw error;
+    }
+    
+    console.log(`✅ Created assignment notification for ticket #${ticket.ticket_number}`);
+  } catch (error) {
+    console.error('❌ Error in createTicketAssignmentNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email notification when ticket status changes
+ */
+async function sendTicketStatusChangeNotification(ticket, previousStatus, supabase) {
+  try {
+    // Get reporter email
+    let reporterEmail = null;
+    let reporterName = null;
+
+    if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+      const { data: reporterProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', ticket.reporter_id)
+        .single();
+      
+      if (reporterProfile) {
+        reporterEmail = reporterProfile.email;
+        reporterName = reporterProfile.full_name || reporterProfile.email;
+      }
+    } else if (ticket.reporter_email) {
+      reporterEmail = ticket.reporter_email;
+      reporterName = ticket.reporter_email;
+    }
+
+    if (!reporterEmail) {
+      console.log('📧 No reporter email found for status change notification');
+      return;
+    }
+
+    const statusLabels = {
+      'open': 'Open',
+      'in_progress': 'In Progress',
+      'resolved': 'Resolved',
+      'closed': 'Closed'
+    };
+
+    const previousStatusLabel = statusLabels[previousStatus] || previousStatus;
+    const newStatusLabel = statusLabels[ticket.status] || ticket.status;
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    
+    const subject = `Ticket #${ticket.ticket_number} status updated: ${newStatusLabel}`;
+    const body = `Your ticket status has been updated:
+
+**Ticket:** #${ticket.ticket_number} - ${ticket.title}
+
+**Status changed from:** ${previousStatusLabel}
+**Status changed to:** ${newStatusLabel}
+
+---
+
+View this ticket: ${ticketUrl}`;
+
+    await sendEmail(reporterEmail, subject, body, 'LECRM Tickets');
+    console.log(`✅ Status change notification sent to ${reporterEmail}`);
+  } catch (error) {
+    console.error('❌ Error in sendTicketStatusChangeNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email notification when ticket is assigned
+ */
+async function sendTicketAssignmentNotification(ticket, previousAssigneeId, supabase) {
+  try {
+    // Only notify if there's a new assignee
+    if (!ticket.assignee_id || ticket.assignee_id === previousAssigneeId) {
+      return;
+    }
+
+    // Get assignee email
+    const { data: assigneeProfile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', ticket.assignee_id)
+      .single();
+
+    if (!assigneeProfile?.email) {
+      console.log('📧 No assignee email found for assignment notification');
+      return;
+    }
+
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    
+    const subject = `You've been assigned to ticket #${ticket.ticket_number}`;
+    const body = `You have been assigned to a ticket:
+
+**Ticket:** #${ticket.ticket_number} - ${ticket.title}
+
+**Priority:** ${ticket.priority || 'Medium'}
+**Status:** ${ticket.status || 'Open'}
+
+**Description:**
+${ticket.description?.substring(0, 500) || 'No description provided'}${ticket.description?.length > 500 ? '...' : ''}
+
+---
+
+View and respond to this ticket: ${ticketUrl}`;
+
+    await sendEmail(assigneeProfile.email, subject, body, 'LECRM Tickets');
+    console.log(`✅ Assignment notification sent to ${assigneeProfile.email}`);
+  } catch (error) {
+    console.error('❌ Error in sendTicketAssignmentNotification:', error);
+    throw error;
   }
 }
 
