@@ -164,7 +164,10 @@ export default async function handler(req, res) {
       // Apply filters based on user role
       if (!isAdmin) {
         // Non-admins can only see their own tickets
+        // Use .or() with proper syntax: field.eq.value,field2.eq.value2
+        // Note: Supabase .or() requires the format: "field.eq.value,field2.eq.value2"
         query = query.or(`reporter_id.eq.${userId},assignee_id.eq.${userId}`);
+        console.log(`🔍 Filtering tickets for user ${userId} (non-admin)`);
       } else {
         // Admins can filter by reporter or assignee
         if (reporter_id) {
@@ -186,11 +189,15 @@ export default async function handler(req, res) {
 
       if (error) {
         console.error('❌ Error fetching tickets:', error);
+        console.error('❌ Query details:', { userId, isAdmin, error: error.message, errorCode: error.code });
         return res.status(500).json({ 
           success: false, 
-          error: 'Failed to fetch tickets' 
+          error: 'Failed to fetch tickets',
+          details: error.message 
         });
       }
+
+      console.log(`✅ Fetched ${tickets?.length || 0} tickets for user ${userId} (admin: ${isAdmin})`);
 
       // Get reporter profiles for all tickets
       const ticketsWithProfiles = await Promise.all(

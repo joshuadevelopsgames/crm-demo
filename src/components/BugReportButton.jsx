@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import { getSupabaseAuth } from '@/services/supabaseClient';
 import { Bug, X, MousePointer2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -462,12 +463,25 @@ export default function BugReportButton() {
         });
       }
 
+      // Get auth token for API call
+      const supabase = getSupabaseAuth();
+      let authToken = null;
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        authToken = session?.access_token || null;
+      }
+
       // Send to API
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
       const response = await fetch('/api/bug-report', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(bugReport),
       });
 
