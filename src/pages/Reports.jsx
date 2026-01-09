@@ -63,6 +63,7 @@ export default function Reports() {
   const yearFromUrl = searchParams.get('year');
   const { availableYears: contextAvailableYears } = useYearSelector();
   const [selectedYear, setSelectedYear] = useState(yearFromUrl ? parseInt(yearFromUrl) : currentYear);
+  const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 1-12
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
 
@@ -493,22 +494,24 @@ export default function Reports() {
     return Array.from(depts).sort();
   }, [estimates]);
 
-  // Get ALL estimates for selected year (from database) - includes won, lost, and pending
+  // Get ALL estimates for selected year (and month if specified) - includes won, lost, and pending
   // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
   const yearEstimates = useMemo(() => {
     if (!Array.isArray(estimates)) return [];
     // Per Estimates spec R2: Uses standardized date priority (contract_end → contract_start → estimate_date → created_date)
     // soldOnly=false to include all estimates (won, lost, pending) for total count
-    return filterEstimatesByYear(estimates, selectedYear, true, false);
-  }, [estimates, selectedYear]);
+    const month = selectedMonth === 'all' ? null : parseInt(selectedMonth);
+    return filterEstimatesByYear(estimates, selectedYear, true, false, month);
+  }, [estimates, selectedYear, selectedMonth]);
 
-  // Get WON estimates for selected year (matches LMN's "Estimates Sold" count)
+  // Get WON estimates for selected year (and month if specified) (matches LMN's "Estimates Sold" count)
   // This should match LMN's count exactly (validated: 1,057 for 2025)
   const yearWonEstimates = useMemo(() => {
     if (!Array.isArray(estimates)) return [];
     // Per Estimates spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
     // Per Estimates spec R10: exclude_stats field is ignored - never used in any system logic
-    const won = filterEstimatesByYear(estimates, selectedYear, true, true);
+    const month = selectedMonth === 'all' ? null : parseInt(selectedMonth);
+    const won = filterEstimatesByYear(estimates, selectedYear, true, true, month);
     // Debug: Log the count and analyze missing estimates for 2025
     if (selectedYear === 2025) {
       console.log(`[Reports] Year 2025 Won Estimates (soldOnly=true): ${won.length} (expected: 1,057)`);
@@ -786,6 +789,29 @@ export default function Reports() {
                       {year}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Month</Label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  <SelectItem value="1">January</SelectItem>
+                  <SelectItem value="2">February</SelectItem>
+                  <SelectItem value="3">March</SelectItem>
+                  <SelectItem value="4">April</SelectItem>
+                  <SelectItem value="5">May</SelectItem>
+                  <SelectItem value="6">June</SelectItem>
+                  <SelectItem value="7">July</SelectItem>
+                  <SelectItem value="8">August</SelectItem>
+                  <SelectItem value="9">September</SelectItem>
+                  <SelectItem value="10">October</SelectItem>
+                  <SelectItem value="11">November</SelectItem>
+                  <SelectItem value="12">December</SelectItem>
                 </SelectContent>
               </Select>
             </div>

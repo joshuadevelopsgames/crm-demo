@@ -272,7 +272,7 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
 }
 
 /**
- * Filter estimates by year for Salesperson Performance reports
+ * Filter estimates by year (and optionally month) for Salesperson Performance reports
  * 
  * Per spec R2: Year determination uses priority order: contract_end → contract_start → estimate_date → created_date
  * Per spec R10: exclude_stats field is ignored - never used in any system logic
@@ -282,9 +282,10 @@ export function isWonStatus(statusOrEstimate, pipelineStatus = null) {
  * @param {number} year - Year to filter by (must be between 2000-2100)
  * @param {boolean} salesPerformanceMode - If true, uses same date priority. If false, uses same date priority (standardized per spec)
  * @param {boolean} soldOnly - If true, only include estimates with won statuses (for "Estimates Sold" calculations)
+ * @param {number|null} month - Optional month to filter by (1-12, or null/undefined for all months)
  * @returns {Array} Filtered estimates
  */
-export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false, soldOnly = false) {
+export function filterEstimatesByYear(estimates, year, salesPerformanceMode = false, soldOnly = false, month = null) {
   // First, remove duplicates by lmn_estimate_id (keep first occurrence)
   const uniqueEstimates = [];
   const seenLmnIds = new Set();
@@ -335,18 +336,65 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     
     if (!dateToUse) return false;
     
-    // Extract year from date string to avoid timezone conversion issues
+    // Extract year and month from date string to avoid timezone conversion issues
     // Use substring to extract first 4 characters (year) - more reliable than regex
     const dateStr = String(dateToUse);
     let estimateYear;
+    let estimateMonth = null;
+    
     if (dateStr.length >= 4) {
       estimateYear = parseInt(dateStr.substring(0, 4));
+      // Try to extract month: formats like YYYY-MM-DD or YYYY/MM/DD
+      // Check for common separators and extract month (positions 5-6 for YYYY-MM-DD)
+      if (dateStr.length >= 7) {
+        const monthStr = dateStr.substring(5, 7);
+        // Check if it's a valid month (01-12)
+        const monthNum = parseInt(monthStr);
+        if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+          estimateMonth = monthNum;
+        } else {
+          // Try alternative format (YYYY/MM/DD) or other separators
+          const altMonthStr = dateStr.substring(5, 7);
+          const altMonthNum = parseInt(altMonthStr);
+          if (!isNaN(altMonthNum) && altMonthNum >= 1 && altMonthNum <= 12) {
+            estimateMonth = altMonthNum;
+          } else {
+            // Fallback: try Date parsing for month
+            try {
+              const dateObj = new Date(dateStr);
+              if (!isNaN(dateObj.getTime())) {
+                estimateMonth = dateObj.getMonth() + 1; // getMonth() returns 0-11
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+      }
     } else {
       // Fallback: use getYearFromDateString (which has its own Date fallback)
       estimateYear = getYearFromDateString(dateStr);
       if (estimateYear === null) {
         // Last resort: Date parsing if getYearFromDateString fails
-        estimateYear = new Date(dateStr).getFullYear();
+        try {
+          const dateObj = new Date(dateStr);
+          if (!isNaN(dateObj.getTime())) {
+            estimateYear = dateObj.getFullYear();
+            estimateMonth = dateObj.getMonth() + 1; // getMonth() returns 0-11
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      } else {
+        // Try to get month from date string
+        try {
+          const dateObj = new Date(dateStr);
+          if (!isNaN(dateObj.getTime())) {
+            estimateMonth = dateObj.getMonth() + 1;
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
       }
     }
     
@@ -357,6 +405,11 @@ export function filterEstimatesByYear(estimates, year, salesPerformanceMode = fa
     
     // Year filter: Only include estimates for the specified year
     if (estimateYear !== year) return false;
+    
+    // Month filter: If month is specified, only include estimates for that month
+    if (month !== null && month !== undefined && estimateMonth !== null) {
+      if (estimateMonth !== month) return false;
+    }
     
     // If soldOnly is true, only include estimates with won statuses
     if (soldOnly) {
