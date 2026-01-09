@@ -239,14 +239,24 @@ export default function BugReportButton() {
       
       if (element && element !== document.body && element !== document.documentElement) {
         // Get element information
+        // Handle SVGAnimatedString for className (SVG elements)
+        const classNameValue = element.className;
+        const classNameString = typeof classNameValue === 'string' 
+          ? classNameValue 
+          : (classNameValue?.baseVal || classNameValue?.animVal || String(classNameValue) || '');
+        
         const elementInfo = {
           tagName: element.tagName,
-          id: element.id,
-          className: element.className,
+          id: element.id || '',
+          className: classNameString,
           textContent: element.textContent?.substring(0, 200) || '',
           innerHTML: element.innerHTML?.substring(0, 500) || '',
           attributes: Array.from(element.attributes || []).reduce((acc, attr) => {
-            acc[attr.name] = attr.value;
+            // Handle SVGAnimatedString for attribute values
+            const attrValue = attr.value;
+            acc[attr.name] = typeof attrValue === 'string' 
+              ? attrValue 
+              : (attrValue?.baseVal || attrValue?.animVal || String(attrValue) || '');
             return acc;
           }, {}),
           computedStyles: window.getComputedStyle(element) ? {
