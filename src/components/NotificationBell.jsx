@@ -853,6 +853,7 @@ export default function NotificationBell() {
       'task_assigned': 4,
       'task_due_today': 5,
       'task_reminder': 6,
+      'ticket_opened': 2.5,       // New tickets - high priority (same as bug reports)
       'ticket_comment': 3.5,      // Ticket comments - high priority
       'ticket_status_change': 3.5, // Ticket status changes - high priority
       'ticket_assigned': 3.5,     // Ticket assignments - high priority
@@ -1115,6 +1116,8 @@ export default function NotificationBell() {
         return <Ticket className="w-6 h-6 text-green-600" />;
       case 'ticket_archived':
         return <Archive className="w-6 h-6 text-amber-600" />;
+      case 'ticket_opened':
+        return <Ticket className="w-6 h-6 text-blue-600" />;
       default:
         return <Mail className="w-6 h-6 text-slate-600" />;
     }
@@ -1144,6 +1147,8 @@ export default function NotificationBell() {
         return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
       case 'ticket_archived':
         return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
+      case 'ticket_opened':
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
       default:
         return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }

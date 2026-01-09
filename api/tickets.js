@@ -284,6 +284,11 @@ export default async function handler(req, res) {
         });
       }
 
+      // Notify system admins about new ticket (non-blocking)
+      createTicketOpenedNotification(ticket, supabase).catch(err => {
+        console.error('❌ Error creating ticket opened notification:', err);
+      });
+
       return res.status(201).json({
         success: true,
         ticket
@@ -548,6 +553,70 @@ async function createTicketAssignmentNotification(ticket, previousAssigneeId, su
     console.log(`✅ Created assignment notification for ticket #${ticket.ticket_number}`);
   } catch (error) {
     console.error('❌ Error in createTicketAssignmentNotification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create in-app notification for system admins when a ticket is opened
+ */
+async function createTicketOpenedNotification(ticket, supabase) {
+  try {
+    // Get all system admins
+    const { data: systemAdmins, error: adminError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('role', 'system_admin');
+
+    if (adminError) {
+      console.error('❌ Error fetching system admins:', adminError);
+      throw adminError;
+    }
+
+    if (!systemAdmins || systemAdmins.length === 0) {
+      console.log('📧 No system admins found to notify');
+      return;
+    }
+
+    // Get reporter name for notification
+    let reporterName = 'Anonymous';
+    if (ticket.reporter_id && ticket.reporter_id !== 'anonymous') {
+      const { data: reporterProfile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', ticket.reporter_id)
+        .single();
+      
+      if (reporterProfile) {
+        reporterName = reporterProfile.full_name || reporterProfile.email || 'Unknown';
+      }
+    } else if (ticket.reporter_email) {
+      reporterName = ticket.reporter_email;
+    }
+
+    // Create notifications for all system admins
+    const notifications = systemAdmins.map(admin => ({
+      user_id: admin.id,
+      type: 'ticket_opened',
+      title: `New ticket #${ticket.ticket_number}`,
+      message: `${reporterName} opened: "${ticket.title}"`,
+      related_ticket_id: ticket.id,
+      is_read: false,
+      scheduled_for: new Date().toISOString()
+    }));
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert(notifications);
+
+    if (error) {
+      console.error('❌ Error creating ticket opened notifications:', error);
+      throw error;
+    }
+
+    console.log(`✅ Created ${notifications.length} ticket opened notification(s) for system admins`);
+  } catch (error) {
+    console.error('❌ Error in createTicketOpenedNotification:', error);
     throw error;
   }
 }
