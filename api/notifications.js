@@ -289,10 +289,6 @@ export default async function handler(req, res) {
       const atRiskStale = !atRiskCache.data || new Date(atRiskCache.data.expires_at) < new Date();
       const neglectedStale = !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date();
       
-      // Extract ticket notifications from the results
-      // The ticket notifications query is at index 4 (after atRiskCache, neglectedCache, taskNotifs, systemNotifs)
-      const ticketNotifs = results[4];
-      
       return res.json({
         success: true,
         data: {
