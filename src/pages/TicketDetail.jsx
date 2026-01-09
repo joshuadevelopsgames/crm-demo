@@ -462,12 +462,12 @@ export default function TicketDetail() {
               {isAdmin && (
                 <div>
                   <Label className="text-sm font-semibold mb-1 block">Assignee</Label>
-                  <Select value={assigneeId || ''} onValueChange={setAssigneeId}>
+                  <Select value={assigneeId || 'unassigned'} onValueChange={(value) => setAssigneeId(value === 'unassigned' ? '' : value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users.map(user => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name || user.email}
@@ -511,7 +511,7 @@ export default function TicketDetail() {
                 </div>
               )}
 
-              {isAdmin && (status !== ticketData.status || assigneeId !== (ticketData.assignee_id || '')) && (
+              {isAdmin && (status !== ticketData.status || (assigneeId || '') !== (ticketData.assignee_id || '')) && (
                 <Button
                   onClick={handleSaveChanges}
                   disabled={updateTicketMutation.isPending}
