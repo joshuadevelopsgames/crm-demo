@@ -39,9 +39,9 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
   
   const getStatusBadge = (status) => {
     const variants = {
-      'won': { className: 'bg-emerald-100 text-emerald-800', label: 'Won' },
-      'lost': { className: 'bg-red-100 text-red-800', label: 'Lost' },
-      'pending': { className: 'bg-amber-100 text-amber-800', label: 'Pending' }
+      'won': { className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200', label: 'Won' },
+      'lost': { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', label: 'Lost' },
+      'pending': { className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200', label: 'Pending' }
     };
     const variant = variants[status] || variants['pending'];
     return <Badge variant="secondary" className={variant.className}>{variant.label}</Badge>;
@@ -54,7 +54,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-slate-600 font-medium">Total Accounts</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Total Accounts</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{accountStats.length}</p>
             </div>
           </CardContent>
@@ -63,7 +63,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-slate-600 font-medium">Avg Win Rate</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Avg Win Rate</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
                 {accountStats.length > 0 
                   ? (accountStats.reduce((sum, acc) => sum + acc.winRate, 0) / accountStats.length).toFixed(1)
@@ -76,7 +76,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-slate-600 font-medium">Total Revenue</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Total Revenue</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                 {formatCurrency(accountStats.reduce((sum, acc) => sum + acc.totalValue, 0))}
               </p>
@@ -87,7 +87,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm text-slate-600 font-medium">Won Revenue</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Won Revenue</p>
               <p className="text-2xl font-bold text-emerald-600 mt-2">
                 {formatCurrency(accountStats.reduce((sum, acc) => sum + acc.wonValue, 0))}
               </p>
@@ -128,7 +128,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                   
                   return (
                     <React.Fragment key={account.accountId}>
-                      <tr className="border-b border-slate-100 hover:bg-slate-50">
+                      <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="p-3">
                           {accountEstimates.length > 0 && (
                             <button
@@ -144,24 +144,26 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                           )}
                         </td>
                         <td className="p-3 text-slate-900 dark:text-white font-medium">{account.accountName}</td>
-                        <td className="p-3 text-right text-slate-600">{account.total}</td>
-                        <td className="p-3 text-right text-emerald-600 font-medium">{account.won}</td>
-                        <td className="p-3 text-right text-red-600 font-medium">{account.lost}</td>
+                        <td className="p-3 text-right text-slate-600 dark:text-slate-300">{account.total}</td>
+                        <td className="p-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{account.won}</td>
+                        <td className="p-3 text-right text-red-600 dark:text-red-400 font-medium">{account.lost}</td>
                         <td className="p-3 text-right">
                           <Badge 
                             variant="secondary" 
-                            className={account.winRate >= 50 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}
+                            className={account.winRate >= 50 
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' 
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
                           >
                             {account.winRate}%
                           </Badge>
                         </td>
-                        <td className="p-3 text-right text-slate-600">
+                        <td className="p-3 text-right text-slate-600 dark:text-slate-300">
                           {formatCurrency(account.totalValue)}
                         </td>
-                        <td className="p-3 text-right text-emerald-600 font-medium">
+                        <td className="p-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
                           {formatCurrency(account.wonValue)}
                         </td>
-                        <td className="p-3 text-right text-slate-600">{account.estimatesVsWonRatio}%</td>
+                        <td className="p-3 text-right text-slate-600 dark:text-slate-300">{account.estimatesVsWonRatio}%</td>
                         <td className="p-3 text-center">
                           <Button
                             variant="ghost"
@@ -177,7 +179,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                       {/* Expanded Estimates List */}
                       {isExpanded && accountEstimates.length > 0 && (
                         <tr>
-                          <td colSpan="13" className="p-0 bg-slate-50">
+                          <td colSpan="13" className="p-0 bg-slate-50 dark:bg-slate-900/50">
                             <div className="p-4">
                               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
                                 Estimates for {account.accountName}
@@ -185,14 +187,14 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                               <div className="overflow-x-auto">
                                 <table className="w-full text-xs">
                                   <thead>
-                                    <tr className="border-b border-slate-200">
-                                      <th className="text-left p-2 font-semibold text-slate-700">Estimate #</th>
-                                      <th className="text-left p-2 font-semibold text-slate-700">Project</th>
-                                      <th className="text-left p-2 font-semibold text-slate-700">Date</th>
-                                      <th className="text-left p-2 font-semibold text-slate-700">Close Date</th>
-                                      <th className="text-right p-2 font-semibold text-slate-700">Value</th>
-                                      <th className="text-center p-2 font-semibold text-slate-700">Status</th>
-                                      <th className="text-left p-2 font-semibold text-slate-700">Division</th>
+                                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Estimate #</th>
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Project</th>
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Date</th>
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Close Date</th>
+                                      <th className="text-right p-2 font-semibold text-slate-700 dark:text-slate-300">Value</th>
+                                      <th className="text-center p-2 font-semibold text-slate-700 dark:text-slate-300">Status</th>
+                                      <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300">Division</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -205,14 +207,14 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                       })
                                       .map((estimate) => (
                                         <tr key={estimate.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800">
-                                          <td className="p-2 text-slate-600">{estimate.estimate_number || 'N/A'}</td>
-                                          <td className="p-2 text-slate-600">{estimate.project_name || 'N/A'}</td>
-                                          <td className="p-2 text-slate-600">
+                                          <td className="p-2 text-slate-600 dark:text-slate-300">{estimate.estimate_number || 'N/A'}</td>
+                                          <td className="p-2 text-slate-600 dark:text-slate-300">{estimate.project_name || 'N/A'}</td>
+                                          <td className="p-2 text-slate-600 dark:text-slate-300">
                                             {estimate.estimate_date 
                                               ? formatDateString(estimate.estimate_date, 'MMM d, yyyy')
                                               : 'N/A'}
                                           </td>
-                                          <td className="p-2 text-slate-600">
+                                          <td className="p-2 text-slate-600 dark:text-slate-300">
                                             {/* Per Estimates spec R2: Display contract_end (Priority 1) if available */}
                                             {estimate.contract_end 
                                               ? formatDateString(estimate.contract_end, 'MMM d, yyyy')
@@ -220,13 +222,13 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                                 ? formatDateString(estimate.contract_start, 'MMM d, yyyy')
                                                 : 'N/A')}
                                           </td>
-                                          <td className="p-2 text-right text-slate-600">
+                                          <td className="p-2 text-right text-slate-600 dark:text-slate-300">
                                             {formatCurrency(parseFloat(estimate.total_price_with_tax) || 0)}
                                           </td>
                                           <td className="p-2 text-center">
                                             {getStatusBadge(estimate.status)}
                                           </td>
-                                          <td className="p-2 text-slate-600">{estimate.division || 'N/A'}</td>
+                                          <td className="p-2 text-slate-600 dark:text-slate-300">{estimate.division || 'N/A'}</td>
                                         </tr>
                                       ))}
                                   </tbody>
@@ -241,7 +243,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                 })}
                 {accountStats.length === 0 && (
                   <tr>
-                    <td colSpan="13" className="p-8 text-center text-slate-500">
+                    <td colSpan="13" className="p-8 text-center text-slate-500 dark:text-slate-400">
                       No account data available for {selectedYear}
                     </td>
                   </tr>
