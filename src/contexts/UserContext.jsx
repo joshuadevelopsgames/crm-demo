@@ -10,7 +10,6 @@ export function UserProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const supabase = getSupabaseAuth();
-
   const queryClient = useQueryClient();
 
   // Get current user session
@@ -26,13 +25,9 @@ export function UserProvider({ children }) {
     staleTime: 0, // Always consider stale to ensure fresh data
   });
 
-  // Fetch user profile when session changes
-  useEffect(() => {
-    fetchProfileForSession(session);
-  }, [session, fetchProfileForSession]);
-
-  // Fetch profile function (extracted for reuse)
+  // Fetch profile function (extracted for reuse) - MUST be defined before useEffects that use it
   const fetchProfileForSession = React.useCallback(async (sessionToUse) => {
+    const currentSupabase = getSupabaseAuth();
     if (!sessionToUse?.user) {
       setUser(null);
       setProfile(null);
@@ -43,10 +38,10 @@ export function UserProvider({ children }) {
     setUser(sessionToUse.user);
 
     // Fetch profile from profiles table
-    if (supabase) {
+    if (currentSupabase) {
       console.log('📋 Fetching profile for user:', sessionToUse.user.id, sessionToUse.user.email);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await currentSupabase
           .from('profiles')
           .select('*')
           .eq('id', sessionToUse.user.id)
@@ -85,7 +80,7 @@ export function UserProvider({ children }) {
             // Get avatar from Google OAuth metadata (avatar_url or picture)
             const avatarUrl = sessionToUse.user.user_metadata?.avatar_url || sessionToUse.user.user_metadata?.picture || null;
             
-            const { data: newProfile, error: insertError } = await supabase
+            const { data: newProfile, error: insertError } = await currentSupabase
               .from('profiles')
               .insert({
                 id: sessionToUse.user.id,
@@ -131,12 +126,12 @@ export function UserProvider({ children }) {
         const defaultRole = sessionToUse.user.email === 'jrsschroeder@gmail.com' ? 'system_admin' : 'user';
         
         // Try to create profile in database
-        if (supabase) {
+        if (currentSupabase) {
           try {
             // Get avatar from Google OAuth metadata (avatar_url or picture)
             const avatarUrl = sessionToUse.user.user_metadata?.avatar_url || sessionToUse.user.user_metadata?.picture || null;
             
-            const { data: newProfile, error: insertError } = await supabase
+            const { data: newProfile, error: insertError } = await currentSupabase
               .from('profiles')
               .insert({
                 id: sessionToUse.user.id,
@@ -177,7 +172,7 @@ export function UserProvider({ children }) {
     }
 
     setIsLoading(false);
-  }, [supabase]);
+  }, []); // No dependencies - we get supabase fresh each time
 
   // Fetch user profile when session changes
   useEffect(() => {
