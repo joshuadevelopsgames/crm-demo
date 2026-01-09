@@ -1183,12 +1183,14 @@ export default function NotificationBell() {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className={isNativeApp ? "fixed left-0 right-0 z-[60] flex justify-center px-4" : "absolute right-0 z-[60] mt-2"} style={isNativeApp ? {
+          <div className={isNativeApp ? "fixed left-0 right-0 flex justify-center px-4" : "absolute right-0 mt-2"} style={isNativeApp ? {
             top: `calc(4rem + env(safe-area-inset-top, 0px) + 0.5rem)`,
             paddingLeft: `max(1rem, env(safe-area-inset-left, 0px) + 1rem)`,
-            paddingRight: `max(1rem, env(safe-area-inset-right, 0px) + 1rem)`
+            paddingRight: `max(1rem, env(safe-area-inset-right, 0px) + 1rem)`,
+            zIndex: 100 // Higher than announcement banner (55) to ensure it appears on top
           } : {
-            top: '100%'
+            top: '100%',
+            zIndex: 100 // Higher than announcement banner (55) to ensure it appears on top
           }}>
             <Card className="max-h-[600px] overflow-y-auto shadow-xl w-full max-w-sm">
             <CardContent className="p-0">
