@@ -227,6 +227,42 @@ export default function TicketDetail() {
     }
   });
 
+  // Unarchive ticket mutation
+  const unarchiveTicketMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/tickets?id=${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          archived_at: null
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to unarchive ticket');
+      }
+
+      const result = await response.json();
+      return result.ticket;
+    },
+    onSuccess: () => {
+      toast.success('Ticket unarchived successfully');
+      refetchTicket();
+      queryClient.invalidateQueries(['tickets']);
+      queryClient.invalidateQueries(['my-tickets']);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to unarchive ticket');
+    }
+  });
+
   // Delete ticket mutation
   const deleteTicketMutation = useMutation({
     mutationFn: async () => {
@@ -276,6 +312,12 @@ export default function TicketDetail() {
   const handleArchive = () => {
     if (window.confirm('Are you sure you want to archive this ticket? The reporter will be notified if the ticket is not completed.')) {
       archiveTicketMutation.mutate();
+    }
+  };
+
+  const handleUnarchive = () => {
+    if (window.confirm('Are you sure you want to unarchive this ticket?')) {
+      unarchiveTicketMutation.mutate();
     }
   };
 
@@ -651,6 +693,24 @@ export default function TicketDetail() {
                       <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                         Archived on {format(new Date(ticketData.archived_at), 'MMM d, yyyy h:mm a')}
                       </div>
+                      <Button
+                        onClick={handleUnarchive}
+                        disabled={unarchiveTicketMutation.isPending}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {unarchiveTicketMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Unarchiving...
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-4 w-4 mr-2" />
+                            Unarchive Ticket
+                          </>
+                        )}
+                      </Button>
                       <Button
                         onClick={handleDelete}
                         disabled={deleteTicketMutation.isPending}

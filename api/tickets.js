@@ -307,6 +307,7 @@ export default async function handler(req, res) {
       const assigneeChanged = updates.assignee_id !== undefined && updates.assignee_id !== existingTicket.assignee_id;
       const previousAssigneeId = existingTicket.assignee_id;
       const archivedChanged = updates.archived_at !== undefined && !existingTicket.archived_at && updates.archived_at;
+      const unarchivedChanged = updates.archived_at === null && existingTicket.archived_at;
 
       // Update ticket
       const { data: ticket, error } = await supabase
@@ -360,6 +361,8 @@ export default async function handler(req, res) {
           });
         }
       }
+      
+      // Note: We don't send notifications when unarchiving - it's a silent operation
 
       return res.status(200).json({
         success: true,

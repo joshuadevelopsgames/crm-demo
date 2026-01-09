@@ -117,6 +117,41 @@ export default function Tickets() {
     }
   });
 
+  // Unarchive ticket mutation
+  const unarchiveTicketMutation = useMutation({
+    mutationFn: async (ticketId) => {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const response = await fetch(`/api/tickets?id=${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          archived_at: null
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to unarchive ticket');
+      }
+
+      const result = await response.json();
+      return result.ticket;
+    },
+    onSuccess: () => {
+      toast.success('Ticket unarchived successfully');
+      refetch();
+      queryClient.invalidateQueries(['tickets']);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to unarchive ticket');
+    }
+  });
+
   // Fetch all users for assignee filter
   const { data: users = [] } = useQuery({
     queryKey: ['profiles'],
@@ -246,6 +281,13 @@ export default function Tickets() {
     e.stopPropagation(); // Prevent navigation
     if (window.confirm('Are you sure you want to archive this ticket? The reporter will be notified if the ticket is not completed.')) {
       archiveTicketMutation.mutate(ticketId);
+    }
+  };
+
+  const handleUnarchive = (ticketId, e) => {
+    e.stopPropagation(); // Prevent navigation
+    if (window.confirm('Are you sure you want to unarchive this ticket?')) {
+      unarchiveTicketMutation.mutate(ticketId);
     }
   };
 
@@ -457,7 +499,22 @@ export default function Tickets() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isArchived && (
+                      {isArchived ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleUnarchive(ticket.id, e)}
+                          disabled={unarchiveTicketMutation.isPending}
+                          className="flex-shrink-0"
+                          title="Unarchive ticket"
+                        >
+                          {unarchiveTicketMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Archive className="h-4 w-4" />
+                          )}
+                        </Button>
+                      ) : (
                         <Button
                           variant="ghost"
                           size="sm"
