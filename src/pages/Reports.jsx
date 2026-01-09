@@ -38,6 +38,7 @@ import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 import { getYearFromDateString } from '@/utils/dateFormatter';
 
 import { getCurrentYear, useYearSelector } from '@/contexts/YearSelectorContext';
+import toast from 'react-hot-toast';
 
 // Helper to get current year (respects test mode)
 function getCurrentYearForCalculation() {
@@ -673,11 +674,23 @@ export default function Reports() {
 
   // Export handlers
   const handleExportXLSX = () => {
-    exportToXLSX({ estimates: filteredYearEstimates, accounts }, selectedYear);
+    try {
+      exportToXLSX({ estimates: filteredYearEstimates, accounts }, selectedYear, selectedMonth);
+      toast.success('✓ Report exported to XLSX');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(`Failed to export: ${error.message}`);
+    }
   };
 
   const handleExportPDF = () => {
-    exportToPDF({ estimates: filteredYearEstimates, accounts }, selectedYear);
+    try {
+      exportToPDF({ estimates: filteredYearEstimates, accounts }, selectedYear, selectedMonth);
+      toast.success('✓ Report exported to PDF');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(`Failed to export: ${error.message}`);
+    }
   };
 
 
