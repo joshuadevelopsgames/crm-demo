@@ -943,10 +943,16 @@ const base44Instance = {
         throw new Error(result.error || 'Failed to update notification');
       },
       markAsRead: async (id) => {
+        // Get current user to include user_id in request (required by API for security)
+        const currentUser = await getCurrentUser();
+        if (!currentUser?.id) {
+          throw new Error('User not authenticated');
+        }
+        
         const response = await fetch('/api/data/notifications', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, is_read: true })
+          body: JSON.stringify({ id, user_id: currentUser.id, is_read: true })
         });
         const result = await response.json();
         if (result.success) return result.data;
