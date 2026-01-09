@@ -57,9 +57,6 @@ export default function Accounts() {
   const { selectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
   const navigate = useNavigate();
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:57',message:'Component entry - hooks initialized',data:{selectedYear,hasGetCurrentYear:typeof getCurrentYear==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   const { user, isLoading: userLoading } = useUser();
 
@@ -76,9 +73,6 @@ export default function Accounts() {
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
   });
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:79',message:'accounts declared via useQuery',data:{accountsLength:accounts?.length||0,isLoading,accountsDefined:typeof accounts!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -121,6 +115,7 @@ export default function Accounts() {
   }, [searchParams]);
 
   // Fetch contacts to check which accounts have contacts
+  // Made non-blocking - accounts can render without this data
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts'],
     queryFn: () => base44.entities.Contact.list(),
@@ -129,6 +124,7 @@ export default function Accounts() {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
+    // Don't block rendering - this is only for badges/indicators
   });
 
   // Create a map of account IDs that have contacts
@@ -146,7 +142,8 @@ export default function Accounts() {
   // We filter by year client-side using filterEstimatesByYear, but including selectedYear in key
   // ensures React Query treats it as a different query and component re-renders
   // Per Year Selection System spec R6, R8: All data must filter by selected year
-  const { data: allEstimates = [] } = useQuery({
+  // Made non-blocking - accounts can render without this data (revenue will show as 0 initially)
+  const { data: allEstimates = [], isLoading: estimatesLoading } = useQuery({
     queryKey: ['estimates', selectedYear], // Include selectedYear to trigger re-render when year changes
     queryFn: async () => {
       const response = await fetch('/api/data/estimates');
@@ -159,9 +156,11 @@ export default function Accounts() {
     refetchOnWindowFocus: false, // Don't refetch on focus to prevent data disappearing
     enabled: !userLoading && !!user, // Wait for user to load before fetching
     placeholderData: (previousData) => previousData, // Keep previous data while refetching
+    // Don't block rendering - revenue calculations will update when estimates load
   });
 
   // Fetch all scorecards to check which accounts have completed ICP scorecards
+  // Made non-blocking - accounts can render without this data
   const { data: allScorecards = [] } = useQuery({
     queryKey: ['scorecards'],
     queryFn: async () => {
@@ -175,6 +174,7 @@ export default function Accounts() {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
+    // Don't block rendering - this is only for scorecard indicators
   });
 
   // Create a map of account IDs that have completed scorecards
@@ -215,103 +215,61 @@ export default function Accounts() {
     enabled: !userLoading && !!user && statusFilter === 'at_risk'
   });
 
-  // Extract unique users from estimates with counts
-  // Only includes users from estimates linked to accounts (have account_id)
-  // Excludes archived estimates for user dropdown (only show active users)
-  const usersWithCounts = useMemo(() => {
-    const userMap = new Map();
-    let estimatesWithUsers = 0;
-    let estimatesWithoutUsers = 0;
+  // Helper to check if account matches filter type (checks both account_type and tags)
+  // Moved before usersWithCounts since it's used there
+  const accountMatchesType = (account, filterType) => {
+    if (filterType === 'all') return true;
     
-    // Filter out archived estimates for user dropdown (only show users from active estimates)
-    const activeEstimates = allEstimates.filter(est => !est.archived);
+    // Normalize filter type to lowercase
+    const normalizedFilter = filterType.toLowerCase();
+    const accountType = account.account_type?.toLowerCase();
     
-    activeEstimates.forEach(est => {
-      // Count accounts per user (salesperson or estimator)
-      // Only process estimates linked to accounts
-      const accountId = est.account_id;
-      if (!accountId) return;
-      
-      const hasSalesperson = est.salesperson && est.salesperson.trim();
-      const hasEstimator = est.estimator && est.estimator.trim();
-      
-      if (hasSalesperson || hasEstimator) {
-        estimatesWithUsers++;
-      } else {
-        estimatesWithoutUsers++;
+    // Map account_type values to filter types
+    // account_type "client" should match "customer" filter
+    // account_type "lead" should match "prospect" filter
+    if (normalizedFilter === 'customer') {
+      if (accountType === 'customer' || accountType === 'client') {
+        return true;
       }
-      
-      // Track salesperson
-      if (hasSalesperson) {
-        const name = est.salesperson.trim();
-        // Only add non-empty names
-        if (name) {
-          if (!userMap.has(name)) {
-            userMap.set(name, { name, accounts: new Set(), roles: new Set() });
-          }
-          userMap.get(name).accounts.add(accountId);
-          userMap.get(name).roles.add('salesperson');
-        }
+    }
+    if (normalizedFilter === 'prospect') {
+      if (accountType === 'prospect' || accountType === 'lead') {
+        return true;
       }
-      
-      // Track estimator
-      if (hasEstimator) {
-        const name = est.estimator.trim();
-        // Only add non-empty names
-        if (name) {
-          if (!userMap.has(name)) {
-            userMap.set(name, { name, accounts: new Set(), roles: new Set() });
-          }
-          userMap.get(name).accounts.add(accountId);
-          userMap.get(name).roles.add('estimator');
-        }
-      }
-    });
-    
-    // Debug logging
-    console.log('[Accounts] usersWithCounts calculation:', {
-      totalEstimates: allEstimates.length,
-      activeEstimates: activeEstimates.length,
-      estimatesWithAccountId: activeEstimates.filter(e => e.account_id).length,
-      estimatesWithUsers,
-      estimatesWithoutUsers,
-      uniqueUsersFound: userMap.size,
-      sampleEstimates: activeEstimates.slice(0, 5).map(e => ({
-        id: e.id,
-        salesperson: e.salesperson,
-        estimator: e.estimator,
-        account_id: e.account_id,
-        archived: e.archived
-      }))
-    });
-    
-    if (userMap.size === 0 && activeEstimates.length > 0) {
-      console.warn('[Accounts] No users found in estimates:', {
-        totalEstimates: allEstimates.length,
-        activeEstimates: activeEstimates.length,
-        estimatesWithUsers,
-        estimatesWithoutUsers,
-        sampleEstimates: activeEstimates.slice(0, 5).map(e => ({
-          id: e.id,
-          salesperson: e.salesperson,
-          estimator: e.estimator,
-          account_id: e.account_id
-        }))
-      });
+    }
+    // Direct match for other types
+    if (accountType === normalizedFilter) {
+      return true;
     }
     
-    // Convert to array and sort by name
-    const result = Array.from(userMap.values())
-      .map(u => ({
-        name: u.name,
-        count: u.accounts.size,
-        roles: Array.from(u.roles)
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    // Also check tags - could be array or string
+    let tags = [];
+    if (Array.isArray(account.tags)) {
+      tags = account.tags.map(t => String(t).toLowerCase().trim());
+    } else if (typeof account.tags === 'string' && account.tags) {
+      tags = account.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+    }
     
-    console.log('[Accounts] usersWithCounts result:', result);
-    return result;
-  }, [allEstimates]);
+    // Map tags to filter types
+    if (normalizedFilter === 'customer' && (tags.includes('client') || tags.includes('customer'))) {
+      return true;
+    }
+    if (normalizedFilter === 'prospect' && (tags.includes('lead') || tags.includes('prospect'))) {
+      return true;
+    }
+    if (normalizedFilter === 'partner' && tags.includes('partner')) {
+      return true;
+    }
+    if (normalizedFilter === 'vendor' && tags.includes('vendor')) {
+      return true;
+    }
+    if (normalizedFilter === 'competitor' && tags.includes('competitor')) {
+      return true;
+    }
+    
+    return false;
+  };
+
 
   // Map of account_id to user roles (for displaying role badges)
   const accountUserRoles = useMemo(() => {
@@ -398,7 +356,17 @@ export default function Accounts() {
   // Pre-calculate revenue and segments for all accounts (performance optimization)
   // This avoids recalculating the same values multiple times during filtering/enrichment
   // Moved before useEffect that uses it to avoid TDZ error
+  // Only calculate if estimates are loaded (or use cached data)
   const accountsWithRevenueAndSegment = useMemo(() => {
+    // If estimates haven't loaded yet, return accounts with default revenue/segment
+    // This allows accounts to render immediately
+    if (estimatesLoading && allEstimates.length === 0) {
+      return accounts.map(account => ({
+        account,
+        revenue: account.revenue_by_year?.[selectedYear] || 0,
+        segment: account.segment_by_year?.[selectedYear] || 'C'
+      }));
+    }
     return accounts.map(account => {
       const accountEstimates = estimatesByAccountId[account.id] || [];
       const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
@@ -414,14 +382,11 @@ export default function Accounts() {
         segment
       };
     });
-  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear]);
+  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear, estimatesLoading, allEstimates.length]);
 
   // Debug: Log year selection status and verify data updates
   // Moved after estimatesByAccountId declaration to avoid TDZ error
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:395',message:'useEffect entry - checking accounts access',data:{accountsDefined:typeof accounts!=='undefined',accountsLength:accounts?.length||0,selectedYear,hasEstimatesByAccountId:typeof estimatesByAccountId!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const currentYear = getCurrentYear();
     console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
       selectedYear,
@@ -453,9 +418,6 @@ export default function Accounts() {
         }).length
       });
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:425',message:'useEffect exit - accounts accessed successfully',data:{accountsLength:accounts?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
   }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId, totalRevenueForYear]);
 
   const createAccountMutation = useMutation({
@@ -610,64 +572,73 @@ export default function Accounts() {
     });
   }, [accounts, statusFilter, atRiskAccountsData, notificationSnoozes]);
 
+  // Extract unique users from estimates with counts
+  // Only includes users from estimates linked to accounts (have account_id)
+  // Calculate user counts based on accounts that match current filters (excluding user filter)
+  // This ensures the count matches what users will actually see when they select a user
+  // Moved after accountsByStatus, accountsWithRevenueAndSegment, and estimatesByAccountId dependencies
+  const usersWithCounts = useMemo(() => {
+    // First, get accounts that match current filters (excluding user filter)
+    const revenueSegmentMap = new Map();
+    accountsWithRevenueAndSegment.forEach(({ account, revenue, segment }) => {
+      revenueSegmentMap.set(account.id, { revenue, segment });
+    });
+
+    const accountsMatchingFilters = accountsByStatus.filter(account => {
+      const matchesSearch = account.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = accountMatchesType(account, filterType);
+      const { segment: accountSegment } = revenueSegmentMap.get(account.id) || { segment: 'C' };
+      const matchesSegment = filterSegment === 'all' || accountSegment === filterSegment;
+      // Note: We exclude user filter here to calculate counts for all users
+      return matchesSearch && matchesType && matchesSegment;
+    });
+
+    // Now count accounts per user based on the filtered accounts
+    const userMap = new Map();
+    
+    accountsMatchingFilters.forEach(account => {
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      
+      accountEstimates.forEach(est => {
+        // Track salesperson
+        if (est.salesperson && est.salesperson.trim()) {
+          const name = est.salesperson.trim();
+          if (name) {
+            if (!userMap.has(name)) {
+              userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+            }
+            userMap.get(name).accounts.add(account.id);
+            userMap.get(name).roles.add('salesperson');
+          }
+        }
+        
+        // Track estimator
+        if (est.estimator && est.estimator.trim()) {
+          const name = est.estimator.trim();
+          if (name) {
+            if (!userMap.has(name)) {
+              userMap.set(name, { name, accounts: new Set(), roles: new Set() });
+            }
+            userMap.get(name).accounts.add(account.id);
+            userMap.get(name).roles.add('estimator');
+          }
+        }
+      });
+    });
+    
+    // Convert to array and sort by name
+    const result = Array.from(userMap.values())
+      .map(u => ({
+        name: u.name,
+        count: u.accounts.size,
+        roles: Array.from(u.roles)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    
+    return result;
+  }, [accountsByStatus, searchTerm, filterType, filterSegment, estimatesByAccountId, accountsWithRevenueAndSegment]);
+
   // Then apply other filters and sort
-  // Map tags to account types for filtering:
-  // - "client" tag matches "customer" filter
-  // - "lead" tag matches "prospect" filter
-  // - Other common mappings
-  // Helper to check if account matches filter type (checks both account_type and tags)
-  const accountMatchesType = (account, filterType) => {
-    if (filterType === 'all') return true;
-    
-    // Normalize filter type to lowercase
-    const normalizedFilter = filterType.toLowerCase();
-    const accountType = account.account_type?.toLowerCase();
-    
-    // Map account_type values to filter types
-    // account_type "client" should match "customer" filter
-    // account_type "lead" should match "prospect" filter
-    if (normalizedFilter === 'customer') {
-      if (accountType === 'customer' || accountType === 'client') {
-        return true;
-      }
-    }
-    if (normalizedFilter === 'prospect') {
-      if (accountType === 'prospect' || accountType === 'lead') {
-        return true;
-      }
-    }
-    // Direct match for other types
-    if (accountType === normalizedFilter) {
-      return true;
-    }
-    
-    // Also check tags - could be array or string
-    let tags = [];
-    if (Array.isArray(account.tags)) {
-      tags = account.tags.map(t => String(t).toLowerCase().trim());
-    } else if (typeof account.tags === 'string' && account.tags) {
-      tags = account.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-    }
-    
-    // Map tags to filter types
-    if (normalizedFilter === 'customer' && (tags.includes('client') || tags.includes('customer'))) {
-      return true;
-    }
-    if (normalizedFilter === 'prospect' && (tags.includes('lead') || tags.includes('prospect'))) {
-      return true;
-    }
-    if (normalizedFilter === 'partner' && tags.includes('partner')) {
-      return true;
-    }
-    if (normalizedFilter === 'vendor' && tags.includes('vendor')) {
-      return true;
-    }
-    if (normalizedFilter === 'competitor' && tags.includes('competitor')) {
-      return true;
-    }
-    
-    return false;
-  };
 
   // Filter and sort accounts - MUST include selectedYear in dependencies so it updates when year changes
   // Per Year Selection System spec R6, R8: All revenue/segment calculations use selected year
@@ -853,7 +824,10 @@ export default function Accounts() {
         >
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
-            <p className="text-slate-600 mt-1">{filteredAccounts.length} total accounts</p>
+            <p className="text-slate-600 mt-1">
+              {isLoading ? 'Loading accounts...' : `${filteredAccounts.length} total accounts`}
+              {estimatesLoading && !isLoading && ' (calculating revenue...)'}
+            </p>
           </div>
         </TutorialTooltip>
         <div className="flex items-center gap-3">
