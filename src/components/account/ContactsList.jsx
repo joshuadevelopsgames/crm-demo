@@ -89,15 +89,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           <CardContent className="p-12 text-center">
             <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No contacts yet</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
-            <Button onClick={() => setShowDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Contact
-            </Button>
+            <p className="text-slate-600 dark:text-slate-400">No contacts available for this account</p>
           </CardContent>
         </Card>
-
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Contact</DialogTitle>
@@ -208,10 +202,6 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                 Show Archived
               </label>
             </div>
-            <Button onClick={() => setShowDialog(true)} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Contact
-            </Button>
           </div>
         </div>
 
@@ -219,104 +209,9 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           <CardContent className="p-12 text-center">
             <Users className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-[#ffffff] mb-1">No contacts yet</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">Add contacts to start building relationships</p>
-            <Button onClick={() => setShowDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Contact
-            </Button>
+            <p className="text-slate-600 dark:text-slate-400">No contacts available for this account</p>
           </CardContent>
         </Card>
-
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Contact</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>First Name *</Label>
-                  <Input
-                    value={newContact.first_name}
-                    onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Last Name *</Label>
-                  <Input
-                    value={newContact.last_name}
-                    onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    value={newContact.email}
-                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Phone</Label>
-                  <Input
-                    value={newContact.phone}
-                    onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Title</Label>
-                  <Input
-                    value={newContact.title}
-                    onChange={(e) => setNewContact({ ...newContact, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Role</Label>
-                  <Select
-                    value={newContact.role}
-                    onValueChange={(value) => setNewContact({ ...newContact, role: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="decision_maker">Decision Maker</SelectItem>
-                      <SelectItem value="influencer">Influencer</SelectItem>
-                      <SelectItem value="champion">Champion</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label>LinkedIn URL</Label>
-                <Input
-                  value={newContact.linkedin_url}
-                  onChange={(e) => setNewContact({ ...newContact, linkedin_url: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Preferences/Notes</Label>
-                <Textarea
-                  value={newContact.preferences}
-                  onChange={(e) => setNewContact({ ...newContact, preferences: e.target.value })}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!newContact.first_name || !newContact.last_name || !newContact.email}
-              >
-                Add Contact
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </>
     );
   }
@@ -356,10 +251,6 @@ export default function ContactsList({ contacts, accountId, accountName }) {
               <List className="w-4 h-4" />
             </Button>
           </div>
-          <Button onClick={() => setShowDialog(true)} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Contact
-          </Button>
         </div>
       </div>
 

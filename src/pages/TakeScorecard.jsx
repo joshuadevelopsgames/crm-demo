@@ -9,6 +9,8 @@ import { ArrowLeft, Check, X, Download } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
@@ -175,6 +177,25 @@ export default function TakeScorecard() {
     });
   };
 
+  const handleMultiSelectChange = (questionIndex, optionValue, checked) => {
+    const currentAnswer = answers[questionIndex] || [];
+    const answerArray = Array.isArray(currentAnswer) ? currentAnswer : [];
+    const newAnswer = checked
+      ? [...answerArray, optionValue]
+      : answerArray.filter(v => v !== optionValue);
+    setAnswers({
+      ...answers,
+      [questionIndex]: newAnswer
+    });
+  };
+
+  const handleSingleSelectChange = (questionIndex, value) => {
+    setAnswers({
+      ...answers,
+      [questionIndex]: value
+    });
+  };
+
   const calculateScore = () => {
     if (!activeTemplate?.questions || activeTemplate.questions.length === 0) {
       return { total: 0, normalized: 0, responses: [], section_scores: {}, is_pass: false };
@@ -192,8 +213,24 @@ export default function TakeScorecard() {
         // Skip "Win Rate" section
         if (section === 'Win Rate') return null;
         
-        const answer = answers[index] || 0;
-        const weightedScore = answer * question.weight;
+        let answer = answers[index];
+        let weightedScore = 0;
+        
+        // Handle different answer types
+        if (question.answer_type === 'multi_select') {
+          // For multi-select, score is weight * number of selected options
+          const selectedCount = Array.isArray(answer) ? answer.length : 0;
+          answer = selectedCount; // Store count for response
+          weightedScore = selectedCount * question.weight;
+        } else if (question.answer_type === 'single_select') {
+          // For single-select, score is weight if selected (1) or 0 if not
+          answer = answer ? 1 : 0;
+          weightedScore = answer * question.weight;
+        } else {
+          // Numeric answers (yes_no, scale_1_5, scale_1_10)
+          answer = answer || 0;
+          weightedScore = answer * question.weight;
+        }
         
         return {
           question_text: question.question_text,
@@ -231,7 +268,17 @@ export default function TakeScorecard() {
       .reduce((sum, q) => {
         const maxAnswer = q.answer_type === 'yes_no' ? 1 : 
                          q.answer_type === 'scale_1_5' ? 5 : 
-                         q.answer_type === 'scale_1_10' ? 10 : 1;
+                         q.answer_type === 'scale_1_10' ? 10 :
+                         q.answer_type === 'single_select' ? 
+                           (q.options?.reduce((max, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return Math.max(max, weight);
+                           }, 1) || 1) :
+                         q.answer_type === 'multi_select' ? 
+                           (q.options?.reduce((sum, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return sum + weight;
+                           }, 0) || 1) : 1;
         return sum + (q.weight * maxAnswer);
       }, 0);
     
@@ -283,11 +330,17 @@ export default function TakeScorecard() {
   
   const isComplete = validQuestionsForCounting.every((q, index) => {
     const originalIndex = activeTemplate.questions.indexOf(q);
-    return answers[originalIndex] !== undefined;
+    if (q.answer_type === 'multi_select') {
+      return Array.isArray(answers[originalIndex]) && answers[originalIndex].length > 0;
+    }
+    return answers[originalIndex] !== undefined && answers[originalIndex] !== null && answers[originalIndex] !== '';
   });
   const answeredCount = validQuestionsForCounting.filter((q) => {
     const originalIndex = activeTemplate.questions.indexOf(q);
-    return answers[originalIndex] !== undefined;
+    if (q.answer_type === 'multi_select') {
+      return Array.isArray(answers[originalIndex]) && answers[originalIndex].length > 0;
+    }
+    return answers[originalIndex] !== undefined && answers[originalIndex] !== null && answers[originalIndex] !== '';
   }).length;
   const totalQuestions = validQuestionsForCounting.length;
   const progress = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
@@ -353,7 +406,7 @@ export default function TakeScorecard() {
     );
   }
 
-  const getAnswerOptions = (answerType) => {
+  const getAnswerOptions = (answerType, questionOptions) => {
     if (answerType === 'yes_no') {
       return [
         { value: 0, label: 'No' },
@@ -372,6 +425,21 @@ export default function TakeScorecard() {
         value: i + 1,
         label: `${i + 1}`
       }));
+    } else if (answerType === 'single_select' || answerType === 'multi_select') {
+      // Return options from question.options array, handling both string and object formats
+      return (questionOptions || []).map((opt, idx) => {
+        if (typeof opt === 'string') {
+          // Legacy format: just text
+          return { value: opt, label: opt, weight: 1 };
+        } else {
+          // New format: object with text and weight
+          return { 
+            value: opt.text || opt, 
+            label: opt.text || opt, 
+            weight: opt.weight || 1 
+          };
+        }
+      });
     }
     return [];
   };
@@ -499,10 +567,29 @@ export default function TakeScorecard() {
                 {/* Questions in this section */}
                 {questions.map((question, qIndex) => {
                   const questionIndex = question.originalIndex;
-                  const options = getAnswerOptions(question.answer_type);
-                  const isAnswered = answers[questionIndex] !== undefined;
+                  const options = getAnswerOptions(question.answer_type, question.options);
+                  const isAnswered = question.answer_type === 'multi_select' 
+                    ? Array.isArray(answers[questionIndex]) && answers[questionIndex].length > 0
+                    : answers[questionIndex] !== undefined && answers[questionIndex] !== null && answers[questionIndex] !== '';
                   const answer = answers[questionIndex];
-                  const weightedScore = isAnswered ? answer * question.weight : 0;
+                  // Calculate weighted score based on answer type
+                  let weightedScore = 0;
+                  if (question.answer_type === 'multi_select') {
+                    // Sum the weights of selected options, then multiply by question weight
+                    const selectedOptions = Array.isArray(answer) ? answer : [];
+                    const selectedWeights = selectedOptions.reduce((sum, selectedValue) => {
+                      const option = options.find(opt => opt.value === selectedValue);
+                      return sum + (option?.weight || 1);
+                    }, 0);
+                    weightedScore = selectedWeights * question.weight;
+                  } else if (question.answer_type === 'single_select') {
+                    // Use the weight of the selected option, then multiply by question weight
+                    const selectedOption = options.find(opt => opt.value === answer);
+                    const optionWeight = selectedOption?.weight || 0;
+                    weightedScore = optionWeight * question.weight;
+                  } else {
+                    weightedScore = isAnswered ? (answer || 0) * question.weight : 0;
+                  }
 
                   return (
                     <div 
@@ -540,6 +627,47 @@ export default function TakeScorecard() {
                               ))}
                             </div>
                           </RadioGroup>
+                        )}
+                        {question.answer_type === 'single_select' && (
+                          <Select
+                            value={answer || ''}
+                            onValueChange={(value) => handleSingleSelectChange(questionIndex, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select an option..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {options.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {question.answer_type === 'multi_select' && (
+                          <div className="space-y-2">
+                            {options.map((option) => {
+                              const isChecked = Array.isArray(answer) && answer.includes(option.value);
+                              return (
+                                <div key={option.value} className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`q${questionIndex}-${option.value}`}
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => 
+                                      handleMultiSelectChange(questionIndex, option.value, checked)
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={`q${questionIndex}-${option.value}`}
+                                    className="cursor-pointer text-sm font-normal"
+                                  >
+                                    {option.label}
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                         {(question.answer_type === 'scale_1_5' || question.answer_type === 'scale_1_10') && (
                           <RadioGroup

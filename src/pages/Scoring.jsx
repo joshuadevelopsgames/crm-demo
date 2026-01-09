@@ -85,7 +85,18 @@ export default function Scoring() {
       // Calculate total possible score
       const totalScore = data.questions.reduce((sum, q) => {
         const maxAnswer = q.answer_type === 'yes_no' ? 1 : 
-                         q.answer_type === 'scale_1_5' ? 5 : 10;
+                         q.answer_type === 'scale_1_5' ? 5 : 
+                         q.answer_type === 'scale_1_10' ? 10 :
+                         q.answer_type === 'single_select' ? 
+                           (q.options?.reduce((max, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return Math.max(max, weight);
+                           }, 1) || 1) :
+                         q.answer_type === 'multi_select' ? 
+                           (q.options?.reduce((sum, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return sum + weight;
+                           }, 0) || 1) : 1;
         return sum + (q.weight * maxAnswer);
       }, 0);
       
@@ -110,7 +121,18 @@ export default function Scoring() {
     mutationFn: ({ id, data }) => {
       const totalScore = data.questions.reduce((sum, q) => {
         const maxAnswer = q.answer_type === 'yes_no' ? 1 : 
-                         q.answer_type === 'scale_1_5' ? 5 : 10;
+                         q.answer_type === 'scale_1_5' ? 5 : 
+                         q.answer_type === 'scale_1_10' ? 10 :
+                         q.answer_type === 'single_select' ? 
+                           (q.options?.reduce((max, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return Math.max(max, weight);
+                           }, 1) || 1) :
+                         q.answer_type === 'multi_select' ? 
+                           (q.options?.reduce((sum, opt) => {
+                             const weight = typeof opt === 'string' ? 1 : (opt?.weight || 1);
+                             return sum + weight;
+                           }, 0) || 1) : 1;
         return sum + (q.weight * maxAnswer);
       }, 0);
       
@@ -249,6 +271,47 @@ export default function Scoring() {
   const updateQuestion = (index, field, value) => {
     const updatedQuestions = [...newTemplate.questions];
     updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
+    // Initialize options array if switching to single_select or multi_select
+    if ((field === 'answer_type' && (value === 'single_select' || value === 'multi_select')) && !updatedQuestions[index].options) {
+      updatedQuestions[index].options = [];
+    }
+    setNewTemplate({ ...newTemplate, questions: updatedQuestions });
+  };
+
+  const addOption = (questionIndex) => {
+    const updatedQuestions = [...newTemplate.questions];
+    if (!updatedQuestions[questionIndex].options) {
+      updatedQuestions[questionIndex].options = [];
+    }
+    // Store options as objects with text and weight
+    updatedQuestions[questionIndex].options.push({ text: '', weight: 1 });
+    setNewTemplate({ ...newTemplate, questions: updatedQuestions });
+  };
+
+  const removeOption = (questionIndex, optionIndex) => {
+    const updatedQuestions = [...newTemplate.questions];
+    if (updatedQuestions[questionIndex].options) {
+      updatedQuestions[questionIndex].options = updatedQuestions[questionIndex].options.filter((_, i) => i !== optionIndex);
+    }
+    setNewTemplate({ ...newTemplate, questions: updatedQuestions });
+  };
+
+  const updateOption = (questionIndex, optionIndex, field, value) => {
+    const updatedQuestions = [...newTemplate.questions];
+    if (!updatedQuestions[questionIndex].options) {
+      updatedQuestions[questionIndex].options = [];
+    }
+    // Handle migration from string to object format
+    if (typeof updatedQuestions[questionIndex].options[optionIndex] === 'string') {
+      updatedQuestions[questionIndex].options[optionIndex] = {
+        text: updatedQuestions[questionIndex].options[optionIndex],
+        weight: 1
+      };
+    }
+    if (!updatedQuestions[questionIndex].options[optionIndex]) {
+      updatedQuestions[questionIndex].options[optionIndex] = { text: '', weight: 1 };
+    }
+    updatedQuestions[questionIndex].options[optionIndex][field] = field === 'weight' ? (parseInt(value) || 1) : value;
     setNewTemplate({ ...newTemplate, questions: updatedQuestions });
   };
 
@@ -398,6 +461,8 @@ export default function Scoring() {
                                       <SelectItem value="yes_no">Yes/No</SelectItem>
                                       <SelectItem value="scale_1_5">Scale 1-5</SelectItem>
                                       <SelectItem value="scale_1_10">Scale 1-10</SelectItem>
+                                      <SelectItem value="single_select">Single Select (Dropdown)</SelectItem>
+                                      <SelectItem value="multi_select">Multi Select (Checkboxes)</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -420,6 +485,66 @@ export default function Scoring() {
                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Group questions together (e.g., "Corporate Demographic Information")</p>
                               </div>
                             </div>
+                            
+                            {/* Options for single_select and multi_select */}
+                            {(question.answer_type === 'single_select' || question.answer_type === 'multi_select') && (
+                              <div className="mt-4 space-y-2">
+                                <Label className="text-xs">Options *</Label>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
+                                  {question.answer_type === 'single_select' 
+                                    ? 'Add options for the dropdown (user can select one). Each option can have its own weight.'
+                                    : 'Add options for checkboxes (user can select multiple). Each option can have its own weight.'}
+                                </p>
+                                {(question.options || []).map((option, optIndex) => {
+                                  // Handle migration from string to object format
+                                  const optionText = typeof option === 'string' ? option : (option?.text || '');
+                                  const optionWeight = typeof option === 'string' ? 1 : (option?.weight || 1);
+                                  
+                                  return (
+                                    <div key={optIndex} className="flex items-center gap-2">
+                                      <Input
+                                        value={optionText}
+                                        onChange={(e) => updateOption(index, optIndex, 'text', e.target.value)}
+                                        placeholder={`Option ${optIndex + 1}`}
+                                        className="flex-1"
+                                      />
+                                      <div className="flex items-center gap-1">
+                                        <Label className="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">Weight:</Label>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          max="10"
+                                          value={optionWeight}
+                                          onChange={(e) => updateOption(index, optIndex, 'weight', e.target.value)}
+                                          className="w-16"
+                                        />
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeOption(index, optIndex)}
+                                        className="flex-shrink-0"
+                                      >
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addOption(index)}
+                                  className="mt-2"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Option
+                                </Button>
+                                {(!question.options || question.options.length === 0) && (
+                                  <p className="text-xs text-red-500 mt-1">At least one option is required</p>
+                                )}
+                              </div>
+                            )}
                             {newTemplate.questions.length > 1 && (
                               <Button
                                 variant="ghost"
@@ -444,7 +569,21 @@ export default function Scoring() {
                 </Button>
                 <Button 
                   onClick={handleCreateOrUpdate}
-                  disabled={!newTemplate.name || newTemplate.questions.some(q => !q.question_text)}
+                  disabled={
+                    !newTemplate.name || 
+                    newTemplate.questions.some(q => {
+                      if (!q.question_text) return true;
+                      // Validate options for single_select and multi_select
+                      if ((q.answer_type === 'single_select' || q.answer_type === 'multi_select')) {
+                        if (!q.options || q.options.length === 0) return true;
+                        return q.options.some(opt => {
+                          const optText = typeof opt === 'string' ? opt : (opt?.text || '');
+                          return !optText || optText.trim() === '';
+                        });
+                      }
+                      return false;
+                    })
+                  }
                 >
                   {editingTemplate ? 'Update ICP Template' : 'Create ICP Template'}
                 </Button>
