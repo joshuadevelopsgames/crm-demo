@@ -65,16 +65,17 @@ export function UserProvider({ children }) {
           profileRole: data?.role
         });
         
-        // If profile exists but role is missing/null, ensure System Admin gets system_admin role
+        // If profile exists, use it as-is (don't overwrite with Google data)
+        // This ensures manually updated profile data in Settings takes precedence
         if (data) {
           const finalRole = data.role || (isSystemAdmin ? 'system_admin' : 'user');
-          console.log('✅ Setting profile with role:', finalRole);
+          console.log('✅ Using existing profile (Settings data takes precedence):', finalRole);
           setProfile({
             ...data,
             role: finalRole
           });
         } else {
-          // Profile doesn't exist in database - create it
+          // Profile doesn't exist - create it with Google data (first login only)
           console.log('🆕 Profile not found, creating new profile with role:', defaultRole);
           try {
             // Get avatar from Google OAuth metadata (avatar_url or picture)

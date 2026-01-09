@@ -39,6 +39,7 @@ export default function Settings() {
 
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [taskReminders, setTaskReminders] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -56,8 +57,10 @@ export default function Settings() {
 
   // Update state when profile/user data loads
   useEffect(() => {
+    // Use profile data first (Settings overrides), then fall back to Google data, then user metadata
     setFullName(profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
     setPhoneNumber(profile?.phone_number || '');
+    setAvatarUrl(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || '');
     
     // Load notification preferences from profile
     const prefs = profile?.notification_preferences || {};
@@ -83,6 +86,9 @@ export default function Settings() {
       }
       if (data.phone_number !== undefined) {
         updateData.phone_number = data.phone_number || null;
+      }
+      if (data.avatar_url !== undefined) {
+        updateData.avatar_url = data.avatar_url || null;
       }
       // Only include notification_preferences if it's being updated
       // Skip if column doesn't exist (will be handled by API fallback)
@@ -176,6 +182,7 @@ export default function Settings() {
     updateProfileMutation.mutate({
       full_name: fullName,
       phone_number: phoneNumber,
+      avatar_url: avatarUrl || null,
       notification_preferences: {
         email_notifications: emailNotifications,
         task_reminders: taskReminders,
@@ -476,6 +483,31 @@ export default function Settings() {
               placeholder="Enter your phone number"
               type="tel"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="avatarUrl" className="dark:text-[#ffffff]">Profile Photo URL</Label>
+            <Input
+              id="avatarUrl"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+              placeholder="https://example.com/photo.jpg"
+              type="url"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Enter a URL to your profile photo. This will override your Google profile photo.
+            </p>
+            {avatarUrl && (
+              <div className="mt-2">
+                <img 
+                  src={avatarUrl} 
+                  alt="Profile preview" 
+                  className="w-16 h-16 rounded-full object-cover border border-slate-200"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label className="dark:text-[#ffffff]">Email</Label>

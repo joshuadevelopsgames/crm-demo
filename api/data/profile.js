@@ -147,7 +147,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // Update user's own profile
-      const { full_name, phone_number, notification_preferences } = req.body;
+      const { full_name, phone_number, avatar_url, notification_preferences } = req.body;
 
       // Build update object
       const updateData = {
@@ -161,6 +161,9 @@ export default async function handler(req, res) {
       }
       if (phone_number !== undefined) {
         updateData.phone_number = phone_number || null;
+      }
+      if (avatar_url !== undefined) {
+        updateData.avatar_url = avatar_url || null;
       }
       if (notification_preferences !== undefined) {
         updateData.notification_preferences = notification_preferences;
