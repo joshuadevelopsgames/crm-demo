@@ -145,12 +145,35 @@ export default async function handler(req, res) {
           ? comments || []
           : (comments || []).filter(c => !c.is_internal);
 
+        // Get commenter profiles for all comments
+        const commentsWithProfiles = await Promise.all(
+          (visibleComments || []).map(async (comment) => {
+            let commenterProfile = null;
+            if (comment.user_id) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, email, full_name')
+                .eq('id', comment.user_id)
+                .single();
+              
+              if (profile) {
+                commenterProfile = profile;
+              }
+            }
+            
+            return {
+              ...comment,
+              commenter_profile: commenterProfile
+            };
+          })
+        );
+
         return res.status(200).json({
           success: true,
           ticket: {
             ...ticket,
             reporter_profile: reporterProfile,
-            comments: visibleComments
+            comments: commentsWithProfiles
           }
         });
       }

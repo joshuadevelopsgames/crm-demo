@@ -439,7 +439,7 @@ export default function TicketDetail() {
             <CardContent className="space-y-4">
               {ticketData.comments && ticketData.comments.length > 0 ? (
                 ticketData.comments.map((comment) => {
-                  const commentUser = users.find(u => u.id === comment.user_id);
+                  const commenterProfile = comment.commenter_profile;
                   const isCommentUser = comment.user_id === user?.id;
                   
                   return (
@@ -448,7 +448,7 @@ export default function TicketDetail() {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-slate-500" />
                           <span className="font-medium text-sm">
-                            {commentUser?.full_name || commentUser?.email || 'Unknown User'}
+                            {commenterProfile?.full_name || commenterProfile?.email || 'Unknown User'}
                           </span>
                           {comment.is_internal && (
                             <Badge variant="outline" className="text-xs">Internal</Badge>
