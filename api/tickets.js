@@ -296,10 +296,11 @@ export default async function handler(req, res) {
           });
         }
 
-        // Non-admins cannot change status, assignee, or priority
+        // Non-admins cannot change status, assignee, priority, or archived_at
         delete updates.status;
         delete updates.assignee_id;
         delete updates.priority;
+        delete updates.archived_at;
       }
 
       // Track what changed for notifications
