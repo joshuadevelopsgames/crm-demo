@@ -223,7 +223,7 @@ export default function AnnouncementBanner() {
         style={{
           // Position below nav (nav is 64px/4rem tall)
           top: '64px', // Below nav (64px)
-          zIndex: 55, // Above nav (z-50) to ensure content doesn't scroll through it
+          zIndex: 40, // Below nav (z-50) and dropdowns (z-60) so they can appear above it
           backgroundColor: 'inherit', // Ensure background is opaque
         }}
       >
