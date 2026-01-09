@@ -514,15 +514,24 @@ export default function Layout({ children, currentPageName }) {
             // Tutorial mode handling if needed
           }
         }}
-        className="flex-1"
-        style={{
-          paddingTop: isTutorialMode ? '3rem' : (isPWA || isNativeApp) 
-            ? 'calc(4rem + env(safe-area-inset-top, 0px))' 
-            : '4rem',
-          minHeight: 'calc(100vh - 4rem)'
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 bg-white dark:bg-bg`} 
+        style={(isPWA || isNativeApp) ? {
+          // PWA and native app specific padding (with safe areas)
+          // Account for: nav (4rem) + test mode banner (40px if active) + announcement banner (~50px)
+          paddingTop: `calc(${isTutorialMode ? '7rem' : '4rem'} + 50px + env(safe-area-inset-top, 0px) + 1rem)`,
+          paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`,
+          backgroundColor: 'hsl(var(--background))',
+          minHeight: `calc(100vh - ${isTutorialMode ? '7rem' : '4rem'} - 50px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`
+        } : {
+          // Desktop web browser styles - standard padding
+          // Account for: nav (6rem/5rem = 64px/80px) + test mode banner (40px if active) + announcement banner (~50px)
+          paddingTop: isTutorialMode ? '7rem' : (isDesktop ? '7rem' : '6rem'), // 6rem/5rem nav (64px/80px) + 50px announcement
+          backgroundColor: 'hsl(var(--background))'
         }}
       >
-        {children}
+        <div className="animate-in fade-in duration-300">
+          {children}
+        </div>
       </main>
     </div>
   );
