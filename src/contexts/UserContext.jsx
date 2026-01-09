@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 
 const UserContext = createContext(null);
@@ -11,8 +11,10 @@ export function UserProvider({ children }) {
 
   const supabase = getSupabaseAuth();
 
+  const queryClient = useQueryClient();
+
   // Get current user session
-  const { data: session } = useQuery({
+  const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ['auth-session'],
     queryFn: async () => {
       if (!supabase) return null;
@@ -176,11 +178,18 @@ export function UserProvider({ children }) {
     fetchProfile();
   }, [session, supabase]);
 
-  // Listen for auth state changes
+  // Listen for auth state changes and refetch session/profile immediately
   useEffect(() => {
     if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      
+      // Invalidate and refetch session query to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['auth-session'] });
+      refetchSession();
+      
+      // Also update user state directly for immediate UI update
       if (session) {
         setUser(session.user);
       } else {
@@ -192,7 +201,7 @@ export function UserProvider({ children }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, refetchSession, queryClient]);
 
   // Determine admin status - check role or email fallback
   // System Admin email always has admin access, regardless of database role
