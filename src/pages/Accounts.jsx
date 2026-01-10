@@ -839,21 +839,19 @@ export default function Accounts() {
           position="bottom"
         >
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
-              {isJanOrFeb && (
-                <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400">
-                  <Info className="w-4 h-4" />
-                  <span className="font-normal">
-                    Segments are based on {segmentYear} data during January and February
-                  </span>
-                </div>
-              )}
-            </div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
             <p className="text-slate-600 mt-1">
               {isLoading ? 'Loading accounts...' : `${filteredAccounts.length} total accounts`}
               {estimatesLoading && !isLoading && ' (calculating revenue...)'}
             </p>
+            {isJanOrFeb && (
+              <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 mt-1">
+                <Info className="w-4 h-4" />
+                <span className="font-normal">
+                  Segments are based on {segmentYear} data during January and February
+                </span>
+              </div>
+            )}
           </div>
         </TutorialTooltip>
         <div className="flex items-center gap-3">
