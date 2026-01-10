@@ -839,7 +839,17 @@ export default function Accounts() {
           position="bottom"
         >
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">Accounts</h1>
+              {isJanOrFeb && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400">
+                  <Info className="w-4 h-4" />
+                  <span className="font-normal">
+                    Segments are based on {segmentYear} data during January and February
+                  </span>
+                </div>
+              )}
+            </div>
             <p className="text-slate-600 mt-1">
               {isLoading ? 'Loading accounts...' : `${filteredAccounts.length} total accounts`}
               {estimatesLoading && !isLoading && ' (calculating revenue...)'}
@@ -912,26 +922,6 @@ export default function Accounts() {
         </TabsList>
 
         <TabsContent value="active" className="mt-0 space-y-4">
-      {/* Segment Year Info Banner - Show in January and February */}
-      {isJanOrFeb && (
-        <Card className="bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-blue-900 dark:text-blue-200">
-                  Segments are based on {segmentYear} data
-                </p>
-                <p className="text-sm text-blue-800 dark:text-blue-300 mt-1">
-                  During January and February, revenue segments are calculated using the previous year's estimates. 
-                  Starting in March, segments will automatically switch to the current year's data.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Status Filter Banner */}
       {statusFilter && (
         <Card className={statusFilter === 'at_risk' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}>
