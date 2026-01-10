@@ -592,9 +592,17 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
 }
 
 /**
- * Auto-assign revenue segments for all accounts based on selected year revenue percentages
+ * Auto-assign revenue segments for all accounts based on revenue percentages
  * Now calculates segments for ALL years and stores in segment_by_year
- * Uses revenue_by_year[selectedYear] for each account
+ * 
+ * IMPORTANT: Segments are displayed based on getSegmentYear() which:
+ * - January/February: uses previous year's segments
+ * - March and later: uses current year's segments
+ * 
+ * This function calculates segments for ALL years, so when March arrives,
+ * the current year's segments will already be in the database and will
+ * automatically be used by getSegmentYear().
+ * 
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, only used for Segment D check)
  * @returns {Array} - Array of accounts with updated segment_by_year and revenue_segment
@@ -605,14 +613,15 @@ export function autoAssignRevenueSegments(accounts, estimatesByAccountId = {}) {
     const estimates = estimatesByAccountId[account.id] || [];
     const segmentsByYear = calculateSegmentsForAllYears(account, accounts, estimates);
     
-    // Also set revenue_segment to selected year's segment for backward compatibility
-    const selectedYear = getCurrentYearForCalculation();
-    const selectedYearSegment = segmentsByYear[selectedYear.toString()] || 'C';
+    // Set revenue_segment to segment year's segment (current year, or previous year if Jan/Feb)
+    // This ensures backward compatibility while respecting the segment year logic
+    const segmentYear = getSegmentYear();
+    const segmentYearSegment = segmentsByYear[segmentYear.toString()] || 'C';
     
     return {
       ...account,
       segment_by_year: Object.keys(segmentsByYear).length > 0 ? segmentsByYear : null,
-      revenue_segment: selectedYearSegment // Keep for backward compatibility
+      revenue_segment: segmentYearSegment // Use segmentYear instead of selectedYear for backward compatibility
     };
   });
 }
