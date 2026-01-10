@@ -5,7 +5,6 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { createContractTypoNotifications, createSegmentDowngradeNotifications } from '../../src/services/notificationService.js';
 
 // Dynamic import for server-side compatibility (Vercel serverless functions)
 async function getAtRiskCalculator() {
@@ -318,11 +317,23 @@ export default async function handler(req, res) {
     
     // 5. Create notifications for contract date typos
     console.log('🔍 Checking for contract date typos...');
-    await createContractTypoNotifications(allEstimates, supabase);
+    try {
+      const { createContractTypoNotifications } = await import('../../src/services/notificationService.js');
+      await createContractTypoNotifications(allEstimates, supabase);
+    } catch (error) {
+      console.error('Error creating contract typo notifications:', error);
+      // Don't fail the whole request if this fails
+    }
     
     // 6. Create notifications for segment downgrades
     console.log('🔍 Creating segment downgrade notifications...');
-    await createSegmentDowngradeNotifications(segmentDowngrades, supabase);
+    try {
+      const { createSegmentDowngradeNotifications } = await import('../../src/services/notificationService.js');
+      await createSegmentDowngradeNotifications(segmentDowngrades, supabase);
+    } catch (error) {
+      console.error('Error creating segment downgrade notifications:', error);
+      // Don't fail the whole request if this fails
+    }
     
     // Supabase Realtime automatically broadcasts cache updates
     
