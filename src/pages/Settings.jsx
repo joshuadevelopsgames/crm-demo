@@ -45,6 +45,7 @@ export default function Settings() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
+  const [isRefreshingNotifications, setIsRefreshingNotifications] = useState(false);
   const [isRecalculatingSegments, setIsRecalculatingSegments] = useState(false);
   
   // Password change state
@@ -449,6 +450,68 @@ export default function Settings() {
     }
   };
 
+  const handleRefreshNotifications = async () => {
+    if (!supabase || !user) {
+      toast.error('Not authenticated');
+      return;
+    }
+
+    setIsRefreshingNotifications(true);
+    
+    try {
+      toast.loading('Refreshing notifications (this may take a moment)...', { id: 'refresh-notifications-toast' });
+      
+      // Get session token for API call
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error('No session token available. Please log out and log back in.');
+      }
+
+      // Call the notification refresh endpoint (admin version that doesn't require CRON_SECRET)
+      const response = await fetch('/api/admin/refresh-notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      let result;
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        // If not JSON, get text and try to parse error
+        const text = await response.text();
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to refresh notifications');
+      }
+
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['at-risk-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['segment-downgrades'] });
+      
+      const data = result.data || {};
+      toast.success(
+        `✓ Notifications refreshed! ${data.atRiskCount || 0} at-risk, ${data.neglectedCount || 0} neglected, ${data.duplicateCount || 0} duplicates.`,
+        { id: 'refresh-notifications-toast', duration: 5000 }
+      );
+    } catch (error) {
+      console.error('Notification refresh error:', error);
+      toast.error(
+        `Notification refresh failed: ${error.message || 'Unknown error'}`,
+        { id: 'refresh-notifications-toast', duration: 5000 }
+      );
+    } finally {
+      setIsRefreshingNotifications(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -675,6 +738,54 @@ export default function Settings() {
       {/* Admin Tools */}
       {isAdmin && (
         <>
+          {/* Notification Refresh - Admin Only */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="w-5 h-5" />
+                Notification Refresh
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Manually trigger the full notification refresh. This will:
+                </p>
+              </div>
+              <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1 ml-2">
+                <li>Update at-risk accounts cache</li>
+                <li>Update neglected accounts cache</li>
+                <li>Update segment downgrades cache</li>
+                <li>Create contract date typo notifications</li>
+                <li>Create segment downgrade notifications</li>
+                <li>Detect duplicate estimates</li>
+              </ul>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                The notification system is normally refreshed automatically every 5 minutes by a background job.
+                Use this to trigger an immediate refresh.
+              </p>
+              
+              <Button
+                onClick={handleRefreshNotifications}
+                disabled={isRefreshingNotifications}
+                variant="outline"
+                className="border-slate-300 disabled:opacity-50"
+              >
+                {isRefreshingNotifications ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh All Notifications
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Cache Refresh - Admin Only */}
           <Card>
             <CardHeader>
