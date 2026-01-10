@@ -990,8 +990,8 @@ export default function Accounts() {
                 <SelectItem value="B">Segment B (5-15%)</SelectItem>
                 <SelectItem value="C">Segment C (&lt;5%)</SelectItem>
                 <SelectItem value="D">Segment D (Project Only)</SelectItem>
-                <SelectItem value="E">Segment E (New Client, ICP ≥80%)</SelectItem>
-                <SelectItem value="F">Segment F (New Client, ICP &lt;80%)</SelectItem>
+                <SelectItem value="E">Segment E (Lead, ICP ≥80%)</SelectItem>
+                <SelectItem value="F">Segment F (Lead, ICP &lt;80%)</SelectItem>
               </SelectContent>
             </Select>
             <UserFilter
