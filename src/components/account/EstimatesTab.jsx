@@ -296,12 +296,53 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     });
   }, [estimates, effectiveFilterYear]);
 
-  // Calculate total win percentage for year-filtered estimates (for Overall Win Rate card)
+  // Filter estimates by year using contract_start date for COUNT-based won/loss ratio
+  // Multi-year contracts are treated as single-year contracts using contract_start year
+  // This is separate from yearFilteredEstimates which uses annualization for dollar values
+  const countFilteredEstimates = useMemo(() => {
+    if (effectiveFilterYear === 'all') {
+      // If "all years" selected, return all non-archived estimates
+      return estimates.filter(est => !est.archived);
+    }
+    
+    return estimates.filter(est => {
+      // Per spec R2: Exclude archived estimates
+      if (est.archived) {
+        return false;
+      }
+      
+      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
+      // For won/loss ratio COUNT, use simple date extraction (treat multi-year as single-year)
+      let dateToUse = null;
+      if (est.contract_end) {
+        dateToUse = est.contract_end;
+      } else if (est.contract_start) {
+        dateToUse = est.contract_start;
+      } else if (est.estimate_date) {
+        dateToUse = est.estimate_date;
+      } else if (est.created_date) {
+        dateToUse = est.created_date;
+      }
+      
+      if (dateToUse) {
+        const year = getYearFromDateString(dateToUse);
+        if (year && year.toString() !== effectiveFilterYear) return false;
+      } else {
+        // No valid date field - exclude from year filtering
+        return false;
+      }
+      
+      return true;
+    });
+  }, [estimates, effectiveFilterYear]);
+
+  // Calculate total win percentage for count-filtered estimates (for Overall Win Rate card)
+  // Uses countFilteredEstimates which treats multi-year contracts as single-year (contract_start year only)
   const totalWinPercentage = useMemo(() => {
-    if (yearFilteredEstimates.length === 0) return 0;
-    const won = yearFilteredEstimates.filter(est => isWonStatus(est)).length;
-    return (won / yearFilteredEstimates.length) * 100;
-  }, [yearFilteredEstimates]);
+    if (countFilteredEstimates.length === 0) return 0;
+    const won = countFilteredEstimates.filter(est => isWonStatus(est)).length;
+    return (won / countFilteredEstimates.length) * 100;
+  }, [countFilteredEstimates]);
 
   // Calculate won value as sum of won estimates' dollar values for selected year
   // Simple sum - no contract-year allocation, just sum the dollar values
@@ -353,7 +394,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                   {totalWinPercentage.toFixed(1)}%
                 </p>
                 <p className="text-xs text-emerald-600 mt-1">
-                  {yearFilteredEstimates.filter(est => isWonStatus(est)).length} won / {yearFilteredEstimates.length} total
+                  {countFilteredEstimates.filter(est => isWonStatus(est)).length} won / {countFilteredEstimates.length} total
                 </p>
                 <p className="text-xs text-emerald-600 mt-1 font-medium">
                   ${totalWonValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} won / ${totalEstimatedValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} estimated
