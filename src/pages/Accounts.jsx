@@ -419,7 +419,6 @@ export default function Accounts() {
         accountsCount: accounts.length,
         totalRevenueForSegmentYear,
         segmentYear,
-        selectedYear,
         sampleAccount: {
           id: sampleAccount.id,
           name: sampleAccount.name,
