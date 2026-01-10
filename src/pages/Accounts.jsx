@@ -429,7 +429,7 @@ export default function Accounts() {
         }).length
       });
     }
-  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId, totalRevenueForYear]);
+  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId, totalRevenueForSegmentYear, segmentYear]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
