@@ -23,7 +23,7 @@
  * Multi-year contracts are annualized (total price divided by number of years)
  */
 
-import { isWonStatus } from './reportCalculations.js';
+// Inline functions to avoid serverless import issues
 // Inline getYearFromDateString to avoid serverless import issues
 function getYearFromDateString(dateStr) {
   if (!dateStr) return null;
@@ -37,6 +37,47 @@ function getYearFromDateString(dateStr) {
     return date.getFullYear();
   }
   return null;
+}
+
+// Inline isWonStatus to avoid serverless import issues
+// Per spec R1, R11: pipeline_status is preferred, status field is fallback
+function isWonStatus(statusOrEstimate, pipelineStatus = null) {
+  let status, pipeline;
+  
+  // Support both: isWonStatus(estimate) or isWonStatus(status, pipelineStatus)
+  if (typeof statusOrEstimate === 'object' && statusOrEstimate !== null) {
+    // First param is an estimate object
+    status = statusOrEstimate.status;
+    pipeline = statusOrEstimate.pipeline_status;
+  } else {
+    // First param is a status string
+    status = statusOrEstimate;
+    pipeline = pipelineStatus;
+  }
+  
+  // Per spec R11: Check pipeline_status first (preferred)
+  if (pipeline) {
+    const pipelineLower = pipeline.toString().toLowerCase().trim();
+    if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+      return true;
+    }
+  }
+  
+  // Per spec R11: Check status field (fallback)
+  if (!status) return false;
+  const statusLower = status.toString().toLowerCase().trim();
+  const wonStatuses = [
+    'contract signed',
+    'work complete',
+    'billing complete',
+    'email contract award',
+    'verbal contract award',
+    'contract in progress',
+    'contract + billing complete',
+    'sold', // LMN uses "Sold" as a won status
+    'won' // Also support our simplified 'won' status
+  ];
+  return wonStatuses.includes(statusLower);
 }
 
 /**
