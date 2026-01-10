@@ -32,7 +32,7 @@ import { getYearFromDateString } from './dateFormatter';
  * @param {Date} endDate - Contract end date
  * @returns {number} - Duration in months
  */
-function calculateDurationMonths(startDate, endDate) {
+export function calculateDurationMonths(startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
@@ -66,7 +66,7 @@ function calculateDurationMonths(startDate, endDate) {
  * @param {number} durationMonths - Duration in months
  * @returns {number} - Number of contract years
  */
-function getContractYears(durationMonths) {
+export function getContractYears(durationMonths) {
   if (durationMonths <= 12) return 1;
   if (durationMonths <= 24) return 2;
   if (durationMonths <= 36) return 3;

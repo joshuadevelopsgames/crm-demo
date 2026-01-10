@@ -1,7 +1,7 @@
 import { base44 } from '@/api/base44Client';
 import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format } from 'date-fns';
 import { calculateRenewalDate, hasAnyEstimateExpiringSoon } from '@/utils/renewalDateCalculator';
-import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getSegmentForYear, detectContractTypo, getContractYears, calculateDurationMonths } from '@/utils/revenueSegmentCalculator';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 
 /**
@@ -406,9 +406,6 @@ export async function createOverdueTaskNotifications() {
           existingKeys.add(key);
           console.log(`✅ Created overdue task notification for "${notifData.task_title}" (${notifData.daysOverdue} days overdue, user_id: ${created?.user_id})`);
         } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:404',message:'Notification creation error caught',data:{errorMessage:error?.message,errorString:error?.toString(),errorResponse:error?.response,errorStatus:error?.status,errorCode:error?.code,errorDetails:error?.details,hasError:!!error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-          // #endregion
           
           // Extract error message from various error formats
           let errorMessage = error?.message || error?.toString() || '';
@@ -532,9 +529,6 @@ export async function createEndOfYearNotification() {
  */
 export async function createRenewalNotifications() {
   console.log('🔄 Starting renewal notification creation (at_risk_accounts table approach)...');
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:491',message:'createRenewalNotifications called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-  // #endregion
   
   // NOTE: At-risk accounts are now managed by the background cron job
   // The cron job runs every 5 minutes and updates the notification_cache table
@@ -801,6 +795,110 @@ export async function checkNotificationSnoozed(notificationType, accountId = nul
   } catch (error) {
     console.error('Error checking notification snooze:', error);
     return false;
+  }
+}
+
+/**
+ * Create notifications for estimates with possible contract date typos
+ * @param {Array} estimates - Array of estimate objects
+ * @param {Object} supabase - Supabase client instance
+ */
+export async function createContractTypoNotifications(estimates, supabase) {
+  try {
+    // Get all users
+    const { data: users } = await supabase.from('profiles').select('id');
+    if (!users || users.length === 0) {
+      console.log('No users found for contract typo notifications');
+      return;
+    }
+    
+    // Find estimates with typos
+    const estimatesWithTypos = estimates.filter(est => {
+      if (!est.contract_start || !est.contract_end || est.archived) {
+        return false;
+      }
+      
+      try {
+        const contractStart = new Date(est.contract_start);
+        const contractEnd = new Date(est.contract_end);
+        
+        if (isNaN(contractStart.getTime()) || isNaN(contractEnd.getTime())) {
+          return false;
+        }
+        
+        const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+        if (durationMonths <= 0) return false;
+        
+        const contractYears = getContractYears(durationMonths);
+        return detectContractTypo(durationMonths, contractYears);
+      } catch (error) {
+        return false;
+      }
+    });
+    
+    if (estimatesWithTypos.length === 0) {
+      console.log('No contract typos detected');
+      return;
+    }
+    
+    console.log(`🔍 Found ${estimatesWithTypos.length} estimates with possible contract date typos`);
+    
+    const notifications = [];
+    const now = new Date().toISOString();
+    
+    for (const est of estimatesWithTypos) {
+      const contractStart = new Date(est.contract_start);
+      const contractEnd = new Date(est.contract_end);
+      const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+      const contractYears = getContractYears(durationMonths);
+      
+      const estimateNumber = est.estimate_number || est.lmn_estimate_id || est.id || 'Unknown';
+      const message = `Estimate ${estimateNumber}: Duration (${durationMonths} months) exceeds an exact ${contractYears - 1} year boundary by one month. Possible date entry error.`;
+      
+      for (const user of users) {
+        // Check if notification already exists (unread)
+        const { data: existing } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('type', 'contract_date_typo')
+          .eq('related_account_id', est.account_id || null)
+          .eq('is_read', false)
+          .maybeSingle();
+        
+        if (existing) continue; // Already notified
+        
+        notifications.push({
+          user_id: user.id,
+          type: 'contract_date_typo',
+          title: 'Possible Contract Date Typo',
+          message: message,
+          related_account_id: est.account_id || null,
+          metadata: JSON.stringify({
+            estimate_id: est.id,
+            estimate_number: estimateNumber,
+            contract_start: est.contract_start,
+            contract_end: est.contract_end,
+            duration_months: durationMonths,
+            contract_years: contractYears
+          }),
+          is_read: false,
+          created_at: now,
+          scheduled_for: now
+        });
+      }
+    }
+    
+    if (notifications.length > 0) {
+      const { error } = await supabase.from('notifications').insert(notifications);
+      if (error) {
+        console.error('Error creating contract typo notifications:', error);
+      } else {
+        console.log(`🔔 Created ${notifications.length} contract typo notifications`);
+      }
+    }
+  } catch (error) {
+    console.error('Error in createContractTypoNotifications:', error);
   }
 }
 

@@ -5,12 +5,14 @@
  * Calculates:
  * - At-risk accounts (with renewal detection)
  * - Neglected accounts
+ * - Segment downgrades (accounts that moved to lower segments)
  * - Duplicate estimates (bad data)
  * 
  * Updates notification_cache table and creates notifications for duplicates
  */
 
 import { getSupabaseClient } from '../../src/services/supabaseClient.js';
+import { createContractTypoNotifications } from '../../src/services/notificationService.js';
 
 // Dynamic import for server-side compatibility (Vercel serverless functions)
 async function getAtRiskCalculator() {
@@ -18,7 +20,8 @@ async function getAtRiskCalculator() {
     const module = await import('../../src/utils/atRiskCalculator.js');
     return {
       calculateAtRiskAccounts: module.calculateAtRiskAccounts,
-      calculateNeglectedAccounts: module.calculateNeglectedAccounts
+      calculateNeglectedAccounts: module.calculateNeglectedAccounts,
+      calculateSegmentDowngrades: module.calculateSegmentDowngrades
     };
   } catch (error) {
     console.error('Error importing atRiskCalculator:', error);
@@ -108,7 +111,7 @@ export default async function handler(req, res) {
     
     // 2. Import calculator functions (dynamic import for server-side compatibility)
     console.log('📦 Importing calculator functions...');
-    const { calculateAtRiskAccounts, calculateNeglectedAccounts } = await getAtRiskCalculator();
+    const { calculateAtRiskAccounts, calculateNeglectedAccounts, calculateSegmentDowngrades } = await getAtRiskCalculator();
     
     // 3. Calculate at-risk accounts (with renewal detection)
     console.log('🧮 Calculating at-risk accounts...');
@@ -118,9 +121,13 @@ export default async function handler(req, res) {
     console.log('🧮 Calculating neglected accounts...');
     const neglectedAccounts = calculateNeglectedAccounts(accounts, snoozes);
     
-    console.log(`✅ Calculated ${atRiskAccounts.length} at-risk accounts, ${neglectedAccounts.length} neglected accounts, ${duplicateEstimates.length} duplicate estimate groups`);
+    // 5. Calculate segment downgrades
+    console.log('🧮 Calculating segment downgrades...');
+    const segmentDowngrades = calculateSegmentDowngrades(accounts, snoozes);
     
-    // 5. Update cache
+    console.log(`✅ Calculated ${atRiskAccounts.length} at-risk accounts, ${neglectedAccounts.length} neglected accounts, ${segmentDowngrades.length} segment downgrades, ${duplicateEstimates.length} duplicate estimate groups`);
+    
+    // 6. Update cache
     // Set expiry to 24 hours (effectively never expires since cron refreshes every 5 min)
     const cacheExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     
@@ -146,6 +153,20 @@ export default async function handler(req, res) {
           accounts: neglectedAccounts, 
           updated_at: new Date().toISOString(),
           count: neglectedAccounts.length
+        },
+        expires_at: cacheExpiry.toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'cache_key'
+      }),
+      
+      // Segment downgrades cache
+      supabase.from('notification_cache').upsert({
+        cache_key: 'segment-downgrades',
+        cache_data: { 
+          accounts: segmentDowngrades, 
+          updated_at: new Date().toISOString(),
+          count: segmentDowngrades.length
         },
         expires_at: cacheExpiry.toISOString(),
         updated_at: new Date().toISOString()
@@ -199,6 +220,10 @@ export default async function handler(req, res) {
         await createDuplicateEstimateNotifications(newDuplicates, supabase);
       }
     }
+    
+    // 5. Create notifications for contract date typos
+    console.log('🔍 Checking for contract date typos...');
+    await createContractTypoNotifications(allEstimates, supabase);
     
     // Supabase Realtime automatically broadcasts cache updates
     
