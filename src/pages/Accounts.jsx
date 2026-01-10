@@ -361,6 +361,11 @@ export default function Accounts() {
   // Get segment year (current year, or previous year if Jan/Feb)
   const segmentYear = getSegmentYear();
   
+  // Check if we're in January or February (when segments use previous year)
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
+  const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+  
   // Calculate total revenue for segment year (not selected year)
   const totalRevenueForSegmentYear = useMemo(() => {
     if (estimatesLoading && allEstimates.length === 0) return 0;
