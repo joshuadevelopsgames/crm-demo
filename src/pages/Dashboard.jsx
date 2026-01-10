@@ -24,6 +24,7 @@ import {
   AlertCircle,
   AlertTriangle,
   TrendingUp,
+  TrendingDown,
   Calendar,
   ArrowRight,
   Clock,
@@ -65,40 +66,22 @@ export default function Dashboard() {
     // Update account statuses (at_risk) based on renewal dates
     // Triggers will automatically update notifications when account.status changes
     const checkAndUpdateAccountStatuses = async (force = false) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:61',message:'checkAndUpdateAccountStatuses called',data:{force,timeSinceLastCheck:Date.now()-lastStatusCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
       try {
         // Skip if we just ran recently (unless forced)
         const timeSinceLastCheck = Date.now() - lastStatusCheck;
         if (!force && timeSinceLastCheck < STATUS_CHECK_INTERVAL) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:65',message:'Skipping status check - too soon',data:{timeSinceLastCheck},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-          // #endregion
           return;
         }
         
         // Get current user
         const currentUser = await base44.auth.me();
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:70',message:'Got current user',data:{hasUser:!!currentUser,hasId:!!currentUser?.id,userId:currentUser?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-        // #endregion
         if (!currentUser?.id) {
           console.warn('No current user, skipping account status check');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:72',message:'No current user - skipping',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-          // #endregion
           return;
         }
         
         // Only update account statuses - triggers handle notification updates
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:77',message:'About to call createRenewalNotifications',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-        // #endregion
         await createRenewalNotifications();
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:78',message:'createRenewalNotifications completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-        // #endregion
         // Invalidate queries to refresh accounts (notifications are auto-updated by triggers)
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
         // Don't invalidate notifications here - triggers handle updates automatically
@@ -106,9 +89,6 @@ export default function Dashboard() {
         lastStatusCheck = Date.now();
       } catch (error) {
         console.error('Error checking/updating account statuses:', error);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:83',message:'Error in checkAndUpdateAccountStatuses',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-        // #endregion
       }
     };
     
@@ -164,14 +144,7 @@ export default function Dashboard() {
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:135',message:'Fetching accounts',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       const accountsList = await base44.entities.Account.list();
-      // #region agent log
-      const atRiskAccounts = accountsList.filter(a => a.status === 'at_risk');
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:137',message:'Accounts loaded',data:{total:accountsList.length,atRiskStatus:atRiskAccounts.length,atRiskIds:atRiskAccounts.slice(0,5).map(a=>a.id),sampleAccounts:accountsList.slice(0,3).map(a=>({id:a.id,name:a.name,status:a.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       return accountsList;
     },
     enabled: !userLoading && !!user // Wait for user to load before fetching
@@ -193,29 +166,17 @@ export default function Dashboard() {
   const { data: atRiskAccountsData = [], isLoading: atRiskAccountsLoading } = useQuery({
     queryKey: ['at-risk-accounts'],
     queryFn: async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:192',message:'Fetching at-risk accounts',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       const response = await fetch('/api/notifications?type=at-risk-accounts');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:195',message:'At-risk accounts response',data:{ok:response.ok,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       if (!response.ok) {
         console.error('❌ Failed to fetch at-risk accounts:', response.status, response.statusText);
         return [];
       }
       const result = await response.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:202',message:'At-risk accounts result',data:{success:result.success,hasData:!!result.data,isArray:Array.isArray(result.data),dataType:typeof result.data,dataLength:result.data?.length,error:result.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       if (!result.success) {
         console.error('❌ At-risk accounts API returned error:', result.error);
         return [];
       }
       const data = result.data || [];
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:207',message:'At-risk accounts final data',data:{isArray:Array.isArray(data),length:data.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       console.log('✅ Fetched at-risk accounts:', data.length, 'accounts');
       return data;
     },
@@ -239,6 +200,28 @@ export default function Dashboard() {
     refetchInterval: 5 * 60 * 1000,
   });
   
+  // Fetch segment downgrades
+  const { data: segmentDowngradesData = [], isLoading: segmentDowngradesLoading } = useQuery({
+    queryKey: ['segment-downgrades'],
+    queryFn: async () => {
+      const response = await fetch('/api/notifications?type=segment-downgrades');
+      if (!response.ok) {
+        console.error('❌ Failed to fetch segment downgrades:', response.status, response.statusText);
+        return [];
+      }
+      const result = await response.json();
+      if (!result.success) {
+        console.error('❌ Segment downgrades API returned error:', result.error);
+        return [];
+      }
+      const data = result.data || [];
+      console.log('✅ Fetched segment downgrades:', data.length, 'accounts');
+      return data;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+  });
+  
   // Set up Supabase Realtime subscriptions for instant updates
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -254,6 +237,7 @@ export default function Dashboard() {
       }, () => {
         console.log('🔔 Cache updated, refreshing dashboard data');
         queryClient.invalidateQueries(['at-risk-accounts']);
+        queryClient.invalidateQueries(['segment-downgrades']);
         queryClient.invalidateQueries(['duplicate-estimates']);
       });
     
@@ -333,13 +317,7 @@ export default function Dashboard() {
   // Process notifications to get counts that match the notification bell
   // This ensures dashboard badge counts always match notification bell counts
   const notificationCounts = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:331',message:'notificationCounts useMemo entry',data:{hasAllNotificationsRaw:!!allNotificationsRaw,isArray:Array.isArray(allNotificationsRaw),type:typeof allNotificationsRaw,length:allNotificationsRaw?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
     if (!Array.isArray(allNotificationsRaw) || allNotificationsRaw.length === 0) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Dashboard.jsx:334',message:'notificationCounts early return',data:{reason:!Array.isArray(allNotificationsRaw)?'not-array':'empty'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
       return { neglected_account: 0, renewal_reminder: 0 };
     }
     
@@ -455,6 +433,53 @@ export default function Dashboard() {
         return daysA - daysB;
       });
   }, [atRiskAccountsData, accounts]);
+  
+  // Segment downgrades from the unified API
+  // The cache is automatically maintained by background job every 5 minutes
+  const segmentDowngrades = useMemo(() => {
+    // Ensure segmentDowngradesData is an array
+    if (!Array.isArray(segmentDowngradesData) || segmentDowngradesData.length === 0) {
+      return [];
+    }
+    
+    // Ensure accounts is an array
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      return [];
+    }
+    
+    // Filter out snoozed accounts
+    const snoozes = Array.isArray(notificationSnoozes) ? notificationSnoozes : [];
+    const now = new Date();
+    
+    return segmentDowngradesData
+      .map(downgradeRecord => {
+        // Check if this account is snoozed
+        const isSnoozed = snoozes.some(snooze => 
+          snooze.notification_type === 'segment_downgrade' &&
+          snooze.related_account_id === downgradeRecord.account_id &&
+          new Date(snooze.snoozed_until) > now
+        );
+        
+        if (isSnoozed) return null;
+        
+        const account = accounts.find(acc => acc.id === downgradeRecord.account_id);
+        if (!account) return null;
+        
+        return {
+          ...account,
+          last_year_segment: downgradeRecord.last_year_segment,
+          current_year_segment: downgradeRecord.current_year_segment,
+          downgrade_level: downgradeRecord.downgrade_level
+        };
+      })
+      .filter(Boolean) // Remove null entries
+      .sort((a, b) => {
+        // Sort by downgrade level (larger downgrades first)
+        const levelA = a.downgrade_level ?? 0;
+        const levelB = b.downgrade_level ?? 0;
+        return levelB - levelA;
+      });
+  }, [segmentDowngradesData, accounts, notificationSnoozes]);
 
   // Debug logging for at-risk accounts
   useEffect(() => {
@@ -576,6 +601,7 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificationSnoozes'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['segment-downgrades'] });
       setSnoozeAccount(null);
       setSnoozeNotificationType(null);
       toast.success('✓ Account snoozed');
@@ -652,6 +678,14 @@ export default function Dashboard() {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       tip: 'Accounts with contract renewals coming up within the next 6 months. These need attention to ensure they renew successfully. Click to view all at-risk accounts, then click individual accounts to prepare renewal proposals, review contracts, or schedule renewal meetings.'
+    },
+    {
+      title: 'Segment Downgrades',
+      value: segmentDowngrades.length,
+      icon: TrendingDown,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      tip: 'Accounts that have moved to a lower revenue segment compared to last year. This indicates declining revenue or account value. Click to view all segment downgrades, then click individual accounts to investigate why the segment changed and take action to restore revenue.'
     }
   ];
 
@@ -680,13 +714,14 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           const isClickable = stat.title === 'Active Accounts' || 
                              stat.title === 'Total Contacts' || 
                              stat.title === 'Open Tasks' || 
-                             stat.title === 'At Risk Accounts';
+                             stat.title === 'At Risk Accounts' ||
+                             stat.title === 'Segment Downgrades';
           
           const handleClick = () => {
             if (stat.title === 'Active Accounts') {
@@ -697,6 +732,8 @@ export default function Dashboard() {
               navigate(createPageUrl('Tasks'));
             } else if (stat.title === 'At Risk Accounts') {
               navigate(`${createPageUrl('Accounts')}?status=at_risk`);
+            } else if (stat.title === 'Segment Downgrades') {
+              navigate(`${createPageUrl('Accounts')}?segment_downgrade=true`);
             }
           };
           
@@ -729,7 +766,7 @@ export default function Dashboard() {
       </div>
 
       {/* Alerts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* At Risk Accounts - Show first for priority */}
         <TutorialTooltip
           tip="Accounts with contract renewals within the next 6 months need proactive attention. Click any account name to view details, prepare renewal proposals, review contract terms, or schedule renewal meetings. Use the snooze button to temporarily hide accounts you've already addressed. Click 'View All' to see the complete list and prioritize your renewal efforts."
@@ -920,6 +957,94 @@ export default function Dashboard() {
                     onClick={() => navigate(createPageUrl('NeglectedAccounts'))}
                   >
                     View All {neglectedAccounts.length} Accounts
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TutorialTooltip>
+
+        {/* Segment Downgrades */}
+        <TutorialTooltip
+          tip="Accounts that have moved to a lower revenue segment compared to last year need attention. This indicates declining revenue or account value. Click any account to view details and investigate why the segment changed. Use the snooze button if you've already addressed the issue."
+          step={1}
+          position="bottom"
+        >
+          <Card className="border-purple-200 dark:border-border bg-purple-50/50 dark:bg-surface-1">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle 
+                  className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground cursor-pointer hover:text-purple-700 dark:hover:text-purple-400 transition-colors"
+                  onClick={() => navigate(`${createPageUrl('Accounts')}?segment_downgrade=true`)}
+                >
+                  <TrendingDown className="w-5 h-5 text-purple-600" />
+                  Segment Downgrades
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                    {segmentDowngrades.length}
+                  </Badge>
+                  {segmentDowngrades.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`${createPageUrl('Accounts')}?segment_downgrade=true`)}
+                      className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View All
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Downgraded from last year's segment</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {segmentDowngrades.slice(0, 5).map(account => {
+                  return (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors border border-purple-100 dark:border-border"
+                    >
+                      <Link
+                        to={createPageUrl(`AccountDetail?id=${account.id}`)}
+                        className="flex-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 dark:text-foreground">{account.name}</p>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-text-muted">
+                          {account.last_year_segment} → {account.current_year_segment}
+                        </p>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSnoozeAccount(account);
+                          setSnoozeNotificationType('segment_downgrade');
+                        }}
+                        className="text-purple-700 hover:text-purple-900 hover:bg-purple-100 ml-2"
+                      >
+                        <BellOff className="w-4 h-4 mr-1" />
+                        Snooze
+                      </Button>
+                    </div>
+                  );
+                })}
+                {segmentDowngrades.length === 0 && (
+                  <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No segment downgrades 🎉</p>
+                )}
+                {segmentDowngrades.length > 5 && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+                    onClick={() => navigate(`${createPageUrl('Accounts')}?segment_downgrade=true`)}
+                  >
+                    View All {segmentDowngrades.length} Accounts
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </Button>
                 )}
