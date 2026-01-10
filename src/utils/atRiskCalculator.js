@@ -12,17 +12,23 @@
  */
 
 import { startOfDay, differenceInDays } from 'date-fns';
-import { getSegmentForYear } from './revenueSegmentCalculator.js';
+import { getSegmentForYear, getSegmentYear } from './revenueSegmentCalculator.js';
 
 // Server-safe getCurrentYear (for serverless functions where localStorage/context isn't available)
-// Get selected year from YearSelectorContext - REQUIRED, no fallback
-// Per user requirement: Never fall back to current year, only ever go by selected year
+// Get selected year from YearSelectorContext - REQUIRED for client-side, fallback to current year for serverless
+// Per user requirement: Never fall back to current year in client-side, only ever go by selected year
+// For serverless functions, use current year as fallback since context isn't available
 function getCurrentYear() {
-  // Use the global getCurrentYear function from YearSelectorContext
+  // Use the global getCurrentYear function from YearSelectorContext (client-side)
   if (typeof window !== 'undefined' && window.__getCurrentYear) {
     return window.__getCurrentYear();
   }
-  // No fallback - selected year is required
+  // Serverless fallback: use current year (for background jobs and API endpoints)
+  // This is acceptable because serverless functions run in background and don't have user context
+  if (typeof window === 'undefined') {
+    return new Date().getFullYear();
+  }
+  // Client-side without context - this should not happen, but throw error to catch issues
   throw new Error('atRiskCalculator.getCurrentYear: YearSelectorContext not initialized. Selected year is required.');
 }
 
@@ -400,5 +406,86 @@ export function calculateNeglectedAccounts(accounts, snoozes = []) {
   });
   
   return neglectedAccounts;
+}
+
+/**
+ * Calculate accounts with downgraded segments
+ * Compares current year's segment to last year's segment
+ * Only flags accounts that moved to a lower segment (downgrade)
+ * 
+ * Segment hierarchy: A > B > C > D > E > F
+ * 
+ * @param {Array} accounts - All accounts
+ * @param {Array} snoozes - Notification snoozes (optional)
+ * @returns {Array} Array of accounts with downgraded segments
+ */
+export function calculateSegmentDowngrades(accounts, snoozes = []) {
+  const currentYear = getCurrentYear();
+  const lastYear = currentYear - 1;
+  const downgradedAccounts = [];
+  
+  // Create snooze lookup
+  const snoozeMap = new Map();
+  snoozes.forEach(snooze => {
+    if (snooze.notification_type === 'segment_downgrade' && snooze.related_account_id) {
+      const key = `${snooze.related_account_id}`;
+      const snoozedUntil = new Date(snooze.snoozed_until);
+      if (snoozedUntil > new Date()) {
+        snoozeMap.set(key, snoozedUntil);
+      }
+    }
+  });
+  
+  // Segment hierarchy for comparison (higher number = lower segment)
+  const segmentHierarchy = {
+    'A': 1,
+    'B': 2,
+    'C': 3,
+    'D': 4,
+    'E': 5,
+    'F': 6
+  };
+  
+  accounts.forEach(account => {
+    // Skip archived accounts
+    if (account.archived) return;
+    
+    // Skip accounts with ICP status = 'na' (permanently excluded)
+    if (account.icp_status === 'na') return;
+    
+    // Skip if snoozed
+    if (snoozeMap.has(account.id)) return;
+    
+    // Get last year's segment
+    let lastYearSegment = null;
+    if (account.segment_by_year && typeof account.segment_by_year === 'object') {
+      lastYearSegment = account.segment_by_year[lastYear.toString()] || account.revenue_segment;
+    } else {
+      lastYearSegment = account.revenue_segment;
+    }
+    
+    // Get current year's segment (using getSegmentYear logic)
+    const currentYearSegment = getSegmentForYear(account, currentYear) || 'C';
+    
+    // Skip if we don't have last year's segment
+    if (!lastYearSegment || !segmentHierarchy[lastYearSegment]) return;
+    
+    // Check if segment downgraded (moved to a lower segment)
+    const lastYearRank = segmentHierarchy[lastYearSegment];
+    const currentYearRank = segmentHierarchy[currentYearSegment] || 6; // Default to F if unknown
+    
+    if (currentYearRank > lastYearRank) {
+      // Segment downgraded
+      downgradedAccounts.push({
+        account_id: account.id,
+        account_name: account.name,
+        last_year_segment: lastYearSegment,
+        current_year_segment: currentYearSegment,
+        downgrade_level: currentYearRank - lastYearRank // How many levels down (1 = one level, 2 = two levels, etc.)
+      });
+    }
+  });
+  
+  return downgradedAccounts;
 }
 
