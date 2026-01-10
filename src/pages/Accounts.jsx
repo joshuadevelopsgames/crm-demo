@@ -24,7 +24,8 @@ import {
   Upload,
   Archive,
   RefreshCw,
-  BellOff
+  BellOff,
+  Info
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { isWonStatus, filterEstimatesByYear } from '@/utils/reportCalculations';
