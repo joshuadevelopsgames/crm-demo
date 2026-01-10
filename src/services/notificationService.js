@@ -870,67 +870,107 @@ export async function createContractTypoNotifications(estimates, supabase) {
     
     if (estimatesWithTypos.length === 0) {
       console.log('No contract typos detected');
+      // Mark existing notifications as read if no typos found
+      for (const user of users) {
+        const { data: existingNotifications } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('type', 'contract_date_typo')
+          .eq('is_read', false);
+        
+        if (existingNotifications && existingNotifications.length > 0) {
+          const notificationIds = existingNotifications.map(n => n.id);
+          await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .in('id', notificationIds);
+        }
+      }
       return;
     }
     
     console.log(`🔍 Found ${estimatesWithTypos.length} estimates with possible contract date typos`);
     
-    const notifications = [];
-    const now = new Date().toISOString();
-    
-    for (const est of estimatesWithTypos) {
+    // Prepare estimate details for metadata
+    const estimateDetails = estimatesWithTypos.map(est => {
       const contractStart = new Date(est.contract_start);
       const contractEnd = new Date(est.contract_end);
       const durationMonths = calculateDurationMonths(contractStart, contractEnd);
       const contractYears = getContractYears(durationMonths);
-      
       const estimateNumber = est.estimate_number || est.lmn_estimate_id || est.id || 'Unknown';
-      const message = `Estimate ${estimateNumber}: Duration (${durationMonths} months) exceeds an exact ${contractYears - 1} year boundary by one month. Possible date entry error.`;
       
-      for (const user of users) {
-        // Check if notification already exists for this specific estimate (unread)
-        // Check by estimate_id in metadata to allow multiple notifications per account
-        const { data: existingNotifications } = await supabase
-          .from('notifications')
-          .select('id, metadata')
-          .eq('user_id', user.id)
-          .eq('type', 'contract_date_typo')
-          .eq('related_account_id', est.account_id || null)
-          .eq('is_read', false);
-        
-        // Check if any existing notification is for this specific estimate
-        const existingForThisEstimate = existingNotifications?.some(notif => {
-          try {
-            const metadata = typeof notif.metadata === 'string' 
-              ? JSON.parse(notif.metadata) 
-              : notif.metadata;
-            return metadata?.estimate_id === est.id;
-          } catch {
-            return false;
+      return {
+        estimate_id: est.id,
+        estimate_number: estimateNumber,
+        account_id: est.account_id,
+        account_name: est.account_name || null,
+        contract_start: est.contract_start,
+        contract_end: est.contract_end,
+        duration_months: durationMonths,
+        contract_years: contractYears
+      };
+    });
+    
+    const notifications = [];
+    const now = new Date().toISOString();
+    
+    // Create ONE notification per user with the count
+    for (const user of users) {
+      // Check if notification already exists (unread)
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id, metadata')
+        .eq('user_id', user.id)
+        .eq('type', 'contract_date_typo')
+        .eq('is_read', false)
+        .maybeSingle();
+      
+      if (existing) {
+        // Update existing notification with new count and estimate list
+        try {
+          const existingMetadata = typeof existing.metadata === 'string' 
+            ? JSON.parse(existing.metadata) 
+            : existing.metadata;
+          
+          // Only update if count changed
+          if (existingMetadata?.count !== estimatesWithTypos.length) {
+            await supabase
+              .from('notifications')
+              .update({
+                message: `${estimatesWithTypos.length} estimate${estimatesWithTypos.length !== 1 ? 's' : ''} ${estimatesWithTypos.length !== 1 ? 'have' : 'has'} possible contract date typos. Click to review.`,
+                metadata: JSON.stringify({
+                  count: estimatesWithTypos.length,
+                  estimates: estimateDetails,
+                  updated_at: now
+                }),
+                updated_at: now
+              })
+              .eq('id', existing.id);
+            console.log(`🔄 Updated contract typo notification for user ${user.id} with new count: ${estimatesWithTypos.length}`);
           }
-        });
-        
-        if (existingForThisEstimate) continue; // Already notified for this estimate
-        
-        notifications.push({
-          user_id: user.id,
-          type: 'contract_date_typo',
-          title: 'Possible Contract Date Typo',
-          message: message,
-          related_account_id: est.account_id || null,
-          metadata: JSON.stringify({
-            estimate_id: est.id,
-            estimate_number: estimateNumber,
-            contract_start: est.contract_start,
-            contract_end: est.contract_end,
-            duration_months: durationMonths,
-            contract_years: contractYears
-          }),
-          is_read: false,
-          created_at: now,
-          scheduled_for: now
-        });
+        } catch (error) {
+          console.error('Error updating existing notification:', error);
+        }
+        continue; // Already has notification
       }
+      
+      // Create new notification
+      notifications.push({
+        user_id: user.id,
+        type: 'contract_date_typo',
+        title: 'Possible Contract Date Typos',
+        message: `${estimatesWithTypos.length} estimate${estimatesWithTypos.length !== 1 ? 's' : ''} ${estimatesWithTypos.length !== 1 ? 'have' : 'has'} possible contract date typos. Click to review.`,
+        related_account_id: null, // No specific account - it's a summary
+        metadata: JSON.stringify({
+          count: estimatesWithTypos.length,
+          estimates: estimateDetails,
+          created_at: now
+        }),
+        is_read: false,
+        created_at: now,
+        scheduled_for: now
+      });
     }
     
     if (notifications.length > 0) {
@@ -938,7 +978,7 @@ export async function createContractTypoNotifications(estimates, supabase) {
       if (error) {
         console.error('Error creating contract typo notifications:', error);
       } else {
-        console.log(`🔔 Created ${notifications.length} contract typo notifications`);
+        console.log(`🔔 Created ${notifications.length} contract typo notification(s) (one per user)`);
       }
     }
   } catch (error) {
