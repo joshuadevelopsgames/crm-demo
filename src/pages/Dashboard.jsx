@@ -965,6 +965,52 @@ export default function Dashboard() {
           </Card>
         </TutorialTooltip>
 
+        {/* Overdue Tasks */}
+        <TutorialTooltip
+          tip="Tasks that are past their due date need immediate action. Click any task to open it, then either complete it, update the due date if it's been rescheduled, or mark it as in progress. Overdue tasks can damage client relationships, so prioritize these. You can also create a new task to follow up on overdue items."
+          step={1}
+          position="bottom"
+        >
+        <Card className="border-orange-200 dark:border-border bg-orange-50/50 dark:bg-surface-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
+                Overdue Tasks
+              </CardTitle>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                {overdueTasks.length}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Tasks past their due date</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {overdueTasks.slice(0, 5).map(task => (
+                <div
+                  key={task.id}
+                  onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
+                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-orange-100 dark:border-border cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 dark:text-foreground">{task.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-text-muted">
+                      Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-orange-600 border-orange-300">
+                    {task.priority}
+                  </Badge>
+                </div>
+              ))}
+              {overdueTasks.length === 0 && (
+                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No overdue tasks</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        </TutorialTooltip>
+
         {/* Segment Downgrades */}
         <TutorialTooltip
           tip="Accounts that have moved to a lower revenue segment compared to last year need attention. This indicates declining revenue or account value. Click any account to view details and investigate why the segment changed. Use the snooze button if you've already addressed the issue."
@@ -1051,52 +1097,6 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        </TutorialTooltip>
-
-        {/* Overdue Tasks */}
-        <TutorialTooltip
-          tip="Tasks that are past their due date need immediate action. Click any task to open it, then either complete it, update the due date if it's been rescheduled, or mark it as in progress. Overdue tasks can damage client relationships, so prioritize these. You can also create a new task to follow up on overdue items."
-          step={1}
-          position="bottom"
-        >
-        <Card className="border-orange-200 dark:border-border bg-orange-50/50 dark:bg-surface-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2 text-slate-900 dark:text-foreground">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
-                Overdue Tasks
-              </CardTitle>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-                {overdueTasks.length}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600 dark:text-text-muted mb-3">Tasks past their due date</p>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {overdueTasks.slice(0, 5).map(task => (
-                <div
-                  key={task.id}
-                  onClick={() => navigate(`${createPageUrl('Tasks')}?taskId=${task.id}`)}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-surface-2 rounded-lg border border-orange-100 dark:border-border cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-slate-900 dark:text-foreground">{task.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-text-muted">
-                      Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-orange-600 border-orange-300">
-                    {task.priority}
-                  </Badge>
-                </div>
-              ))}
-              {overdueTasks.length === 0 && (
-                <p className="text-sm text-slate-500 dark:text-text-muted text-center py-4">No overdue tasks</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
         </TutorialTooltip>
 
         {/* Active Sequences */}
