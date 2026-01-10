@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, Target } from 'lucide-react';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { isWonStatus } from '@/utils/reportCalculations';
-import { getEstimateYearData } from '@/utils/revenueSegmentCalculator';
+import { getYearFromDateString } from '@/utils/dateFormatter';
 
 // Helper to get current year (respects year selector) - REQUIRED, no fallback
 // Per user requirement: Never fall back to current year, only ever go by selected year
@@ -26,6 +26,7 @@ export default function EstimatesStats({ estimates = [], account = null, selecte
   
   // Per Estimates spec R20-R23: Use pre-calculated total_estimates_by_year
   // Fallback to on-the-fly calculation if stored value is missing or 0
+  // Per Won Loss Ratio spec R40: For count-based calculations, treat multi-year contracts as single-year using contract_start
   const thisYearEstimatesCount = useMemo(() => {
     // Try to use pre-calculated value first
     if (account && account.total_estimates_by_year && typeof account.total_estimates_by_year === 'object') {
@@ -39,23 +40,62 @@ export default function EstimatesStats({ estimates = [], account = null, selecte
     }
     
     // Fallback: Calculate on-the-fly if stored value is missing or 0
-    // Filter estimates that apply to current year (excluding archived)
+    // Filter estimates that apply to current year using simple date extraction (treat multi-year as single-year)
+    // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
     const yearEstimates = estimates.filter(est => {
       if (est.archived) return false;
-      const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
+      
+      // Use simple date extraction (treat multi-year contracts as single-year)
+      let dateToUse = null;
+      if (est.contract_end) {
+        dateToUse = est.contract_end;
+      } else if (est.contract_start) {
+        dateToUse = est.contract_start;
+      } else if (est.estimate_date) {
+        dateToUse = est.estimate_date;
+      } else if (est.created_date) {
+        dateToUse = est.created_date;
+      }
+      
+      if (dateToUse) {
+        const year = getYearFromDateString(dateToUse);
+        if (year && year.toString() === currentYear.toString()) return true;
+      }
+      
+      return false;
     });
     
     return yearEstimates.length;
   }, [account, currentYear, estimates]);
 
   // Per spec R1, R11: Calculate win percentage using isWonStatus to respect pipeline_status priority
-  // Calculate win rate for selected year estimates only
+  // Per Won Loss Ratio spec R40: For count-based win rate, treat multi-year contracts as single-year using contract_start
+  // Calculate win rate for selected year estimates only (using simple date extraction)
   const winPercentage = useMemo(() => {
+    // Use same count-based filtering logic as thisYearEstimatesCount
     const yearEstimates = estimates.filter(est => {
-      const yearData = getEstimateYearData(est, currentYear);
-      return yearData && yearData.appliesToCurrentYear;
+      if (est.archived) return false;
+      
+      // Use simple date extraction (treat multi-year contracts as single-year)
+      let dateToUse = null;
+      if (est.contract_end) {
+        dateToUse = est.contract_end;
+      } else if (est.contract_start) {
+        dateToUse = est.contract_start;
+      } else if (est.estimate_date) {
+        dateToUse = est.estimate_date;
+      } else if (est.created_date) {
+        dateToUse = est.created_date;
+      }
+      
+      if (dateToUse) {
+        const year = getYearFromDateString(dateToUse);
+        if (year && year.toString() === currentYear.toString()) return true;
+      }
+      
+      return false;
     });
+    
     if (yearEstimates.length === 0) return 0;
     const won = yearEstimates.filter(est => isWonStatus(est)).length;
     return (won / yearEstimates.length) * 100;
