@@ -82,12 +82,17 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 
 3. **Year Filtering** (if year specified)
    - Exclude archived estimates
-   - Determine date to use (per Estimates spec R2):
-     - Priority 1: `contract_end` (if available)
-     - Priority 2: `contract_start` (if available)
-     - Priority 3: `estimate_date` (if available)
-     - Priority 4: `created_date` (if available)
-   - Extract year from date (first 4 characters of date string)
+   - **For COUNT-based calculations** (win rate, estimate counts):
+     - Determine date to use (per Estimates spec R2):
+       - Priority 1: `contract_end` (if available)
+       - Priority 2: `contract_start` (if available)
+       - Priority 3: `estimate_date` (if available)
+       - Priority 4: `created_date` (if available)
+     - Extract year from date (first 4 characters of date string)
+     - Multi-year contracts are treated as single-year contracts (appear only in determined year) (R40)
+   - **For DOLLAR-based calculations** (revenue, won value, estimated value):
+     - Use annualization logic (per Revenue Logic spec R8, R9)
+     - Multi-year contracts are allocated to sequential calendar years with annualized amounts (R41)
    - Validate year is between 2000-2100
    - If `soldOnly=true`: Exclude estimates with status containing "lost"
    - Per Estimates spec R10: `exclude_stats` field is ignored (never used in any system logic)
@@ -111,16 +116,18 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
    - If both are missing or zero, treat as 0
 
 7. **Overall Statistics Calculation**
-   - Count total estimates
-   - Count won estimates (where `isWonStatus()` returns true)
-   - Count lost estimates (where `status === 'lost'`)
-   - Count pending estimates (neither won nor lost)
-   - Calculate decided count (won + lost)
-   - Calculate win rate: `(won / decidedCount) * 100` (only decided estimates)
-   - Sum revenue for total, won, lost, and pending
-   - Calculate ratios:
-     - `estimatesVsWonRatio`: `(won / total) * 100`
-     - `revenueVsWonRatio`: `(wonValue / totalValue) * 100`
+   - **Count-based calculations** (use simple date extraction, R40):
+     - Count total estimates (multi-year contracts counted once in start year)
+     - Count won estimates (where `isWonStatus()` returns true)
+     - Count lost estimates (where `status === 'lost'`)
+     - Count pending estimates (neither won nor lost)
+     - Calculate decided count (won + lost)
+     - Calculate win rate: `(won / decidedCount) * 100` (only decided estimates)
+   - **Dollar-based calculations** (use annualization, R41):
+     - Sum revenue for total, won, lost, and pending (multi-year contracts annualized)
+     - Calculate ratios:
+       - `estimatesVsWonRatio`: `(won / total) * 100` (count-based)
+       - `revenueVsWonRatio`: `(wonValue / totalValue) * 100` (dollar-based)
 
 8. **Account Statistics Calculation**
    - Group estimates by `account_id`
@@ -235,6 +242,14 @@ Rules must be testable and numbered.
 - **R25**: If `soldOnly=true`, exclude estimates with status containing "lost" (case-insensitive).
 - **R26**: Per Estimates spec R10: `exclude_stats` field is ignored - never used in any system logic.
 - **R27**: Estimates with zero/negative prices are included in year filtering (LMN compatibility).
+
+### Multi-Year Contract Handling Rules
+
+- **R40**: For COUNT-based won/loss ratio calculations (win rate percentage, "X won / Y total" display), multi-year contracts are treated as single-year contracts using the year determined by date priority (R22). A multi-year contract appears only in the year of its determined date field (typically `contract_start`).
+- **R41**: For DOLLAR-based calculations (won value, estimated value, revenue totals), multi-year contracts use annualization logic (per Revenue Logic spec R8, R9). Revenue is allocated to sequential calendar years starting from `contract_start` year, with annualized amounts per year.
+- **R42**: The distinction between count-based and dollar-based filtering ensures that:
+  - Win rate counts (R12, R13) use simple date extraction (multi-year contracts counted once in start year)
+  - Revenue values use annualization (multi-year contracts contribute annualized amounts to each year they span)
 
 ### Duplicate Handling Rules
 
@@ -574,6 +589,8 @@ estimates = [
 - **AC10**: All statistics are sorted by `totalValue` in descending order (R38, R39).
 - **AC11**: Win rates and ratios are formatted to 1 decimal place (R15, R18).
 - **AC12**: Estimates without any valid date fields (`contract_end`, `contract_start`, `estimate_date`, or `created_date`) are excluded from year-based reports (per Estimates spec R2).
+- **AC13**: Multi-year contracts are treated as single-year contracts for count-based won/loss ratio calculations (appear only in determined year) (R40).
+- **AC14**: Multi-year contracts use annualization for dollar-based revenue calculations (allocated to sequential years with annualized amounts) (R41).
 
 ## Special considerations
 
@@ -642,4 +659,5 @@ This spec governs behavior for the Won Loss Ratio Logic section. Any change to t
 The following changes were made and approved:
 - **2024-XX-XX**: Changed revenue field preference from `total_price` (with fallback to `total_price_with_tax`) to `total_price_with_tax` (with fallback to `total_price`)
 - **2024-XX-XX**: Changed missing division default from 'Unknown' to 'Uncategorized'
+- **2025-01-09**: Added distinction between count-based and dollar-based multi-year contract handling. Count-based calculations (win rate, estimate counts) treat multi-year contracts as single-year using contract_start year. Dollar-based calculations (revenue, won value) continue using annualization (R40, R41).
 

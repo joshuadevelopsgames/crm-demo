@@ -152,6 +152,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 - **Win Rate**: `(won estimates / total estimates) * 100`
   - Archived estimates excluded from both numerator and denominator
   - Uses `isWonStatus()` function to respect `pipeline_status` priority
+  - **Multi-year contracts**: Treated as single-year contracts for count-based calculations (appear only in determined year, typically `contract_start`). See Won Loss Ratio spec R40 for details.
 - **Department Total**: Sum of `total_price_with_tax` (or `total_price`) for all estimates in department
 - **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
   - Archived estimates excluded
@@ -511,7 +512,8 @@ Similar to how `revenue_by_year` is pre-calculated during import, `total_estimat
 - For each account:
   - Get all estimates linked to account (won + lost, excluding archived)
   - Determine year for each estimate using date priority (R2): `contract_end` → `contract_start` → `estimate_date` → `created_date`
-  - For multi-year contracts, count once per year they span (same logic as revenue allocation)
+  - **For count-based calculations** (win rate, estimate counts): Multi-year contracts are treated as single-year contracts (appear only in determined year, typically `contract_start`). See Won Loss Ratio spec R40.
+  - **For dollar-based calculations** (revenue, totals): Multi-year contracts use annualization (allocated to sequential years with annualized amounts). See Revenue Logic spec R8, R9.
   - Store count in `total_estimates_by_year` JSONB: `{ "2024": 15, "2025": 23, ... }`
 
 **R21**: `total_estimates_by_year` field is calculated and stored during import only. It is NOT updated by database triggers when estimates change.
