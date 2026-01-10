@@ -812,9 +812,41 @@ export async function createContractTypoNotifications(estimates, supabase) {
       return;
     }
     
-    // Find estimates with typos
+    // Helper function to check if estimate is won (matches account page logic)
+    const isWonStatus = (est) => {
+      // Check pipeline_status first (preferred)
+      if (est.pipeline_status) {
+        const pipelineLower = est.pipeline_status.toString().toLowerCase().trim();
+        if (pipelineLower === 'sold' || pipelineLower.includes('sold')) {
+          return true;
+        }
+      }
+      // Check status field (fallback)
+      if (!est.status) return false;
+      const statusLower = est.status.toString().toLowerCase().trim();
+      const wonStatuses = [
+        'contract signed',
+        'work complete',
+        'billing complete',
+        'email contract award',
+        'verbal contract award',
+        'contract in progress',
+        'contract + billing complete',
+        'work in progress',
+        'sold',
+        'won'
+      ];
+      return wonStatuses.includes(statusLower);
+    };
+    
+    // Find estimates with typos (only won estimates, matching account page warning)
     const estimatesWithTypos = estimates.filter(est => {
       if (!est.contract_start || !est.contract_end || est.archived) {
+        return false;
+      }
+      
+      // Only check won estimates (matches account page warning behavior)
+      if (!isWonStatus(est)) {
         return false;
       }
       
@@ -856,17 +888,29 @@ export async function createContractTypoNotifications(estimates, supabase) {
       const message = `Estimate ${estimateNumber}: Duration (${durationMonths} months) exceeds an exact ${contractYears - 1} year boundary by one month. Possible date entry error.`;
       
       for (const user of users) {
-        // Check if notification already exists (unread)
-        const { data: existing } = await supabase
+        // Check if notification already exists for this specific estimate (unread)
+        // Check by estimate_id in metadata to allow multiple notifications per account
+        const { data: existingNotifications } = await supabase
           .from('notifications')
-          .select('id')
+          .select('id, metadata')
           .eq('user_id', user.id)
           .eq('type', 'contract_date_typo')
           .eq('related_account_id', est.account_id || null)
-          .eq('is_read', false)
-          .maybeSingle();
+          .eq('is_read', false);
         
-        if (existing) continue; // Already notified
+        // Check if any existing notification is for this specific estimate
+        const existingForThisEstimate = existingNotifications?.some(notif => {
+          try {
+            const metadata = typeof notif.metadata === 'string' 
+              ? JSON.parse(notif.metadata) 
+              : notif.metadata;
+            return metadata?.estimate_id === est.id;
+          } catch {
+            return false;
+          }
+        });
+        
+        if (existingForThisEstimate) continue; // Already notified for this estimate
         
         notifications.push({
           user_id: user.id,
