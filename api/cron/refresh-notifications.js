@@ -13,7 +13,6 @@
 
 import { getSupabaseClient } from '../../src/services/supabaseClient.js';
 import { createContractTypoNotifications, createSegmentDowngradeNotifications } from '../../src/services/notificationService.js';
-import { createContractTypoNotifications } from '../../src/services/notificationService.js';
 
 // Dynamic import for server-side compatibility (Vercel serverless functions)
 async function getAtRiskCalculator() {
