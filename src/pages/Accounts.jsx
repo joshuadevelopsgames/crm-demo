@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue, calculateRevenueSegmentForYear } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue, calculateRevenueSegmentForYear, getSegmentYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -357,23 +357,32 @@ export default function Accounts() {
   // This avoids recalculating the same values multiple times during filtering/enrichment
   // Moved before useEffect that uses it to avoid TDZ error
   // Only calculate if estimates are loaded (or use cached data)
+  // Get segment year (current year, or previous year if Jan/Feb)
+  const segmentYear = getSegmentYear();
+  
+  // Calculate total revenue for segment year (not selected year)
+  const totalRevenueForSegmentYear = useMemo(() => {
+    if (estimatesLoading && allEstimates.length === 0) return 0;
+    return calculateTotalRevenue(accounts, estimatesByAccountId, segmentYear);
+  }, [accounts, estimatesByAccountId, segmentYear, estimatesLoading, allEstimates.length]);
+
   const accountsWithRevenueAndSegment = useMemo(() => {
     // If estimates haven't loaded yet, return accounts with default revenue/segment
     // This allows accounts to render immediately
     if (estimatesLoading && allEstimates.length === 0) {
       return accounts.map(account => ({
         account,
-        revenue: account.revenue_by_year?.[selectedYear] || 0,
-        segment: account.segment_by_year?.[selectedYear] || 'C'
+        revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
+        segment: account.segment_by_year?.[segmentYear] || 'C' // Segments use segmentYear
       }));
     }
     return accounts.map(account => {
       const accountEstimates = estimatesByAccountId[account.id] || [];
-      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear); // Revenue still uses selectedYear
       const segment = calculateRevenueSegmentForYear(
         account,
-        selectedYear,
-        totalRevenueForYear,
+        segmentYear, // Segments use segmentYear (current year, or previous year if Jan/Feb)
+        totalRevenueForSegmentYear,
         accountEstimates
       );
       return {
@@ -382,7 +391,7 @@ export default function Accounts() {
         segment
       };
     });
-  }, [accounts, estimatesByAccountId, selectedYear, totalRevenueForYear, estimatesLoading, allEstimates.length]);
+  }, [accounts, estimatesByAccountId, selectedYear, segmentYear, totalRevenueForSegmentYear, estimatesLoading, allEstimates.length]);
 
   // Debug: Log year selection status and verify data updates
   // Moved after estimatesByAccountId declaration to avoid TDZ error
@@ -393,16 +402,18 @@ export default function Accounts() {
       currentYear: getCurrentYear(),
       accountsCount: accounts.length
     });
-    if (accounts.length > 0 && estimatesByAccountId && totalRevenueForYear !== undefined) {
+    if (accounts.length > 0 && estimatesByAccountId && totalRevenueForSegmentYear !== undefined) {
       const sampleAccount = accounts[0];
       const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
       const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
-      const sampleSegment = calculateRevenueSegmentForYear(sampleAccount, selectedYear, totalRevenueForYear, sampleAccountEstimates);
+      const sampleSegment = calculateRevenueSegmentForYear(sampleAccount, segmentYear, totalRevenueForSegmentYear, sampleAccountEstimates);
       console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
         selectedYear,
         currentYear: getCurrentYear(),
         accountsCount: accounts.length,
-        totalRevenueForYear,
+        totalRevenueForSegmentYear,
+        segmentYear,
+        selectedYear,
         sampleAccount: {
           id: sampleAccount.id,
           name: sampleAccount.name,

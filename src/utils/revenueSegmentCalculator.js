@@ -268,6 +268,28 @@ function getCurrentYearForCalculation() {
 }
 
 /**
+ * Get the year to use for segment calculations
+ * Segments are calculated based on current year, with special rule:
+ * - January and February: use previous year's segments
+ * - March and later: use current year's segments
+ * 
+ * @returns {number} - Year to use for segment calculations
+ */
+export function getSegmentYear() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
+  
+  // January (1) or February (2): use previous year
+  if (currentMonth === 1 || currentMonth === 2) {
+    return currentYear - 1;
+  }
+  
+  // March (3) and later: use current year
+  return currentYear;
+}
+
+/**
  * Calculate revenue from won estimates for a specific account and year
  * 
  * This function calculates revenue on-the-fly from won estimates, not from stored revenue_by_year.
@@ -416,9 +438,9 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
  * @returns {string} - Revenue segment: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
-  // Use the helper function for selected year
-  const selectedYear = getCurrentYearForCalculation();
-  return calculateRevenueSegmentForYear(account, selectedYear, totalRevenue, estimates);
+  // Use segment year (current year, or previous year if Jan/Feb)
+  const segmentYear = getSegmentYear();
+  return calculateRevenueSegmentForYear(account, segmentYear, totalRevenue, estimates);
 }
 
 /**
@@ -539,21 +561,23 @@ export function getTotalEstimatesForYear(account, selectedYear = null) {
  * @returns {string} - Segment for selected year: 'A', 'B', 'C', or 'D'
  */
 export function getSegmentForYear(account, selectedYear = null, allAccounts = [], estimatesByAccountId = {}) {
-  const year = selectedYear || getCurrentYearForCalculation();
+  // Always use segment year (current year, or previous year if Jan/Feb) for segment calculations
+  // selectedYear parameter is ignored - segments are always based on current year logic
+  const segmentYear = getSegmentYear();
   
   // If we don't have the required data for on-the-fly calculation, fall back to stored data
   if (!allAccounts || allAccounts.length === 0 || !estimatesByAccountId) {
     if (account.segment_by_year && typeof account.segment_by_year === 'object') {
-      const yearSegment = account.segment_by_year[year.toString()];
-      if (yearSegment && ['A', 'B', 'C', 'D'].includes(yearSegment)) {
+      const yearSegment = account.segment_by_year[segmentYear.toString()];
+      if (yearSegment && ['A', 'B', 'C', 'D', 'E', 'F'].includes(yearSegment)) {
         return yearSegment;
       }
     }
     return account.revenue_segment || 'C';
   }
   
-  // Calculate total revenue from all won estimates for all accounts for the selected year
-  const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId, year);
+  // Calculate total revenue from all won estimates for all accounts for the segment year
+  const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId, segmentYear);
   
   // Get this account's estimates
   const accountEstimates = estimatesByAccountId[account.id] || [];
@@ -561,7 +585,7 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
   // Calculate segment using the helper function
   return calculateRevenueSegmentForYear(
     account,
-    year,
+    segmentYear,
     totalRevenue,
     accountEstimates
   );
