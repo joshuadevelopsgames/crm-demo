@@ -818,7 +818,7 @@ export default function Accounts() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <TutorialTooltip
-          tip="Your central hub for managing all companies. Search by name, filter by type (prospect, customer, partner) or revenue segment (A, B, C, D), and sort by score, name, or last interaction. Click any account to view full details including interactions, contacts, scorecards, and sales insights. Use this to track your sales pipeline and customer relationships."
+          tip="Your central hub for managing all companies. Search by name, filter by type (prospect, customer, partner) or revenue segment (A, B, C, D, E, F), and sort by score, name, or last interaction. Click any account to view full details including interactions, contacts, scorecards, and sales insights. Use this to track your sales pipeline and customer relationships."
           step={2}
           position="bottom"
         >
@@ -966,6 +966,8 @@ export default function Accounts() {
                 <SelectItem value="B">Segment B (5-15%)</SelectItem>
                 <SelectItem value="C">Segment C (&lt;5%)</SelectItem>
                 <SelectItem value="D">Segment D (Project Only)</SelectItem>
+                <SelectItem value="E">Segment E (New Client, ICP ≥80%)</SelectItem>
+                <SelectItem value="F">Segment F (New Client, ICP &lt;80%)</SelectItem>
               </SelectContent>
             </Select>
             <UserFilter

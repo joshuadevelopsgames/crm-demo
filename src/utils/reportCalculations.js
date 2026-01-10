@@ -627,13 +627,13 @@ export function enhanceDepartmentStatsWithMetadata(deptStats, estimates, account
       : null;
     
     // Calculate segment distribution
-    const segmentCounts = { A: 0, B: 0, C: 0, D: 0 };
+    const segmentCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
     deptAccounts.forEach(acc => {
       let segment = acc.revenue_segment;
       if (acc.segment_by_year && typeof acc.segment_by_year === 'object') {
         segment = acc.segment_by_year[selectedYear.toString()] || segment;
       }
-      if (segment && ['A', 'B', 'C', 'D'].includes(segment)) {
+      if (segment && ['A', 'B', 'C', 'D', 'E', 'F'].includes(segment)) {
         segmentCounts[segment]++;
       }
     });

@@ -9,6 +9,8 @@
  *   - "Standard" = project (one-time)
  *   - "Service" = ongoing/recurring
  *   - A/B/C can have Standard revenue, but D cannot have Service estimates - per spec R3
+ * Segment E: New client (no sold estimates) - ICP above 80%
+ * Segment F: New client (no sold estimates) - ICP below 80%
  * 
  * Revenue is calculated from won estimates for the selected year only (year-based calculation)
  * Per spec R1: All segment information is based on total revenue for the selected year
@@ -338,17 +340,42 @@ export function getRevenueForYear(account, selectedYear = null) {
  * @param {number} year - The year to calculate segment for
  * @param {number} totalRevenue - Total revenue for THIS SPECIFIC YEAR ONLY (not across all years)
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
- * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
+ * @returns {string} - Revenue segment: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function calculateRevenueSegmentForYear(account, year, totalRevenue, estimates = []) {
+  // Check for new clients (Segments E and F) - highest priority
+  // New client = no won estimates for the selected year
+  const wonEstimates = estimates.filter(est => {
+    if (!isWonStatus(est)) return false;
+    const yearData = getEstimateYearData(est, year);
+    return yearData && yearData.appliesToCurrentYear;
+  });
+  
+  // If no won estimates, this is a new client - check ICP score
+  if (wonEstimates.length === 0) {
+    const organizationScore = account?.organization_score;
+    // Check if organization_score exists and is a valid number
+    if (organizationScore !== null && organizationScore !== undefined) {
+      const icpScore = typeof organizationScore === 'number' 
+        ? organizationScore 
+        : parseFloat(organizationScore);
+      
+      if (!isNaN(icpScore)) {
+        // Segment E: New client with ICP >= 80%
+        if (icpScore >= 80) {
+          return 'E';
+        }
+        // Segment F: New client with ICP < 80%
+        return 'F';
+      }
+    }
+    // If no ICP score available, default to Segment F (new client, no ICP score)
+    return 'F';
+  }
+  
+  // Existing clients (have won estimates) - proceed with A/B/C/D logic
   // Segment D check (uses estimates for this specific year)
   if (estimates && estimates.length > 0) {
-    const wonEstimates = estimates.filter(est => {
-      if (!isWonStatus(est)) return false;
-      const yearData = getEstimateYearData(est, year);
-      return yearData && yearData.appliesToCurrentYear;
-    });
-    
     const hasStandardEstimates = wonEstimates.some(est => 
       est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
     );
@@ -386,7 +413,7 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
  * @param {Object} account - The account object
  * @param {number} totalRevenue - Total revenue for selected year ONLY (not across all years)
  * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
- * @returns {string} - Revenue segment: 'A', 'B', 'C', or 'D'
+ * @returns {string} - Revenue segment: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
   // Use the helper function for selected year
