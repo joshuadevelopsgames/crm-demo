@@ -24,7 +24,20 @@
  */
 
 import { isWonStatus } from './reportCalculations.js';
-import { getYearFromDateString } from './dateFormatter';
+// Inline getYearFromDateString to avoid serverless import issues
+function getYearFromDateString(dateStr) {
+  if (!dateStr) return null;
+  const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateMatch) {
+    return parseInt(dateMatch[1]);
+  }
+  // Fallback: try parsing as Date
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) {
+    return date.getFullYear();
+  }
+  return null;
+}
 
 /**
  * Calculate contract duration in months between two dates
