@@ -273,6 +273,15 @@ function getCurrentYearForCalculation() {
  * - January and February: use previous year's segments
  * - March and later: use current year's segments
  * 
+ * IMPORTANT: This function is called dynamically each time segments are needed.
+ * When March 1st arrives, this function will automatically return the current year
+ * instead of the previous year, causing segments to switch automatically.
+ * 
+ * To ensure segments are available for the current year when March arrives:
+ * - Segments are calculated for ALL years during import/recalculation
+ * - The current year's segments will already be in segment_by_year
+ * - No manual action is needed - the switch happens automatically
+ * 
  * @returns {number} - Year to use for segment calculations
  */
 export function getSegmentYear() {
