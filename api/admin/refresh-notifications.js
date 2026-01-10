@@ -23,7 +23,7 @@ async function getAtRiskCalculator() {
 }
 
 // Get Supabase anon client (for auth verification)
-function getSupabaseAnon() {
+async function getSupabaseAnon() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 
                           process.env.VITE_SUPABASE_ANON_KEY ||
@@ -33,7 +33,7 @@ function getSupabaseAnon() {
     throw new Error('Missing Supabase anon key for token verification. Add SUPABASE_ANON_KEY to Vercel environment variables.');
   }
 
-  const { createClient } = require('@supabase/supabase-js');
+  const { createClient } = await import('@supabase/supabase-js');
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
     // Verify token using anon client
     let supabaseAnon;
     try {
-      supabaseAnon = getSupabaseAnon();
+      supabaseAnon = await getSupabaseAnon();
     } catch (error) {
       console.error('Failed to create anon client:', error);
       return res.status(500).json({
