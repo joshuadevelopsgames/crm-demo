@@ -1010,7 +1010,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         </TutorialTooltip>
+      </div>
 
+      {/* Second Row: 2-Column Grid for Segment Downgrades and Active Sequences */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Segment Downgrades */}
         <TutorialTooltip
           tip="Accounts that have moved to a lower revenue segment compared to last year need attention. This indicates declining revenue or account value. Click any account to view details and investigate why the segment changed. Use the snooze button if you've already addressed the issue."
