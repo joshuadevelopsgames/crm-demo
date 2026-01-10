@@ -12,6 +12,7 @@
  */
 
 import { getSupabaseClient } from '../../src/services/supabaseClient.js';
+import { createContractTypoNotifications, createSegmentDowngradeNotifications } from '../../src/services/notificationService.js';
 import { createContractTypoNotifications } from '../../src/services/notificationService.js';
 
 // Dynamic import for server-side compatibility (Vercel serverless functions)
@@ -224,6 +225,10 @@ export default async function handler(req, res) {
     // 5. Create notifications for contract date typos
     console.log('🔍 Checking for contract date typos...');
     await createContractTypoNotifications(allEstimates, supabase);
+    
+    // 6. Create notifications for segment downgrades
+    console.log('🔍 Creating segment downgrade notifications...');
+    await createSegmentDowngradeNotifications(segmentDowngrades, supabase);
     
     // Supabase Realtime automatically broadcasts cache updates
     

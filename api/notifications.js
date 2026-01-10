@@ -4,12 +4,13 @@
  * Provides a single endpoint for all notification types:
  * - at-risk-accounts: Cached at-risk accounts (from notification_cache)
  * - neglected-accounts: Cached neglected accounts (from notification_cache)
+ * - segment-downgrades: Cached accounts with downgraded segments (from notification_cache)
  * - duplicate-estimates: Duplicate at-risk estimates (bad data)
  * - all: Combined notifications for a user
  * 
  * Query params:
  * - user_id (required for 'all' type)
- * - type (optional: 'at-risk-accounts', 'neglected-accounts', 'duplicate-estimates', 'all')
+ * - type (optional: 'at-risk-accounts', 'neglected-accounts', 'segment-downgrades', 'duplicate-estimates', 'all')
  */
 
 import { getSupabaseClient } from '../src/services/supabaseClient.js';
@@ -180,6 +181,53 @@ export default async function handler(req, res) {
       });
     }
     
+    if (type === 'segment-downgrades') {
+      // Return cached segment downgrades
+      const { data: cache, error } = await supabase
+        .from('notification_cache')
+        .select('*')
+        .eq('cache_key', 'segment-downgrades')
+        .single();
+      
+      if (error) {
+        // If table doesn't exist
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.warn('notification_cache table not found or empty, returning empty array');
+          return res.json({ 
+            success: true, 
+            data: [], 
+            stale: true,
+            message: 'Cache not available. Background job will create it shortly.'
+          });
+        }
+        console.error('Error fetching segment downgrades cache:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+      
+      if (!cache) {
+        // Cache missing - return empty
+        return res.json({ 
+          success: true, 
+          data: [], 
+          stale: true,
+          message: 'Cache not available. Background job will create it shortly.'
+        });
+      }
+      
+      // If cache exists but is expired, still return it (stale data is better than no data)
+      const isExpired = new Date(cache.expires_at) < new Date();
+      if (isExpired) {
+        console.warn('⚠️ Cache expired but returning stale data:', cache.cache_key);
+      }
+      
+      return res.json({ 
+        success: true, 
+        data: cache.cache_data?.accounts || [],
+        updated_at: cache.updated_at,
+        stale: isExpired
+      });
+    }
+    
     if (type === 'duplicate-estimates') {
       // Get unresolved duplicate estimates
       // #region agent log
@@ -229,6 +277,7 @@ export default async function handler(req, res) {
       const [
         atRiskCache,
         neglectedCache,
+        segmentDowngradesCache,
         taskNotifs,
         systemNotifs,
         ticketNotifs,
@@ -246,6 +295,12 @@ export default async function handler(req, res) {
           .eq('cache_key', 'neglected-accounts')
           .single(),
         
+        // Segment downgrades (cached)
+        supabase.from('notification_cache')
+          .select('*')
+          .eq('cache_key', 'segment-downgrades')
+          .single(),
+        
         // Task notifications (individual rows)
         supabase.from('notifications')
           .select('*')
@@ -257,7 +312,7 @@ export default async function handler(req, res) {
         supabase.from('notifications')
           .select('*')
           .eq('user_id', user_id)
-          .in('type', ['bug_report', 'end_of_year_analysis', 'duplicate_at_risk_estimates'])
+          .in('type', ['bug_report', 'end_of_year_analysis', 'duplicate_at_risk_estimates', 'contract_date_typo'])
           .order('created_at', { ascending: false }),
         
         // Ticket notifications (individual rows)
@@ -285,30 +340,43 @@ export default async function handler(req, res) {
         ? (neglectedCache.data.cache_data?.accounts || [])
         : [];
       
+      const segmentDowngrades = segmentDowngradesCache.data
+        ? (segmentDowngradesCache.data.cache_data?.accounts || [])
+        : [];
+      
       // Check if caches are stale (expired but still returned)
       const atRiskStale = !atRiskCache.data || new Date(atRiskCache.data.expires_at) < new Date();
       const neglectedStale = !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date();
+      const segmentDowngradesStale = !segmentDowngradesCache.data || new Date(segmentDowngradesCache.data.expires_at) < new Date();
+      
+      // Include contract date typo notifications in system notifications
+      const systemNotificationsWithTypos = (systemNotifs.data || []).concat(
+        // Contract date typo notifications are already included in systemNotifs query above
+        []
+      );
       
       return res.json({
         success: true,
         data: {
           atRiskAccounts,
           neglectedAccounts,
+          segmentDowngrades,
           taskNotifications: taskNotifs.data || [],
-          systemNotifications: systemNotifs.data || [],
+          systemNotifications: systemNotificationsWithTypos,
           ticketNotifications: ticketNotifs.data || [],
           duplicateEstimates: duplicates.data || []
         },
         cache: {
           atRiskStale: !atRiskCache.data || new Date(atRiskCache.data.expires_at) < new Date(),
-          neglectedStale: !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date()
+          neglectedStale: !neglectedCache.data || new Date(neglectedCache.data.expires_at) < new Date(),
+          segmentDowngradesStale: !segmentDowngradesCache.data || new Date(segmentDowngradesCache.data.expires_at) < new Date()
         }
       });
     }
     
     return res.status(400).json({ 
       success: false, 
-      error: 'Invalid type parameter. Use: at-risk-accounts, neglected-accounts, duplicate-estimates, or all' 
+      error: 'Invalid type parameter. Use: at-risk-accounts, neglected-accounts, segment-downgrades, duplicate-estimates, or all' 
     });
     
   } catch (error) {

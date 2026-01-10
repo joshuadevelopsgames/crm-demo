@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug, Ticket, MessageSquare, Archive } from 'lucide-react';
+import { Bell, Check, X, BellOff, ChevronDown, ChevronRight, RefreshCw, Clock, AlertCircle, AlertTriangle, Clipboard, BarChart, Mail, Trash2, User, Bug, Ticket, MessageSquare, Archive, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -121,6 +121,16 @@ export default function NotificationBell() {
           created_at: new Date().toISOString()
         }));
         
+        const segmentDowngradeNotifications = (result.data.segmentDowngrades || []).map(account => ({
+          id: `segment_downgrade_${account.account_id}`,
+          type: 'segment_downgrade',
+          title: `Segment Downgrade: ${account.account_name}`,
+          message: `Downgraded from ${account.last_year_segment} to ${account.current_year_segment}`,
+          related_account_id: account.account_id,
+          is_read: false,
+          created_at: new Date().toISOString()
+        }));
+        
         // Convert duplicate estimates to notifications
         const duplicateNotifications = (result.data.duplicateEstimates || []).map(dup => ({
           id: `duplicate_${dup.id}`,
@@ -133,12 +143,22 @@ export default function NotificationBell() {
           metadata: dup
         }));
         
+        // Filter contract date typo notifications from system notifications
+        const contractTypoNotifications = (result.data.systemNotifications || [])
+          .filter(n => n.type === 'contract_date_typo');
+        
+        // Other system notifications (excluding contract date typos which are handled separately)
+        const otherSystemNotifications = (result.data.systemNotifications || [])
+          .filter(n => n.type !== 'contract_date_typo');
+        
         // Combine all notifications
         const allNotifications = [
           ...atRiskNotifications,
           ...neglectedNotifications,
+          ...segmentDowngradeNotifications,
           ...result.data.taskNotifications || [],
-          ...result.data.systemNotifications || [],
+          ...otherSystemNotifications,
+          ...contractTypoNotifications,
           ...result.data.ticketNotifications || [],
           ...duplicateNotifications
         ];
@@ -848,6 +868,8 @@ export default function NotificationBell() {
     const priorities = {
       'renewal_reminder': 1,        // At Risk - highest priority
       'neglected_account': 2,       // Neglected Accounts - second priority
+      'segment_downgrade': 2.3,    // Segment Downgrades - high priority (after neglected accounts)
+      'contract_date_typo': 2.4,   // Contract Date Typos - high priority (after segment downgrades)
       'bug_report': 2.5,            // Bug Reports - high priority (after neglected accounts)
       'task_overdue': 3,            // Overdue Tasks - third priority (after neglected accounts)
       'task_assigned': 4,
@@ -1118,6 +1140,10 @@ export default function NotificationBell() {
         return <Archive className="w-6 h-6 text-amber-600" />;
       case 'ticket_opened':
         return <Ticket className="w-6 h-6 text-blue-600" />;
+      case 'segment_downgrade':
+        return <TrendingDown className="w-6 h-6 text-purple-600" />;
+      case 'contract_date_typo':
+        return <AlertCircle className="w-6 h-6 text-amber-600" />;
       default:
         return <Mail className="w-6 h-6 text-slate-600" />;
     }
@@ -1149,6 +1175,10 @@ export default function NotificationBell() {
         return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
       case 'ticket_opened':
         return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+      case 'segment_downgrade':
+        return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+      case 'contract_date_typo':
+        return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800';
       default:
         return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
     }
@@ -1228,6 +1258,8 @@ export default function NotificationBell() {
                     const hasMultiple = group.count > 1;
                     const groupName = group.type === 'renewal_reminder' ? 'At Risk Accounts' :
                                      group.type === 'neglected_account' ? 'Neglected Accounts' :
+                                     group.type === 'segment_downgrade' ? 'Segment Downgrades' :
+                                     group.type === 'contract_date_typo' ? 'Contract Date Typos' :
                                      group.type === 'task_assigned' ? 'Task Assignments' :
                                      group.type === 'task_reminder' ? 'Task Reminders' :
                                      group.type === 'task_overdue' ? 'Overdue Tasks' :

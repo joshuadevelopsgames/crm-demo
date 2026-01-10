@@ -903,6 +903,78 @@ export async function createContractTypoNotifications(estimates, supabase) {
 }
 
 /**
+ * Create notifications for segment downgrades
+ * @param {Array} segmentDowngrades - Array of segment downgrade account objects
+ * @param {Object} supabase - Supabase client instance
+ */
+export async function createSegmentDowngradeNotifications(segmentDowngrades, supabase) {
+  try {
+    if (!segmentDowngrades || segmentDowngrades.length === 0) {
+      console.log('No segment downgrades to notify');
+      return;
+    }
+    
+    // Get all users
+    const { data: users } = await supabase.from('profiles').select('id');
+    if (!users || users.length === 0) {
+      console.log('No users found for segment downgrade notifications');
+      return;
+    }
+    
+    console.log(`🔍 Creating notifications for ${segmentDowngrades.length} segment downgrades`);
+    
+    const notifications = [];
+    const now = new Date().toISOString();
+    
+    for (const downgrade of segmentDowngrades) {
+      const accountName = downgrade.account_name || 'Unknown Account';
+      const message = `Downgraded from ${downgrade.last_year_segment} to ${downgrade.current_year_segment}`;
+      
+      for (const user of users) {
+        // Check if notification already exists (unread)
+        const { data: existing } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('type', 'segment_downgrade')
+          .eq('related_account_id', downgrade.account_id)
+          .eq('is_read', false)
+          .maybeSingle();
+        
+        if (existing) continue; // Already notified
+        
+        notifications.push({
+          user_id: user.id,
+          type: 'segment_downgrade',
+          title: `Segment Downgrade: ${accountName}`,
+          message: message,
+          related_account_id: downgrade.account_id,
+          metadata: JSON.stringify({
+            last_year_segment: downgrade.last_year_segment,
+            current_year_segment: downgrade.current_year_segment,
+            downgrade_level: downgrade.downgrade_level
+          }),
+          is_read: false,
+          created_at: now,
+          scheduled_for: now
+        });
+      }
+    }
+    
+    if (notifications.length > 0) {
+      const { error } = await supabase.from('notifications').insert(notifications);
+      if (error) {
+        console.error('Error creating segment downgrade notifications:', error);
+      } else {
+        console.log(`🔔 Created ${notifications.length} segment downgrade notifications`);
+      }
+    }
+  } catch (error) {
+    console.error('Error in createSegmentDowngradeNotifications:', error);
+  }
+}
+
+/**
  * Snooze a notification (universal - applies to all users)
  * @param {string} notificationType - Type of notification
  * @param {string} accountId - Account ID (optional)
