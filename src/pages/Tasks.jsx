@@ -911,6 +911,12 @@ export default function Tasks() {
     }
 
     if (editingTask) {
+      // If editing an unassigned task without created_by_email, set it to current user
+      // This helps backfill old tasks when someone edits them
+      if (!taskData.assigned_to && !editingTask.created_by_email && currentUser?.email) {
+        taskData.created_by_email = currentUser.email;
+      }
+      
       updateTaskMutation.mutate({ 
         id: editingTask.id, 
         data: taskData,
@@ -1230,13 +1236,20 @@ export default function Tasks() {
     // Note: blocked tasks are excluded from main views but can be seen in "all" view
     // All views filter by user assignment - users only see tasks assigned to them
     // Unassigned tasks are only visible to the user who created them
+    // For backward compatibility: unassigned tasks with null created_by_email are visible to everyone
     const assignedUsers = parseAssignedUsers(task.assigned_to || "");
     const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
     const isUnassigned = assignedUsers.length === 0;
     const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+    const hasNoCreator = !task.created_by_email; // Tasks created before created_by_email field was added
     
-    // Show task if: assigned to current user OR (unassigned AND created by current user)
-    const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+    // Show task if: 
+    // - assigned to current user, OR
+    // - (unassigned AND created by current user), OR
+    // - (unassigned AND no creator - backward compatibility for old tasks)
+    const shouldShowTask = isAssignedToCurrentUser || 
+                          (isUnassigned && isCreatedByCurrentUser) ||
+                          (isUnassigned && hasNoCreator);
     
     switch (activeFilter) {
       case "inbox":
@@ -1468,7 +1481,10 @@ export default function Tasks() {
         const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
         const isUnassigned = assignedUsers.length === 0;
         const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
-        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        const hasNoCreator = !task.created_by_email;
+        const shouldShowTask = isAssignedToCurrentUser || 
+                              (isUnassigned && isCreatedByCurrentUser) ||
+                              (isUnassigned && hasNoCreator);
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
@@ -1482,7 +1498,10 @@ export default function Tasks() {
         const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
         const isUnassigned = assignedUsers.length === 0;
         const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
-        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        const hasNoCreator = !task.created_by_email;
+        const shouldShowTask = isAssignedToCurrentUser || 
+                              (isUnassigned && isCreatedByCurrentUser) ||
+                              (isUnassigned && hasNoCreator);
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
@@ -1499,7 +1518,10 @@ export default function Tasks() {
         const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
         const isUnassigned = assignedUsers.length === 0;
         const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
-        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        const hasNoCreator = !task.created_by_email;
+        const shouldShowTask = isAssignedToCurrentUser || 
+                              (isUnassigned && isCreatedByCurrentUser) ||
+                              (isUnassigned && hasNoCreator);
         return task.status !== "completed" && shouldShowTask && isTaskUpcoming(task);
       }
     ).length; // Includes blocked tasks
@@ -1509,7 +1531,10 @@ export default function Tasks() {
         const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
         const isUnassigned = assignedUsers.length === 0;
         const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
-        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        const hasNoCreator = !task.created_by_email;
+        const shouldShowTask = isAssignedToCurrentUser || 
+                              (isUnassigned && isCreatedByCurrentUser) ||
+                              (isUnassigned && hasNoCreator);
         return task.status === "completed" && shouldShowTask;
       }
     ).length;

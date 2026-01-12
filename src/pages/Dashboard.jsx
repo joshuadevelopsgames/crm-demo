@@ -391,8 +391,14 @@ export default function Dashboard() {
     const isAssignedToCurrentUser = assignedUsers.includes(user?.email);
     const isUnassigned = assignedUsers.length === 0;
     const isCreatedByCurrentUser = task.created_by_email === user?.email;
-    // Show task if: assigned to current user OR (unassigned AND created by current user)
-    return isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+    const hasNoCreator = !task.created_by_email; // Tasks created before created_by_email field was added
+    // Show task if: 
+    // - assigned to current user, OR
+    // - (unassigned AND created by current user), OR
+    // - (unassigned AND no creator - backward compatibility for old tasks)
+    return isAssignedToCurrentUser || 
+           (isUnassigned && isCreatedByCurrentUser) ||
+           (isUnassigned && hasNoCreator);
   };
 
   // Calculate metrics
