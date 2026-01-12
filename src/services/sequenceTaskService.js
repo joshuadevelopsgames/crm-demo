@@ -78,6 +78,7 @@ export async function createTasksFromSequence(enrollment, sequence, accountId) {
         title: taskTitle,
         description: taskDescription,
         assigned_to: currentUser?.email || null,
+        created_by_email: currentUser?.email || null, // Track who created the task
         due_date: dueDate.toISOString().split('T')[0],
         priority: 'normal',
         status: taskStatus,

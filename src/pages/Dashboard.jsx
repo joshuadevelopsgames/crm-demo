@@ -379,6 +379,22 @@ export default function Dashboard() {
     };
   }, [allNotificationsRaw, notificationSnoozes]);
 
+  // Helper function to parse assigned users from task.assigned_to field
+  const parseAssignedUsers = (assignedTo) => {
+    if (!assignedTo || assignedTo.trim() === "") return [];
+    return assignedTo.split(",").map((email) => email.trim()).filter(Boolean);
+  };
+
+  // Helper function to check if task should be visible to current user
+  const shouldShowTask = (task) => {
+    const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+    const isAssignedToCurrentUser = assignedUsers.includes(user?.email);
+    const isUnassigned = assignedUsers.length === 0;
+    const isCreatedByCurrentUser = task.created_by_email === user?.email;
+    // Show task if: assigned to current user OR (unassigned AND created by current user)
+    return isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+  };
+
   // Calculate metrics
   // Active accounts = all non-archived accounts (matches Accounts page logic)
   const accountsArray = Array.isArray(accounts) ? accounts : [];
@@ -389,7 +405,10 @@ export default function Dashboard() {
   // Calculate at-risk accounts based on renewal dates (not just status)
   // This ensures the count matches what's actually shown in the dashboard
   // Note: atRiskRenewals is calculated below, so we'll use that length
-  const myTasks = tasksArray.filter(t => t.status !== 'completed').length;
+  // Filter tasks to only show those assigned to current user or unassigned tasks created by current user
+  const myTasks = tasksArray.filter(t => {
+    return t.status !== 'completed' && shouldShowTask(t);
+  }).length;
   
   // At-risk accounts from the unified API
   // The cache is automatically maintained by background job every 5 minutes
@@ -588,9 +607,12 @@ export default function Dashboard() {
   }, [accounts, neglectedAccounts, notificationSnoozes]);
 
   // Overdue tasks (matches notification service logic)
+  // Only show tasks assigned to current user or unassigned tasks created by current user
   const overdueTasks = tasks.filter(task => {
     // Skip tasks without due dates or completed tasks
     if (!task.due_date || task.status === 'completed') return false;
+    // Only show tasks that should be visible to current user
+    if (!shouldShowTask(task)) return false;
     // Task is overdue if due date is before now (matches notification service: new Date(task.due_date) < new Date())
     return new Date(task.due_date) < new Date();
   });

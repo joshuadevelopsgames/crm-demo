@@ -76,6 +76,7 @@ export async function generateRecurringTaskInstances() {
           title: parentTask.title,
           description: parentTask.description,
           assigned_to: parentTask.assigned_to,
+          created_by_email: parentTask.created_by_email || null, // Inherit creator from parent task
           due_date: parentTask.next_recurrence_date,
           due_time: parentTask.due_time,
           priority: parentTask.priority,

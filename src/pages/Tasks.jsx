@@ -865,6 +865,8 @@ export default function Tasks() {
     const taskData = {
       ...newTask,
       assigned_to: newTask.assigned_to || null,
+      // Set created_by_email when creating a new task (not when editing)
+      ...(editingTask ? {} : { created_by_email: currentUser?.email || null }),
       // Clean up recurring fields if not recurring
       is_recurring: newTask.is_recurring || false,
       recurrence_pattern: newTask.is_recurring
@@ -1226,27 +1228,39 @@ export default function Tasks() {
 
     // Apply tab filter
     // Note: blocked tasks are excluded from main views but can be seen in "all" view
+    // All views filter by user assignment - users only see tasks assigned to them
+    // Unassigned tasks are only visible to the user who created them
+    const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+    const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+    const isUnassigned = assignedUsers.length === 0;
+    const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+    
+    // Show task if: assigned to current user OR (unassigned AND created by current user)
+    const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+    
     switch (activeFilter) {
       case "inbox":
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
-          parseAssignedUsers(task.assigned_to).includes(currentUser?.email)
+          shouldShowTask
         );
       case "today":
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
+          shouldShowTask &&
           (isTaskToday(task) || isTaskOverdue(task))
         );
       case "upcoming":
         // Must have a due_date to be upcoming
         if (!task.due_date) return false;
-        return task.status !== "completed" && isTaskUpcoming(task);
+        return task.status !== "completed" && shouldShowTask && isTaskUpcoming(task);
       case "completed":
-        return task.status === "completed";
+        return task.status === "completed" && shouldShowTask;
       default:
-        return true; // "all" view shows all tasks including blocked
+        // "all" view shows all tasks assigned to current user or unassigned tasks created by current user, including blocked
+        return shouldShowTask;
     }
   });
 
@@ -1449,26 +1463,55 @@ export default function Tasks() {
     });
 
     const inbox = typeFilteredTasks.filter(
-      (task) =>
-        task.status !== "completed" &&
-        task.status !== "blocked" &&
-        parseAssignedUsers(task.assigned_to || "").includes(currentUser?.email),
+      (task) => {
+        const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+        const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+        const isUnassigned = assignedUsers.length === 0;
+        const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        return (
+          task.status !== "completed" &&
+          task.status !== "blocked" &&
+          shouldShowTask
+        );
+      }
     ).length;
     const today = typeFilteredTasks.filter(
-      (task) =>
-        task.status !== "completed" &&
-        task.status !== "blocked" &&
-        (isTaskToday(task) || isTaskOverdue(task)),
+      (task) => {
+        const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+        const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+        const isUnassigned = assignedUsers.length === 0;
+        const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        return (
+          task.status !== "completed" &&
+          task.status !== "blocked" &&
+          shouldShowTask &&
+          (isTaskToday(task) || isTaskOverdue(task))
+        );
+      }
     ).length;
     const upcoming = typeFilteredTasks.filter(
       (task) => {
         // Must have a due_date to be upcoming
         if (!task.due_date) return false;
-        return task.status !== "completed" && isTaskUpcoming(task);
+        const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+        const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+        const isUnassigned = assignedUsers.length === 0;
+        const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        return task.status !== "completed" && shouldShowTask && isTaskUpcoming(task);
       }
     ).length; // Includes blocked tasks
     const completed = typeFilteredTasks.filter(
-      (task) => task.status === "completed",
+      (task) => {
+        const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+        const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+        const isUnassigned = assignedUsers.length === 0;
+        const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+        const shouldShowTask = isAssignedToCurrentUser || (isUnassigned && isCreatedByCurrentUser);
+        return task.status === "completed" && shouldShowTask;
+      }
     ).length;
 
     return { inbox, today, upcoming, completed };
