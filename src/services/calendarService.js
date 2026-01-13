@@ -162,11 +162,17 @@ export async function fetchCalendarEvents(options = {}) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
+        // Check if it's a scope issue
+        if (error.error?.message?.includes('insufficient authentication scopes') || 
+            error.error?.message?.includes('Request had insufficient authentication scopes')) {
+          await disconnectCalendar();
+          throw new Error('Calendar permissions needed. Please reconnect Calendar in Settings to grant access.');
+        }
         await disconnectCalendar();
         throw new Error('Calendar authorization expired. Please reconnect.');
       }
-      throw new Error(error.error || `Calendar API error: ${response.statusText}`);
+      throw new Error(error.error?.message || error.error || `Calendar API error: ${response.statusText}`);
     }
 
     const result = await response.json();

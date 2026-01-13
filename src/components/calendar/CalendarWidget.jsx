@@ -26,7 +26,7 @@ export default function CalendarWidget() {
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsData, isLoading, error: eventsError } = useQuery({
     queryKey: ['calendar-events', weekStart.toISOString(), weekEnd.toISOString()],
     queryFn: async () => {
       try {
@@ -38,11 +38,17 @@ export default function CalendarWidget() {
         return result.items || [];
       } catch (error) {
         console.error('Error fetching calendar events:', error);
-        return [];
+        // If it's an authentication scope error, mark as not connected
+        if (error.message?.includes('insufficient authentication scopes') || 
+            error.message?.includes('403')) {
+          setIsConnected(false);
+        }
+        throw error; // Re-throw to let React Query handle it
       }
     },
     enabled: isConnected,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry on auth errors
   });
 
   const events = eventsData || [];
@@ -157,6 +163,30 @@ export default function CalendarWidget() {
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          </div>
+        ) : eventsError ? (
+          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+            <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50 text-red-400" />
+            <p className="text-red-600 dark:text-red-400 mb-2 font-medium">
+              {eventsError.message?.includes('insufficient authentication scopes') || 
+               eventsError.message?.includes('permissions needed') ||
+               eventsError.message?.includes('403')
+                ? 'Calendar permissions needed'
+                : 'Error loading events'}
+            </p>
+            {(eventsError.message?.includes('insufficient authentication scopes') || 
+              eventsError.message?.includes('permissions needed')) && (
+              <p className="text-sm mb-3 text-slate-600 dark:text-slate-400">
+                Please reconnect Calendar in Settings to grant access.
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/settings'}
+            >
+              Go to Settings
+            </Button>
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
