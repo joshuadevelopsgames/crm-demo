@@ -120,7 +120,11 @@ export async function createTaskNotifications(task) {
     // until the task is completed or no longer overdue
     for (const notif of existingNotifications) {
       if (notif.type !== 'task_assigned' && notif.type !== 'task_overdue') {
-        await base44.entities.Notification.update(notif.id, { is_read: true });
+        // Include user_id for security (required by API)
+        await base44.entities.Notification.update(notif.id, { 
+          is_read: true,
+          user_id: notif.user_id 
+        });
       }
     }
 
