@@ -743,6 +743,7 @@ export default function AccountDetail() {
             className="hidden"
             disabled={uploadAttachmentMutation.isPending}
           />
+          </div>
         </TabsContent>
 
       </Tabs>
