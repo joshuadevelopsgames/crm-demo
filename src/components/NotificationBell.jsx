@@ -13,6 +13,7 @@ import { snoozeNotification } from '@/services/notificationService';
 import { useUser } from '@/contexts/UserContext';
 import { getSupabaseClient } from '@/services/supabaseClient';
 import toast from 'react-hot-toast';
+import OverdueNotificationMessage from './OverdueNotificationMessage';
 import {
   Dialog,
   DialogContent,
@@ -1378,7 +1379,14 @@ export default function NotificationBell() {
                               {!hasMultiple && group.notifications[0] && (
                                 <>
                                   <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                                    {group.notifications[0].message}
+                                    {group.notifications[0].type === 'task_overdue' ? (
+                                      <OverdueNotificationMessage 
+                                        notification={group.notifications[0]} 
+                                        tasks={tasks}
+                                      />
+                                    ) : (
+                                      group.notifications[0].message
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                                     {group.notifications[0].scheduled_for 
@@ -1446,7 +1454,14 @@ export default function NotificationBell() {
                                     </div>
                                   </div>
                                   <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                                    {notification.message}
+                                    {notification.type === 'task_overdue' ? (
+                                      <OverdueNotificationMessage 
+                                        notification={notification} 
+                                        tasks={tasks}
+                                      />
+                                    ) : (
+                                      notification.message
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                                     {notification.scheduled_for 
