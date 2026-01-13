@@ -78,27 +78,48 @@ export default async function handler(req, res) {
 
     // GET - Retrieve Calendar integration for user
     if (req.method === 'GET') {
+      console.log('📅 GET /api/calendar/integration - User ID:', userId);
+      
       const { data, error } = await supabase
         .from('google_calendar_integrations')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-        console.error('Error fetching Calendar integration:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Failed to fetch Calendar integration' 
-        });
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows found - not connected
+          console.log('📅 No Calendar integration found for user');
+          return res.status(200).json({ 
+            success: true, 
+            data: null,
+            connected: false
+          });
+        } else {
+          console.error('❌ Error fetching Calendar integration:', error);
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch Calendar integration',
+            details: error.message
+          });
+        }
       }
 
       if (!data) {
+        console.log('📅 No Calendar integration data found');
         return res.status(200).json({ 
           success: true, 
           data: null,
           connected: false
         });
       }
+
+      console.log('✅ Calendar integration found:', { 
+        id: data.id, 
+        hasAccessToken: !!data.access_token,
+        hasRefreshToken: !!data.refresh_token,
+        tokenExpiry: data.token_expiry
+      });
 
       // Don't return tokens directly - return connection status
       return res.status(200).json({ 
@@ -118,7 +139,15 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const { access_token, refresh_token, expires_in, calendar_id } = req.body;
 
+      console.log('📅 POST /api/calendar/integration - User ID:', userId);
+      console.log('📅 Token data:', { 
+        hasAccessToken: !!access_token, 
+        hasRefreshToken: !!refresh_token,
+        expiresIn: expires_in 
+      });
+
       if (!access_token) {
+        console.error('❌ Missing access_token');
         return res.status(400).json({ 
           success: false, 
           error: 'access_token is required' 
@@ -130,15 +159,25 @@ export default async function handler(req, res) {
         : null;
 
       // Check if integration exists
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from('google_calendar_integrations')
         .select('id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking existing Calendar integration:', checkError);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to check existing Calendar integration',
+          details: checkError.message
+        });
+      }
 
       let result;
       if (existing) {
         // Update existing
+        console.log('📅 Updating existing Calendar integration:', existing.id);
         const { data, error } = await supabase
           .from('google_calendar_integrations')
           .update({
@@ -153,15 +192,18 @@ export default async function handler(req, res) {
           .single();
 
         if (error) {
-          console.error('Error updating Calendar integration:', error);
+          console.error('❌ Error updating Calendar integration:', error);
           return res.status(500).json({ 
             success: false, 
-            error: 'Failed to update Calendar integration' 
+            error: 'Failed to update Calendar integration',
+            details: error.message
           });
         }
         result = data;
+        console.log('✅ Calendar integration updated:', result.id);
       } else {
         // Create new
+        console.log('📅 Creating new Calendar integration');
         const { data, error } = await supabase
           .from('google_calendar_integrations')
           .insert({
@@ -175,14 +217,28 @@ export default async function handler(req, res) {
           .single();
 
         if (error) {
-          console.error('Error creating Calendar integration:', error);
+          console.error('❌ Error creating Calendar integration:', error);
           return res.status(500).json({ 
             success: false, 
-            error: 'Failed to create Calendar integration' 
+            error: 'Failed to create Calendar integration',
+            details: error.message
           });
         }
         result = data;
+        console.log('✅ Calendar integration created:', result.id);
       }
+
+      // Verify it was stored
+      const { data: verify } = await supabase
+        .from('google_calendar_integrations')
+        .select('id, access_token')
+        .eq('user_id', userId)
+        .single();
+      
+      console.log('✅ Verification:', { 
+        found: !!verify, 
+        hasToken: !!verify?.access_token 
+      });
 
       return res.status(200).json({ 
         success: true, 
