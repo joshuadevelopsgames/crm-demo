@@ -206,7 +206,7 @@ export default function CalendarWidget() {
             <p>No events this week</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-7 gap-4">
             {weekDays.map((day) => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const dayEvents = eventsByDate[dateKey] || [];
@@ -221,69 +221,57 @@ export default function CalendarWidget() {
                       : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`font-semibold ${
-                          isToday
-                            ? 'text-blue-900 dark:text-blue-100'
-                            : 'text-slate-900 dark:text-white'
-                        }`}
-                      >
-                        {format(day, 'EEE')}
-                      </span>
-                      <span
-                        className={`text-sm ${
-                          isToday
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : 'text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        {format(day, 'MMM d')}
-                      </span>
-                    </div>
+                  <div className="flex flex-col items-center mb-3">
+                    <span
+                      className={`text-xs font-medium mb-1 ${
+                        isToday
+                          ? 'text-blue-700 dark:text-blue-300'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {format(day, 'EEE')}
+                    </span>
+                    <span
+                      className={`text-lg font-semibold ${
+                        isToday
+                          ? 'text-blue-900 dark:text-blue-100'
+                          : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {format(day, 'd')}
+                    </span>
                     {dayEvents.length > 0 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs mt-1">
                         {dayEvents.length}
                       </Badge>
                     )}
                   </div>
                   {dayEvents.length > 0 ? (
-                    <div className="space-y-2 mt-2">
-                      {dayEvents.slice(0, 3).map((event) => (
+                    <div className="space-y-2">
+                      {dayEvents.slice(0, 4).map((event) => (
                         <div
                           key={event.id}
-                          className="flex items-start gap-2 text-sm p-2 rounded bg-white dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                          className="flex items-start gap-1.5 text-xs p-1.5 rounded bg-white dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                         >
-                          <Clock className="w-3 h-3 mt-0.5 text-slate-400 flex-shrink-0" />
+                          <Clock className="w-2.5 h-2.5 mt-0.5 text-slate-400 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-900 dark:text-white truncate">
+                            <p className="font-medium text-slate-900 dark:text-white truncate text-xs leading-tight">
                               {event.summary || 'No title'}
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                               {formatEventTime(event)}
                             </p>
                           </div>
-                          {event.htmlLink && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => window.open(event.htmlLink, '_blank')}
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </Button>
-                          )}
                         </div>
                       ))}
-                      {dayEvents.length > 3 && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-1">
-                          +{dayEvents.length - 3} more
+                      {dayEvents.length > 4 && (
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center pt-1">
+                          +{dayEvents.length - 4} more
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 italic text-center">
                       No events
                     </p>
                   )}
