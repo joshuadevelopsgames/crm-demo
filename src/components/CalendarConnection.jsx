@@ -180,6 +180,9 @@ export default function CalendarConnection() {
           
           setConnected(isConnected);
           
+          // Invalidate connection status query so CalendarWidget refreshes
+          queryClient.invalidateQueries({ queryKey: ['calendar-connection-status'] });
+          
           if (isConnected) {
             toast.success('Calendar connected successfully!');
             setIsConnecting(false);
