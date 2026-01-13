@@ -18,14 +18,81 @@ export default function CalendarConnection() {
   const [connected, setConnected] = useState(false);
   const { user } = useUser();
 
-  // Check connection status
+  // Check connection status - following Gmail pattern
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null;
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    const checkConnection = async () => {
+    const checkConnection = async (forceRetry = false) => {
       try {
-        const connected = await isCalendarConnected();
+        console.log('🔍 Checking Calendar connection status...', { retryCount, forceRetry });
+        
+        // First check if already connected (checks database)
+        let connected = await isCalendarConnected();
+        console.log('📊 Database connection check result:', connected);
+        
+        // If not connected, check if we have Calendar token in Supabase session
+        // This handles cases where user logged in with Google and granted Calendar permissions
+        if (!connected && user?.id) {
+          const supabase = getSupabaseAuth();
+          if (supabase) {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              
+              // Check if provider_token exists (Calendar token from Google OAuth with Calendar scopes)
+              if (session?.provider_token && session?.provider_refresh_token) {
+                console.log('📅 Found Calendar token in session, storing integration...');
+                try {
+                  await storeCalendarToken({
+                    access_token: session.provider_token,
+                    refresh_token: session.provider_refresh_token,
+                    expires_in: session.expires_in || 3600
+                  });
+                  
+                  // Wait a moment for database to update
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
+                  // Check again after storing
+                  connected = await isCalendarConnected();
+                  console.log('📊 Connection check after storing token:', connected);
+                  
+                  if (connected) {
+                    console.log('✅ Calendar integration stored and verified');
+                  }
+                } catch (error) {
+                  console.error('Error storing Calendar token from session:', error);
+                  // Don't set connected to true here - wait for database check
+                }
+              } else {
+                // No provider_token means no Calendar permissions granted yet
+                console.log('ℹ️ No Calendar token found in session - checking database again...');
+                // Re-check database in case token was stored by callback but session doesn't have it
+                connected = await isCalendarConnected();
+                console.log('📊 Re-check database result:', connected);
+                
+                // If still not connected and we haven't retried too many times, retry after a delay
+                // This handles the case where the callback just stored the token but we're checking too quickly
+                if (!connected && retryCount < maxRetries && !forceRetry) {
+                  retryCount++;
+                  console.log(`🔄 Retrying connection check (${retryCount}/${maxRetries}) in 2 seconds...`);
+                  setTimeout(() => {
+                    if (isMounted) {
+                      checkConnection(true);
+                    }
+                  }, 2000);
+                  return; // Don't update state yet, wait for retry
+                }
+              }
+            } catch (error) {
+              console.error('Error getting Supabase session:', error);
+            }
+          }
+        }
+        
         if (isMounted) {
+          console.log('✅ Setting connected state to:', connected);
           setConnected(connected);
         }
       } catch (error) {
@@ -37,23 +104,40 @@ export default function CalendarConnection() {
     };
     
     // Initial check with a slight delay to allow OAuth callback to complete
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       checkConnection();
     }, 500);
     
-    // Also check when page becomes visible
+    // Also check when page becomes visible (user navigates back)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user?.id) {
-        checkConnection();
+        console.log('👁️ Page became visible, re-checking Calendar connection...');
+        retryCount = 0; // Reset retry count on visibility change
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => checkConnection(), 100);
+      }
+    };
+    
+    // Also check on focus (user switches back to tab)
+    const handleFocus = () => {
+      if (user?.id) {
+        console.log('👁️ Window focused, re-checking Calendar connection...');
+        retryCount = 0;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => checkConnection(), 100);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
       isMounted = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimeout(timeoutId);
+      window.removeEventListener('focus', handleFocus);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [user?.id]);
 
