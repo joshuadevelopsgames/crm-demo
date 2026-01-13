@@ -1,18 +1,106 @@
-import React, { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, isPast } from 'date-fns';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, isPast, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, ExternalLink } from 'lucide-react';
 import { parseCalgaryDate } from '@/utils/timezone';
+import { fetchCalendarEvents, isCalendarConnected } from '@/services/calendarService';
 
 export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
+  const [isCalendarConnectedState, setIsCalendarConnectedState] = useState(false);
+
+  // Check calendar connection status
+  const { data: connectionStatus } = useQuery({
+    queryKey: ['calendar-connection-status'],
+    queryFn: async () => {
+      const connected = await isCalendarConnected();
+      return connected;
+    },
+    refetchOnWindowFocus: true,
+    staleTime: 30 * 1000, // 30 seconds
+  });
+
+  useEffect(() => {
+    if (connectionStatus !== undefined) {
+      setIsCalendarConnectedState(connectionStatus);
+    }
+  }, [connectionStatus]);
+
+  // Calculate date range for fetching calendar events based on view mode
+  const getDateRange = useMemo(() => {
+    if (viewMode === 'month') {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+      return {
+        timeMin: calendarStart.toISOString(),
+        timeMax: calendarEnd.toISOString()
+      };
+    } else if (viewMode === 'week') {
+      const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+      return {
+        timeMin: weekStart.toISOString(),
+        timeMax: weekEnd.toISOString()
+      };
+    } else {
+      // Day view - fetch events for the day plus buffer
+      const dayStart = startOfDay(currentDate);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+      return {
+        timeMin: dayStart.toISOString(),
+        timeMax: dayEnd.toISOString()
+      };
+    }
+  }, [currentDate, viewMode]);
+
+  // Fetch Google Calendar events
+  const { data: calendarEventsData, isLoading: isLoadingEvents } = useQuery({
+    queryKey: ['calendar-events', getDateRange.timeMin, getDateRange.timeMax],
+    queryFn: async () => {
+      try {
+        const result = await fetchCalendarEvents({
+          timeMin: getDateRange.timeMin,
+          timeMax: getDateRange.timeMax,
+          maxResults: 250
+        });
+        return result.items || [];
+      } catch (error) {
+        console.error('Error fetching calendar events:', error);
+        if (error.message?.includes('insufficient authentication scopes') || 
+            error.message?.includes('403')) {
+          setIsCalendarConnectedState(false);
+        }
+        return [];
+      }
+    },
+    enabled: isCalendarConnectedState,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+  });
+
+  const calendarEvents = calendarEventsData || [];
 
   // Parse task due dates using Calgary timezone
   const parseLocalDate = (dateString) => {
     return parseCalgaryDate(dateString);
+  };
+
+  // Get calendar events for a specific date
+  const getCalendarEventsForDate = (date) => {
+    if (!date || !calendarEvents.length) return [];
+    return calendarEvents.filter(event => {
+      const startDate = event.start?.dateTime || event.start?.date;
+      if (!startDate) return false;
+      const eventDate = parseISO(startDate);
+      return isSameDay(eventDate, date);
+    });
   };
 
   // Get tasks for a specific date
@@ -24,6 +112,24 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
       if (!taskDate) return false;
       return isSameDay(taskDate, date);
     });
+  };
+
+  // Format event time
+  const formatEventTime = (event) => {
+    if (event.start?.dateTime) {
+      return format(parseISO(event.start.dateTime), 'h:mm a');
+    }
+    if (event.start?.date) {
+      return 'All day';
+    }
+    return '';
+  };
+
+  // Handle calendar event click - open in Google Calendar
+  const handleCalendarEventClick = (event) => {
+    if (event.htmlLink) {
+      window.open(event.htmlLink, '_blank');
+    }
   };
 
   // Month view
@@ -38,9 +144,10 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
     return days.map(day => ({
       date: day,
       isCurrentMonth: isSameMonth(day, currentDate),
-      tasks: getTasksForDate(day)
+      tasks: getTasksForDate(day),
+      calendarEvents: getCalendarEventsForDate(day)
     }));
-  }, [currentDate, tasks]);
+  }, [currentDate, tasks, calendarEvents]);
 
   // Week view
   const weekView = useMemo(() => {
@@ -51,17 +158,19 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
     
     return days.map(day => ({
       date: day,
-      tasks: getTasksForDate(day)
+      tasks: getTasksForDate(day),
+      calendarEvents: getCalendarEventsForDate(day)
     }));
-  }, [currentDate, tasks]);
+  }, [currentDate, tasks, calendarEvents]);
 
   // Day view
   const dayView = useMemo(() => {
     return [{
       date: currentDate,
-      tasks: getTasksForDate(currentDate)
+      tasks: getTasksForDate(currentDate),
+      calendarEvents: getCalendarEventsForDate(currentDate)
     }];
-  }, [currentDate, tasks]);
+  }, [currentDate, tasks, calendarEvents]);
 
   const navigateDate = (direction) => {
     if (viewMode === 'month') {
@@ -92,6 +201,22 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
   const renderCalendarGrid = (days) => {
     if (viewMode === 'day') {
       const day = days[0];
+      const allItems = [
+        ...day.tasks.map(t => ({ type: 'task', data: t })),
+        ...day.calendarEvents.map(e => ({ type: 'event', data: e }))
+      ].sort((a, b) => {
+        // Sort by time if available
+        if (a.type === 'event' && b.type === 'event') {
+          const aTime = a.data.start?.dateTime || a.data.start?.date;
+          const bTime = b.data.start?.dateTime || b.data.start?.date;
+          if (aTime && bTime) return new Date(aTime) - new Date(bTime);
+        }
+        if (a.type === 'task' && a.data.due_time && b.type === 'event' && b.data.start?.dateTime) {
+          return -1; // Tasks with time come before events
+        }
+        return 0;
+      });
+
       return (
         <div className="h-full">
           <div className="border-b p-4 bg-slate-50">
@@ -99,33 +224,71 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
             {isToday(day.date) && <Badge className="mt-2">Today</Badge>}
           </div>
           <div className="p-4 space-y-2 h-[calc(100vh-300px)] overflow-y-auto">
-            {day.tasks.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">No tasks for this day</p>
+            {allItems.length === 0 ? (
+              <p className="text-slate-500 text-center py-8">No tasks or events for this day</p>
             ) : (
-              day.tasks.map(task => (
-                <Card 
-                  key={task.id} 
-                  className="p-3 cursor-pointer hover:bg-slate-50 transition-colors"
-                  onClick={() => onTaskClick(task)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-sm">{task.title}</h4>
-                        <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </Badge>
+              allItems.map((item, index) => {
+                if (item.type === 'task') {
+                  const task = item.data;
+                  return (
+                    <Card 
+                      key={`task-${task.id}`} 
+                      className="p-3 cursor-pointer hover:bg-slate-50 transition-colors border-l-4 border-l-blue-500"
+                      onClick={() => onTaskClick(task)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-sm">📋 {task.title}</h4>
+                            <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
+                              {task.priority}
+                            </Badge>
+                          </div>
+                          {task.description && (
+                            <p className="text-xs text-slate-600 line-clamp-2">{task.description}</p>
+                          )}
+                          {task.due_time && (
+                            <p className="text-xs text-slate-500 mt-1">⏰ {task.due_time}</p>
+                          )}
+                        </div>
                       </div>
-                      {task.description && (
-                        <p className="text-xs text-slate-600 line-clamp-2">{task.description}</p>
-                      )}
-                      {task.due_time && (
-                        <p className="text-xs text-slate-500 mt-1">{task.due_time}</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))
+                    </Card>
+                  );
+                } else {
+                  const event = item.data;
+                  return (
+                    <Card 
+                      key={`event-${event.id}`} 
+                      className="p-3 cursor-pointer hover:bg-green-50 transition-colors border-l-4 border-l-green-500"
+                      onClick={() => handleCalendarEventClick(event)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-sm">📅 {event.summary || 'No title'}</h4>
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                              Calendar
+                            </Badge>
+                            {event.htmlLink && (
+                              <ExternalLink className="w-3 h-3 text-slate-400" />
+                            )}
+                          </div>
+                          {event.description && (
+                            <p className="text-xs text-slate-600 line-clamp-2">{event.description}</p>
+                          )}
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <p className="text-xs text-slate-500">{formatEventTime(event)}</p>
+                          </div>
+                          {event.location && (
+                            <p className="text-xs text-slate-500 mt-1">📍 {event.location}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                }
+              })
             )}
           </div>
         </div>
@@ -135,33 +298,69 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
     if (viewMode === 'week') {
       return (
         <div className="grid grid-cols-7 gap-1 h-full">
-          {days.map((day, index) => (
-            <div key={index} className="border-r last:border-r-0 flex flex-col min-h-[500px]">
-              <div className={`p-2 border-b text-center ${isToday(day.date) ? 'bg-blue-50 font-bold' : 'bg-slate-50'}`}>
-                <div className="text-xs text-slate-600">{format(day.date, 'EEE')}</div>
-                <div className={`text-lg ${isToday(day.date) ? 'text-blue-600' : ''}`}>
-                  {format(day.date, 'd')}
+          {days.map((day, index) => {
+            const allItems = [
+              ...day.tasks.map(t => ({ type: 'task', data: t })),
+              ...day.calendarEvents.map(e => ({ type: 'event', data: e }))
+            ];
+            const displayItems = allItems.slice(0, 5);
+            const remainingCount = allItems.length - displayItems.length;
+
+            return (
+              <div key={index} className="border-r last:border-r-0 flex flex-col min-h-[500px]">
+                <div className={`p-2 border-b text-center ${isToday(day.date) ? 'bg-blue-50 font-bold' : 'bg-slate-50'}`}>
+                  <div className="text-xs text-slate-600">{format(day.date, 'EEE')}</div>
+                  <div className={`text-lg ${isToday(day.date) ? 'text-blue-600' : ''}`}>
+                    {format(day.date, 'd')}
+                  </div>
+                </div>
+                <div className="flex-1 p-1 space-y-1 overflow-y-auto">
+                  {displayItems.map((item, itemIndex) => {
+                    if (item.type === 'task') {
+                      const task = item.data;
+                      return (
+                        <div
+                          key={`task-${task.id}`}
+                          className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)}`}
+                          onClick={() => onTaskClick(task)}
+                          title={task.title}
+                        >
+                          <div className="truncate">📋 {task.title}</div>
+                        </div>
+                      );
+                    } else {
+                      const event = item.data;
+                      return (
+                        <div
+                          key={`event-${event.id}`}
+                          className="text-xs p-1.5 rounded cursor-pointer hover:opacity-80 bg-green-50 text-green-800 border-l-2 border-l-green-500"
+                          onClick={() => handleCalendarEventClick(event)}
+                          title={event.summary || 'No title'}
+                        >
+                          <div className="truncate">📅 {event.summary || 'No title'}</div>
+                          {event.start?.dateTime && (
+                            <div className="text-[10px] text-green-600 mt-0.5">
+                              {formatEventTime(event)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  })}
+                  {remainingCount > 0 && (
+                    <div className="text-xs text-slate-500 text-center py-1">
+                      +{remainingCount} more
+                    </div>
+                  )}
+                  {allItems.length === 0 && (
+                    <div className="text-xs text-slate-400 text-center py-2 italic">
+                      No items
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex-1 p-1 space-y-1 overflow-y-auto">
-                {day.tasks.slice(0, 3).map(task => (
-                  <div
-                    key={task.id}
-                    className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 ${getPriorityColor(task.priority)}`}
-                    onClick={() => onTaskClick(task)}
-                    title={task.title}
-                  >
-                    <div className="truncate">{task.title}</div>
-                  </div>
-                ))}
-                {day.tasks.length > 3 && (
-                  <div className="text-xs text-slate-500 text-center py-1">
-                    +{day.tasks.length - 3} more
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       );
     }
@@ -189,7 +388,7 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7 gap-1">
               {week.map((day, dayIndex) => {
-                const isOverdue = isPast(startOfDay(day.date)) && !isToday(day.date) && day.tasks.length > 0;
+                const isOverdue = isPast(startOfDay(day.date)) && !isToday(day.date) && (day.tasks.length > 0 || day.calendarEvents.length > 0);
                 return (
                   <div
                     key={dayIndex}
@@ -201,21 +400,51 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
                       {format(day.date, 'd')}
                     </div>
                     <div className="flex-1 space-y-0.5 overflow-y-auto">
-                      {day.tasks.slice(0, 3).map(task => (
-                        <div
-                          key={task.id}
-                          className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 truncate ${getPriorityColor(task.priority)}`}
-                          onClick={() => onTaskClick(task)}
-                          title={task.title}
-                        >
-                          {task.title}
-                        </div>
-                      ))}
-                      {day.tasks.length > 3 && (
-                        <div className="text-xs text-slate-500 text-center py-0.5">
-                          +{day.tasks.length - 3}
-                        </div>
-                      )}
+                      {(() => {
+                        const allItems = [
+                          ...day.tasks.map(t => ({ type: 'task', data: t })),
+                          ...day.calendarEvents.map(e => ({ type: 'event', data: e }))
+                        ];
+                        const displayItems = allItems.slice(0, 3);
+                        const remainingCount = allItems.length - displayItems.length;
+
+                        return (
+                          <>
+                            {displayItems.map((item) => {
+                              if (item.type === 'task') {
+                                const task = item.data;
+                                return (
+                                  <div
+                                    key={`task-${task.id}`}
+                                    className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 truncate border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)}`}
+                                    onClick={() => onTaskClick(task)}
+                                    title={task.title}
+                                  >
+                                    📋 {task.title}
+                                  </div>
+                                );
+                              } else {
+                                const event = item.data;
+                                return (
+                                  <div
+                                    key={`event-${event.id}`}
+                                    className="text-xs p-1 rounded cursor-pointer hover:opacity-80 truncate bg-green-50 text-green-800 border-l-2 border-l-green-500"
+                                    onClick={() => handleCalendarEventClick(event)}
+                                    title={event.summary || 'No title'}
+                                  >
+                                    📅 {event.summary || 'No title'}
+                                  </div>
+                                );
+                              }
+                            })}
+                            {remainingCount > 0 && (
+                              <div className="text-xs text-slate-500 text-center py-0.5">
+                                +{remainingCount}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -281,6 +510,12 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
               <ChevronRight className="w-4 h-4" />
             </Button>
             <h2 className="text-xl font-bold ml-4">{getDateLabel()}</h2>
+            {isCalendarConnectedState && (
+              <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
+                <CalendarIcon className="w-3 h-3 mr-1" />
+                Google Calendar Connected
+              </Badge>
+            )}
           </div>
           
           {/* View mode selector */}
