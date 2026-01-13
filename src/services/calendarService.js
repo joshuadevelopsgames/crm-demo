@@ -57,14 +57,17 @@ export async function isCalendarConnected() {
     const { getSupabaseAuth } = await import('@/services/supabaseClient');
     const supabase = getSupabaseAuth();
     if (!supabase) {
+      console.log('❌ isCalendarConnected: Supabase not configured');
       return false;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
+      console.log('❌ isCalendarConnected: No session found');
       return false;
     }
 
+    console.log('🔍 isCalendarConnected: Checking API endpoint...');
     const response = await fetch('/api/calendar/integration', {
       headers: {
         'Authorization': `Bearer ${session.access_token}`
@@ -72,13 +75,18 @@ export async function isCalendarConnected() {
     });
 
     if (!response.ok) {
+      console.log('❌ isCalendarConnected: API response not OK:', response.status, response.statusText);
+      const errorText = await response.text().catch(() => '');
+      console.log('❌ Response body:', errorText);
       return false;
     }
     
     const result = await response.json();
-    return result.success && result.connected === true;
+    const connected = result.success && result.connected === true;
+    console.log('📊 isCalendarConnected: API result:', { success: result.success, connected: result.connected, final: connected });
+    return connected;
   } catch (error) {
-    console.error('Error checking Calendar connection:', error);
+    console.error('❌ Error checking Calendar connection:', error);
     return false;
   }
 }

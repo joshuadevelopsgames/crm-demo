@@ -159,8 +159,17 @@ export default function GoogleAuthCallback() {
             }
 
             // Store Calendar integration
+            // Check if Calendar scopes were granted by checking if we requested them
+            // Since we request Calendar scopes in Login.jsx, if we have provider_token, we likely have Calendar access
             try {
               console.log('📅 Storing Calendar integration...');
+              console.log('📅 Session scopes:', session.scopes);
+              console.log('📅 Token data:', { 
+                hasAccessToken: !!tokenData.access_token, 
+                hasRefreshToken: !!tokenData.refresh_token,
+                expiresIn: tokenData.expires_in 
+              });
+              
               const calendarResponse = await fetch('/api/calendar/integration', {
                 method: 'POST',
                 headers: {
@@ -173,9 +182,21 @@ export default function GoogleAuthCallback() {
               if (calendarResponse.ok) {
                 const calendarResult = await calendarResponse.json();
                 console.log('✅ Calendar integration stored successfully', calendarResult);
+                
+                // Verify it was actually stored by checking connection status
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const verifyResponse = await fetch('/api/calendar/integration', {
+                  headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                  }
+                });
+                if (verifyResponse.ok) {
+                  const verifyResult = await verifyResponse.json();
+                  console.log('✅ Calendar integration verified:', verifyResult);
+                }
               } else {
                 const errorText = await calendarResponse.text();
-                console.error('⚠️ Failed to store Calendar integration:', errorText);
+                console.error('⚠️ Failed to store Calendar integration:', calendarResponse.status, errorText);
                 // Don't throw - allow other integrations to continue
               }
             } catch (error) {
