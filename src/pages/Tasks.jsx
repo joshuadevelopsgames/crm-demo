@@ -3322,27 +3322,72 @@ export default function Tasks() {
                                 {/* Top row: Priority, Title, Status */}
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                                    <div
-                                      className={`flex items-center justify-center ${isMobileView ? "w-8 h-8" : "w-6 h-6"} rounded-md border-2 ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 touch-manipulation`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handlePriorityClick(
-                                          task.id,
-                                          task.priority,
-                                          e,
-                                        );
-                                      }}
-                                      title={`Change priority (${priorityFlag.label})`}
-                                      style={{
-                                        minWidth: "32px",
-                                        minHeight: "32px",
-                                        WebkitTapHighlightColor: "transparent",
+                                    <Select
+                                      value={task.priority || "normal"}
+                                      onValueChange={(value) => {
+                                        handlePriorityChange(task.id, value);
                                       }}
                                     >
-                                      <PriorityIcon
-                                        className={`${isMobileView ? "w-4 h-4" : "w-3.5 h-3.5"} ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
-                                      />
-                                    </div>
+                                      <SelectTrigger
+                                        className={`${isMobileView ? "w-8 h-8" : "w-6 h-6"} p-0 border-0 hover:opacity-80 flex items-center justify-center ${priorityFlag.bgColor} ${priorityFlag.borderColor} flex-shrink-0 touch-manipulation`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                        onMouseDown={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                        style={{
+                                          minWidth: isMobileView ? "32px" : "24px",
+                                          minHeight: isMobileView ? "32px" : "24px",
+                                          WebkitTapHighlightColor: "transparent",
+                                        }}
+                                      >
+                                        <PriorityIcon
+                                          className={`${isMobileView ? "w-4 h-4" : "w-3.5 h-3.5"} ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
+                                        />
+                                      </SelectTrigger>
+                                      <SelectContent
+                                        position="item-aligned"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <SelectItem value="critical">
+                                          <div className="flex items-center gap-2">
+                                            <AlertTriangle className="w-4 h-4 text-red-600" />
+                                            Critical
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="blocker">
+                                          <div className="flex items-center gap-2">
+                                            <Ban className="w-4 h-4 text-red-700" />
+                                            Blocker
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="major">
+                                          <div className="flex items-center gap-2">
+                                            <ChevronsUp className="w-4 h-4 text-orange-600" />
+                                            Major
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="normal">
+                                          <div className="flex items-center gap-2">
+                                            <Minus className="w-4 h-4 text-blue-600" />
+                                            Normal
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="minor">
+                                          <div className="flex items-center gap-2">
+                                            <ChevronsDown className="w-4 h-4 text-slate-600" />
+                                            Minor
+                                          </div>
+                                        </SelectItem>
+                                        <SelectItem value="trivial">
+                                          <div className="flex items-center gap-2">
+                                            <Circle className="w-4 h-4 text-gray-500 fill-current" />
+                                            Trivial
+                                          </div>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                     <div className="flex-1 min-w-0">
                                       <h3
                                         className={`font-semibold ${isMobileView ? "text-base" : "text-base"} text-slate-900 dark:text-foreground leading-tight ${
@@ -3494,21 +3539,67 @@ export default function Tasks() {
                                   {!bulkActionMode && (
                                     <GripVertical className="w-4 h-4 text-slate-400 cursor-move" />
                                   )}
-                                  <div
-                                    className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity`}
-                                    onClick={(e) =>
-                                      handlePriorityClick(
-                                        task.id,
-                                        task.priority,
-                                        e,
-                                      )
-                                    }
-                                    title={`Click to change priority (currently ${priorityFlag.label})`}
+                                  <Select
+                                    value={task.priority || "normal"}
+                                    onValueChange={(value) => {
+                                      handlePriorityChange(task.id, value);
+                                    }}
                                   >
-                                    <PriorityIcon
-                                      className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
-                                    />
-                                  </div>
+                                    <SelectTrigger
+                                      className={`w-6 h-6 p-0 border-0 hover:opacity-80 flex items-center justify-center ${priorityFlag.bgColor} ${priorityFlag.borderColor}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                      }}
+                                      onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                      }}
+                                    >
+                                      <PriorityIcon
+                                        className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent
+                                      position="item-aligned"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <SelectItem value="critical">
+                                        <div className="flex items-center gap-2">
+                                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                                          Critical
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="blocker">
+                                        <div className="flex items-center gap-2">
+                                          <Ban className="w-4 h-4 text-red-700" />
+                                          Blocker
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="major">
+                                        <div className="flex items-center gap-2">
+                                          <ChevronsUp className="w-4 h-4 text-orange-600" />
+                                          Major
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="normal">
+                                        <div className="flex items-center gap-2">
+                                          <Minus className="w-4 h-4 text-blue-600" />
+                                          Normal
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="minor">
+                                        <div className="flex items-center gap-2">
+                                          <ChevronsDown className="w-4 h-4 text-slate-600" />
+                                          Minor
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="trivial">
+                                        <div className="flex items-center gap-2">
+                                          <Circle className="w-4 h-4 text-gray-500 fill-current" />
+                                          Trivial
+                                        </div>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                   <Select
                                     value={task.status}
                                     onValueChange={(value) => {
