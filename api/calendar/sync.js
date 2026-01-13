@@ -195,8 +195,7 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
               taskUpdates.due_time = null;
             }
 
-            // Update task via base44 API (would need to import base44 client)
-            // For now, we'll update the calendar_events record
+            // Update the calendar_events record
             await supabase
               .from('calendar_events')
               .update({
@@ -207,6 +206,12 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
                 updated_at: new Date().toISOString()
               })
               .eq('id', linkedEvent.id);
+
+            // Note: To update the actual task in base44, you would need to:
+            // 1. Import base44 client
+            // 2. Call base44.entities.Task.update(linkedEvent.task_id, taskUpdates)
+            // For now, we're just updating the calendar_events record to track changes
+            // The UI can show a notification that calendar events have changed
 
             updated++;
           }
