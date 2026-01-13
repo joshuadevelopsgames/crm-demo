@@ -131,11 +131,32 @@ export default async function handler(req, res) {
           .single();
         
         if (error) {
+          // Log the full error for debugging
+          console.error('❌ Error creating task:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            taskData: Object.keys(taskData)
+          });
+          
           // Provide more helpful error message if table doesn't exist
-          if (error.message && error.message.includes('schema cache')) {
-            throw new Error('Tasks table not found. Please ensure the tasks table has been created in Supabase. Run the create_tasks_table.sql file in your Supabase SQL Editor.');
+          if (error.message && (error.message.includes('schema cache') || error.message.includes('relation') || error.code === 'PGRST106' || error.code === '42P01')) {
+            return res.status(500).json({
+              success: false,
+              error: 'Tasks table not found. Please ensure the tasks table has been created in Supabase. Run the create_tasks_table.sql file in your Supabase SQL Editor.',
+              details: error.message,
+              code: error.code
+            });
           }
-          throw error;
+          
+          // Return error with details
+          return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to create task',
+            details: error.details,
+            code: error.code
+          });
         }
         
         return res.status(201).json({
