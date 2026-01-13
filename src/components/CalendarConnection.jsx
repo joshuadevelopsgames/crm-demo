@@ -94,6 +94,8 @@ export default function CalendarConnection() {
         if (isMounted) {
           console.log('✅ Setting connected state to:', connected);
           setConnected(connected);
+          // Invalidate connection status query so CalendarWidget refreshes
+          queryClient.invalidateQueries({ queryKey: ['calendar-connection-status'] });
         }
       } catch (error) {
         console.error('Error checking Calendar connection:', error);
