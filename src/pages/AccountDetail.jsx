@@ -646,7 +646,7 @@ export default function AccountDetail() {
             <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff] mb-4">
               Uploaded Files
             </h3>
-          {attachments.length > 0 ? (
+            {attachments.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff]">Files ({attachments.length})</h3>

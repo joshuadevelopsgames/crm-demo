@@ -143,8 +143,8 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
     }
 
     let updated = 0;
-    let created = 0;
-    let errors = [];
+    const created = 0;
+    const errors = [];
 
     // Fetch each event from Google Calendar to check for changes
     for (const linkedEvent of linkedEvents || []) {
@@ -252,9 +252,9 @@ async function syncCRMToCalendar(supabase, userId, accessToken, res) {
       throw new Error('Failed to fetch tasks to sync');
     }
 
-    let created = 0;
-    let updated = 0;
-    let errors = [];
+    const created = 0;
+    const updated = 0;
+    const errors = [];
 
     // This is a simplified version - in production you'd fetch tasks from base44
     // and create/update calendar events accordingly
