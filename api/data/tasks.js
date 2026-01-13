@@ -90,12 +90,18 @@ export default async function handler(req, res) {
       if (action === 'create') {
         // Create new task in Supabase
         // Remove id if it's not a valid UUID - let Supabase generate it
-        const { id, ...dataWithoutId } = data;
+        const { id, sync_to_calendar, ...dataWithoutId } = data;
+        
+        // Only include fields that exist in the tasks table
+        // Filter out any fields that might not exist in the schema
         const taskData = { 
           ...dataWithoutId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+        
+        // Remove sync_to_calendar if present (it's not a database field, just a UI flag)
+        delete taskData.sync_to_calendar;
         
         // Convert empty strings to null for date/time fields
         if (taskData.due_date === '' || taskData.due_date === null || taskData.due_date === undefined) {
