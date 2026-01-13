@@ -62,11 +62,20 @@ export async function syncTaskToCalendar(task) {
     }
 
     // Check if calendar event already exists for this task
-    const { data: existingEvent } = await supabase
+    // Use maybeSingle() instead of single() to handle case where no event exists
+    const { data: existingEvent, error: checkError } = await supabase
       .from('calendar_events')
       .select('google_event_id')
       .eq('task_id', task.id)
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    // If error is 406 (Not Acceptable), table might not have RLS policies
+    // Continue anyway - we'll try to create/update and handle errors there
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.warn('⚠️ Error checking for existing calendar event:', checkError);
+      // Continue - we'll try to create/update anyway
+    }
 
     let googleEventId;
     if (existingEvent?.google_event_id) {

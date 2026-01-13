@@ -48,6 +48,15 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_user_id ON calendar_events(user_i
 CREATE INDEX IF NOT EXISTS idx_calendar_events_start_time ON calendar_events(start_time);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_google_event_id ON calendar_events(google_event_id);
 
+-- Enable Row Level Security (RLS)
+ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy: Users can only access their own calendar events
+CREATE POLICY calendar_events_user_access ON calendar_events
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Drive Integration Table
 CREATE TABLE IF NOT EXISTS google_drive_integrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
