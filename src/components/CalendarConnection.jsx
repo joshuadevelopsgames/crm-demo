@@ -80,16 +80,30 @@ export default function CalendarConnection() {
             expires_in: session.expires_in || 3600
           });
           
-          const isConnected = await isCalendarConnected();
+          // Wait a moment for database to update, then verify connection
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Retry connection check a few times to ensure persistence
+          let isConnected = false;
+          for (let i = 0; i < 3; i++) {
+            isConnected = await isCalendarConnected();
+            if (isConnected) break;
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
           setConnected(isConnected);
           
           if (isConnected) {
             toast.success('Calendar connected successfully!');
             setIsConnecting(false);
             return;
+          } else {
+            console.warn('⚠️ Calendar token stored but connection check failed');
+            // Continue to OAuth flow to ensure proper connection
           }
         } catch (error) {
           console.error('Error storing Calendar token from session:', error);
+          toast.error('Failed to store Calendar token. Please try connecting again.');
         }
       }
       

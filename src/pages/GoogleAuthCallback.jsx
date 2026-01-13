@@ -171,12 +171,16 @@ export default function GoogleAuthCallback() {
               });
 
               if (calendarResponse.ok) {
-                console.log('✅ Calendar integration stored successfully');
+                const calendarResult = await calendarResponse.json();
+                console.log('✅ Calendar integration stored successfully', calendarResult);
               } else {
-                console.warn('⚠️ Failed to store Calendar integration:', await calendarResponse.text());
+                const errorText = await calendarResponse.text();
+                console.error('⚠️ Failed to store Calendar integration:', errorText);
+                // Don't throw - allow other integrations to continue
               }
             } catch (error) {
               console.error('❌ Error storing Calendar integration:', error);
+              // Don't throw - allow other integrations to continue
             }
 
             // Store Drive integration

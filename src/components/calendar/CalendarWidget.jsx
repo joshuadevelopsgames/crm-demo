@@ -15,11 +15,45 @@ export default function CalendarWidget() {
 
   // Check connection status
   React.useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    
     const checkConnection = async () => {
-      const connected = await isCalendarConnected();
-      setIsConnected(connected);
+      try {
+        const connected = await isCalendarConnected();
+        setIsConnected(connected);
+        
+        // If not connected, retry a few times (in case we just came back from OAuth)
+        if (!connected && retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(() => {
+            checkConnection();
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('Error checking Calendar connection:', error);
+        setIsConnected(false);
+      }
     };
-    checkConnection();
+    
+    // Initial check with delay
+    setTimeout(() => {
+      checkConnection();
+    }, 500);
+    
+    // Also check when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        retryCount = 0;
+        checkConnection();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Fetch calendar events for the current week
