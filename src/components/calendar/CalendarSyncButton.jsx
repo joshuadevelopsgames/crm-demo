@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
-import { Calendar, RefreshCw, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSupabaseAuth } from '@/services/supabaseClient';
+import { isCalendarConnected } from '@/services/calendarService';
 import toast from 'react-hot-toast';
 
 export default function CalendarSyncButton() {
   const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleSync = async () => {
     setIsSyncing(true);
     try {
+      // Check if calendar is connected first
+      const connected = await isCalendarConnected();
+      if (!connected) {
+        toast.error('Calendar not connected. Please connect Calendar in Settings first.');
+        setIsSyncing(false);
+        return;
+      }
+
       const supabase = getSupabaseAuth();
       if (!supabase) {
         throw new Error('Supabase not configured');
@@ -19,6 +30,8 @@ export default function CalendarSyncButton() {
       if (!session) {
         throw new Error('Not authenticated');
       }
+
+      toast.loading('Syncing calendar events...', { id: 'calendar-sync' });
 
       // Sync calendar to CRM (two-way sync)
       const response = await fetch('/api/calendar/sync', {
@@ -38,10 +51,24 @@ export default function CalendarSyncButton() {
         throw new Error(result.error || 'Sync failed');
       }
 
-      toast.success(`✓ Synced ${result.data?.updated || 0} events from calendar`);
+      const updated = result.data?.updated || 0;
+      const created = result.data?.created || 0;
+      
+      // Invalidate calendar events query to refresh the widget
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      
+      if (updated > 0 || created > 0) {
+        toast.success(
+          `✓ Calendar synced! ${updated} updated, ${created} created`,
+          { id: 'calendar-sync', duration: 4000 }
+        );
+      } else {
+        toast.success('✓ Calendar synced! No changes found.', { id: 'calendar-sync' });
+      }
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      toast.error(error.message || 'Failed to sync calendar');
+      const errorMessage = error.message || 'Failed to sync calendar';
+      toast.error(errorMessage, { id: 'calendar-sync', duration: 5000 });
     } finally {
       setIsSyncing(false);
     }
