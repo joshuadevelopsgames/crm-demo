@@ -151,8 +151,11 @@ export default function GoogleAuthCallback() {
 
               if (gmailResponse.ok) {
                 console.log('✅ Gmail integration stored successfully');
+                // Wait for database to update before proceeding
+                await new Promise(resolve => setTimeout(resolve, 500));
               } else {
-                console.warn('⚠️ Failed to store Gmail integration:', await gmailResponse.text());
+                const errorText = await gmailResponse.text();
+                console.warn('⚠️ Failed to store Gmail integration:', errorText);
               }
             } catch (error) {
               console.error('❌ Error storing Gmail integration:', error);
