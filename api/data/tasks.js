@@ -179,8 +179,11 @@ export default async function handler(req, res) {
     
     if (req.method === 'PUT') {
       // Update task by ID in Supabase
-      const { id, ...updateData } = req.body;
+      const { id, sync_to_calendar, ...updateData } = req.body;
       updateData.updated_at = new Date().toISOString();
+      
+      // Remove sync_to_calendar if present (it's not a database field, just a UI flag)
+      delete updateData.sync_to_calendar;
       
       // Convert empty strings to null for date/time fields
       if (updateData.due_date === '' || updateData.due_date === null || updateData.due_date === undefined) {
