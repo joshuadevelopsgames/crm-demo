@@ -106,7 +106,7 @@ export default async function handler(req, res) {
 
     if (syncType === 'calendar_to_crm') {
       // Sync calendar events to CRM tasks
-      return await syncCalendarToCRM(supabase, user.id, integration.access_token, res);
+      return await syncCalendarToCRM(supabase, user.id, integration.access_token, res, user.email);
     } else if (syncType === 'crm_to_calendar') {
       // Sync CRM tasks to calendar events
       return await syncCRMToCalendar(supabase, user.id, integration.access_token, res);
@@ -129,13 +129,9 @@ export default async function handler(req, res) {
  * Sync calendar events to CRM tasks
  * Updates tasks when calendar events change and creates tasks for new events
  */
-async function syncCalendarToCRM(supabase, userId, accessToken, res) {
+async function syncCalendarToCRM(supabase, userId, accessToken, res, userEmail) {
   try {
     console.log('🔄 Starting calendar to CRM sync for user:', userId);
-    
-    // Get user's email for task creation
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
-    const userEmail = authUser?.email;
     
     // Fetch all events from Google Calendar for the next 30 days
     const timeMin = new Date().toISOString();
