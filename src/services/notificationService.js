@@ -129,6 +129,7 @@ export async function createTaskNotifications(task) {
     }
 
     // Create notification based on task status
+    // Check for existing notification of the specific type to avoid unique constraint violations
     if (isOverdue) {
       // Task is overdue - check if notification already exists (read or unread) to avoid duplicates
       // createOverdueTaskNotifications() handles overdue notifications periodically, but we check here
@@ -139,51 +140,97 @@ export async function createTaskNotifications(task) {
       
       if (!existingOverdueNotif) {
         // Only create if it doesn't already exist
-        await base44.entities.Notification.create({
-          user_id: user.id,
-          type: 'task_overdue',
-          title: 'Task Overdue',
-          message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
-          related_task_id: task.id,
-          related_account_id: task.related_account_id || null,
-          scheduled_for: new Date().toISOString()
-        });
+        try {
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'task_overdue',
+            title: 'Task Overdue',
+            message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
+            related_task_id: task.id,
+            related_account_id: task.related_account_id || null,
+            scheduled_for: new Date().toISOString()
+          });
+        } catch (error) {
+          // Ignore duplicate key errors (notification might have been created by another process)
+          if (!error.message?.includes('unique_user_task_notification')) {
+            console.error('Error creating overdue notification:', error);
+          }
+        }
       }
       // Note: createOverdueTaskNotifications() will handle creating overdue notifications for all users
       // This is just for immediate notification when a task becomes overdue during create/update
     } else if (isDueToday) {
-      // Task is due today
-      await base44.entities.Notification.create({
-        user_id: user.id,
-        type: 'task_due_today',
-        title: 'Task Due Today',
-        message: `"${task.title}" is due today`,
-        related_task_id: task.id,
-        related_account_id: task.related_account_id || null,
-        scheduled_for: new Date().toISOString()
-      });
+      // Check if task_due_today notification already exists
+      const existingDueTodayNotif = existingNotifications.find(
+        n => n.type === 'task_due_today'
+      );
+      
+      if (!existingDueTodayNotif) {
+        try {
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'task_due_today',
+            title: 'Task Due Today',
+            message: `"${task.title}" is due today`,
+            related_task_id: task.id,
+            related_account_id: task.related_account_id || null,
+            scheduled_for: new Date().toISOString()
+          });
+        } catch (error) {
+          // Ignore duplicate key errors
+          if (!error.message?.includes('unique_user_task_notification')) {
+            console.error('Error creating due today notification:', error);
+          }
+        }
+      }
     } else if (daysUntilDue === 1) {
-      // Task is due tomorrow
-      await base44.entities.Notification.create({
-        user_id: user.id,
-        type: 'task_reminder',
-        title: 'Task Due Tomorrow',
-        message: `"${task.title}" is due tomorrow`,
-        related_task_id: task.id,
-        related_account_id: task.related_account_id || null,
-        scheduled_for: addDays(today, 1).toISOString()
-      });
+      // Check if task_reminder notification for tomorrow already exists
+      const existingReminderNotif = existingNotifications.find(
+        n => n.type === 'task_reminder' && n.message?.includes('tomorrow')
+      );
+      
+      if (!existingReminderNotif) {
+        try {
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'task_reminder',
+            title: 'Task Due Tomorrow',
+            message: `"${task.title}" is due tomorrow`,
+            related_task_id: task.id,
+            related_account_id: task.related_account_id || null,
+            scheduled_for: addDays(today, 1).toISOString()
+          });
+        } catch (error) {
+          // Ignore duplicate key errors
+          if (!error.message?.includes('unique_user_task_notification')) {
+            console.error('Error creating reminder notification:', error);
+          }
+        }
+      }
     } else if (daysUntilDue <= 7) {
-      // Task is due within a week
-      await base44.entities.Notification.create({
-        user_id: user.id,
-        type: 'task_reminder',
-        title: 'Task Due Soon',
-        message: `"${task.title}" is due in ${daysUntilDue} days`,
-        related_task_id: task.id,
-        related_account_id: task.related_account_id || null,
-        scheduled_for: taskDate.toISOString()
-      });
+      // Check if task_reminder notification for this task already exists
+      const existingReminderNotif = existingNotifications.find(
+        n => n.type === 'task_reminder' && n.related_task_id === task.id
+      );
+      
+      if (!existingReminderNotif) {
+        try {
+          await base44.entities.Notification.create({
+            user_id: user.id,
+            type: 'task_reminder',
+            title: 'Task Due Soon',
+            message: `"${task.title}" is due in ${daysUntilDue} days`,
+            related_task_id: task.id,
+            related_account_id: task.related_account_id || null,
+            scheduled_for: taskDate.toISOString()
+          });
+        } catch (error) {
+          // Ignore duplicate key errors
+          if (!error.message?.includes('unique_user_task_notification')) {
+            console.error('Error creating reminder notification:', error);
+          }
+        }
+      }
     }
   }
 }
