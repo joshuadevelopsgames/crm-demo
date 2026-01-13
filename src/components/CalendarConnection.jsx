@@ -17,6 +17,7 @@ export default function CalendarConnection() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const { user } = useUser();
+  const queryClient = useQueryClient();
 
   // Check connection status - following Gmail pattern
   useEffect(() => {
