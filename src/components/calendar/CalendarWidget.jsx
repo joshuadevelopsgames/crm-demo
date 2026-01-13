@@ -145,7 +145,6 @@ export default function CalendarWidget() {
             Upcoming Events
           </CardTitle>
           <div className="flex items-center gap-2">
-            <CalendarSyncButton />
             <Button
               variant="outline"
               size="sm"

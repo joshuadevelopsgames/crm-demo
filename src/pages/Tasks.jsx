@@ -356,8 +356,9 @@ export default function Tasks() {
       if (task.due_date) {
         await createTaskNotifications(task);
       }
-      // Sync to calendar if enabled and task has due date
-      if (data.sync_to_calendar && task.due_date) {
+      // Auto-sync to calendar if task has due date
+      // syncTaskToCalendar() will check if calendar is connected and handle gracefully
+      if (task.due_date) {
         try {
           // Check if task is recurring
           if (task.is_recurring) {
@@ -368,8 +369,8 @@ export default function Tasks() {
             await syncTaskToCalendar(task);
           }
         } catch (error) {
+          // Silently fail - calendar sync is optional
           console.error('Error syncing task to calendar:', error);
-          // Don't fail task creation if calendar sync fails
         }
       }
       return task;
