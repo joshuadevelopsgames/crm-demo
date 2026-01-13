@@ -1459,61 +1459,19 @@ export default function Tasks() {
     return priorityOrder[nextIndex];
   };
 
+  const handlePriorityChange = async (taskId, newPriority) => {
+    // Update priority without recalculating order (prevents tasks from moving between views)
+    updateTaskMutation.mutate({
+      id: taskId,
+      data: { priority: newPriority },
+    });
+  };
+
+  // Keep handlePriorityClick for backward compatibility (if needed elsewhere)
   const handlePriorityClick = (taskId, currentPriority, e) => {
     e.stopPropagation(); // Prevent opening the edit dialog
     const newPriority = cyclePriority(currentPriority);
-
-    // Update priority
-    updateTaskMutation.mutate(
-      {
-        id: taskId,
-        data: { priority: newPriority },
-      },
-      {
-        onSuccess: () => {
-          // After priority is updated, recalculate order based on priority sorting
-          // Use setTimeout to ensure the query has been invalidated and refetched
-          setTimeout(() => {
-            const updatedTasks = queryClient.getQueryData(["tasks"]) || tasks;
-            if (!updatedTasks || updatedTasks.length === 0) return;
-
-            const priorityOrder = {
-              critical: 6,
-              blocker: 5,
-              major: 4,
-              normal: 3,
-              minor: 2,
-              trivial: 1,
-            };
-
-            // Sort by priority, then due date (same logic as filteredTasks sorting)
-            const sortedTasks = [...updatedTasks].sort((a, b) => {
-              const priorityDiff =
-                (priorityOrder[b.priority] || 0) -
-                (priorityOrder[a.priority] || 0);
-              if (priorityDiff !== 0) return priorityDiff;
-
-              if (a.due_date && b.due_date) {
-                return new Date(a.due_date) - new Date(b.due_date);
-              }
-              if (a.due_date) return -1;
-              if (b.due_date) return 1;
-              return 0;
-            });
-
-            // Update order for all tasks based on their new sorted position
-            sortedTasks.forEach((task, index) => {
-              if (task.order !== index) {
-                updateTaskMutation.mutate({
-                  id: task.id,
-                  data: { order: index },
-                });
-              }
-            });
-          }, 200);
-        },
-      },
-    );
+    handlePriorityChange(taskId, newPriority);
   };
 
   const getPriorityColor = (priority) => {
@@ -3092,21 +3050,67 @@ export default function Tasks() {
                             {/* Header with priority and status */}
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center gap-2">
-                                <div
-                                  className={`flex items-center justify-center w-6 h-6 rounded border ${priorityFlag.bgColor} ${priorityFlag.borderColor} cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0`}
-                                  onClick={(e) =>
-                                    handlePriorityClick(
-                                      task.id,
-                                      task.priority,
-                                      e,
-                                    )
-                                  }
-                                  title={`Click to change priority (currently ${priorityFlag.label})`}
+                                <Select
+                                  value={task.priority || "normal"}
+                                  onValueChange={(value) => {
+                                    handlePriorityChange(task.id, value);
+                                  }}
                                 >
-                                  <PriorityIcon
-                                    className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
-                                  />
-                                </div>
+                                  <SelectTrigger
+                                    className={`w-6 h-6 p-0 border-0 hover:opacity-80 flex items-center justify-center ${priorityFlag.bgColor} ${priorityFlag.borderColor} flex-shrink-0`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <PriorityIcon
+                                      className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? "fill-current" : ""}`}
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent
+                                    position="item-aligned"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <SelectItem value="critical">
+                                      <div className="flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                                        Critical
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="blocker">
+                                      <div className="flex items-center gap-2">
+                                        <Ban className="w-4 h-4 text-red-700" />
+                                        Blocker
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="major">
+                                      <div className="flex items-center gap-2">
+                                        <ChevronsUp className="w-4 h-4 text-orange-600" />
+                                        Major
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="normal">
+                                      <div className="flex items-center gap-2">
+                                        <Minus className="w-4 h-4 text-blue-600" />
+                                        Normal
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="minor">
+                                      <div className="flex items-center gap-2">
+                                        <ChevronsDown className="w-4 h-4 text-slate-600" />
+                                        Minor
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="trivial">
+                                      <div className="flex items-center gap-2">
+                                        <Circle className="w-4 h-4 text-gray-500 fill-current" />
+                                        Trivial
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
                                 <Select
                                   value={task.status}
                                   onValueChange={(value) => {
