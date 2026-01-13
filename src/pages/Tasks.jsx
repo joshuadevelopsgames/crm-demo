@@ -1086,6 +1086,15 @@ export default function Tasks() {
     // Show toast notification when completing a task
     if (newStatus === "completed") {
       setLastCompletedTask({ id: taskId, title: task?.title });
+      
+      // Clear search/priority/label filters when completing a task so it's visible in completed view
+      setSearchTerm("");
+      setFilterPriority("all");
+      setFilterLabel("all");
+      
+      // Switch to completed view so user can see the completed task
+      setActiveFilter("completed");
+      
       toast.success("✓ Task completed", {
         duration: 5000,
         action: {
