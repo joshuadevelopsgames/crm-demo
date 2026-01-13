@@ -107,7 +107,8 @@ export default async function handler(req, res) {
           connected: true,
           last_sync: data.last_sync,
           token_expiry: data.token_expiry
-        }
+        },
+        connected: true
       });
     }
 
