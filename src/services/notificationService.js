@@ -470,12 +470,16 @@ export async function createOverdueTaskNotifications() {
           continue; // Already exists (and is now unread)
         }
         
+        // Find the task to get accurate due_date for time calculation
+        const task = tasks.find(t => t.id === notifData.task_id);
+        const overdueTime = task?.due_date ? formatOverdueTime(task.due_date) : `${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`;
+        
         // Define notificationData outside try block so it's accessible in catch
         const notificationData = {
           user_id: String(notifData.user_id).trim(), // Ensure string format
           type: 'task_overdue',
           title: 'Task Overdue',
-          message: `"${notifData.task_title}" is overdue by ${notifData.daysOverdue} day${notifData.daysOverdue !== 1 ? 's' : ''}`,
+          message: `"${notifData.task_title}" is overdue by ${overdueTime}`,
           related_task_id: notifData.task_id,
           related_account_id: notifData.related_account_id,
           scheduled_for: new Date().toISOString()
