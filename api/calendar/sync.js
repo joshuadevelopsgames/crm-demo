@@ -139,20 +139,47 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res, userEmail) 
     timeMax.setDate(timeMax.getDate() + 30);
     const timeMaxISO = timeMax.toISOString();
 
-    console.log('📅 Fetching calendar events from Google...');
-    const eventsResponse = await fetch(
-      `${CALENDAR_API_BASE}/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMaxISO}&singleEvents=true&orderBy=startTime`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+    console.log('📅 Fetching calendar events from Google...', { timeMin, timeMax: timeMaxISO });
+    
+    let eventsResponse;
+    try {
+      eventsResponse = await fetch(
+        `${CALENDAR_API_BASE}/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMaxISO}&singleEvents=true&orderBy=startTime&maxResults=2500`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
         }
-      }
-    );
+      );
+    } catch (fetchError) {
+      console.error('❌ Network error fetching calendar events:', fetchError);
+      throw new Error(`Network error: ${fetchError.message}`);
+    }
 
     if (!eventsResponse.ok) {
-      const errorText = await eventsResponse.text();
-      console.error('❌ Failed to fetch calendar events:', eventsResponse.status, errorText);
-      throw new Error(`Failed to fetch calendar events: ${eventsResponse.statusText}`);
+      let errorText = '';
+      try {
+        errorText = await eventsResponse.text();
+        const errorJson = JSON.parse(errorText);
+        console.error('❌ Failed to fetch calendar events:', {
+          status: eventsResponse.status,
+          statusText: eventsResponse.statusText,
+          error: errorJson
+        });
+        
+        // Handle specific error cases
+        if (eventsResponse.status === 401) {
+          throw new Error('Calendar authentication failed. Please reconnect your calendar.');
+        } else if (eventsResponse.status === 403) {
+          throw new Error('Calendar access denied. Please check your permissions.');
+        } else if (eventsResponse.status === 429) {
+          throw new Error('Calendar API rate limit exceeded. Please try again later.');
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing error response:', parseError);
+      }
+      throw new Error(`Failed to fetch calendar events: ${eventsResponse.status} ${eventsResponse.statusText}${errorText ? ` - ${errorText}` : ''}`);
     }
 
     const eventsData = await eventsResponse.json();
