@@ -25,7 +25,7 @@ export default function GmailConnection({ onSyncComplete }) {
   const [lastSync, setLastSync] = useState(null);
   const { user } = useUser();
 
-  // Check connection status
+  // Check connection status - following Calendar/Drive pattern
   useEffect(() => {
     let isMounted = true;
     let timeoutId = null;
@@ -58,6 +58,9 @@ export default function GmailConnection({ onSyncComplete }) {
                     expires_in: session.expires_in || 3600
                   });
                   
+                  // Wait a moment for database to update
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
                   // Check again after storing
                   connected = await isGmailConnected();
                   console.log('📊 Connection check after storing token:', connected);
@@ -67,9 +70,7 @@ export default function GmailConnection({ onSyncComplete }) {
                   }
                 } catch (error) {
                   console.error('Error storing Gmail token from session:', error);
-                  // Even if storing fails, if we have the token in session, user has permissions
-                  // We can consider them "connected" for UI purposes (hide the button)
-                  connected = true;
+                  // Don't set connected to true here - wait for database check
                 }
               } else {
                 // No provider_token means no Gmail permissions granted yet
@@ -114,7 +115,7 @@ export default function GmailConnection({ onSyncComplete }) {
     // Initial check with a slight delay to allow OAuth callback to complete
     timeoutId = setTimeout(() => {
       checkConnection();
-    }, 500); // Increased delay to allow callback to store token
+    }, 500);
     
     // Also check when page becomes visible (user navigates back)
     const handleVisibilityChange = () => {
@@ -147,7 +148,7 @@ export default function GmailConnection({ onSyncComplete }) {
         clearTimeout(timeoutId);
       }
     };
-  }, [user?.id]); // Only depend on user.id, not the entire user object
+  }, [user?.id]);
 
   // Get current user email
   const { data: currentUser } = useQuery({
@@ -192,36 +193,41 @@ export default function GmailConnection({ onSyncComplete }) {
             expires_in: session.expires_in || 3600
           });
           
-          const isConnected = await isGmailConnected();
+          // Wait a moment for database to update, then verify connection
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Retry connection check a few times to ensure persistence
+          let isConnected = false;
+          for (let i = 0; i < 3; i++) {
+            isConnected = await isGmailConnected();
+            if (isConnected) break;
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
           setConnected(isConnected);
           
           if (isConnected) {
             toast.success('Gmail connected successfully!');
             setIsConnecting(false);
             return;
+          } else {
+            console.warn('⚠️ Gmail token stored but connection check failed');
+            // Continue to OAuth flow to ensure proper connection
           }
         } catch (error) {
           console.error('Error storing Gmail token from session:', error);
-          // Continue to OAuth flow
+          toast.error('Failed to store Gmail token. Please try connecting again.');
         }
       }
       
       // Store the current page path so we can redirect back to it after OAuth
       const currentPath = window.location.pathname + window.location.search;
-      console.log('📍 GmailConnection: Storing return path:', currentPath);
-      console.log('📍 GmailConnection: Full URL:', window.location.href);
       localStorage.setItem('gmail_oauth_return_path', currentPath);
       
-      // Verify it was stored
-      const verifyPath = localStorage.getItem('gmail_oauth_return_path');
-      console.log('📍 GmailConnection: Verified stored path:', verifyPath);
-      
       // Open Google OAuth consent screen to request Gmail permissions
-      // This works whether the user is logged in with Google or not
       const redirectUrl = window.location.origin + '/google-auth-callback';
       
       console.log('📧 Opening Google OAuth to request Gmail access...');
-      console.log('📍 Redirect URL:', redirectUrl);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -229,7 +235,7 @@ export default function GmailConnection({ onSyncComplete }) {
           scopes: 'https://www.googleapis.com/auth/gmail.readonly',
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent', // Force consent screen to ensure Gmail scope is requested
+            prompt: 'consent',
           },
         },
       });
@@ -244,14 +250,6 @@ export default function GmailConnection({ onSyncComplete }) {
       // Redirect to Google OAuth consent screen
       if (data?.url) {
         window.location.href = data.url;
-        // Don't set isConnecting to false - we're redirecting
-        return;
-      }
-      
-      // Fallback: If Supabase OAuth fails, try separate Gmail OAuth flow
-      const authUrl = initGmailAuth();
-      if (authUrl) {
-        window.location.href = authUrl;
         return;
       }
       
@@ -309,72 +307,62 @@ export default function GmailConnection({ onSyncComplete }) {
     }
   };
 
-  // Note: Gmail access is NOT automatically available through Google OAuth login
-  // Supabase's Google OAuth only requests basic scopes (openid, email, profile)
-  // Gmail API requires separate scopes (gmail.readonly) that need separate consent
-  // So we only hide the button if Gmail is actually connected via the Gmail OAuth flow
-  if (!connected) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-              <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-slate-900 dark:text-[#ffffff] mb-1">Connect Gmail</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                Automatically sync emails with your CRM contacts and track client relationships
-              </p>
-              <Button 
-                onClick={handleConnect}
-                disabled={isConnecting}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isConnecting ? 'Connecting...' : 'Connect Gmail'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-slate-900 dark:text-[#ffffff]">Gmail Connected</h3>
-              <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">Active</Badge>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            {lastSync && (
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                Last synced: {new Date(lastSync).toLocaleString()}
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white">Gmail</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Sync emails with your CRM contacts and accounts
               </p>
-            )}
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleSync}
-                disabled={isSyncing}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : 'Sync Now'}
-              </Button>
-              <Button 
-                onClick={handleDisconnect}
-                variant="outline"
-                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                Disconnect
-              </Button>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {connected ? (
+              <>
+                <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800">
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Connected
+                </Badge>
+                {lastSync && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Last synced: {new Date(lastSync).toLocaleString()}
+                  </span>
+                )}
+                <Button
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-300"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  disabled={isConnecting}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                size="sm"
+              >
+                {isConnecting ? 'Connecting...' : 'Connect Gmail'}
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
