@@ -1,8 +1,9 @@
 import { base44 } from '@/api/base44Client';
-import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format } from 'date-fns';
+import { differenceInDays, isToday, isPast, startOfDay, addDays, getYear, getMonth, getDate, subMonths, format, differenceInSeconds, differenceInMinutes, differenceInHours } from 'date-fns';
 import { calculateRenewalDate, hasAnyEstimateExpiringSoon } from '@/utils/renewalDateCalculator';
 import { getSegmentForYear, detectContractTypo, getContractYears, calculateDurationMonths } from '@/utils/revenueSegmentCalculator';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
+import { parseCalgaryDate, getCalgaryToday } from '@/utils/timezone';
 
 /**
  * Parse assigned users from comma-separated string
@@ -10,6 +11,37 @@ import { getCurrentYear } from '@/contexts/YearSelectorContext';
 function parseAssignedUsers(assignedTo) {
   if (!assignedTo || assignedTo.trim() === '') return [];
   return assignedTo.split(',').map(email => email.trim()).filter(Boolean);
+}
+
+/**
+ * Format overdue time in the most appropriate unit (seconds, minutes, hours, or days)
+ * @param {string} dueDateString - Due date string in YYYY-MM-DD format
+ * @returns {string} Formatted overdue time string (e.g., "5 seconds", "3 minutes", "2 hours", "5 days")
+ */
+function formatOverdueTime(dueDateString) {
+  if (!dueDateString) return 'unknown time';
+  
+  const dueDate = parseCalgaryDate(dueDateString);
+  const now = new Date();
+  
+  if (!dueDate) return 'unknown time';
+  
+  // Calculate differences in various units
+  const secondsDiff = differenceInSeconds(now, dueDate);
+  const minutesDiff = differenceInMinutes(now, dueDate);
+  const hoursDiff = differenceInHours(now, dueDate);
+  const daysDiff = differenceInDays(now, dueDate);
+  
+  // Return the most appropriate unit
+  if (secondsDiff < 60) {
+    return `${secondsDiff} second${secondsDiff !== 1 ? 's' : ''}`;
+  } else if (minutesDiff < 60) {
+    return `${minutesDiff} minute${minutesDiff !== 1 ? 's' : ''}`;
+  } else if (hoursDiff < 24) {
+    return `${hoursDiff} hour${hoursDiff !== 1 ? 's' : ''}`;
+  } else {
+    return `${daysDiff} day${daysDiff !== 1 ? 's' : ''}`;
+  }
 }
 
 /**
@@ -141,11 +173,12 @@ export async function createTaskNotifications(task) {
       if (!existingOverdueNotif) {
         // Only create if it doesn't already exist
         try {
+          const overdueTime = formatOverdueTime(task.due_date);
           await base44.entities.Notification.create({
             user_id: user.id,
             type: 'task_overdue',
             title: 'Task Overdue',
-            message: `"${task.title}" is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`,
+            message: `"${task.title}" is overdue by ${overdueTime}`,
             related_task_id: task.id,
             related_account_id: task.related_account_id || null,
             scheduled_for: new Date().toISOString()
