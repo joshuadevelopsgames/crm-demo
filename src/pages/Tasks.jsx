@@ -407,20 +407,20 @@ export default function Tasks() {
         }
       } else if (updatedTask.due_date) {
         await createTaskNotifications(updatedTask);
-        // Sync to calendar if enabled
-        if (data.sync_to_calendar) {
-          try {
-            // Check if task is recurring
-            if (updatedTask.is_recurring) {
-              const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
-              await syncRecurringTaskToCalendar(updatedTask);
-            } else {
-              const { syncTaskToCalendar } = await import('../services/calendarSyncService');
-              await syncTaskToCalendar(updatedTask);
-            }
-          } catch (error) {
-            console.error('Error syncing task to calendar:', error);
+        // Auto-sync to calendar if calendar is connected
+        // syncTaskToCalendar() will check if calendar is connected and handle gracefully
+        try {
+          // Check if task is recurring
+          if (updatedTask.is_recurring) {
+            const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
+            await syncRecurringTaskToCalendar(updatedTask);
+          } else {
+            const { syncTaskToCalendar } = await import('../services/calendarSyncService');
+            await syncTaskToCalendar(updatedTask);
           }
+        } catch (error) {
+          // Silently fail - calendar sync is optional
+          console.error('Error syncing task to calendar:', error);
         }
       }
 
