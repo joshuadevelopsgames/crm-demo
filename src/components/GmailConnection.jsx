@@ -8,7 +8,6 @@ import {
   isGmailConnected, 
   disconnectGmail, 
   getLastSyncTimestamp,
-  initGmailAuth,
   storeGmailToken
 } from '../services/gmailService';
 import { syncGmailToCRM } from '../services/gmailSyncService';
