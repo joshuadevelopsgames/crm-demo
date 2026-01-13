@@ -51,6 +51,9 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_google_event_id ON calendar_event
 -- Enable Row Level Security (RLS)
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop policy if it exists (for idempotency)
+DROP POLICY IF EXISTS calendar_events_user_access ON calendar_events;
+
 -- RLS Policy: Users can only access their own calendar events
 CREATE POLICY calendar_events_user_access ON calendar_events
   FOR ALL TO authenticated
