@@ -1325,24 +1325,38 @@ export default function Tasks() {
                           (isUnassigned && isCreatedByCurrentUser) ||
                           (isUnassigned && hasNoCreator);
     
+    // Check if task is assigned by another user (assigned to current user but NOT created by current user)
+    const isAssignedByAnotherUser = isAssignedToCurrentUser && !isCreatedByCurrentUser;
+    
     switch (activeFilter) {
       case "inbox":
-        return (
-          task.status !== "completed" &&
-          task.status !== "blocked" &&
-          shouldShowTask
-        );
-      case "today":
+        // Only show tasks assigned to current user by another user
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
           shouldShowTask &&
+          isAssignedByAnotherUser
+        );
+      case "today":
+        // Show tasks that are due today or overdue
+        // Exclude tasks that should be in inbox (assigned by another user)
+        return (
+          task.status !== "completed" &&
+          task.status !== "blocked" &&
+          shouldShowTask &&
+          !isAssignedByAnotherUser &&
           (isTaskToday(task) || isTaskOverdue(task))
         );
       case "upcoming":
         // Must have a due_date to be upcoming
+        // Exclude tasks that should be in inbox (assigned by another user)
         if (!task.due_date) return false;
-        return task.status !== "completed" && shouldShowTask && isTaskUpcoming(task);
+        return (
+          task.status !== "completed" && 
+          shouldShowTask && 
+          !isAssignedByAnotherUser &&
+          isTaskUpcoming(task)
+        );
       case "completed":
         return task.status === "completed" && shouldShowTask;
       default:
