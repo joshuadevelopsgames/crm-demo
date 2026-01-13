@@ -127,33 +127,77 @@ export default function GoogleAuthCallback() {
           // User exists - proceed with login
           console.log('✅ User validated, email exists in profiles');
           
-          // Check if Gmail scopes were granted and store the token
+          // Check if Google scopes were granted and store tokens for Gmail, Calendar, and Drive
           // Supabase provides provider_token and provider_refresh_token in the session
+          // The same token works for all Google APIs (Gmail, Calendar, Drive)
           if (session.provider_token && session.provider_refresh_token) {
+            const tokenData = {
+              access_token: session.provider_token,
+              refresh_token: session.provider_refresh_token,
+              expires_in: session.expires_in || 3600 // Default to 1 hour if not specified
+            };
+
+            // Store Gmail integration
             try {
-              console.log('📧 Gmail token detected, storing Gmail integration...');
-              const response = await fetch('/api/gmail/integration', {
+              console.log('📧 Storing Gmail integration...');
+              const gmailResponse = await fetch('/api/gmail/integration', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({
-                  access_token: session.provider_token,
-                  refresh_token: session.provider_refresh_token,
-                  expires_in: session.expires_in || 3600 // Default to 1 hour if not specified
-                })
+                body: JSON.stringify(tokenData)
               });
 
-              if (response.ok) {
+              if (gmailResponse.ok) {
                 console.log('✅ Gmail integration stored successfully');
               } else {
-                console.warn('⚠️ Failed to store Gmail integration:', await response.text());
-                // Don't fail the login if Gmail storage fails
+                console.warn('⚠️ Failed to store Gmail integration:', await gmailResponse.text());
               }
             } catch (error) {
               console.error('❌ Error storing Gmail integration:', error);
-              // Don't fail the login if Gmail storage fails
+            }
+
+            // Store Calendar integration
+            try {
+              console.log('📅 Storing Calendar integration...');
+              const calendarResponse = await fetch('/api/calendar/integration', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify(tokenData)
+              });
+
+              if (calendarResponse.ok) {
+                console.log('✅ Calendar integration stored successfully');
+              } else {
+                console.warn('⚠️ Failed to store Calendar integration:', await calendarResponse.text());
+              }
+            } catch (error) {
+              console.error('❌ Error storing Calendar integration:', error);
+            }
+
+            // Store Drive integration
+            try {
+              console.log('📁 Storing Drive integration...');
+              const driveResponse = await fetch('/api/drive/integration', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify(tokenData)
+              });
+
+              if (driveResponse.ok) {
+                console.log('✅ Drive integration stored successfully');
+              } else {
+                console.warn('⚠️ Failed to store Drive integration:', await driveResponse.text());
+              }
+            } catch (error) {
+              console.error('❌ Error storing Drive integration:', error);
             }
           }
           

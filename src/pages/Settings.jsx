@@ -29,6 +29,9 @@ import { createPageUrl } from '@/utils';
 import toast from 'react-hot-toast';
 import { exportAllDataToGoogleSheet } from '@/services/googleSheetsService';
 import { autoAssignRevenueSegments } from '@/utils/revenueSegmentCalculator';
+import GmailConnection from '@/components/GmailConnection';
+import CalendarConnection from '@/components/CalendarConnection';
+import DriveConnection from '@/components/DriveConnection';
 
 export default function Settings() {
   const { profile, user, isAdmin } = useUser();
@@ -731,6 +734,26 @@ export default function Settings() {
               checked={isDarkMode}
               onCheckedChange={toggleDarkMode}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Google Integrations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LinkIcon className="w-5 h-5" />
+            Google Integrations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Connect your Google services to sync emails, calendar events, and files with your CRM.
+          </p>
+          <div className="space-y-3">
+            <GmailConnection />
+            <CalendarConnection />
+            <DriveConnection />
           </div>
         </CardContent>
       </Card>

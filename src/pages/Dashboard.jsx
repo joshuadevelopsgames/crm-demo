@@ -17,6 +17,7 @@ import ImportLeadsDialog from '../components/ImportLeadsDialog';
 import { useYearSelector } from '@/contexts/YearSelectorContext';
 import { getSegmentForYear } from '@/utils/revenueSegmentCalculator';
 import ICPManagementPanel from '../components/ICPManagementPanel';
+import CalendarWidget from '../components/calendar/CalendarWidget';
 import {
   Building2,
   Users,
@@ -1196,6 +1197,11 @@ export default function Dashboard() {
           onSnooze={handleSnooze}
         />
       )}
+
+      {/* Calendar Widget */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CalendarWidget />
+      </div>
 
       {/* Import Leads Dialog */}
       <ImportLeadsDialog 

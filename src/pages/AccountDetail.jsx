@@ -46,6 +46,7 @@ import AccountTags from '../components/account/AccountTags';
 import AccountNotes from '../components/account/AccountNotes';
 import EstimatesTab from '../components/account/EstimatesTab';
 import JobsitesTab from '../components/account/JobsitesTab';
+import DriveFilesTab from '../components/drive/DriveFilesTab';
 import AddInteractionDialog from '../components/account/AddInteractionDialog';
 import EditAccountDialog from '../components/account/EditAccountDialog';
 import TutorialTooltip from '../components/TutorialTooltip';
@@ -637,6 +638,14 @@ export default function AccountDetail() {
 
         {/* Files Tab */}
         <TabsContent value="files" className="space-y-6">
+          {/* Drive Files Section */}
+          <DriveFilesTab accountId={accountId} />
+          
+          {/* Local Attachments Section */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-[#ffffff] mb-4">
+              Uploaded Files
+            </h3>
           {attachments.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">

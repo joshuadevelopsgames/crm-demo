@@ -95,6 +95,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import TutorialTooltip from "../components/TutorialTooltip";
 import { useDeviceDetection } from "@/hooks/useDeviceDetection";
 import TaskCalendarView from "@/components/TaskCalendarView";
@@ -268,6 +269,7 @@ export default function Tasks() {
     recurrence_day_of_month: null,
     recurrence_end_date: "",
     recurrence_count: null,
+    sync_to_calendar: false, // Sync to Google Calendar
   });
   const [selectedTaskType, setSelectedTaskType] = useState(""); // 'sales', 'operations', or '' for no selection
   const [assignedUsersOpen, setAssignedUsersOpen] = useState(false);
@@ -337,6 +339,7 @@ export default function Tasks() {
       recurrence_day_of_month: null,
       recurrence_end_date: "",
       recurrence_count: null,
+      sync_to_calendar: false,
     });
     setSelectedTaskType("");
     setNewLabelInput("");
@@ -352,6 +355,22 @@ export default function Tasks() {
       // Create notifications for task reminders
       if (task.due_date) {
         await createTaskNotifications(task);
+      }
+      // Sync to calendar if enabled and task has due date
+      if (data.sync_to_calendar && task.due_date) {
+        try {
+          // Check if task is recurring
+          if (task.is_recurring) {
+            const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
+            await syncRecurringTaskToCalendar(task);
+          } else {
+            const { syncTaskToCalendar } = await import('../services/calendarSyncService');
+            await syncTaskToCalendar(task);
+          }
+        } catch (error) {
+          console.error('Error syncing task to calendar:', error);
+          // Don't fail task creation if calendar sync fails
+        }
       }
       return task;
     },
@@ -370,7 +389,7 @@ export default function Tasks() {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
+    mutationFn: async ({ id, data, previousAssignedTo }) => {
       const task = await base44.entities.Task.update(id, data);
       const updatedTask = { ...task, ...data };
 
@@ -379,8 +398,30 @@ export default function Tasks() {
         await cleanupTaskNotifications(id);
         // Unblock next task if this task was blocking others
         await unblockNextTask(id);
+        // Remove from calendar if task is completed
+        try {
+          const { removeTaskFromCalendar } = await import('../services/calendarSyncService');
+          await removeTaskFromCalendar(id);
+        } catch (error) {
+          console.error('Error removing task from calendar:', error);
+        }
       } else if (updatedTask.due_date) {
         await createTaskNotifications(updatedTask);
+        // Sync to calendar if enabled
+        if (data.sync_to_calendar) {
+          try {
+            // Check if task is recurring
+            if (updatedTask.is_recurring) {
+              const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
+              await syncRecurringTaskToCalendar(updatedTask);
+            } else {
+              const { syncTaskToCalendar } = await import('../services/calendarSyncService');
+              await syncTaskToCalendar(updatedTask);
+            }
+          } catch (error) {
+            console.error('Error syncing task to calendar:', error);
+          }
+        }
       }
 
       return task;
@@ -1098,7 +1139,7 @@ export default function Tasks() {
     }
   }, [accounts, isLoading, isDialogOpen]);
 
-  const openEditDialog = (task) => {
+  const openEditDialog = async (task) => {
     setEditingTask(task);
     setViewingTask(null);
     setIsViewMode(false);
@@ -1106,6 +1147,28 @@ export default function Tasks() {
     // Determine task type from category
     const salesCategories = ['follow_up', 'demo', 'proposal', 'estimate'];
     const taskType = salesCategories.includes(category) ? 'sales' : 'operations';
+    
+    // Check if task is already synced to calendar
+    let isSynced = false;
+    try {
+      const { getSupabaseClient } = await import('@/services/supabaseClient');
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: calendarEvent } = await supabase
+            .from('calendar_events')
+            .select('google_event_id')
+            .eq('task_id', task.id)
+            .eq('user_id', user.id)
+            .single();
+          isSynced = !!calendarEvent?.google_event_id;
+        }
+      }
+    } catch (error) {
+      // Ignore errors - just default to false
+      console.error('Error checking calendar sync:', error);
+    }
     
     setNewTask({
       title: task.title || "",
@@ -1118,6 +1181,7 @@ export default function Tasks() {
       category: category,
       related_account_id: task.related_account_id || "",
       related_contact_id: task.related_contact_id || "",
+      sync_to_calendar: isSynced,
       estimated_time: task.estimated_time || 30,
       labels: task.labels || [],
       subtasks: task.subtasks || [],
@@ -1997,6 +2061,28 @@ export default function Tasks() {
                             placeholder="30"
                           />
                         </div>
+                        {newTask.due_date && (
+                          <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                            <div className="space-y-0.5">
+                              <Label className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Sync to Google Calendar
+                              </Label>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Create a calendar event for this task
+                              </p>
+                            </div>
+                            <Switch
+                              checked={newTask.sync_to_calendar || false}
+                              onCheckedChange={(checked) =>
+                                setNewTask({
+                                  ...newTask,
+                                  sync_to_calendar: checked,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
                         <div>
                           <Label>Assigned To</Label>
                           <Select
