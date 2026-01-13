@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { fetchCalendarEvents, isCalendarConnected } from '@/services/calendarService';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
-import CalendarSyncButton from './CalendarSyncButton';
 
 export default function CalendarWidget() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
