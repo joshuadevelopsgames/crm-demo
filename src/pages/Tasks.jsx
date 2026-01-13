@@ -1551,10 +1551,13 @@ export default function Tasks() {
         const shouldShowTask = isAssignedToCurrentUser || 
                               (isUnassigned && isCreatedByCurrentUser) ||
                               (isUnassigned && hasNoCreator);
+        // Exclude tasks that should be in inbox (assigned by another user)
+        const isAssignedByAnotherUser = isAssignedToCurrentUser && !isCreatedByCurrentUser;
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
           shouldShowTask &&
+          !isAssignedByAnotherUser &&
           (isTaskToday(task) || isTaskOverdue(task))
         );
       }
