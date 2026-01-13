@@ -127,11 +127,43 @@ export default async function handler(req, res) {
 
 /**
  * Sync calendar events to CRM tasks
- * Updates tasks when calendar events change
+ * Updates tasks when calendar events change and creates tasks for new events
  */
 async function syncCalendarToCRM(supabase, userId, accessToken, res) {
   try {
-    // Get all linked calendar events
+    console.log('🔄 Starting calendar to CRM sync for user:', userId);
+    
+    // Get user's email for task creation
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+    const userEmail = authUser?.email;
+    
+    // Fetch all events from Google Calendar for the next 30 days
+    const timeMin = new Date().toISOString();
+    const timeMax = new Date();
+    timeMax.setDate(timeMax.getDate() + 30);
+    const timeMaxISO = timeMax.toISOString();
+
+    console.log('📅 Fetching calendar events from Google...');
+    const eventsResponse = await fetch(
+      `${CALENDAR_API_BASE}/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMaxISO}&singleEvents=true&orderBy=startTime`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!eventsResponse.ok) {
+      const errorText = await eventsResponse.text();
+      console.error('❌ Failed to fetch calendar events:', eventsResponse.status, errorText);
+      throw new Error(`Failed to fetch calendar events: ${eventsResponse.statusText}`);
+    }
+
+    const eventsData = await eventsResponse.json();
+    const googleEvents = eventsData.items || [];
+    console.log(`📅 Found ${googleEvents.length} calendar events`);
+
+    // Get all existing linked calendar events
     const { data: linkedEvents, error: eventsError } = await supabase
       .from('calendar_events')
       .select('*')
@@ -139,49 +171,40 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
       .not('google_event_id', 'is', null);
 
     if (eventsError) {
+      console.error('❌ Failed to fetch linked events:', eventsError);
       throw new Error('Failed to fetch linked events');
     }
 
+    const linkedEventMap = new Map();
+    (linkedEvents || []).forEach(event => {
+      linkedEventMap.set(event.google_event_id, event);
+    });
+
     let updated = 0;
-    const created = 0;
+    let created = 0;
     const errors = [];
 
-    // Fetch each event from Google Calendar to check for changes
-    for (const linkedEvent of linkedEvents || []) {
+    // Process each Google Calendar event
+    for (const googleEvent of googleEvents) {
       try {
-        const response = await fetch(
-          `${CALENDAR_API_BASE}/calendars/primary/events/${linkedEvent.google_event_id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
-          }
-        );
-
-        if (!response.ok) {
-          // Event might have been deleted
-          if (response.status === 404) {
-            // Delete the link
-            await supabase
-              .from('calendar_events')
-              .delete()
-              .eq('id', linkedEvent.id);
-            continue;
-          }
-          throw new Error(`Failed to fetch event: ${response.statusText}`);
+        // Skip all-day events without times (they're less useful for task sync)
+        if (!googleEvent.start?.dateTime && !googleEvent.start?.date) {
+          continue;
         }
 
-        const googleEvent = await response.json();
+        const linkedEvent = linkedEventMap.get(googleEvent.id);
+        
+        if (linkedEvent) {
+          // Event is already linked - check if it needs updating
+          const googleUpdated = new Date(googleEvent.updated);
+          const localUpdated = linkedEvent.updated_at ? new Date(linkedEvent.updated_at) : new Date(0);
 
-        // Check if event was updated
-        const googleUpdated = new Date(googleEvent.updated);
-        const localUpdated = linkedEvent.updated_at ? new Date(linkedEvent.updated_at) : new Date(0);
-
-        if (googleUpdated > localUpdated) {
-          // Event was updated in Google Calendar, update the task
-          if (linkedEvent.task_id) {
+          if (googleUpdated > localUpdated && linkedEvent.task_id) {
+            // Event was updated in Google Calendar, update the task
+            console.log(`🔄 Updating task for event: ${googleEvent.summary || 'Untitled'}`);
+            
             const taskUpdates = {
-              title: googleEvent.summary || linkedEvent.title,
+              title: googleEvent.summary || linkedEvent.title || 'Untitled Event',
               description: googleEvent.description || linkedEvent.description || null,
             };
 
@@ -195,32 +218,127 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
               taskUpdates.due_time = null;
             }
 
-            // Update the calendar_events record
-            await supabase
-              .from('calendar_events')
-              .update({
-                title: googleEvent.summary || linkedEvent.title,
-                description: googleEvent.description || linkedEvent.description,
-                start_time: googleEvent.start?.dateTime || googleEvent.start?.date,
-                end_time: googleEvent.end?.dateTime || googleEvent.end?.date,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', linkedEvent.id);
+            // Update the task directly in Supabase
+            taskUpdates.updated_at = new Date().toISOString();
+            
+            // Convert empty strings to null for date/time fields
+            if (taskUpdates.due_date === '' || taskUpdates.due_date === null || taskUpdates.due_date === undefined) {
+              taskUpdates.due_date = null;
+            }
+            if (taskUpdates.due_time === '' || taskUpdates.due_time === null || taskUpdates.due_time === undefined) {
+              taskUpdates.due_time = null;
+            }
 
-            // Note: To update the actual task in base44, you would need to:
-            // 1. Import base44 client
-            // 2. Call base44.entities.Task.update(linkedEvent.task_id, taskUpdates)
-            // For now, we're just updating the calendar_events record to track changes
-            // The UI can show a notification that calendar events have changed
+            const { data: updatedTask, error: updateError } = await supabase
+              .from('tasks')
+              .update(taskUpdates)
+              .eq('id', linkedEvent.task_id)
+              .select()
+              .single();
 
-            updated++;
+            if (updateError) {
+              console.error(`❌ Failed to update task ${linkedEvent.task_id}:`, updateError);
+              errors.push({ eventId: googleEvent.id, error: `Failed to update task: ${updateError.message}` });
+            } else {
+              // Update the calendar_events record
+              await supabase
+                .from('calendar_events')
+                .update({
+                  title: googleEvent.summary || linkedEvent.title,
+                  description: googleEvent.description || linkedEvent.description,
+                  start_time: googleEvent.start?.dateTime || googleEvent.start?.date,
+                  end_time: googleEvent.end?.dateTime || googleEvent.end?.date,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', linkedEvent.id);
+
+              updated++;
+              console.log(`✅ Updated task ${linkedEvent.task_id}`);
+            }
+          }
+        } else {
+          // New event - create a task for it
+          // Only create tasks for events that look like they could be tasks (have a title and aren't all-day)
+          if (googleEvent.summary && googleEvent.start?.dateTime) {
+            console.log(`➕ Creating task for new event: ${googleEvent.summary}`);
+            
+            const startDate = new Date(googleEvent.start.dateTime);
+            const endDate = googleEvent.end?.dateTime ? new Date(googleEvent.end.dateTime) : null;
+            
+            // Calculate estimated time in minutes
+            const estimatedTime = endDate 
+              ? Math.round((endDate - startDate) / (1000 * 60))
+              : 30; // Default to 30 minutes
+
+            const taskData = {
+              title: googleEvent.summary,
+              description: googleEvent.description || null,
+              due_date: startDate.toISOString().split('T')[0],
+              due_time: startDate.toTimeString().slice(0, 5),
+              estimated_time: estimatedTime,
+              status: 'pending',
+              created_by_email: userEmail || null,
+              sync_to_calendar: true // Mark as synced so it doesn't create duplicate events
+            };
+
+            // Create the task directly in Supabase
+            taskData.created_at = new Date().toISOString();
+            taskData.updated_at = new Date().toISOString();
+
+            const { data: newTask, error: createError } = await supabase
+              .from('tasks')
+              .insert(taskData)
+              .select()
+              .single();
+
+            if (createError) {
+              console.error(`❌ Failed to create task for event ${googleEvent.id}:`, createError);
+              errors.push({ eventId: googleEvent.id, error: `Failed to create task: ${createError.message}` });
+            } else if (newTask?.id) {
+              // Link the calendar event to the task
+              await supabase
+                .from('calendar_events')
+                .insert({
+                  google_event_id: googleEvent.id,
+                  user_id: userId,
+                  task_id: newTask.id,
+                  title: googleEvent.summary,
+                  description: googleEvent.description || null,
+                  start_time: googleEvent.start.dateTime,
+                  end_time: googleEvent.end?.dateTime || null,
+                  location: googleEvent.location || null,
+                  sync_direction: 'calendar_to_crm'
+                });
+
+              created++;
+              console.log(`✅ Created task ${newTask.id} for event ${googleEvent.id}`);
+            } else {
+              console.error(`❌ Task created but no ID returned`);
+              errors.push({ eventId: googleEvent.id, error: 'Task created but no ID returned' });
+            }
           }
         }
       } catch (error) {
-        console.error(`Error syncing event ${linkedEvent.google_event_id}:`, error);
-        errors.push({ eventId: linkedEvent.google_event_id, error: error.message });
+        console.error(`❌ Error syncing event ${googleEvent.id}:`, error);
+        errors.push({ eventId: googleEvent.id, error: error.message });
       }
     }
+
+    // Check for deleted events (events that were in our database but not in Google Calendar)
+    const googleEventIds = new Set(googleEvents.map(e => e.id));
+    for (const linkedEvent of linkedEvents || []) {
+      if (!googleEventIds.has(linkedEvent.google_event_id)) {
+        // Event was deleted from Google Calendar
+        console.log(`🗑️ Event ${linkedEvent.google_event_id} was deleted from Google Calendar`);
+        // Don't delete the task, just remove the link
+        await supabase
+          .from('calendar_events')
+          .delete()
+          .eq('id', linkedEvent.id);
+      }
+    }
+
+    console.log(`✅ Sync complete: ${updated} updated, ${created} created, ${errors.length} errors`);
 
     return res.status(200).json({
       success: true,
@@ -231,7 +349,7 @@ async function syncCalendarToCRM(supabase, userId, accessToken, res) {
       }
     });
   } catch (error) {
-    console.error('Error syncing calendar to CRM:', error);
+    console.error('❌ Error syncing calendar to CRM:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to sync calendar to CRM'
