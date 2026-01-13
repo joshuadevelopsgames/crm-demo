@@ -241,6 +241,8 @@ export default function CalendarConnection() {
       try {
         await disconnectCalendar();
         setConnected(false);
+        // Invalidate connection status query so CalendarWidget refreshes
+        queryClient.invalidateQueries({ queryKey: ['calendar-connection-status'] });
         toast.success('Calendar disconnected');
       } catch (error) {
         console.error('Error disconnecting Calendar:', error);
