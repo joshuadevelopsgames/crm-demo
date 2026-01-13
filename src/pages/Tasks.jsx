@@ -55,6 +55,13 @@ import {
   isPast,
   startOfDay,
 } from "date-fns";
+import { formatDateString } from "@/utils/dateFormatter";
+import {
+  parseCalgaryDate,
+  getCalgaryToday,
+  isCalgaryToday,
+  daysDifferenceFromCalgaryToday,
+} from "@/utils/timezone";
 import {
   DndContext,
   closestCenter,
@@ -973,8 +980,10 @@ export default function Tasks() {
   const calculateNextRecurrenceDate = (task) => {
     if (!task.due_date) return null;
 
-    const dueDate = new Date(task.due_date);
-    const today = startOfDay(new Date());
+    const dueDate = parseCalgaryDate(task.due_date);
+    const today = getCalgaryToday();
+    if (!dueDate) return null;
+    
     let nextDate = new Date(dueDate);
 
     // If due date is in the past, start from today
@@ -1240,29 +1249,29 @@ export default function Tasks() {
     return Array.from(allLabels).sort();
   };
 
-  // Helper functions for date filtering
+  // Helper functions for date filtering (using Calgary timezone)
   const parseLocalDate = (dateString) => {
-    if (!dateString) return null;
-    const [year, month, day] = dateString.split("-").map(Number);
-    return new Date(year, month - 1, day);
+    return parseCalgaryDate(dateString);
   };
 
   const isTaskToday = (task) => {
     if (!task.due_date) return false;
-    const taskDate = parseLocalDate(task.due_date);
-    return isToday(taskDate);
+    return isCalgaryToday(task.due_date);
   };
 
   const isTaskOverdue = (task) => {
     if (!task.due_date || task.status === "completed") return false;
-    const taskDate = parseLocalDate(task.due_date);
-    return isPast(startOfDay(taskDate)) && !isToday(taskDate);
+    const taskDate = parseCalgaryDate(task.due_date);
+    const today = getCalgaryToday();
+    if (!taskDate) return false;
+    return taskDate < today && !isCalgaryToday(task.due_date);
   };
 
   const isTaskUpcoming = (task) => {
     if (!task.due_date) return false;
-    const taskDate = parseLocalDate(task.due_date);
-    const today = startOfDay(new Date());
+    const taskDate = parseCalgaryDate(task.due_date);
+    const today = getCalgaryToday();
+    if (!taskDate) return false;
     return taskDate > today && !isTaskToday(task) && !isTaskOverdue(task);
   };
 
@@ -1805,10 +1814,7 @@ export default function Tasks() {
                             </Label>
                             <p className="mt-1 text-slate-900 dark:text-white">
                               {viewingTask.due_date
-                                ? format(
-                                    new Date(viewingTask.due_date),
-                                    "MMM d, yyyy",
-                                  )
+                                ? formatDateString(viewingTask.due_date, "MMM d, yyyy")
                                 : "No due date"}
                               {viewingTask.due_time &&
                                 ` at ${viewingTask.due_time}`}
@@ -3182,10 +3188,7 @@ export default function Tasks() {
                                       <Calendar className="w-2.5 h-2.5" />
                                       {isTaskToday(task)
                                         ? "Today"
-                                        : format(
-                                            new Date(task.due_date),
-                                            "MMM d",
-                                          )}
+                                        : formatDateString(task.due_date, "MMM d")}
                                     </Badge>
                                   )}
                                   {task.estimated_time && (
@@ -3403,11 +3406,8 @@ export default function Tasks() {
                                       {isTaskToday(task)
                                         ? "Today"
                                         : isOverdue
-                                          ? `${differenceInDays(new Date(), parseLocalDate(task.due_date))}d overdue`
-                                          : format(
-                                              new Date(task.due_date),
-                                              "MMM d",
-                                            )}
+                                          ? `${Math.abs(daysDifferenceFromCalgaryToday(task.due_date))}d overdue`
+                                          : formatDateString(task.due_date, "MMM d")}
                                     </Badge>
                                   )}
                                   {accountName && (
@@ -3616,11 +3616,8 @@ export default function Tasks() {
                                         {isTaskToday(task)
                                           ? "Today"
                                           : isOverdue
-                                            ? `${differenceInDays(new Date(), parseLocalDate(task.due_date))}d overdue`
-                                            : format(
-                                                new Date(task.due_date),
-                                                "MMM d, yyyy",
-                                              )}
+                                            ? `${Math.abs(daysDifferenceFromCalgaryToday(task.due_date))}d overdue`
+                                            : formatDateString(task.due_date, "MMM d, yyyy")}
                                       </Badge>
                                     )}
                                     {task.assigned_to && parseAssignedUsers(task.assigned_to).length > 0 && (

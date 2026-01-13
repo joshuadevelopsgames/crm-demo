@@ -4,16 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { parseCalgaryDate } from '@/utils/timezone';
 
 export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
 
-  // Parse task due dates
+  // Parse task due dates using Calgary timezone
   const parseLocalDate = (dateString) => {
-    if (!dateString) return null;
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
+    return parseCalgaryDate(dateString);
   };
 
   // Get tasks for a specific date

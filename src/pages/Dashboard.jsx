@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { formatDateString } from '@/utils/dateFormatter';
+import { parseCalgaryDate, getCalgaryToday } from '@/utils/timezone';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
@@ -620,8 +621,11 @@ export default function Dashboard() {
     if (!task.due_date || task.status === 'completed') return false;
     // Only show tasks that should be visible to current user
     if (!shouldShowTask(task)) return false;
-    // Task is overdue if due date is before now (matches notification service: new Date(task.due_date) < new Date())
-    return new Date(task.due_date) < new Date();
+    // Task is overdue if due date is before today in Calgary timezone
+    const taskDate = parseCalgaryDate(task.due_date);
+    const today = getCalgaryToday();
+    if (!taskDate) return false;
+    return taskDate < today;
   });
 
   const snoozeMutation = useMutation({
@@ -1024,7 +1028,7 @@ export default function Dashboard() {
                   <div className="flex-1">
                     <p className="font-medium text-slate-900 dark:text-foreground">{task.title}</p>
                     <p className="text-xs text-slate-500 dark:text-text-muted">
-                      Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
+                      Due: {formatDateString(task.due_date, 'MMM d, yyyy')}
                     </p>
                   </div>
                   <Badge variant="outline" className="text-orange-600 border-orange-300">
@@ -1162,7 +1166,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="font-medium text-slate-900 dark:text-foreground">{account?.name || 'Unknown'}</p>
                       <p className="text-xs text-slate-500 dark:text-text-muted">
-                        Step {enrollment.current_step} • Next: {enrollment.next_action_date ? format(new Date(enrollment.next_action_date), 'MMM d') : 'TBD'}
+                        Step {enrollment.current_step} • Next: {enrollment.next_action_date ? formatDateString(enrollment.next_action_date, 'MMM d') : 'TBD'}
                       </p>
                     </div>
                   </div>
