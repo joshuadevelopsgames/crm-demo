@@ -1531,10 +1531,13 @@ export default function Tasks() {
         const shouldShowTask = isAssignedToCurrentUser || 
                               (isUnassigned && isCreatedByCurrentUser) ||
                               (isUnassigned && hasNoCreator);
+        // Check if task is assigned by another user (assigned to current user but NOT created by current user)
+        const isAssignedByAnotherUser = isAssignedToCurrentUser && !isCreatedByCurrentUser;
         return (
           task.status !== "completed" &&
           task.status !== "blocked" &&
-          shouldShowTask
+          shouldShowTask &&
+          isAssignedByAnotherUser
         );
       }
     ).length;
@@ -1568,7 +1571,14 @@ export default function Tasks() {
         const shouldShowTask = isAssignedToCurrentUser || 
                               (isUnassigned && isCreatedByCurrentUser) ||
                               (isUnassigned && hasNoCreator);
-        return task.status !== "completed" && shouldShowTask && isTaskUpcoming(task);
+        // Exclude tasks that should be in inbox (assigned by another user)
+        const isAssignedByAnotherUser = isAssignedToCurrentUser && !isCreatedByCurrentUser;
+        return (
+          task.status !== "completed" && 
+          shouldShowTask && 
+          !isAssignedByAnotherUser &&
+          isTaskUpcoming(task)
+        );
       }
     ).length; // Includes blocked tasks
     const completed = typeFilteredTasks.filter(
