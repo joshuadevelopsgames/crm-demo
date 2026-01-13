@@ -140,6 +140,8 @@ export async function isGmailConnected() {
 
     if (!response.ok) {
       console.log('❌ isGmailConnected: API response not OK:', response.status, response.statusText);
+      const errorText = await response.text().catch(() => '');
+      console.log('❌ Response body:', errorText);
       return false;
     }
     

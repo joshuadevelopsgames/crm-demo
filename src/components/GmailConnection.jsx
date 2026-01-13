@@ -102,6 +102,10 @@ export default function GmailConnection({ onSyncComplete }) {
           setConnected(connected);
           const syncTime = getLastSyncTimestamp();
           setLastSync(syncTime);
+          // Invalidate connection status query if needed
+          if (connected) {
+            queryClient.invalidateQueries({ queryKey: ['gmail-connection-status'] });
+          }
         }
       } catch (error) {
         console.error('Error checking Gmail connection:', error);
@@ -205,6 +209,9 @@ export default function GmailConnection({ onSyncComplete }) {
           
           setConnected(isConnected);
           
+          // Invalidate connection status query so other components refresh
+          queryClient.invalidateQueries({ queryKey: ['gmail-connection-status'] });
+          
           if (isConnected) {
             toast.success('Gmail connected successfully!');
             setIsConnecting(false);
@@ -267,6 +274,8 @@ export default function GmailConnection({ onSyncComplete }) {
         await disconnectGmail();
         setConnected(false);
         setLastSync(null);
+        // Invalidate connection status query
+        queryClient.invalidateQueries({ queryKey: ['gmail-connection-status'] });
         toast.success('Gmail disconnected');
       } catch (error) {
         console.error('Error disconnecting Gmail:', error);
