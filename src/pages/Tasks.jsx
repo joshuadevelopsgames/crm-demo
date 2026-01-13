@@ -415,20 +415,28 @@ export default function Tasks() {
         }
       } else if (updatedTask.due_date) {
         await createTaskNotifications(updatedTask);
-        // Auto-sync to calendar if calendar is connected
-        // syncTaskToCalendar() will check if calendar is connected and handle gracefully
-        try {
-          // Check if task is recurring
-          if (updatedTask.is_recurring) {
-            const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
-            await syncRecurringTaskToCalendar(updatedTask);
-          } else {
-            const { syncTaskToCalendar } = await import('../services/calendarSyncService');
-            await syncTaskToCalendar(updatedTask);
+        
+        // Only sync to calendar if calendar-relevant fields changed
+        // Calendar-relevant fields: due_date, title, description, due_time, is_recurring, recurrence_pattern, recurrence_end_date
+        const calendarRelevantFields = ['due_date', 'title', 'description', 'due_time', 'is_recurring', 'recurrence_pattern', 'recurrence_end_date'];
+        const hasCalendarRelevantChanges = Object.keys(data).some(key => calendarRelevantFields.includes(key));
+        
+        if (hasCalendarRelevantChanges) {
+          // Auto-sync to calendar if calendar is connected
+          // syncTaskToCalendar() will check if calendar is connected and handle gracefully
+          try {
+            // Check if task is recurring
+            if (updatedTask.is_recurring) {
+              const { syncRecurringTaskToCalendar } = await import('../services/recurringCalendarSyncService');
+              await syncRecurringTaskToCalendar(updatedTask);
+            } else {
+              const { syncTaskToCalendar } = await import('../services/calendarSyncService');
+              await syncTaskToCalendar(updatedTask);
+            }
+          } catch (error) {
+            // Silently fail - calendar sync is optional
+            console.error('Error syncing task to calendar:', error);
           }
-        } catch (error) {
-          // Silently fail - calendar sync is optional
-          console.error('Error syncing task to calendar:', error);
         }
       }
 
