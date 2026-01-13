@@ -28,38 +28,28 @@ export function parseCalgaryDate(dateString) {
   
   const [, year, month, day] = dateMatch;
   
-  // Create date string in ISO format with Calgary timezone
-  // Use noon to avoid DST issues
-  const isoString = `${year}-${month}-${day}T12:00:00`;
-  
-  // Parse as if it's in Calgary timezone
-  // We'll use Intl.DateTimeFormat to convert
-  const date = new Date(`${year}-${month}-${day}T00:00:00`);
-  
-  // Get the date components in Calgary timezone
-  const calgaryDate = new Date(date.toLocaleString('en-US', { timeZone: CALGARY_TIMEZONE }));
-  
-  // Create a new date with the Calgary date components but in local timezone
-  // This ensures comparisons work correctly
-  return new Date(
-    calgaryDate.getFullYear(),
-    calgaryDate.getMonth(),
-    calgaryDate.getDate()
-  );
+  // Create a date object using local date constructor (no timezone conversion)
+  // This represents the date as if it's in Calgary timezone
+  // We use noon to avoid DST edge cases
+  return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
 }
 
 /**
  * Get today's date in Calgary timezone
- * @returns {Date} Date object representing today in Calgary
+ * @returns {Date} Date object representing today in Calgary (at noon to avoid DST issues)
  */
 export function getCalgaryToday() {
   const now = new Date();
-  const calgaryString = now.toLocaleString('en-US', { timeZone: CALGARY_TIMEZONE });
-  const calgaryDate = new Date(calgaryString);
+  
+  // Get the current date/time in Calgary timezone
+  const calgaryTime = new Date(now.toLocaleString('en-US', { timeZone: CALGARY_TIMEZONE }));
+  
+  // Create a date object with Calgary's date components at noon (to avoid DST edge cases)
   return new Date(
-    calgaryDate.getFullYear(),
-    calgaryDate.getMonth(),
-    calgaryDate.getDate()
+    calgaryTime.getFullYear(),
+    calgaryTime.getMonth(),
+    calgaryTime.getDate(),
+    12, 0, 0
   );
 }
 
