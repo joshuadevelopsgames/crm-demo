@@ -13,48 +13,28 @@ export default function CalendarWidget() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isConnected, setIsConnected] = useState(false);
 
-  // Check connection status
+  // Check connection status - use React Query to cache and auto-refresh
+  const { data: connectionStatus } = useQuery({
+    queryKey: ['calendar-connection-status'],
+    queryFn: async () => {
+      console.log('🔍 CalendarWidget: Checking connection status...');
+      const connected = await isCalendarConnected();
+      console.log('📊 CalendarWidget: Connection status:', connected);
+      return connected;
+    },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 3,
+    retryDelay: 2000
+  });
+
   React.useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    const checkConnection = async () => {
-      try {
-        const connected = await isCalendarConnected();
-        setIsConnected(connected);
-        
-        // If not connected, retry a few times (in case we just came back from OAuth)
-        if (!connected && retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(() => {
-            checkConnection();
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Error checking Calendar connection:', error);
-        setIsConnected(false);
-      }
-    };
-    
-    // Initial check with delay
-    setTimeout(() => {
-      checkConnection();
-    }, 500);
-    
-    // Also check when page becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        retryCount = 0;
-        checkConnection();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
+    if (connectionStatus !== undefined) {
+      console.log('✅ CalendarWidget: Setting connection state to:', connectionStatus);
+      setIsConnected(connectionStatus);
+    }
+  }, [connectionStatus]);
 
   // Fetch calendar events for the current week
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
