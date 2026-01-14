@@ -81,11 +81,13 @@ export default async function handler(req, res) {
     }
 
     // Get Calendar integration for user
-    let { data: integration, error: integrationError } = await supabase
+    const { data: initialIntegration, error: integrationError } = await supabase
       .from('google_calendar_integrations')
       .select('access_token, refresh_token, token_expiry')
       .eq('user_id', user.id)
       .single();
+    
+    let integration = initialIntegration;
 
     if (integrationError || !integration) {
       return res.status(401).json({ 
