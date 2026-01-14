@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Calendar, ChevronLeft, ChevronRight, Clock, ExternalLink, Loader2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Calendar, ChevronLeft, ChevronRight, Clock, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 export default function CalendarWidget() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isConnected, setIsConnected] = useState(false);
+  const queryClient = useQueryClient();
 
   // Check connection status - use React Query to cache and auto-refresh
   const { data: connectionStatus } = useQuery({
@@ -39,7 +40,7 @@ export default function CalendarWidget() {
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 
-  const { data: eventsData, isLoading, error: eventsError } = useQuery({
+  const { data: eventsData, isLoading, error: eventsError, refetch: refetchCalendarEvents } = useQuery({
     queryKey: ['calendar-events', weekStart.toISOString(), weekEnd.toISOString()],
     queryFn: async () => {
       try {
@@ -63,6 +64,26 @@ export default function CalendarWidget() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false, // Don't retry on auth errors
   });
+
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    if (!isConnected) {
+      toast.error('Calendar not connected');
+      return;
+    }
+    
+    try {
+      // Invalidate and refetch calendar events
+      await queryClient.invalidateQueries({ 
+        queryKey: ['calendar-events'] 
+      });
+      await refetchCalendarEvents();
+      toast.success('Calendar events refreshed');
+    } catch (error) {
+      console.error('Error refreshing calendar events:', error);
+      toast.error('Failed to refresh calendar events');
+    }
+  };
 
   const events = eventsData || [];
 
@@ -144,6 +165,19 @@ export default function CalendarWidget() {
             Upcoming Events
           </CardTitle>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              title="Refresh calendar events"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+            </Button>
             <Button
               variant="outline"
               size="sm"
