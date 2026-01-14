@@ -15,6 +15,7 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
   const [isCalendarConnectedState, setIsCalendarConnectedState] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check calendar connection status
   const { data: connectionStatus } = useQuery({
@@ -95,6 +96,7 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
       return;
     }
     
+    setIsRefreshing(true);
     try {
       // Invalidate and refetch calendar events
       await queryClient.invalidateQueries({ 
@@ -105,6 +107,8 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
     } catch (error) {
       console.error('Error refreshing calendar events:', error);
       toast.error('Failed to refresh calendar events');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -756,11 +760,11 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
                   variant="outline"
                   size="sm"
                   onClick={handleRefresh}
-                  disabled={isLoadingEvents}
+                  disabled={isLoadingEvents || isRefreshing}
                   className="ml-2"
                   title="Refresh calendar events"
                 >
-                  {isLoadingEvents ? (
+                  {(isLoadingEvents || isRefreshing) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <RefreshCw className="w-4 h-4" />

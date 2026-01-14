@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 export default function CalendarWidget() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isConnected, setIsConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
   // Check connection status - use React Query to cache and auto-refresh
@@ -72,6 +73,7 @@ export default function CalendarWidget() {
       return;
     }
     
+    setIsRefreshing(true);
     try {
       // Invalidate and refetch calendar events
       await queryClient.invalidateQueries({ 
@@ -82,6 +84,8 @@ export default function CalendarWidget() {
     } catch (error) {
       console.error('Error refreshing calendar events:', error);
       toast.error('Failed to refresh calendar events');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -169,10 +173,10 @@ export default function CalendarWidget() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
               title="Refresh calendar events"
             >
-              {isLoading ? (
+              {(isLoading || isRefreshing) ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
