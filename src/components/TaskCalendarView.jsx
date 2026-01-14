@@ -1,15 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfDay, isToday, isPast, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, ExternalLink, AlertTriangle, Ban, ChevronsUp, ChevronsDown, Minus, Circle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, ExternalLink, AlertTriangle, Ban, ChevronsUp, ChevronsDown, Minus, Circle, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { parseCalgaryDate } from '@/utils/timezone';
 import { fetchCalendarEvents, isCalendarConnected } from '@/services/calendarService';
+import toast from 'react-hot-toast';
 
 export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPriorityChange, onStatusChange }) {
+  const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
   const [isCalendarConnectedState, setIsCalendarConnectedState] = useState(false);
@@ -62,7 +64,7 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
   }, [currentDate, viewMode]);
 
   // Fetch Google Calendar events
-  const { data: calendarEventsData, isLoading: isLoadingEvents } = useQuery({
+  const { data: calendarEventsData, isLoading: isLoadingEvents, refetch: refetchCalendarEvents } = useQuery({
     queryKey: ['calendar-events', getDateRange.timeMin, getDateRange.timeMax],
     queryFn: async () => {
       try {
@@ -85,6 +87,26 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
+
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    if (!isCalendarConnectedState) {
+      toast.error('Calendar not connected');
+      return;
+    }
+    
+    try {
+      // Invalidate and refetch calendar events
+      await queryClient.invalidateQueries({ 
+        queryKey: ['calendar-events'] 
+      });
+      await refetchCalendarEvents();
+      toast.success('Calendar events refreshed');
+    } catch (error) {
+      console.error('Error refreshing calendar events:', error);
+      toast.error('Failed to refresh calendar events');
+    }
+  };
 
   const calendarEvents = calendarEventsData || [];
 
@@ -725,10 +747,26 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPr
             </Button>
             <h2 className="text-xl font-bold ml-4">{getDateLabel()}</h2>
             {isCalendarConnectedState && (
-              <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
-                <CalendarIcon className="w-3 h-3 mr-1" />
-                Google Calendar Connected
-              </Badge>
+              <>
+                <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
+                  <CalendarIcon className="w-3 h-3 mr-1" />
+                  Google Calendar Connected
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoadingEvents}
+                  className="ml-2"
+                  title="Refresh calendar events"
+                >
+                  {isLoadingEvents ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </Button>
+              </>
             )}
           </div>
           
