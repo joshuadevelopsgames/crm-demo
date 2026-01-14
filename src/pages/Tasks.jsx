@@ -442,16 +442,38 @@ export default function Tasks() {
 
       return task;
     },
+    onMutate: async ({ id, data }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueryData(["tasks"]);
+      
+      // Optimistically update the task in cache
+      queryClient.setQueryData(["tasks"], (old) => {
+        if (!old) return old;
+        return old.map((task) => 
+          task.id === id ? { ...task, ...data } : task
+        );
+      });
+      
+      return { previousTasks };
+    },
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks"], context.previousTasks);
+      }
+      console.error("Error updating task:", error);
+      toast.error(error.message || "Failed to update task");
+    },
     onSuccess: () => {
+      // Invalidate to refetch and ensure consistency
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       setIsDialogOpen(false);
       setEditingTask(null);
       resetTaskForm();
-    },
-    onError: (error) => {
-      console.error("Error updating task:", error);
-      toast.error(error.message || "Failed to update task");
     },
   });
 
@@ -1071,6 +1093,62 @@ export default function Tasks() {
     const completedDate =
       newStatus === "completed" ? new Date().toISOString() : null;
 
+    // Determine if we need to switch filters to keep the task visible
+    // Do this BEFORE the mutation so the filter is already set when data updates
+    let shouldSwitchFilter = false;
+    let newFilter = activeFilter;
+
+    if (newStatus === "blocked") {
+      // Blocked tasks are excluded from "today", "inbox", and "upcoming" filters
+      // Switch to "all" view to show blocked tasks
+      if (activeFilter === "today" || activeFilter === "inbox" || activeFilter === "upcoming") {
+        shouldSwitchFilter = true;
+        newFilter = "all";
+      }
+    } else if (newStatus === "completed") {
+      // Completed tasks only show in "completed" filter
+      shouldSwitchFilter = true;
+      newFilter = "completed";
+    } else if (newStatus === "todo" || newStatus === "in_progress") {
+      // If switching from completed to active status, switch to a view that shows active tasks
+      if (activeFilter === "completed") {
+        shouldSwitchFilter = true;
+        // Try to determine best filter - if task has due date, check if it's today/upcoming
+        if (task?.due_date) {
+          const taskDate = parseCalgaryDate(task.due_date);
+          const today = getCalgaryToday();
+          if (taskDate && isCalgaryToday(taskDate)) {
+            newFilter = "today";
+          } else if (taskDate && taskDate > today) {
+            newFilter = "upcoming";
+          } else {
+            newFilter = "all";
+          }
+        } else {
+          newFilter = "all";
+        }
+      }
+      // Also handle case where task might not match current filter criteria
+      // For example, if on "today" view but task isn't due today, switch to "all"
+      else if (activeFilter === "today") {
+        const taskDate = parseCalgaryDate(task?.due_date || "");
+        const today = getCalgaryToday();
+        if (!taskDate || (!isCalgaryToday(taskDate) && taskDate <= today)) {
+          // Task isn't due today or is overdue, might disappear from "today" view
+          // Keep it in current view - if it disappears, user can switch to "all"
+        }
+      }
+    }
+
+    // Switch filter FIRST, synchronously before mutation, to ensure task stays visible
+    if (shouldSwitchFilter && newFilter !== activeFilter) {
+      setActiveFilter(newFilter);
+      // Clear search/priority/label filters to ensure task is visible
+      setSearchTerm("");
+      setFilterPriority("all");
+      setFilterLabel("all");
+    }
+
     // Clean up notifications if task is completed
     if (newStatus === "completed") {
       await cleanupTaskNotifications(taskId);
@@ -1086,14 +1164,6 @@ export default function Tasks() {
     // Show toast notification when completing a task
     if (newStatus === "completed") {
       setLastCompletedTask({ id: taskId, title: task?.title });
-      
-      // Clear search/priority/label filters when completing a task so it's visible in completed view
-      setSearchTerm("");
-      setFilterPriority("all");
-      setFilterLabel("all");
-      
-      // Switch to completed view so user can see the completed task
-      setActiveFilter("completed");
       
       toast.success("✓ Task completed", {
         duration: 5000,
@@ -1112,6 +1182,11 @@ export default function Tasks() {
       setTimeout(() => {
         setLastCompletedTask(null);
       }, 5000);
+    } else if (newStatus === "blocked" && shouldSwitchFilter) {
+      // Show a subtle notification when switching to "all" view for blocked tasks
+      toast.success("Task blocked - switched to All view", {
+        duration: 3000,
+      });
     }
   };
 
@@ -3033,11 +3108,13 @@ export default function Tasks() {
         position="bottom"
       >
         {viewMode === "calendar" ? (
-          <div className="h-[calc(100vh-300px)]">
+          <div className="h-[calc(100vh-300px)] overflow-hidden">
             <TaskCalendarView
               tasks={filteredTasks}
               onTaskClick={(task) => openTaskView(task)}
               currentUser={currentUser}
+              onPriorityChange={handlePriorityChange}
+              onStatusChange={handleStatusChange}
             />
           </div>
         ) : (

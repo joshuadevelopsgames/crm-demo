@@ -4,11 +4,12 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInte
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, ExternalLink } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, ExternalLink, AlertTriangle, Ban, ChevronsUp, ChevronsDown, Minus, Circle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { parseCalgaryDate } from '@/utils/timezone';
 import { fetchCalendarEvents, isCalendarConnected } from '@/services/calendarService';
 
-export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
+export default function TaskCalendarView({ tasks, onTaskClick, currentUser, onPriorityChange, onStatusChange }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
   const [isCalendarConnectedState, setIsCalendarConnectedState] = useState(false);
@@ -198,6 +199,38 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
     return colors[priority] || colors.normal;
   };
 
+  const getPriorityFlag = (priority) => {
+    const flags = {
+      critical: { icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+      blocker: { icon: Ban, color: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-300' },
+      major: { icon: ChevronsUp, color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
+      normal: { icon: Minus, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+      minor: { icon: ChevronsDown, color: 'text-slate-600', bgColor: 'bg-slate-50', borderColor: 'border-slate-200' },
+      trivial: { icon: Circle, color: 'text-gray-500', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' },
+    };
+    return flags[priority] || flags.normal;
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      todo: Circle,
+      in_progress: Clock,
+      blocked: AlertCircle,
+      completed: CheckCircle2,
+    };
+    return icons[status] || Circle;
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      todo: 'text-slate-400',
+      in_progress: 'text-blue-500',
+      blocked: 'text-red-500',
+      completed: 'text-emerald-500',
+    };
+    return colors[status] || colors.todo;
+  };
+
   const renderCalendarGrid = (days) => {
     if (viewMode === 'day') {
       const day = days[0];
@@ -223,32 +256,130 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
             <div className="text-2xl font-bold">{format(day.date, 'EEEE, MMMM d, yyyy')}</div>
             {isToday(day.date) && <Badge className="mt-2">Today</Badge>}
           </div>
-          <div className="p-4 space-y-2 h-[calc(100vh-300px)] overflow-y-auto">
+          <div className="p-4 space-y-2 h-[calc(100vh-300px)] overflow-y-auto overflow-x-hidden" style={{ scrollbarGutter: 'stable' }}>
             {allItems.length === 0 ? (
               <p className="text-slate-500 text-center py-8">No tasks or events for this day</p>
             ) : (
               allItems.map((item, index) => {
                 if (item.type === 'task') {
                   const task = item.data;
+                  const priorityFlag = getPriorityFlag(task.priority);
+                  const PriorityIcon = priorityFlag.icon;
+                  const StatusIcon = getStatusIcon(task.status);
+                  
                   return (
                     <Card 
                       key={`task-${task.id}`} 
-                      className="p-3 cursor-pointer hover:bg-slate-50 transition-colors border-l-4 border-l-blue-500"
-                      onClick={() => onTaskClick(task)}
+                      className="p-3 hover:bg-slate-50 transition-colors border-l-4 border-l-blue-500"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0" onClick={() => onTaskClick(task)}>
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm">📋 {task.title}</h4>
-                            <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </Badge>
+                            <h4 className="font-semibold text-sm cursor-pointer">📋 {task.title}</h4>
                           </div>
                           {task.description && (
                             <p className="text-xs text-slate-600 line-clamp-2">{task.description}</p>
                           )}
                           {task.due_time && (
                             <p className="text-xs text-slate-500 mt-1">⏰ {task.due_time}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {onPriorityChange && (
+                            <Select
+                              value={task.priority || 'normal'}
+                              onValueChange={(value) => {
+                                onPriorityChange(task.id, value);
+                              }}
+                            >
+                              <SelectTrigger
+                                className="w-6 h-6 p-0 border-0 hover:opacity-80 flex items-center justify-center flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <PriorityIcon
+                                  className={`w-3.5 h-3.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`}
+                                />
+                              </SelectTrigger>
+                              <SelectContent
+                                position="item-aligned"
+                                onClick={(e) => e.stopPropagation()}
+                                className="max-h-[300px] overflow-y-auto"
+                              >
+                                <SelectItem value="critical">
+                                  <div className="flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                                    Critical
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="blocker">
+                                  <div className="flex items-center gap-2">
+                                    <Ban className="w-4 h-4 text-red-700" />
+                                    Blocker
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="major">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronsUp className="w-4 h-4 text-orange-600" />
+                                    Major
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="normal">
+                                  <div className="flex items-center gap-2">
+                                    <Minus className="w-4 h-4 text-blue-600" />
+                                    Normal
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="minor">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronsDown className="w-4 h-4 text-slate-600" />
+                                    Minor
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="trivial">
+                                  <div className="flex items-center gap-2">
+                                    <Circle className="w-4 h-4 text-gray-500 fill-current" />
+                                    Trivial
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {onStatusChange && (
+                            <Select
+                              value={task.status}
+                              onValueChange={(value) => {
+                                onStatusChange(task.id, value);
+                              }}
+                            >
+                              <SelectTrigger
+                                className="w-6 h-6 p-0 border-0 hover:opacity-80 flex items-center justify-center flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <StatusIcon
+                                  className={`w-3.5 h-3.5 ${getStatusColor(task.status)} flex-shrink-0`}
+                                />
+                              </SelectTrigger>
+                              <SelectContent
+                                position="item-aligned"
+                                onClick={(e) => e.stopPropagation()}
+                                className="max-h-[300px] overflow-y-auto"
+                              >
+                                <SelectItem value="todo">To Do</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="blocked">Blocked</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
                           )}
                         </div>
                       </div>
@@ -314,18 +445,60 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
                     {format(day.date, 'd')}
                   </div>
                 </div>
-                <div className="flex-1 p-1 space-y-1 overflow-y-auto">
+                <div className="flex-1 p-1 space-y-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarGutter: 'stable' }}>
                   {displayItems.map((item, itemIndex) => {
                     if (item.type === 'task') {
                       const task = item.data;
+                      const priorityFlag = getPriorityFlag(task.priority);
+                      const PriorityIcon = priorityFlag.icon;
                       return (
                         <div
                           key={`task-${task.id}`}
-                          className={`text-xs p-1.5 rounded cursor-pointer hover:opacity-80 border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)}`}
-                          onClick={() => onTaskClick(task)}
+                          className={`text-xs p-1.5 rounded hover:opacity-80 border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)} flex items-center justify-between gap-1`}
+                          onClick={(e) => {
+                            // Only open task if clicking on the text area, not on dropdowns
+                            if (e.target.closest('.priority-select, .status-select')) {
+                              return;
+                            }
+                            onTaskClick(task);
+                          }}
                           title={task.title}
                         >
-                          <div className="truncate">📋 {task.title}</div>
+                          <div className="truncate flex-1 cursor-pointer">📋 {task.title}</div>
+                          {onPriorityChange && (
+                            <Select
+                              value={task.priority || 'normal'}
+                              onValueChange={(value) => {
+                                onPriorityChange(task.id, value);
+                              }}
+                            >
+                              <SelectTrigger
+                                className="priority-select w-4 h-4 p-0 border-0 hover:opacity-80 flex items-center justify-center flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <PriorityIcon
+                                  className={`w-3 h-3 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`}
+                                />
+                              </SelectTrigger>
+                              <SelectContent
+                                position="item-aligned"
+                                onClick={(e) => e.stopPropagation()}
+                                className="max-h-[300px] overflow-y-auto"
+                              >
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="blocker">Blocker</SelectItem>
+                                <SelectItem value="major">Major</SelectItem>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="minor">Minor</SelectItem>
+                                <SelectItem value="trivial">Trivial</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
                       );
                     } else {
@@ -399,7 +572,7 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
                     <div className={`text-sm font-medium mb-1 ${isToday(day.date) ? 'text-blue-600' : ''}`}>
                       {format(day.date, 'd')}
                     </div>
-                    <div className="flex-1 space-y-0.5 overflow-y-auto">
+                    <div className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden" style={{ scrollbarGutter: 'stable' }}>
                       {(() => {
                         const allItems = [
                           ...day.tasks.map(t => ({ type: 'task', data: t })),
@@ -413,14 +586,55 @@ export default function TaskCalendarView({ tasks, onTaskClick, currentUser }) {
                             {displayItems.map((item) => {
                               if (item.type === 'task') {
                                 const task = item.data;
+                                const priorityFlag = getPriorityFlag(task.priority);
+                                const PriorityIcon = priorityFlag.icon;
                                 return (
                                   <div
                                     key={`task-${task.id}`}
-                                    className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 truncate border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)}`}
-                                    onClick={() => onTaskClick(task)}
+                                    className={`text-xs p-1 rounded hover:opacity-80 truncate border-l-2 border-l-blue-500 ${getPriorityColor(task.priority)} flex items-center justify-between gap-1`}
+                                    onClick={(e) => {
+                                      if (e.target.closest('.priority-select')) {
+                                        return;
+                                      }
+                                      onTaskClick(task);
+                                    }}
                                     title={task.title}
                                   >
-                                    📋 {task.title}
+                                    <span className="truncate flex-1 cursor-pointer">📋 {task.title}</span>
+                                    {onPriorityChange && (
+                                      <Select
+                                        value={task.priority || 'normal'}
+                                        onValueChange={(value) => {
+                                          onPriorityChange(task.id, value);
+                                        }}
+                                      >
+                                        <SelectTrigger
+                                          className="priority-select w-4 h-4 p-0 border-0 hover:opacity-80 flex items-center justify-center flex-shrink-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                          }}
+                                          onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                          }}
+                                        >
+                                          <PriorityIcon
+                                            className={`w-2.5 h-2.5 ${priorityFlag.color} ${PriorityIcon === Circle ? 'fill-current' : ''}`}
+                                          />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                          position="item-aligned"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="max-h-[300px] overflow-y-auto"
+                                        >
+                                          <SelectItem value="critical">Critical</SelectItem>
+                                          <SelectItem value="blocker">Blocker</SelectItem>
+                                          <SelectItem value="major">Major</SelectItem>
+                                          <SelectItem value="normal">Normal</SelectItem>
+                                          <SelectItem value="minor">Minor</SelectItem>
+                                          <SelectItem value="trivial">Trivial</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    )}
                                   </div>
                                 );
                               } else {
