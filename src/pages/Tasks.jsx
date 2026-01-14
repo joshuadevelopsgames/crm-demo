@@ -468,9 +468,12 @@ export default function Tasks() {
       toast.error(error.message || "Failed to update task");
     },
     onSuccess: () => {
-      // Invalidate to refetch and ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      // Delay invalidation slightly to ensure filter state has been applied
+      // This prevents tasks from disappearing due to race conditions
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      }, 50);
       setIsDialogOpen(false);
       setEditingTask(null);
       resetTaskForm();
@@ -1098,6 +1101,52 @@ export default function Tasks() {
     let shouldSwitchFilter = false;
     let newFilter = activeFilter;
 
+    // Helper to check if task will match current filter after status change
+    const willTaskMatchFilter = (task, status, filter) => {
+      const assignedUsers = parseAssignedUsers(task.assigned_to || "");
+      const isAssignedToCurrentUser = assignedUsers.includes(currentUser?.email);
+      const isUnassigned = assignedUsers.length === 0;
+      const isCreatedByCurrentUser = task.created_by_email === currentUser?.email;
+      const hasNoCreator = !task.created_by_email;
+      const shouldShowTask = isAssignedToCurrentUser || 
+                            (isUnassigned && isCreatedByCurrentUser) ||
+                            (isUnassigned && hasNoCreator);
+      const isAssignedByAnotherUser = isAssignedToCurrentUser && !isCreatedByCurrentUser;
+
+      // Create a temporary task with new status to check if it would match
+      const tempTask = { ...task, status };
+
+      switch (filter) {
+        case "inbox":
+          return (
+            tempTask.status !== "completed" &&
+            tempTask.status !== "blocked" &&
+            shouldShowTask &&
+            isAssignedByAnotherUser
+          );
+        case "today":
+          return (
+            tempTask.status !== "completed" &&
+            tempTask.status !== "blocked" &&
+            shouldShowTask &&
+            !isAssignedByAnotherUser &&
+            (isTaskToday(tempTask) || isTaskOverdue(tempTask))
+          );
+        case "upcoming":
+          if (!tempTask.due_date) return false;
+          return (
+            tempTask.status !== "completed" && 
+            shouldShowTask && 
+            !isAssignedByAnotherUser &&
+            isTaskUpcoming(tempTask)
+          );
+        case "completed":
+          return tempTask.status === "completed" && shouldShowTask;
+        default:
+          return shouldShowTask;
+      }
+    };
+
     if (newStatus === "blocked") {
       // Blocked tasks are excluded from "today", "inbox", and "upcoming" filters
       // Switch to "all" view to show blocked tasks
@@ -1110,10 +1159,9 @@ export default function Tasks() {
       shouldSwitchFilter = true;
       newFilter = "completed";
     } else if (newStatus === "todo" || newStatus === "in_progress") {
-      // If switching from completed to active status, switch to a view that shows active tasks
+      // If switching from completed to active status, determine best filter
       if (activeFilter === "completed") {
         shouldSwitchFilter = true;
-        // Try to determine best filter - if task has due date, check if it's today/upcoming
         if (task?.due_date) {
           const taskDate = parseCalgaryDate(task.due_date);
           const today = getCalgaryToday();
@@ -1127,16 +1175,13 @@ export default function Tasks() {
         } else {
           newFilter = "all";
         }
-      }
-      // Also handle case where task might not match current filter criteria
-      // For example, if on "today" view but task isn't due today, switch to "all"
-      else if (activeFilter === "today") {
-        const taskDate = parseCalgaryDate(task?.due_date || "");
-        const today = getCalgaryToday();
-        if (!taskDate || (!isCalgaryToday(taskDate) && taskDate <= today)) {
-          // Task isn't due today or is overdue, might disappear from "today" view
-          // Keep it in current view - if it disappears, user can switch to "all"
-        }
+      } 
+      // Check if task will still match current filter after status change
+      // Only switch if we're NOT already on "all" view (which shows everything)
+      else if (activeFilter !== "all" && !willTaskMatchFilter(task, newStatus, activeFilter)) {
+        // Task won't match current filter, switch to "all" to keep it visible
+        shouldSwitchFilter = true;
+        newFilter = "all";
       }
     }
 
@@ -1147,6 +1192,8 @@ export default function Tasks() {
       setSearchTerm("");
       setFilterPriority("all");
       setFilterLabel("all");
+      // Small delay to ensure React has processed the state update before mutation
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     // Clean up notifications if task is completed
