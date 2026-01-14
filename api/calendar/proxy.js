@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     }
 
     // Get Calendar integration for user
-    const { data: integration, error: integrationError } = await supabase
+    let { data: integration, error: integrationError } = await supabase
       .from('google_calendar_integrations')
       .select('access_token, refresh_token, token_expiry')
       .eq('user_id', user.id)
@@ -95,19 +95,102 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if token is expired
-    if (integration.token_expiry && new Date(integration.token_expiry) < new Date()) {
+    // Check if token is expired or about to expire (refresh 5 minutes before expiry)
+    const now = new Date();
+    const expiryTime = integration.token_expiry ? new Date(integration.token_expiry) : null;
+    const shouldRefresh = expiryTime && (expiryTime.getTime() - now.getTime() < 5 * 60 * 1000); // 5 minutes buffer
+
+    if (shouldRefresh || (expiryTime && expiryTime < now)) {
       if (!integration.refresh_token) {
         return res.status(401).json({ 
           success: false, 
           error: 'Calendar token expired. Please reconnect.' 
         });
       }
-      // TODO: Implement token refresh
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Calendar token expired. Please reconnect.' 
-      });
+
+      // Refresh the token
+      try {
+        const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID;
+        const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+        if (!CLIENT_ID || !CLIENT_SECRET) {
+          console.error('❌ Google OAuth credentials not configured');
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Server configuration error' 
+          });
+        }
+
+        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+            refresh_token: integration.refresh_token,
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        if (!refreshResponse.ok) {
+          const errorData = await refreshResponse.json().catch(() => ({}));
+          console.error('❌ Token refresh failed:', errorData);
+          
+          // If refresh token is invalid/expired, delete the integration
+          if (refreshResponse.status === 400) {
+            await supabase
+              .from('google_calendar_integrations')
+              .delete()
+              .eq('user_id', user.id);
+            
+            return res.status(401).json({ 
+              success: false, 
+              error: 'Calendar token expired. Please reconnect.' 
+            });
+          }
+          
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Failed to refresh Calendar token. Please reconnect.' 
+          });
+        }
+
+        const tokenData = await refreshResponse.json();
+        const newAccessToken = tokenData.access_token;
+        const newExpiresIn = tokenData.expires_in || 3600; // Default to 1 hour
+        const newTokenExpiry = new Date(Date.now() + newExpiresIn * 1000).toISOString();
+
+        // Update the integration with new token
+        const { data: updatedIntegration, error: updateError } = await supabase
+          .from('google_calendar_integrations')
+          .update({
+            access_token: newAccessToken,
+            token_expiry: newTokenExpiry,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .select('access_token, refresh_token, token_expiry')
+          .single();
+
+        if (updateError || !updatedIntegration) {
+          console.error('❌ Error updating refreshed token:', updateError);
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to save refreshed token' 
+          });
+        }
+
+        console.log('✅ Calendar token refreshed successfully');
+        integration = updatedIntegration;
+      } catch (error) {
+        console.error('❌ Error refreshing Calendar token:', error);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to refresh token' 
+        });
+      }
     }
 
     // Get Calendar API endpoint and params
