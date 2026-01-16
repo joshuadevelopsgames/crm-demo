@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createPageUrl } from '@/utils';
 
 export default function ContactsList({ contacts, accountId, accountName }) {
+  const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [viewMode, setViewMode] = useState('card'); // 'card' or 'list' - default to card view
@@ -264,7 +267,11 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
           
           return (
-          <Card key={contact.id} className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}>
+          <Card 
+            key={contact.id} 
+            className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
+            onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
+          >
             <CardContent className="p-5">
               <div className="space-y-4">
                 {/* Header with Avatar */}
@@ -387,7 +394,8 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                   return (
                     <tr 
                       key={contact.id}
-                      className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
+                      onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
                     >
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
@@ -429,6 +437,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                         <a 
                           href={`mailto:${contact.email}`}
                           className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {contact.email}
                         </a>
@@ -438,6 +447,7 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                           <a 
                             href={`tel:${contact.phone}`}
                             className={`text-sm ${isArchived ? 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400' : 'text-slate-600 dark:text-slate-400 hover:text-blue-600'}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             {contact.phone}
                           </a>
