@@ -345,7 +345,27 @@ export default function Settings() {
       // Ensure we update accounts even if they don't have a segment yet (will get 'C' as default)
       // Update both segment_by_year and revenue_segment (for backward compatibility)
       const updates = updatedAccounts.map(account => {
+        // Validate account has an ID before attempting update
+        if (!account.id) {
+          console.error(`❌ Account missing ID:`, account);
+          return { success: false, accountId: null, accountName: account.name, error: 'Account missing ID' };
+        }
+        
         const selectedYearSegment = account.segment_by_year?.[currentYear.toString()] || account.revenue_segment || 'C';
+        
+        // Validate segment value
+        const validSegments = ['A', 'B', 'C', 'D', 'E', 'F'];
+        if (!validSegments.includes(selectedYearSegment)) {
+          console.error(`❌ Invalid segment value for account ${account.id} (${account.name}):`, selectedYearSegment);
+          return { success: false, accountId: account.id, accountName: account.name, error: `Invalid segment: ${selectedYearSegment}` };
+        }
+        
+        // Validate segment_by_year is valid JSON object (or null)
+        if (account.segment_by_year !== null && account.segment_by_year !== undefined && typeof account.segment_by_year !== 'object') {
+          console.error(`❌ Invalid segment_by_year format for account ${account.id} (${account.name}):`, account.segment_by_year);
+          return { success: false, accountId: account.id, accountName: account.name, error: `Invalid segment_by_year format: ${typeof account.segment_by_year}` };
+        }
+        
         return base44.entities.Account.update(account.id, { 
           segment_by_year: account.segment_by_year,
           revenue_segment: selectedYearSegment // Keep for backward compatibility
@@ -354,11 +374,24 @@ export default function Settings() {
             if (selectedYearSegment === 'D') {
               console.log(`✅ Updated ${account.name || account.id} to Segment D`);
             }
-            return { success: true, accountId: account.id, segment: selectedYearSegment };
+            return { success: true, accountId: account.id, accountName: account.name, segment: selectedYearSegment };
           })
           .catch(error => {
-            console.error(`❌ Failed to update revenue segment for account ${account.id || account.name}:`, error);
-            return { success: false, accountId: account.id, error: error.message };
+            console.error(`❌ Failed to update revenue segment for account ${account.id} (${account.name || 'unnamed'}):`, {
+              error,
+              errorMessage: error.message,
+              errorStatus: error.status,
+              errorResponse: error.response,
+              accountId: account.id,
+              accountName: account.name,
+              segment_by_year: account.segment_by_year,
+              revenue_segment: selectedYearSegment,
+              updateData: {
+                segment_by_year: account.segment_by_year,
+                revenue_segment: selectedYearSegment
+              }
+            });
+            return { success: false, accountId: account.id, accountName: account.name, error: error.message || 'Unknown error' };
           });
       });
       
@@ -368,8 +401,15 @@ export default function Settings() {
       const failedCount = results.filter(r => !r.success).length;
       
       if (failedCount > 0) {
-        console.warn(`⚠️ ${failedCount} accounts failed to update. Check console for details.`);
-        toast.error(`${failedCount} accounts failed to update. Check console for details.`, { id: 'recalculate-segments-toast' });
+        const failedAccounts = results.filter(r => !r.success);
+        console.warn(`⚠️ ${failedCount} accounts failed to update:`, failedAccounts);
+        const failedAccountNames = failedAccounts
+          .map(f => f.accountName || f.accountId || 'Unknown')
+          .join(', ');
+        toast.error(`${failedCount} account(s) failed to update: ${failedAccountNames}. Check console for details.`, { 
+          id: 'recalculate-segments-toast',
+          duration: 8000 
+        });
       }
       
       console.log(`✅ Segment updates: ${successCount} successful, ${failedCount} failed, ${dSegmentCount} Segment D accounts`);
