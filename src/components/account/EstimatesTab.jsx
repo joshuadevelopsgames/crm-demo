@@ -416,13 +416,40 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     const selectedYear = parseInt(effectiveFilterYear);
     const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
     
-    return wonEstimates.reduce((sum, est) => {
+    // DEBUG: Log for debugging totalWonValue
+    console.log(`[DEBUG totalWonValue] Year: ${selectedYear}, Won estimates: ${wonEstimates.length}`);
+    
+    let wonIncluded = 0;
+    let wonExcluded = 0;
+    
+    const result = wonEstimates.reduce((sum, est) => {
       const yearData = getEstimateYearData(est, selectedYear);
+      const price = parseFloat(est.total_price || est.total_price_with_tax) || 0;
+      
       if (yearData && yearData.appliesToCurrentYear) {
+        wonIncluded++;
         return sum + (yearData.value || 0);
+      } else {
+        wonExcluded++;
+        if (price > 0) {
+          console.log(`[DEBUG totalWonValue] EXCLUDED won estimate:`, {
+            id: est.id,
+            estimate_number: est.estimate_number,
+            price,
+            yearData: yearData ? { appliesToCurrentYear: yearData.appliesToCurrentYear, value: yearData.value } : null,
+            contract_start: est.contract_start,
+            contract_end: est.contract_end,
+            estimate_date: est.estimate_date,
+            created_date: est.created_date
+          });
+        }
       }
       return sum;
     }, 0);
+    
+    console.log(`[DEBUG totalWonValue] Result: $${result.toFixed(2)}, Included: ${wonIncluded}, Excluded: ${wonExcluded}`);
+    
+    return result;
   }, [estimates, effectiveFilterYear]);
 
   const totalEstimatedValue = useMemo(() => {
@@ -440,7 +467,21 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     // For specific year, use annualization to match totalWonValue logic
     // Must include ALL estimates (won + lost + pending) that apply to the selected year
     const selectedYear = parseInt(effectiveFilterYear);
-    return estimates.filter(est => !est.archived).reduce((sum, est) => {
+    const allEstimates = estimates.filter(est => !est.archived);
+    
+    // DEBUG: Log for debugging totalEstimatedValue issue
+    console.log(`[DEBUG totalEstimatedValue] Year: ${selectedYear}, Total estimates: ${allEstimates.length}`);
+    const wonCount = allEstimates.filter(est => isWonStatus(est)).length;
+    const lostCount = allEstimates.filter(est => !isWonStatus(est) && (est.status || '').toString().toLowerCase() === 'lost').length;
+    const pendingCount = allEstimates.length - wonCount - lostCount;
+    console.log(`[DEBUG totalEstimatedValue] Won: ${wonCount}, Lost: ${lostCount}, Pending: ${pendingCount}`);
+    
+    let includedCount = 0;
+    let excludedCount = 0;
+    let wonIncluded = 0;
+    let wonExcluded = 0;
+    
+    const result = allEstimates.reduce((sum, est) => {
       // Check for fallback and show toast notification if needed (once per session)
       checkPriceFieldFallback(est);
       
@@ -450,12 +491,37 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       // Estimates with $0 price contribute $0 to total (correct behavior)
       // Estimates without valid dates can't be assigned to a year (correctly excluded)
       const yearData = getEstimateYearData(est, selectedYear);
+      const isWon = isWonStatus(est);
+      const price = parseFloat(est.total_price || est.total_price_with_tax) || 0;
+      
       if (yearData && yearData.appliesToCurrentYear) {
         // yearData.value already contains the annualized amount for this year
+        includedCount++;
+        if (isWon) wonIncluded++;
         return sum + (yearData.value || 0);
+      } else {
+        excludedCount++;
+        if (isWon) wonExcluded++;
+        // DEBUG: Log why won estimates are being excluded
+        if (isWon && price > 0) {
+          console.log(`[DEBUG totalEstimatedValue] EXCLUDED won estimate:`, {
+            id: est.id,
+            estimate_number: est.estimate_number,
+            price,
+            yearData: yearData ? { appliesToCurrentYear: yearData.appliesToCurrentYear, value: yearData.value } : null,
+            contract_start: est.contract_start,
+            contract_end: est.contract_end,
+            estimate_date: est.estimate_date,
+            created_date: est.created_date
+          });
+        }
       }
       return sum;
     }, 0);
+    
+    console.log(`[DEBUG totalEstimatedValue] Result: $${result.toFixed(2)}, Included: ${includedCount} (${wonIncluded} won), Excluded: ${excludedCount} (${wonExcluded} won)`);
+    
+    return result;
   }, [estimates, effectiveFilterYear]);
 
   const totalEstimates = statusFilteredEstimates.length;
