@@ -474,6 +474,11 @@ export function calculateTotalRevenue(accounts, estimatesByAccountId = {}, year)
 /**
  * Get segment year (current year, or previous year if Jan/Feb)
  * Segments use previous year's data in January/February, current year's data from March onward
+ * 
+ * NOTE: This function is primarily used for backward compatibility when no selectedYear is provided.
+ * When a selectedYear is provided, use getSegmentForYear() which applies the Jan/Feb rule only
+ * when viewing the current year (historical years always use that year's segments).
+ * 
  * @returns {number} - Year to use for segment calculations
  */
 export function getSegmentYear() {
@@ -706,6 +711,8 @@ export function getTotalEstimatesForYear(account, selectedYear) {
  * IMPORTANT: 
  * - For clients (accounts with won estimates): Always read from stored segment_by_year (A/B/C/D only change on import)
  * - For leads (accounts with no won estimates): Calculate E/F on-the-fly based on current ICP score
+ * - January/February rule (use previous year's segments) only applies when viewing CURRENT year
+ * - Historical years always use that year's segments regardless of current month
  * 
  * @param {Object} account - Account object
  * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
@@ -714,8 +721,29 @@ export function getTotalEstimatesForYear(account, selectedYear) {
  * @returns {string} - Segment for selected year: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function getSegmentForYear(account, selectedYear = null, allAccounts = [], estimatesByAccountId = {}) {
-  // Always use segment year (current year, or previous year if Jan/Feb)
-  const segmentYear = getSegmentYear();
+  // Determine effective segment year:
+  // - If selectedYear is provided and it's NOT the current year, use selectedYear directly (historical year)
+  // - If selectedYear is provided and it IS the current year, apply January/February rule
+  // - If selectedYear is null, use getSegmentYear() logic (for backward compatibility)
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
+  const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+  
+  let segmentYear;
+  if (selectedYear !== null && selectedYear !== undefined) {
+    // Selected year is explicitly provided
+    if (selectedYear === currentYear) {
+      // Viewing current year: apply January/February rule
+      segmentYear = isJanOrFeb ? currentYear - 1 : currentYear;
+    } else {
+      // Viewing historical year: always use that year's segments
+      segmentYear = selectedYear;
+    }
+  } else {
+    // No selected year provided: use getSegmentYear() for backward compatibility
+    segmentYear = getSegmentYear();
+  }
   
   // CRITICAL: Always validate stored Segment E before using it
   // Check stored segments first to catch bad data
@@ -783,13 +811,12 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
  * Auto-assign revenue segments for all accounts based on revenue percentages
  * Now calculates segments for ALL years and stores in segment_by_year
  * 
- * IMPORTANT: Segments are displayed based on getSegmentYear() which:
- * - January/February: uses previous year's segments
- * - March and later: uses current year's segments
+ * IMPORTANT: Segments are displayed based on selectedYear:
+ * - When viewing current year: January/February uses previous year's segments, March+ uses current year's segments
+ * - When viewing historical years: Always uses that year's segments (no Jan/Feb rule)
  * 
- * This function calculates segments for ALL years, so when March arrives,
- * the current year's segments will already be in the database and will
- * automatically be used by getSegmentYear().
+ * This function calculates segments for ALL years, so when viewing any year,
+ * the segments will already be in the database.
  * 
  * @param {Array} accounts - Array of account objects
  * @param {Object} estimatesByAccountId - Map of account_id to estimates array (optional, only used for Segment D check)

@@ -363,8 +363,17 @@ export default function Accounts() {
     // But for leads, we need estimates to determine if they're leads, so use fallback
     if (estimatesLoading && allEstimates.length === 0) {
       return accounts.map(account => {
+        // Determine effective segment year (apply Jan/Feb rule only for current year)
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+        const effectiveSegmentYear = (selectedYear === currentYear && isJanOrFeb) 
+          ? currentYear - 1 
+          : (selectedYear !== null && selectedYear !== undefined ? selectedYear : getSegmentYear());
+        
         // Try to read stored segment, but validate E segments
-        const storedSegment = account.segment_by_year?.[getSegmentYear()] || account.revenue_segment || 'C';
+        const storedSegment = account.segment_by_year?.[effectiveSegmentYear.toString()] || account.revenue_segment || 'C';
         let segment = storedSegment;
         
         // If stored segment is E, validate ICP score
@@ -830,14 +839,15 @@ export default function Accounts() {
             </p>
             {(() => {
               const now = new Date();
+              const currentYear = now.getFullYear();
               const currentMonth = now.getMonth() + 1;
               const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
-              const segmentYear = getSegmentYear();
-              return isJanOrFeb && (
+              // Only show banner when viewing current year AND it's January/February
+              return isJanOrFeb && selectedYear === currentYear && (
                 <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 mt-1">
                   <Info className="w-4 h-4" />
                   <span className="font-normal">
-                    Segments are based on {segmentYear} data during January and February
+                    Segments are based on {currentYear - 1} data during January and February
                   </span>
                 </div>
               );

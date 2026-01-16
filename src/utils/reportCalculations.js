@@ -570,11 +570,19 @@ export function enhanceAccountStatsWithMetadata(accountStats, accounts, interact
     const interactionStats = interactionStatsMap.get(stat.accountId);
     const scorecardStats = scorecardStatsMap.get(stat.accountId);
     
-    // Get revenue segment for segment year (current year, or previous year if Jan/Feb)
-    const segmentYear = getSegmentYear();
+    // Get revenue segment for selected year
+    // Apply January/February rule only if viewing current year
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+    const effectiveSegmentYear = (selectedYear === currentYear && isJanOrFeb)
+      ? currentYear - 1
+      : (selectedYear !== null && selectedYear !== undefined ? selectedYear : getSegmentYear());
+    
     let revenueSegment = account?.revenue_segment || null;
     if (account?.segment_by_year && typeof account.segment_by_year === 'object') {
-      revenueSegment = account.segment_by_year[segmentYear.toString()] || revenueSegment;
+      revenueSegment = account.segment_by_year[effectiveSegmentYear.toString()] || revenueSegment;
     }
     
     return {
@@ -645,12 +653,20 @@ export function enhanceDepartmentStatsWithMetadata(deptStats, estimates, account
     
     // Calculate segment distribution
     const segmentCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
-    // Calculate segment distribution using segment year (current year, or previous year if Jan/Feb)
-    const segmentYear = getSegmentYear();
+    // Calculate segment distribution for selected year
+    // Apply January/February rule only if viewing current year
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+    const effectiveSegmentYear = (selectedYear === currentYear && isJanOrFeb)
+      ? currentYear - 1
+      : (selectedYear !== null && selectedYear !== undefined ? selectedYear : getSegmentYear());
+    
     deptAccounts.forEach(acc => {
       let segment = acc.revenue_segment;
       if (acc.segment_by_year && typeof acc.segment_by_year === 'object') {
-        segment = acc.segment_by_year[segmentYear.toString()] || segment;
+        segment = acc.segment_by_year[effectiveSegmentYear.toString()] || segment;
       }
       if (segment && ['A', 'B', 'C', 'D', 'E', 'F'].includes(segment)) {
         segmentCounts[segment]++;
