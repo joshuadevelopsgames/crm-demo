@@ -155,7 +155,7 @@ The Accounts section provides the central hub for managing all company accounts 
    - Note: Revenue is calculated and stored during import only. See Revenue Logic spec for calculation details.
 
 10. **Revenue Segment Assignment**
-    - Segment A: ≥15% of total revenue (selected year)
+    - Segment A: >15% of total revenue (selected year)
     - Segment B: 5-15% of total revenue (selected year)
     - Segment C: 0-5% of total revenue (selected year)
     - Segment D: Project only (has "Standard" type estimates but no "Service" type estimates)
@@ -226,7 +226,7 @@ Contract duration is calculated in whole months before converting to years.
 
 ### Revenue Segment Rules
 
-- **R12**: Segment A: ≥15% of total revenue (selected year)
+- **R12**: Segment A: >15% of total revenue (selected year)
 - **R13**: Segment B: 5-15% of total revenue (selected year)
 - **R14**: Segment C: 0-5% of total revenue (selected year)
 - **R15**: Segment D: Project only (has "Standard" type but no "Service" type won estimates)

@@ -576,7 +576,7 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
   
   const revenuePercentage = (accountRevenue / totalRevenue) * 100;
   
-  if (revenuePercentage >= 15) {
+  if (revenuePercentage > 15) {
     return 'A';
   } else if (revenuePercentage >= 5) {
     return 'B';
