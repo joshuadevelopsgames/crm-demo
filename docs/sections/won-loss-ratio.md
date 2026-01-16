@@ -144,10 +144,16 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
    - Use 'Uncategorized' if `division` is missing
    - For each department:
      - Count total, won, lost (pending not tracked for departments)
-     - Sum revenue for total, won, lost
+     - **Dollar-based calculations** (use same logic as overall totals, R41a):
+       - Start with ALL estimates (not pre-filtered)
+       - Filter for won status first
+       - Check year applicability using `getEstimateYearData()`
+       - Filter by department
+       - Sum annualized values for won estimates in department
      - Calculate win rate: `(won / (won + lost)) * 100`
      - Calculate ratios (same as overall)
    - Sort by `totalValue` descending
+   - **Important**: Department totals use identical filtering and calculation logic as overall totals, ensuring they add up correctly (R41a)
 
 10. **Display Formatting**
     - Win rate: Format to 1 decimal place (e.g., "65.3%")
@@ -247,6 +253,7 @@ Rules must be testable and numbered.
 
 - **R40**: For COUNT-based won/loss ratio calculations (win rate percentage, "X won / Y total" display), multi-year contracts are treated as single-year contracts using the year determined by date priority (R22). A multi-year contract appears only in the year of its determined date field (typically `contract_start`).
 - **R41**: For DOLLAR-based calculations (won value, estimated value, revenue totals), multi-year contracts use annualization logic (per Revenue Logic spec R8, R9). Revenue is allocated to sequential calendar years starting from `contract_start` year, with annualized amounts per year.
+- **R41a**: Department totals use the same calculation logic as overall totals to ensure consistency. Both start with all estimates, filter for won status first, then check year applicability using `getEstimateYearData()`, then sum annualized values. Department totals are filtered by department after filtering for won status and checking year applicability. This ensures department totals add up to overall totals.
 - **R42**: The distinction between count-based and dollar-based filtering ensures that:
   - Win rate counts (R12, R13) use simple date extraction (multi-year contracts counted once in start year)
   - Revenue values use annualization (multi-year contracts contribute annualized amounts to each year they span)
@@ -591,6 +598,7 @@ estimates = [
 - **AC12**: Estimates without any valid date fields (`contract_end`, `contract_start`, `estimate_date`, or `created_date`) are excluded from year-based reports (per Estimates spec R2).
 - **AC13**: Multi-year contracts are treated as single-year contracts for count-based won/loss ratio calculations (appear only in determined year) (R40).
 - **AC14**: Multi-year contracts use annualization for dollar-based revenue calculations (allocated to sequential years with annualized amounts) (R41).
+- **AC15**: Department totals match overall totals because both use identical filtering and calculation logic: start with all estimates, filter for won status first, check year applicability, then sum annualized values (R41a).
 
 ## Special considerations
 

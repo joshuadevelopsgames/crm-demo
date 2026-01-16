@@ -23,6 +23,8 @@
  * Multi-year contracts are annualized (total price divided by number of years)
  */
 
+import { checkPriceFieldFallback } from './priceFieldFallbackNotification';
+
 // Inline functions to avoid serverless import issues
 // Inline getYearFromDateString to avoid serverless import issues
 function getYearFromDateString(dateStr) {
@@ -238,6 +240,9 @@ export function detectContractTypo(durationMonths, contractYears, startDate = nu
 export function getEstimateYearData(estimate, currentYear) {
   if (!estimate) return null;
   
+  // Check for fallback and show toast notification if needed (once per session)
+  checkPriceFieldFallback(estimate);
+  
   const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
   if (totalPrice === 0) return null;
   
@@ -342,6 +347,9 @@ export function calculateRevenueFromWonEstimates(account, estimates, year) {
     // Get year data for this estimate
     const yearData = getEstimateYearData(est, year);
     if (!yearData || !yearData.appliesToCurrentYear) return;
+    
+    // Check for fallback and show toast notification if needed (once per session)
+    checkPriceFieldFallback(est);
     
     // Get price (prefer total_price, fallback to total_price_with_tax)
     let price = 0;

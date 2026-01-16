@@ -153,7 +153,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
   - Archived estimates excluded from both numerator and denominator
   - Uses `isWonStatus()` function to respect `pipeline_status` priority
   - **Multi-year contracts**: Treated as single-year contracts for count-based calculations (appear only in determined year, typically `contract_start`). See Won Loss Ratio spec R40 for details.
-- **Department Total**: Sum of `total_price` (or `total_price_with_tax`) for all estimates in department. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41).
+- **Department Total**: Sum of `total_price` (or `total_price_with_tax`) for won estimates in department. Uses the same calculation logic as overall totals: filters all estimates for won status first, then checks year applicability using `getEstimateYearData()`, then sums annualized values. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41). Department totals will match overall totals because both use identical filtering and calculation logic.
 - **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
   - Archived estimates excluded
   - Uses `isWonStatus()` function for status determination
@@ -204,7 +204,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
   1. "Uncategorized" always first
   2. Known divisions (in order listed above)
   3. Other divisions alphabetically
-- **Department Totals**: Sum of `total_price` (or `total_price_with_tax`) for all estimates in department. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41).
+- **Department Totals**: Sum of `total_price` (or `total_price_with_tax`) for won estimates in department. Uses the same calculation logic as overall totals: filters all estimates for won status first, then checks year applicability using `getEstimateYearData()`, then sums annualized values. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41). Department totals will match overall totals because both use identical filtering and calculation logic.
 - **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
   - Archived estimates excluded from win rate calculation
 

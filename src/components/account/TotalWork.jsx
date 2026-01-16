@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
-import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
+import { detectContractTypo, getEstimateYearData } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
 import { getYearFromDateString } from '@/utils/dateFormatter';
+import { checkPriceFieldFallback } from '@/utils/priceFieldFallbackNotification';
 
 /**
  * Calculate contract duration in months between two dates
@@ -289,6 +290,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     
     estimates.forEach(est => {
       const yearData = getEstimateYearData(est, currentYear);
+      // Check for fallback and show toast notification if needed (once per session)
+      checkPriceFieldFallback(est);
       // Use total_price consistently
       const totalPrice = parseFloat(est.total_price || est.total_price_with_tax) || 0;
       
@@ -331,6 +334,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
       .filter(est => isWonStatus(est))
       .forEach(est => {
         const yearData = getEstimateYearData(est, currentYear);
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
         // Use total_price consistently
         const totalPrice = parseFloat(est.total_price || est.total_price_with_tax) || 0;
         
@@ -420,6 +425,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     return estimates
       .filter(est => isWonStatus(est))
       .reduce((sum, est) => {
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
         const totalPrice = parseFloat(est.total_price) || parseFloat(est.total_price_with_tax) || 0;
         return sum + totalPrice;
       }, 0);

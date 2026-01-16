@@ -15,6 +15,7 @@ import { formatDateString, getYearFromDateString, getDateStringTimestamp } from 
 import { UserFilter } from '@/components/UserFilter';
 import { isWonStatus } from '@/utils/reportCalculations';
 import { getEstimateYearData } from '@/utils/revenueSegmentCalculator';
+import { checkPriceFieldFallback } from '@/utils/priceFieldFallbackNotification';
 
 // Exact division categories from Google Sheet
 const DIVISION_CATEGORIES = [
@@ -278,20 +279,38 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     return colors[status] || colors.lost;
   };
 
-  const calculateDepartmentTotal = (departmentEstimates) => {
-    // Only calculate revenue from won estimates
-    const wonEstimates = departmentEstimates.filter(est => isWonStatus(est));
+  const calculateDepartmentTotal = (departmentName) => {
+    // Use the same logic as totalWonValue to ensure consistency:
+    // 1. Start with ALL estimates (not pre-filtered)
+    // 2. Filter for won estimates first
+    // 3. Check year applicability
+    // 4. Filter by department
+    // This ensures department totals match overall totals
     
     if (effectiveFilterYear === 'all') {
-      // For "all years", sum full values
+      // For "all years", sum full values of won estimates in this department
+      const wonEstimates = estimates.filter(est => 
+        !est.archived && 
+        isWonStatus(est) && 
+        normalizeDepartment(est.division) === departmentName
+      );
       return wonEstimates.reduce((sum, est) => {
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
         const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
     }
     
     // For specific year, use annualization to match overall totals
+    // Must use same logic as totalWonValue: filter all estimates for won, then check year
     const selectedYear = parseInt(effectiveFilterYear);
+    const wonEstimates = estimates.filter(est => 
+      !est.archived && 
+      isWonStatus(est) && 
+      normalizeDepartment(est.division) === departmentName
+    );
+    
     return wonEstimates.reduce((sum, est) => {
       const yearData = getEstimateYearData(est, selectedYear);
       if (yearData && yearData.appliesToCurrentYear) {
@@ -386,6 +405,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       // For "all years", sum full values of won estimates
       const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
       return wonEstimates.reduce((sum, est) => {
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
         const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
@@ -408,6 +429,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     if (effectiveFilterYear === 'all') {
       // For "all years", sum all estimates (full value, not annualized)
       return estimates.filter(est => !est.archived).reduce((sum, est) => {
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
         const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
@@ -512,7 +535,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
           {filteredDepartments.map((department) => {
             const departmentEstimates = estimatesByDepartment.grouped[department] || [];
             const isExpanded = expandedDepartments.has(department);
-            const departmentTotal = calculateDepartmentTotal(departmentEstimates);
+            const departmentTotal = calculateDepartmentTotal(department);
             
             if (departmentEstimates.length === 0) return null;
 

@@ -5,6 +5,7 @@
 
 import { getYearFromDateString, parseDateString } from './dateFormatter';
 import { getSegmentYear } from './revenueSegmentCalculator';
+import { checkPriceFieldFallback } from './priceFieldFallbackNotification';
 
 /**
  * Format currency value with appropriate suffix (K for thousands, M for millions)
@@ -48,16 +49,28 @@ export function calculateOverallStats(estimates) {
   
   // Calculate revenue values
   // Use total_price with fallback to total_price_with_tax
-  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+  const totalValue = estimates.reduce((sum, e) => {
+    checkPriceFieldFallback(e);
+    return sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0);
+  }, 0);
   const wonValue = estimates
     .filter(e => isWonStatus(e))
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => {
+      checkPriceFieldFallback(e);
+      return sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0);
+    }, 0);
   const lostValue = estimates
     .filter(e => (e.status || '').toString().toLowerCase() === 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => {
+      checkPriceFieldFallback(e);
+      return sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0);
+    }, 0);
   const pendingValue = estimates
     .filter(e => !isWonStatus(e) && (e.status || '').toString().toLowerCase() !== 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
+    .reduce((sum, e) => {
+      checkPriceFieldFallback(e);
+      return sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0);
+    }, 0);
   
   return {
     total,
@@ -118,6 +131,7 @@ export function calculateAccountStats(estimates, accounts) {
     stats.estimates.push(estimate);
     
     // Use total_price with fallback to total_price_with_tax
+    checkPriceFieldFallback(estimate);
     const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
@@ -180,6 +194,7 @@ export function calculateDepartmentStats(estimates) {
     stats.estimates.push(estimate);
     
     // Use total_price with fallback to total_price_with_tax
+    checkPriceFieldFallback(estimate);
     const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
