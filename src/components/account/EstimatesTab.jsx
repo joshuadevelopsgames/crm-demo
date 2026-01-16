@@ -778,10 +778,9 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                                 <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                 <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
                                   {getEstimatePrice(estimate).toLocaleString('en-US', { 
-                                        minimumFractionDigits: 2, 
-                                        maximumFractionDigits: 2 
-                                      })
-                                    : '—'}
+                                    minimumFractionDigits: 2, 
+                                    maximumFractionDigits: 2 
+                                  })}
                                 </span>
                               </div>
                             </td>

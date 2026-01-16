@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
 import { getYearFromDateString } from '@/utils/dateFormatter';
 import { checkPriceFieldFallback } from '@/utils/priceFieldFallbackNotification';
+import { getEstimatePrice } from '@/utils/revenueSegmentCalculator';
 
 /**
  * Calculate contract duration in months between two dates
