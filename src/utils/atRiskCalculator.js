@@ -375,8 +375,10 @@ export function calculateNeglectedAccounts(accounts, snoozes = []) {
     // Determine threshold based on revenue segment
     // A and B segments: 30+ days, others: 90+ days
     // Default to 'C' (90 days) if segment is missing
-    const selectedYear = getCurrentYear();
-    const segment = getSegmentForYear(account, selectedYear) || 'C';
+    // Use getSegmentYear() to match getSegmentForYear() which uses segment year internally
+    // (getSegmentForYear ignores the selectedYear parameter for segment lookup)
+    const segmentYear = getSegmentYear();
+    const segment = getSegmentForYear(account, segmentYear) || 'C';
     const thresholdDays = (segment === 'A' || segment === 'B') ? 30 : 90;
     
     // Check if no interaction beyond threshold
