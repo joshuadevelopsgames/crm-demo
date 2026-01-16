@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue, getSegmentYear } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -411,7 +411,6 @@ export default function Accounts() {
   }, [accounts, estimatesByAccountId, selectedYear, estimatesLoading, allEstimates.length]);
 
   // Debug: Log year selection status and verify data updates
-  // Moved after estimatesByAccountId declaration to avoid TDZ error
   useEffect(() => {
     const currentYear = getCurrentYear();
     console.log('[Accounts] 🔄 Year changed - Component re-rendering:', {
@@ -419,33 +418,7 @@ export default function Accounts() {
       currentYear: getCurrentYear(),
       accountsCount: accounts.length
     });
-    if (accounts.length > 0 && estimatesByAccountId && totalRevenueForSegmentYear !== undefined) {
-      const sampleAccount = accounts[0];
-      const sampleAccountEstimates = estimatesByAccountId[sampleAccount.id] || [];
-      const sampleRevenue = calculateRevenueFromWonEstimates(sampleAccount, sampleAccountEstimates, selectedYear);
-      const sampleSegment = calculateRevenueSegmentForYear(sampleAccount, segmentYear, totalRevenueForSegmentYear, sampleAccountEstimates);
-      console.log('[Accounts] ⚠️ Year changed - Component should re-render:', {
-        selectedYear,
-        currentYear: getCurrentYear(),
-        accountsCount: accounts.length,
-        totalRevenueForSegmentYear,
-        segmentYear,
-        sampleAccount: {
-          id: sampleAccount.id,
-          name: sampleAccount.name,
-          revenue_by_year: sampleAccount.revenue_by_year,
-          segment_by_year: sampleAccount.segment_by_year,
-          revenue_for_selected_year: sampleRevenue,
-          segment_for_selected_year: sampleSegment
-        },
-        accountsWithRevenueData: accounts.filter(acc => {
-          const accEstimates = estimatesByAccountId[acc.id] || [];
-          const revenue = calculateRevenueFromWonEstimates(acc, accEstimates, selectedYear);
-          return revenue > 0;
-        }).length
-      });
-    }
-  }, [selectedYear, getCurrentYear, accounts, estimatesByAccountId, totalRevenueForSegmentYear, segmentYear]);
+  }, [selectedYear, getCurrentYear, accounts.length]);
 
   const createAccountMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -855,14 +828,20 @@ export default function Accounts() {
               {isLoading ? 'Loading accounts...' : `${filteredAccounts.length} total accounts`}
               {estimatesLoading && !isLoading && ' (calculating revenue...)'}
             </p>
-            {isJanOrFeb && (
-              <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 mt-1">
-                <Info className="w-4 h-4" />
-                <span className="font-normal">
-                  Segments are based on {segmentYear} data during January and February
-                </span>
-              </div>
-            )}
+            {(() => {
+              const now = new Date();
+              const currentMonth = now.getMonth() + 1;
+              const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
+              const segmentYear = getSegmentYear();
+              return isJanOrFeb && (
+                <div className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  <Info className="w-4 h-4" />
+                  <span className="font-normal">
+                    Segments are based on {segmentYear} data during January and February
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </TutorialTooltip>
         <div className="flex items-center gap-3">

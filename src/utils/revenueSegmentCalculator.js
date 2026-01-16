@@ -96,7 +96,7 @@ export function calculateDurationMonths(startDate, endDate) {
   const dayDiff = end.getDate() - start.getDate();
   
   // Total months = years * 12 + months
-  let totalMonths = yearDiff * 12 + monthDiff;
+  const totalMonths = yearDiff * 12 + monthDiff;
   
   // If day difference is negative, we haven't quite reached the full month yet
   // But for contract purposes, we typically count full months, so we don't adjust
