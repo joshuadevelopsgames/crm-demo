@@ -436,10 +436,20 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       }, 0);
     }
     
+    // For specific year, use annualization to match totalWonValue logic
+    // Must include ALL estimates (won + lost) that apply to the selected year
     const selectedYear = parseInt(effectiveFilterYear);
     return estimates.filter(est => !est.archived).reduce((sum, est) => {
+      // Check for fallback and show toast notification if needed (once per session)
+      checkPriceFieldFallback(est);
+      
+      // Use getEstimateYearData to check year applicability and get annualized value
+      // This handles multi-year contracts with annualization
       const yearData = getEstimateYearData(est, selectedYear);
       if (yearData && yearData.appliesToCurrentYear) {
+        // yearData.value already contains the annualized amount
+        // Note: getEstimateYearData returns null if price is 0, which is correct
+        // (estimates with $0 price contribute $0 to total anyway)
         return sum + (yearData.value || 0);
       }
       return sum;
