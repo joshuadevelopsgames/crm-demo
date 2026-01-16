@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS accounts (
   classification text,
   revenue_segment text,
   annual_revenue numeric(12,2),
+  revenue_by_year jsonb,
+  segment_by_year jsonb,
+  total_estimates_by_year jsonb,
   organization_score numeric,
   tags text[],
   address_1 text,
@@ -165,6 +168,11 @@ CREATE TABLE IF NOT EXISTS scorecard_responses (
 CREATE INDEX IF NOT EXISTS idx_accounts_lmn_crm_id ON accounts(lmn_crm_id);
 CREATE INDEX IF NOT EXISTS idx_contacts_lmn_contact_id ON contacts(lmn_contact_id);
 CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id);
+
+-- Create indexes for JSONB columns (GIN indexes for efficient JSONB queries)
+CREATE INDEX IF NOT EXISTS idx_accounts_revenue_by_year ON accounts USING gin (revenue_by_year);
+CREATE INDEX IF NOT EXISTS idx_accounts_segment_by_year ON accounts USING gin (segment_by_year);
+CREATE INDEX IF NOT EXISTS idx_accounts_total_estimates_by_year ON accounts USING gin (total_estimates_by_year);
 CREATE INDEX IF NOT EXISTS idx_estimates_lmn_estimate_id ON estimates(lmn_estimate_id);
 CREATE INDEX IF NOT EXISTS idx_estimates_account_id ON estimates(account_id);
 CREATE INDEX IF NOT EXISTS idx_jobsites_lmn_jobsite_id ON jobsites(lmn_jobsite_id);
