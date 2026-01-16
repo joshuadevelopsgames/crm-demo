@@ -120,9 +120,14 @@ function isWithinGracePeriod(startDate, endDate, years) {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
+  // Normalize dates to start of day for accurate day calculations
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
   // Calculate the exact anniversary date
   const anniversaryDate = new Date(start);
   anniversaryDate.setFullYear(start.getFullYear() + years);
+  anniversaryDate.setHours(0, 0, 0, 0);
   
   // Calculate days difference (end date - anniversary date)
   const daysDiff = Math.floor((end - anniversaryDate) / (1000 * 60 * 60 * 24));
@@ -181,16 +186,21 @@ export function getContractYears(durationMonths, startDate = null, endDate = nul
  * @returns {boolean} - True if typo is detected
  */
 export function detectContractTypo(durationMonths, contractYears, startDate = null, endDate = null) {
-  // If we have dates and the contract qualifies for grace period, don't flag as typo
-  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-    // Check if it's within grace period for the calculated years
+  // Calculate remainder months first
+  const remainderMonths = durationMonths % 12;
+  
+  // If we have dates and remainder is 1 month (potential typo), check grace period
+  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && remainderMonths === 1) {
+    // Check grace period for the year being exceeded (contractYears - 1)
+    // Example: 13 months calculated as 2 years → check if within grace period of 1 year
+    if (contractYears > 1 && isWithinGracePeriod(startDate, endDate, contractYears - 1)) {
+      return false; // Within grace period, not a typo
+    }
+    // Also check grace period for the calculated years (safety check)
     if (isWithinGracePeriod(startDate, endDate, contractYears)) {
       return false; // Within grace period, not a typo
     }
   }
-  
-  // Calculate remainder months
-  const remainderMonths = durationMonths % 12;
   
   // Typo detected if remainder is exactly 1 month (per spec R24)
   // This catches: 13 months (1 year + 1), 25 months (2 years + 1), 37 months (3 years + 1), etc.
