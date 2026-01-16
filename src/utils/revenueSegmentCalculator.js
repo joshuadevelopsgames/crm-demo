@@ -500,6 +500,13 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
   if (wonEstimates.length === 0) {
     const organizationScore = account?.organization_score;
     
+    // #region agent log
+    const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
+    if (isBimboCanada) {
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:500',message:'Bimbo Canada segment calc - entry',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+    }
+    // #endregion
+    
     // Strict validation: must be a valid number > 0
     // Handle null, undefined, empty string, 0, NaN, invalid strings, and special values like "-"
     let icpScore = null;
@@ -522,10 +529,27 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
       }
     }
     
+    // #region agent log
+    if (isBimboCanada) {
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:523',message:'Bimbo Canada segment calc - after validation',data:{icpScore,orgScoreRaw:organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    }
+    // #endregion
+    
     // Only assign Segment E if we have a valid ICP score >= 80
     if (icpScore !== null && icpScore >= 80) {
+      // #region agent log
+      if (isBimboCanada) {
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:527',message:'Bimbo Canada returning Segment E',data:{icpScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      }
+      // #endregion
       return 'E';
     }
+    
+    // #region agent log
+    if (isBimboCanada) {
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:531',message:'Bimbo Canada returning Segment F',data:{icpScore,reason:icpScore===null?'no valid score':icpScore<80?'score < 80':'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    }
+    // #endregion
     
     // Default to Segment F: no ICP score, invalid ICP score, or ICP < 80%
     return 'F';

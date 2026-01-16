@@ -376,21 +376,44 @@ export default function Accounts() {
     // If estimates haven't loaded yet, return accounts with default revenue/segment
     // This allows accounts to render immediately
     if (estimatesLoading && allEstimates.length === 0) {
-      return accounts.map(account => ({
-        account,
-        revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
-        segment: account.segment_by_year?.[segmentYear] || 'C' // Segments use segmentYear
-      }));
+      return accounts.map(account => {
+        // #region agent log
+        const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
+        if (isBimboCanada) {
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:378',message:'Bimbo Canada using stored segment (estimates not loaded)',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
+        return {
+          account,
+          revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
+          segment: account.segment_by_year?.[segmentYear] || 'C' // Segments use segmentYear
+        };
+      });
     }
     return accounts.map(account => {
       const accountEstimates = estimatesByAccountId[account.id] || [];
       const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear); // Revenue still uses selectedYear
+      
+      // #region agent log
+      const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
+      if (isBimboCanada) {
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:386',message:'Bimbo Canada before segment calc',data:{accountId:account?.id,accountName:account?.name,organizationScore:account?.organization_score,orgScoreType:typeof account?.organization_score,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length,accountEstimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
+      }
+      // #endregion
+      
       const segment = calculateRevenueSegmentForYear(
         account,
         segmentYear, // Segments use segmentYear (current year, or previous year if Jan/Feb)
         totalRevenueForSegmentYear,
         accountEstimates
       );
+      
+      // #region agent log
+      if (isBimboCanada) {
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:393',message:'Bimbo Canada after segment calc',data:{calculatedSegment:segment,storedSegment:account?.segment_by_year?.[segmentYear]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
+      
       return {
         account,
         revenue,
