@@ -17,26 +17,22 @@ const SESSION_STORAGE_KEY = 'price_field_fallback_toast_shown';
 export function checkPriceFieldFallback(estimate) {
   if (!estimate) return false;
   
-  // Check if total_price is missing/null/zero and total_price_with_tax exists
+  // Check if total_price is missing (null or undefined) and total_price_with_tax exists
+  // Note: total_price will always have a value (even if 0), so we only check for null/undefined
   const totalPrice = estimate.total_price;
   const totalPriceWithTax = estimate.total_price_with_tax;
   
-  // Check if fallback is being used by simulating the || operator behavior
-  // Fallback is used when: !total_price && total_price_with_tax
-  // This matches: est.total_price || est.total_price_with_tax || 0
+  // Only show toast if total_price is truly missing (null or undefined), not if it's 0
+  // total_price will always exist (even if 0), so this should never trigger in normal operation
+  const isTotalPriceMissing = totalPrice === null || totalPrice === undefined;
   
-  // Check if total_price is falsy (null, undefined, 0, '', NaN, false)
-  const isTotalPriceFalsy = !totalPrice || 
-    (typeof totalPrice === 'number' && (isNaN(totalPrice) || totalPrice === 0)) ||
-    (typeof totalPrice === 'string' && totalPrice.trim() === '');
+  // Check if total_price_with_tax has a valid value (not null, undefined, or NaN)
+  const hasTotalPriceWithTax = totalPriceWithTax != null && 
+    !(typeof totalPriceWithTax === 'number' && isNaN(totalPriceWithTax));
   
-  // Check if total_price_with_tax is truthy (has a valid value)
-  const hasTotalPriceWithTax = totalPriceWithTax && 
-    !(typeof totalPriceWithTax === 'number' && (isNaN(totalPriceWithTax) || totalPriceWithTax === 0)) &&
-    !(typeof totalPriceWithTax === 'string' && totalPriceWithTax.trim() === '');
-  
-  // If fallback is being used (total_price is falsy AND total_price_with_tax is truthy), show toast once per session
-  if (isTotalPriceFalsy && hasTotalPriceWithTax) {
+  // If fallback is being used (total_price is missing AND total_price_with_tax exists), show toast once per session
+  // This should never happen in normal operation since total_price always has a value
+  if (isTotalPriceMissing && hasTotalPriceWithTax) {
     showFallbackToastOnce();
     return true;
   }
