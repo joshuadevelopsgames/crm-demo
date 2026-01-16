@@ -499,22 +499,32 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
   // If no won estimates, this is a lead - check ICP score
   if (wonEstimates.length === 0) {
     const organizationScore = account?.organization_score;
-    // Check if organization_score exists and is a valid number
-    if (organizationScore !== null && organizationScore !== undefined) {
-      const icpScore = typeof organizationScore === 'number' 
-        ? organizationScore 
-        : parseFloat(organizationScore);
-      
-      if (!isNaN(icpScore)) {
-        // Segment E: Lead with ICP >= 80%
-        if (icpScore >= 80) {
-          return 'E';
+    
+    // Strict validation: must be a valid number > 0
+    // Handle null, undefined, empty string, 0, NaN, and invalid strings
+    let icpScore = null;
+    
+    if (organizationScore !== null && organizationScore !== undefined && organizationScore !== '') {
+      if (typeof organizationScore === 'number') {
+        // Valid number (including 0, but 0 is not a valid ICP score)
+        if (!isNaN(organizationScore) && organizationScore > 0) {
+          icpScore = organizationScore;
         }
-        // Segment F: Lead with ICP < 80%
-        return 'F';
+      } else {
+        // Try to parse string
+        const parsed = parseFloat(organizationScore);
+        if (!isNaN(parsed) && parsed > 0) {
+          icpScore = parsed;
+        }
       }
     }
-    // If no ICP score available, default to Segment F (lead, no ICP score)
+    
+    // Only assign Segment E if we have a valid ICP score >= 80
+    if (icpScore !== null && icpScore >= 80) {
+      return 'E';
+    }
+    
+    // Default to Segment F: no ICP score, invalid ICP score, or ICP < 80%
     return 'F';
   }
   
