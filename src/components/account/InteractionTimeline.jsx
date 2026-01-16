@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink, Trash2, Edit } from 'lucide-react';
+import { Mail, Phone, MessageSquare, Calendar, FileText, Linkedin, ExternalLink, Trash2, Edit, X } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -54,6 +54,34 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
     }
   });
 
+  const removeAttachmentMutation = useMutation({
+    mutationFn: async ({ interaction, attachment, nextAttachments }) => {
+      if (attachment?.id) {
+        await base44.entities.AccountAttachment.delete(attachment.id);
+      }
+
+      const existingMetadata = interaction.metadata || {};
+      return await base44.entities.Interaction.update(interaction.id, {
+        metadata: {
+          ...existingMetadata,
+          attachments: nextAttachments
+        }
+      });
+    },
+    onSuccess: (_, variables) => {
+      if (accountId) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', accountId] });
+      }
+      if (contactId) {
+        queryClient.invalidateQueries({ queryKey: ['interactions', contactId] });
+      }
+      toast.success('Attachment removed');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to remove attachment');
+    }
+  });
+
   const handleDeleteClick = (interaction) => {
     setInteractionToDelete(interaction);
     setDeleteDialogOpen(true);
@@ -73,6 +101,20 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
   const handleEditClose = () => {
     setEditDialogOpen(false);
     setEditingInteraction(null);
+  };
+
+  const handleRemoveAttachment = (interaction, index) => {
+    if (!canManageInteractions) {
+      toast.error('You do not have permission to manage interactions');
+      return;
+    }
+
+    const attachments = interaction.metadata?.attachments || [];
+    const attachment = attachments[index];
+    if (!attachment) return;
+
+    const nextAttachments = attachments.filter((_, i) => i !== index);
+    removeAttachmentMutation.mutate({ interaction, attachment, nextAttachments });
   };
   const getInteractionIcon = (type) => {
     const icons = {
@@ -225,7 +267,9 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attachments</p>
                       <div className="mt-2 space-y-3">
                         {attachments.map((file, i) => {
-                          const fileUrl = file.file_url;
+                          const fileUrl = file.file_url || (file.storage_path
+                            ? `/api/storage/download?path=${encodeURIComponent(file.storage_path)}&filename=${encodeURIComponent(file.file_name || 'attachment')}`
+                            : null);
                           const canPreview = !!fileUrl && isImageAttachment(file);
                           return (
                             <div
@@ -237,6 +281,16 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                                   {file.file_name || 'Attachment'}
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {canManageInteractions && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveAttachment(interaction, i)}
+                                      className="text-red-600 hover:text-red-700 text-sm inline-flex items-center gap-1"
+                                      title="Remove attachment"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
                                   {fileUrl && (
                                     <>
                                       <a
