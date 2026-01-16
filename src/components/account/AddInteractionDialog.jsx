@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import toast from 'react-hot-toast';
@@ -26,6 +26,10 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
   const { permissions } = useUserPermissions();
   const canManageInteractions = permissions['manage_interactions'] === true;
   const isEditing = !!editingInteraction;
+  const fileInputRef = useRef(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [interaction, setInteraction] = useState({
     type: 'email_sent',
@@ -41,6 +45,9 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
   // Load interaction data when editing
   useEffect(() => {
     if (editingInteraction) {
+      const existing = editingInteraction.metadata?.attachments || [];
+      setExistingAttachments(Array.isArray(existing) ? existing : []);
+      setPendingFiles([]);
       setInteraction({
         type: editingInteraction.type || 'email_sent',
         contact_id: editingInteraction.contact_id || contactId || '',
@@ -54,6 +61,8 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
         tags: editingInteraction.tags || []
       });
     } else {
+      setExistingAttachments([]);
+      setPendingFiles([]);
       // Reset form for new interaction
       setInteraction({
         type: 'email_sent',
@@ -74,6 +83,12 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
       setInteraction(prev => ({ ...prev, contact_id: contactId }));
     }
   }, [contactId, isEditing]);
+
+  useEffect(() => {
+    if (!open) {
+      setPendingFiles([]);
+    }
+  }, [open]);
 
   const createInteractionMutation = useMutation({
     mutationFn: async (data) => {
@@ -99,6 +114,8 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Interaction logged successfully');
       onClose();
+      setPendingFiles([]);
+      setExistingAttachments([]);
       setInteraction({
         type: 'email_sent',
         contact_id: contactId || '',
@@ -133,6 +150,7 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Interaction updated successfully');
       onClose();
+      setPendingFiles([]);
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update interaction');
@@ -147,6 +165,39 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     }
 
     const user = await base44.auth.me();
+    let uploadedAttachments = [];
+    let mergedAttachments = existingAttachments;
+
+    if (pendingFiles.length > 0) {
+      if (!accountId) {
+        toast.error('Account is required to upload files');
+        return;
+      }
+
+      try {
+        setIsUploading(true);
+        uploadedAttachments = await Promise.all(
+          pendingFiles.map((file) =>
+            base44.entities.AccountAttachment.upload(
+              file,
+              file.name,
+              accountId,
+              user.id,
+              user.email,
+              file.type
+            )
+          )
+        );
+        mergedAttachments = [...existingAttachments, ...uploadedAttachments];
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        toast.error(error.message || 'Failed to upload files');
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
+
     const interactionData = {
       ...interaction,
       logged_by: user.email
@@ -161,6 +212,14 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     if (interaction.contact_id) {
       interactionData.contact_id = interaction.contact_id;
     }
+
+    if (mergedAttachments.length > 0) {
+      const existingMetadata = editingInteraction?.metadata || {};
+      interactionData.metadata = {
+        ...existingMetadata,
+        attachments: mergedAttachments
+      };
+    }
     
     if (isEditing && editingInteraction) {
       updateInteractionMutation.mutate({
@@ -170,6 +229,32 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
     } else {
       createInteractionMutation.mutate(interactionData);
     }
+  };
+
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const validFiles = [];
+    files.forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}" exceeds 10MB limit`);
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (validFiles.length > 0) {
+      setPendingFiles((prev) => [...prev, ...validFiles]);
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePendingFile = (index) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -294,6 +379,63 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
                 })}
               />
             </div>
+            <div className="col-span-2">
+              <Label>Attachments</Label>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                disabled={!accountId}
+              />
+              {existingAttachments.length > 0 && (
+                <div className="mt-2 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">Existing files:</p>
+                  <ul className="list-disc pl-5">
+                    {existingAttachments.map((file, index) => (
+                      <li key={`${file.id || file.file_name}-${index}`}>
+                        {file.file_url ? (
+                          <a
+                            href={file.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            {file.file_name || 'Attachment'}
+                          </a>
+                        ) : (
+                          <span>{file.file_name || 'Attachment'}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {pendingFiles.length > 0 && (
+                <div className="mt-2 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">Files to upload:</p>
+                  <ul className="list-disc pl-5">
+                    {pendingFiles.map((file, index) => (
+                      <li key={`${file.name}-${index}`} className="flex items-center gap-2">
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePendingFile(index)}
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {!accountId && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Files can only be uploaded when an account is linked.
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={onClose}>
@@ -301,11 +443,11 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={!interaction.content || !interaction.interaction_date || createInteractionMutation.isPending || updateInteractionMutation.isPending}
+              disabled={!interaction.content || !interaction.interaction_date || createInteractionMutation.isPending || updateInteractionMutation.isPending || isUploading}
             >
               {isEditing 
-                ? (updateInteractionMutation.isPending ? 'Updating...' : 'Update Interaction')
-                : (createInteractionMutation.isPending ? 'Logging...' : 'Log Interaction')
+                ? (updateInteractionMutation.isPending ? 'Updating...' : (isUploading ? 'Uploading...' : 'Update Interaction'))
+                : (createInteractionMutation.isPending ? 'Logging...' : (isUploading ? 'Uploading...' : 'Log Interaction'))
               }
             </Button>
           </div>

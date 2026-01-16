@@ -129,6 +129,7 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
       {interactions.map((interaction, index) => {
         const Icon = getInteractionIcon(interaction.type);
         const contactName = getContactName(interaction.contact_id);
+        const attachments = interaction.metadata?.attachments || [];
         
         return (
           <Card key={interaction.id} className="relative">
@@ -211,6 +212,30 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                   {interaction.content && (
                     <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mt-3">
                       <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{interaction.content}</p>
+                    </div>
+                  )}
+                  {attachments.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attachments</p>
+                      <div className="mt-2 space-y-1">
+                        {attachments.map((file, i) => {
+                          const downloadUrl = file.storage_path
+                            ? `/api/storage/download?path=${encodeURIComponent(file.storage_path)}&filename=${encodeURIComponent(file.file_name || 'attachment')}`
+                            : file.file_url;
+                          return (
+                            <a
+                              key={`${file.id || file.file_name}-${i}`}
+                              href={downloadUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              {file.file_name || 'Attachment'}
+                            </a>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                   {interaction.gmail_link && (
