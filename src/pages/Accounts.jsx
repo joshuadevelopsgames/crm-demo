@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue, calculateRevenueSegmentForYear, getSegmentYear } from '@/utils/revenueSegmentCalculator';
+import { getRevenueForYear, getSegmentForYear, calculateRevenueFromWonEstimates, calculateTotalRevenue } from '@/utils/revenueSegmentCalculator';
 import { useYearSelector, getCurrentYear } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
 import { UserFilter } from '@/components/UserFilter';
@@ -355,78 +355,52 @@ export default function Accounts() {
   }, [accounts, estimatesByAccountId, selectedYear]);
 
   // Pre-calculate revenue and segments for all accounts (performance optimization)
-  // This avoids recalculating the same values multiple times during filtering/enrichment
-  // Moved before useEffect that uses it to avoid TDZ error
-  // Only calculate if estimates are loaded (or use cached data)
-  // Get segment year (current year, or previous year if Jan/Feb)
-  const segmentYear = getSegmentYear();
-  
-  // Check if we're in January or February (when segments use previous year)
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
-  const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
-  
-  // Calculate total revenue for segment year (not selected year)
-  const totalRevenueForSegmentYear = useMemo(() => {
-    if (estimatesLoading && allEstimates.length === 0) return 0;
-    return calculateTotalRevenue(accounts, estimatesByAccountId, segmentYear);
-  }, [accounts, estimatesByAccountId, segmentYear, estimatesLoading, allEstimates.length]);
-
+  // IMPORTANT: 
+  // - For clients (accounts with won estimates): Segments read from stored segment_by_year (A/B/C/D only change on import)
+  // - For leads (accounts with no won estimates): Segments calculated on-the-fly based on current ICP score (E/F)
   const accountsWithRevenueAndSegment = useMemo(() => {
-    // If estimates haven't loaded yet, return accounts with default revenue/segment
-    // IMPORTANT: All segments (A/B/C/D/E/F) require estimates for accurate calculation:
-    // - A/B/C: Need won estimates for revenue percentage calculation
-    // - D: Need to check estimate types (Standard vs Service)
-    // - E/F: Need to check if there are won estimates (to determine if account is a lead)
-    // Therefore, we defer ALL segment assignments until estimates have loaded
-    // This ensures accuracy and prevents showing incorrect segments from stale stored data
+    // If estimates haven't loaded yet, we can still read stored segments for clients
+    // But for leads, we need estimates to determine if they're leads, so use fallback
     if (estimatesLoading && allEstimates.length === 0) {
       return accounts.map(account => {
-        // #region agent log
-        const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
-        if (isBimboCanada) {
-          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada - estimates not loaded, deferring segment calculation',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-          console.log('[DEBUG]', logData);
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-        }
-        // #endregion
+        // Try to read stored segment, but validate E segments
+        const storedSegment = account.segment_by_year?.[getSegmentYear()] || account.revenue_segment || 'C';
+        let segment = storedSegment;
         
-        // Defer ALL segment assignments until estimates load
-        // Use 'C' as a temporary fallback - this will be recalculated once estimates load
+        // If stored segment is E, validate ICP score
+        if (segment === 'E') {
+          const orgScore = account?.organization_score;
+          let hasValidICP = false;
+          if (orgScore !== null && orgScore !== undefined && orgScore !== '' && orgScore !== '-') {
+            if (typeof orgScore === 'number' && !isNaN(orgScore) && orgScore > 0 && orgScore >= 80) {
+              hasValidICP = true;
+            } else if (typeof orgScore === 'string') {
+              const strValue = String(orgScore).trim();
+              if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
+                const parsed = parseFloat(strValue);
+                if (!isNaN(parsed) && parsed > 0 && parsed >= 80) {
+                  hasValidICP = true;
+                }
+              }
+            }
+          }
+          if (!hasValidICP) {
+            segment = 'F'; // Override invalid E to F
+          }
+        }
+        
         return {
           account,
-          revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
-          segment: 'C' // Temporary fallback - will be recalculated once estimates load
+          revenue: account.revenue_by_year?.[selectedYear] || 0,
+          segment
         };
       });
     }
+    
+    // Estimates loaded: use getSegmentForYear which handles client vs lead logic
     return accounts.map(account => {
-      const accountEstimates = estimatesByAccountId[account.id] || [];
-      const revenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear); // Revenue still uses selectedYear
-      
-      // #region agent log
-      const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
-      if (isBimboCanada) {
-        const logData = {location:'Accounts.jsx:386',message:'Bimbo Canada before segment calc',data:{accountId:account?.id,accountName:account?.name,organizationScore:account?.organization_score,orgScoreType:typeof account?.organization_score,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length,accountEstimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'};
-        console.log('[DEBUG]', logData);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-      }
-      // #endregion
-      
-      const segment = calculateRevenueSegmentForYear(
-        account,
-        segmentYear, // Segments use segmentYear (current year, or previous year if Jan/Feb)
-        totalRevenueForSegmentYear,
-        accountEstimates
-      );
-      
-      // #region agent log
-      if (isBimboCanada) {
-        const logData = {location:'Accounts.jsx:393',message:'Bimbo Canada after segment calc',data:{calculatedSegment:segment,storedSegment:account?.segment_by_year?.[segmentYear]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-        console.log('[DEBUG]', logData);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-      }
-      // #endregion
+      const revenue = account.revenue_by_year?.[selectedYear] || 0;
+      const segment = getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId);
       
       return {
         account,
@@ -434,7 +408,7 @@ export default function Accounts() {
         segment
       };
     });
-  }, [accounts, estimatesByAccountId, selectedYear, segmentYear, totalRevenueForSegmentYear, estimatesLoading, allEstimates.length]);
+  }, [accounts, estimatesByAccountId, selectedYear, estimatesLoading, allEstimates.length]);
 
   // Debug: Log year selection status and verify data updates
   // Moved after estimatesByAccountId declaration to avoid TDZ error

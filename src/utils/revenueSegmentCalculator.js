@@ -98,304 +98,307 @@ export function calculateDurationMonths(startDate, endDate) {
   // Total months = years * 12 + months
   let totalMonths = yearDiff * 12 + monthDiff;
   
-  // Only add 1 month if the end date is AFTER the start day (not same day)
-  // This prevents exact 12-month contracts from being counted as 13 months
-  // Example: Apr 15, 2025 → Apr 15, 2026 = 12 months (not 13)
-  if (dayDiff > 0) {
-    totalMonths += 1; // Include the end month only if end day is after start day
-  }
-  // If dayDiff === 0 (same day), don't add 1 - it's exactly N*12 months
+  // If day difference is negative, we haven't quite reached the full month yet
+  // But for contract purposes, we typically count full months, so we don't adjust
+  // This matches the behavior of date-fns differenceInMonths
   
   return totalMonths;
 }
 
 /**
- * Check if contract end date is within grace period (30 days) after an exact N-year anniversary
- * @param {Date} startDate - Contract start date
- * @param {Date} endDate - Contract end date
- * @param {number} years - Number of years to check (e.g., 1, 2, 3)
- * @returns {boolean} - True if end date is within 30 days after the anniversary
+ * Get the number of years for a contract based on start and end dates
+ * Uses a "fuzzy" 30-day grace period to handle contracts that end slightly after
+ * an exact N-year anniversary (e.g., 1 year + 14 days = 1 year contract)
+ * 
+ * @param {Date|string} startDate - Contract start date
+ * @param {Date|string} endDate - Contract end date
+ * @returns {number} - Number of contract years (rounded down, with grace period)
  */
-function isWithinGracePeriod(startDate, endDate, years) {
+export function getContractYears(startDate, endDate) {
+  if (!startDate || !endDate) return 0;
+  
   const start = new Date(startDate);
   const end = new Date(endDate);
   
-  // Normalize dates to start of day for accurate day calculations
+  // Normalize to start of day for accurate day calculations
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
   
-  // Calculate the exact anniversary date
-  const anniversaryDate = new Date(start);
-  anniversaryDate.setFullYear(start.getFullYear() + years);
-  anniversaryDate.setHours(0, 0, 0, 0);
-  
-  // Calculate days difference (end date - anniversary date)
-  const daysDiff = Math.floor((end - anniversaryDate) / (1000 * 60 * 60 * 24));
-  
-  // Grace period: 0 to 30 days after anniversary (not before)
-  return daysDiff >= 0 && daysDiff <= 30;
-}
-
-/**
- * Determine number of contract years based on duration in months
- * Rules:
- * - duration_months ≤ 12 → years_count = 1
- * - 12 < duration_months ≤ 24 → years_count = 2
- * - 24 < duration_months ≤ 36 → years_count = 3
- * - Exact multiples of 12 do NOT round up (24 months = 2 years, not 3)
- * - Grace period: If end date is within 30 days after an exact N-year anniversary, treat as N years (not N+1)
- * - Otherwise: ceil(duration_months / 12)
- * @param {number} durationMonths - Duration in months
- * @param {Date} [startDate] - Optional contract start date (for grace period check)
- * @param {Date} [endDate] - Optional contract end date (for grace period check)
- * @returns {number} - Number of contract years
- */
-export function getContractYears(durationMonths, startDate = null, endDate = null) {
-  // If we have dates, check for grace period eligibility
-  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-    // Check if it's within grace period for 1, 2, 3, etc. years
-    for (let years = 1; years <= 10; years++) {
-      if (isWithinGracePeriod(startDate, endDate, years)) {
-        // End date is within 30 days after N-year anniversary, treat as exactly N years
-        return years;
-      }
-    }
-  }
-  
-  // Standard calculation (no grace period applies)
-  if (durationMonths <= 12) return 1;
-  if (durationMonths <= 24) return 2;
-  if (durationMonths <= 36) return 3;
-  // For longer contracts, use ceil but exact multiples of 12 don't round up
-  if (durationMonths % 12 === 0) {
-    return durationMonths / 12;
-  }
-  return Math.ceil(durationMonths / 12);
-}
-
-/**
- * Detect potential data entry errors in contract dates
- * Flags contracts where duration is exactly 1 month over an exact year boundary
- * (e.g., 13 months, 25 months, 37 months)
- * Per spec R24-R27: Typo detection is advisory only and does not change contract_years
- * Grace period: Contracts ending within 30 days after an anniversary are NOT flagged as typos
- * @param {number} durationMonths - Duration in months
- * @param {number} contractYears - Calculated contract years
- * @param {Date} [startDate] - Optional contract start date (for grace period check)
- * @param {Date} [endDate] - Optional contract end date (for grace period check)
- * @returns {boolean} - True if typo is detected
- */
-export function detectContractTypo(durationMonths, contractYears, startDate = null, endDate = null) {
-  // Calculate remainder months first
+  const durationMonths = calculateDurationMonths(start, end);
+  const baseYears = Math.floor(durationMonths / 12);
   const remainderMonths = durationMonths % 12;
   
-  // If we have dates and remainder is 1 month (potential typo), check grace period
-  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && remainderMonths === 1) {
-    // Check grace period for the year being exceeded (contractYears - 1)
-    // Example: 13 months calculated as 2 years → check if within grace period of 1 year
-    if (contractYears > 1 && isWithinGracePeriod(startDate, endDate, contractYears - 1)) {
-      return false; // Within grace period, not a typo
+  // Check if we're within the 30-day grace period for the next year
+  if (remainderMonths === 0) {
+    // Exactly N years - check if we're within 30 days after anniversary
+    const anniversaryDate = new Date(start);
+    anniversaryDate.setFullYear(start.getFullYear() + baseYears);
+    anniversaryDate.setHours(0, 0, 0, 0);
+    
+    const daysDiff = Math.floor((end - anniversaryDate) / (1000 * 60 * 60 * 24));
+    if (daysDiff >= 0 && daysDiff <= 30) {
+      return baseYears; // Within grace period, still counts as baseYears
     }
-    // Also check grace period for the calculated years (safety check)
+    // More than 30 days after anniversary, count as baseYears + 1
+    return baseYears + 1;
+  }
+  
+  // Check grace period for remainderMonths === 1 case
+  if (remainderMonths === 1) {
+    // Check if we're within 30 days after the lower year's anniversary
+    if (baseYears > 0) {
+      const lowerYearAnniversary = new Date(start);
+      lowerYearAnniversary.setFullYear(start.getFullYear() + baseYears);
+      lowerYearAnniversary.setHours(0, 0, 0, 0);
+      
+      const daysDiff = Math.floor((end - lowerYearAnniversary) / (1000 * 60 * 60 * 24));
+      if (daysDiff >= 0 && daysDiff <= 30) {
+        return baseYears; // Within grace period of lower year, counts as baseYears
+      }
+    }
+    
+    // Also check the calculated year's anniversary
+    const calculatedYearAnniversary = new Date(start);
+    calculatedYearAnniversary.setFullYear(start.getFullYear() + baseYears + 1);
+    calculatedYearAnniversary.setHours(0, 0, 0, 0);
+    
+    const daysDiff = Math.floor((end - calculatedYearAnniversary) / (1000 * 60 * 60 * 24));
+    if (daysDiff >= 0 && daysDiff <= 30) {
+      return baseYears + 1; // Within grace period, counts as baseYears + 1
+    }
+  }
+  
+  // Default: round up if remainderMonths > 0
+  return remainderMonths > 0 ? baseYears + 1 : baseYears;
+}
+
+/**
+ * Check if a contract end date is within a 30-day grace period after an N-year anniversary
+ * @param {Date|string} startDate - Contract start date
+ * @param {Date|string} endDate - Contract end date
+ * @param {number} years - Number of years to check
+ * @returns {boolean} - True if end date is within 30 days after the anniversary
+ */
+export function isWithinGracePeriod(startDate, endDate, years) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  start.setHours(0, 0, 0, 0); // Normalize to start of day
+  end.setHours(0, 0, 0, 0);   // Normalize to start of day
+  
+  const anniversaryDate = new Date(start);
+  anniversaryDate.setFullYear(start.getFullYear() + years);
+  anniversaryDate.setHours(0, 0, 0, 0); // Normalize to start of day
+  
+  const daysDiff = Math.floor((end - anniversaryDate) / (1000 * 60 * 60 * 24));
+  return daysDiff >= 0 && daysDiff <= 30; // 0 to 30 days after anniversary
+}
+
+/**
+ * Detect potential contract date typos
+ * Returns true if duration is exactly N years + 1 month (likely a typo)
+ * BUT excludes cases within the 30-day grace period
+ * 
+ * @param {number} durationMonths - Contract duration in months
+ * @param {number} contractYears - Number of contract years (from getContractYears)
+ * @param {Date|string} startDate - Contract start date (optional, for grace period check)
+ * @param {Date|string} endDate - Contract end date (optional, for grace period check)
+ * @returns {boolean} - True if likely a typo (N years + 1 month, not in grace period)
+ */
+export function detectContractTypo(durationMonths, contractYears, startDate = null, endDate = null) {
+  const remainderMonths = durationMonths % 12;
+  
+  // If remainder is 1 month, check grace period before flagging as typo
+  if (startDate && endDate && !isNaN(new Date(startDate).getTime()) && !isNaN(new Date(endDate).getTime()) && remainderMonths === 1) {
+    // Check grace period for the year being exceeded
+    if (contractYears > 1 && isWithinGracePeriod(startDate, endDate, contractYears - 1)) {
+      return false; // Within grace period of the lower year, not a typo
+    }
+    // Also check calculated years for safety
     if (isWithinGracePeriod(startDate, endDate, contractYears)) {
       return false; // Within grace period, not a typo
     }
   }
   
-  // Typo detected if remainder is exactly 1 month (per spec R24)
-  // This catches: 13 months (1 year + 1), 25 months (2 years + 1), 37 months (3 years + 1), etc.
-  // But only if NOT within grace period
+  // Default typo detection: remainder of 1 month is suspicious
   return remainderMonths === 1;
 }
 
 /**
- * Get the year an estimate applies to and its allocated value for the selected year
- * Uses year-based calculation (not rolling 12 months): revenue allocated by calendar year
- * Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
- * @param {Object} estimate - Estimate object
- * @param {number} currentYear - Selected year (e.g., 2025) from YearSelectorContext
- * @returns {Object|null} - { appliesToCurrentYear: boolean, value: number } or null if no valid date
+ * Get estimate year data - determines which year(s) an estimate applies to
+ * Returns object with year and appliesToCurrentYear flag
+ * 
+ * Priority for year determination (per spec R2):
+ * 1. contract_end
+ * 2. contract_start
+ * 3. estimate_date
+ * 4. created_date
  */
 export function getEstimateYearData(estimate, currentYear) {
-  // Per spec R2: Year determination priority: contract_end → contract_start → estimate_date → created_date
-  const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
-  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
-  const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
-  const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
-  
-  // Use total_price_with_tax consistently - this is the standard field for revenue calculations
-  const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
-  const totalPriceNoTax = parseFloat(estimate.total_price);
-  
-  // If total_price_with_tax is missing but total_price exists, use total_price as fallback (per spec R8, R9)
-  let totalPrice;
-  if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
-    if (totalPriceNoTax && totalPriceNoTax > 0) {
-      // Use total_price as fallback
-      totalPrice = totalPriceNoTax;
-      
-      // Notify user once per session (per spec R9)
-      if (typeof window !== 'undefined') {
-        if (!window.__totalPriceFallbackNotified) {
-          // Dynamic import to avoid circular dependencies
-          import('react-hot-toast').then(({ default: toast }) => {
-            toast.error('Some estimates are missing tax-inclusive prices. Using base price as fallback.');
-          });
-          window.__totalPriceFallbackNotified = true;
-        }
-      }
-    } else {
-      // No price data at all
-      return null;
-    }
-  } else {
-    totalPrice = totalPriceWithTax;
-  }
-  
-  // Debug logging for year selector
-  if (typeof window !== 'undefined' && window.__getCurrentYear && currentYear === 2025) {
-    const debugInfo = {
-      estimateId: estimate.id || estimate.lmn_estimate_id,
-      currentYear,
-      contractEndRaw: estimate.contract_end,
-      contractEndParsed: getYearFromDateString(estimate.contract_end),
-      contractStartRaw: estimate.contract_start,
-      contractStartParsed: getYearFromDateString(estimate.contract_start),
-      estimateDateRaw: estimate.estimate_date,
-      estimateDateParsed: getYearFromDateString(estimate.estimate_date),
-      createdDateRaw: estimate.created_date,
-      createdDateParsed: getYearFromDateString(estimate.created_date),
-      totalPrice,
-      hasContractEnd: !!contractEnd && !isNaN(contractEnd.getTime()),
-      hasContractStart: !!contractStart && !isNaN(contractStart.getTime()),
-      hasEstimateDate: !!estimateDate && !isNaN(estimateDate.getTime()),
-      hasCreatedDate: !!createdDate && !isNaN(createdDate.getTime())
-    };
-    // Only log first few to avoid spam
-    if (!window.__estimateYearDataDebugCount) window.__estimateYearDataDebugCount = 0;
-    if (window.__estimateYearDataDebugCount < 10) {
-      console.log('[getEstimateYearData] Debug:', debugInfo);
-      window.__estimateYearDataDebugCount++;
-    }
-  }
-  
-  // Per spec R2: Determine which date to use for year calculation
-  // Extract year from string (avoid timezone issues)
-  let determinationYear = null;
-  let yearDeterminationSource = null;
+  if (!estimate) return null;
   
   // Priority 1: contract_end
   if (estimate.contract_end) {
-    determinationYear = getYearFromDateString(estimate.contract_end);
-    if (determinationYear !== null) {
-      yearDeterminationSource = 'contract_end';
+    const year = getYearFromDateString(estimate.contract_end);
+    if (year) {
+      return {
+        year,
+        appliesToCurrentYear: year === currentYear,
+        source: 'contract_end'
+      };
     }
   }
+  
   // Priority 2: contract_start
-  if (determinationYear === null && estimate.contract_start) {
-    determinationYear = getYearFromDateString(estimate.contract_start);
-    if (determinationYear !== null) {
-      yearDeterminationSource = 'contract_start';
+  if (estimate.contract_start) {
+    const year = getYearFromDateString(estimate.contract_start);
+    if (year) {
+      return {
+        year,
+        appliesToCurrentYear: year === currentYear,
+        source: 'contract_start'
+      };
     }
   }
+  
   // Priority 3: estimate_date
-  if (determinationYear === null && estimate.estimate_date) {
-    determinationYear = getYearFromDateString(estimate.estimate_date);
-    if (determinationYear !== null) {
-      yearDeterminationSource = 'estimate_date';
+  if (estimate.estimate_date) {
+    const year = getYearFromDateString(estimate.estimate_date);
+    if (year) {
+      return {
+        year,
+        appliesToCurrentYear: year === currentYear,
+        source: 'estimate_date'
+      };
     }
   }
+  
   // Priority 4: created_date
-  if (determinationYear === null && estimate.created_date) {
-    determinationYear = getYearFromDateString(estimate.created_date);
-    if (determinationYear !== null) {
-      yearDeterminationSource = 'created_date';
+  if (estimate.created_date) {
+    const year = getYearFromDateString(estimate.created_date);
+    if (year) {
+      return {
+        year,
+        appliesToCurrentYear: year === currentYear,
+        source: 'created_date'
+      };
     }
   }
   
-  // Per spec R9: Multi-year contracts allocate to sequential calendar years starting from contract_start
-  // If we have both contract_start and contract_end, use contract allocation (not determination year)
-  if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
-    // Multi-year contract: annualize the revenue per spec R8
-    const startYear = getYearFromDateString(estimate.contract_start);
-    if (startYear === null) return null;
-    const durationMonths = calculateDurationMonths(contractStart, contractEnd);
-    if (durationMonths <= 0) return null;
-    
-    // Pass dates to getContractYears for grace period check
-    const yearsCount = getContractYears(durationMonths, contractStart, contractEnd);
-    const annualAmount = totalPrice / yearsCount;
-    
-    // Per spec R9: Allocate to sequential calendar years starting from contract_start
-    const yearsApplied = [];
-    for (let i = 0; i < yearsCount; i++) {
-      yearsApplied.push(startYear + i);
-    }
-    const appliesToCurrentYear = yearsApplied.includes(currentYear);
-    
-    // Detect typo (per spec R20) - pass dates for grace period check
-    const hasTypo = detectContractTypo(durationMonths, yearsCount, contractStart, contractEnd);
-    
-    return {
-      appliesToCurrentYear,
-      value: appliesToCurrentYear ? annualAmount : 0,
-      durationMonths,        // Include for display
-      contractYears: yearsCount,  // Include for display
-      hasTypo,               // Typo flag
-      typoReason: hasTypo ? `Duration (${durationMonths} months) exceeds an exact ${yearsCount - 1} year boundary by one month. Possible date entry error.` : null
-    };
-  }
-  
-  // If we have a year for determination (but no contract dates), use it
-  if (determinationYear !== null) {
-    const appliesToCurrentYear = currentYear === determinationYear;
-    
-    // Single-year or no contract dates: use full price
-    return {
-      appliesToCurrentYear,
-      value: appliesToCurrentYear ? totalPrice : 0
-    };
-  }
-  
-  // Case: No dates at all - treat as applying to current year
-  // This handles estimates that have no date information at all
-  // We assume they apply to the current year (useful for test mode or estimates without dates)
-  return {
-    appliesToCurrentYear: true,
-    value: totalPrice
-  };
-}
-
-// Get current year from YearSelectorContext - REQUIRED, no fallback
-// Per Year Selection System spec R6: All revenue calculations MUST use getCurrentYear() from YearSelectorContext
-// Per user requirement: Never fall back to current year, only ever go by selected year
-function getCurrentYearForCalculation() {
-  // In browser context, use the global getCurrentYear function from YearSelectorContext
-  // This respects the user's selected year
-  if (typeof window !== 'undefined' && window.__getCurrentYear) {
-    return window.__getCurrentYear();
-  }
-  // No fallback - selected year is required
-  // If this is called in a context where window.__getCurrentYear is not available,
-  // it means the YearSelectorContext is not initialized, which is an error
-  throw new Error('getCurrentYearForCalculation: YearSelectorContext not initialized. Selected year is required.');
+  return null;
 }
 
 /**
- * Get the year to use for segment calculations
- * Segments are calculated based on current year, with special rule:
- * - January and February: use previous year's segments
- * - March and later: use current year's segments
+ * Calculate revenue from won estimates for a specific year
+ * Handles multi-year contracts by annualizing (dividing total price by contract years)
  * 
- * IMPORTANT: This function is called dynamically each time segments are needed.
- * When March 1st arrives, this function will automatically return the current year
- * instead of the previous year, causing segments to switch automatically.
+ * @param {Object} account - Account object
+ * @param {Array} estimates - Array of estimate objects
+ * @param {number} year - Year to calculate revenue for
+ * @returns {number} - Revenue amount for the specified year
+ */
+export function calculateRevenueFromWonEstimates(account, estimates, year) {
+  if (!estimates || estimates.length === 0) {
+    // If no estimates provided, try to use stored revenue_by_year
+    if (account && account.revenue_by_year && typeof account.revenue_by_year === 'object') {
+      const yearRevenue = account.revenue_by_year[year.toString()];
+      if (typeof yearRevenue === 'number') {
+        return yearRevenue;
+      }
+      if (yearRevenue) {
+        const parsed = parseFloat(yearRevenue);
+        if (!isNaN(parsed)) {
+          return parsed;
+        }
+      }
+    }
+    return 0;
+  }
+  
+  let totalRevenue = 0;
+  
+  estimates.forEach(est => {
+    // Only count won estimates
+    if (!isWonStatus(est)) return;
+    
+    // Get year data for this estimate
+    const yearData = getEstimateYearData(est, year);
+    if (!yearData || !yearData.appliesToCurrentYear) return;
+    
+    // Get price (prefer total_price_with_tax, fallback to total_price)
+    let price = 0;
+    if (est.total_price_with_tax !== null && est.total_price_with_tax !== undefined) {
+      price = typeof est.total_price_with_tax === 'number' 
+        ? est.total_price_with_tax 
+        : parseFloat(est.total_price_with_tax) || 0;
+    } else if (est.total_price !== null && est.total_price !== undefined) {
+      price = typeof est.total_price === 'number' 
+        ? est.total_price 
+        : parseFloat(est.total_price) || 0;
+    }
+    
+    if (price <= 0) return;
+    
+    // Check if this is a multi-year contract
+    const contractYears = getContractYears(est.contract_start, est.contract_end);
+    
+    if (contractYears > 0) {
+      // Annualize: divide total price by number of years
+      const annualRevenue = price / contractYears;
+      totalRevenue += annualRevenue;
+    } else {
+      // Single year or no contract dates - use full price
+      totalRevenue += price;
+    }
+  });
+  
+  return totalRevenue;
+}
+
+/**
+ * Calculate total revenue across all accounts for a specific year
+ * Uses stored revenue_by_year values for performance
  * 
- * To ensure segments are available for the current year when March arrives:
- * - Segments are calculated for ALL years during import/recalculation
- * - The current year's segments will already be in segment_by_year
- * - No manual action is needed - the switch happens automatically
- * 
+ * @param {Array} accounts - Array of account objects
+ * @param {Object} estimatesByAccountId - Map of account_id to estimates (optional, for fallback)
+ * @param {number} year - Year to calculate total revenue for
+ * @returns {number} - Total revenue for all accounts for the specified year
+ */
+export function calculateTotalRevenue(accounts, estimatesByAccountId = {}, year) {
+  if (!accounts || accounts.length === 0) return 0;
+  
+  let total = 0;
+  
+  accounts.forEach(account => {
+    // Prefer stored revenue_by_year (calculated during import)
+    if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
+      const yearRevenue = account.revenue_by_year[year.toString()];
+      if (typeof yearRevenue === 'number') {
+        total += yearRevenue;
+        return;
+      }
+      if (yearRevenue) {
+        const parsed = parseFloat(yearRevenue);
+        if (!isNaN(parsed)) {
+          total += parsed;
+          return;
+        }
+      }
+    }
+    
+    // Fallback: calculate from estimates if stored value not available
+    const accountEstimates = estimatesByAccountId[account.id] || [];
+    if (accountEstimates.length > 0) {
+      const accountRevenue = calculateRevenueFromWonEstimates(account, accountEstimates, year);
+      total += accountRevenue;
+    }
+  });
+  
+  return total;
+}
+
+/**
+ * Get segment year (current year, or previous year if Jan/Feb)
+ * Segments use previous year's data in January/February, current year's data from March onward
  * @returns {number} - Year to use for segment calculations
  */
 export function getSegmentYear() {
@@ -403,80 +406,53 @@ export function getSegmentYear() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
   
-  // January (1) or February (2): use previous year
+  // January/February: use previous year's segments
+  // March and later: use current year's segments
   if (currentMonth === 1 || currentMonth === 2) {
     return currentYear - 1;
   }
   
-  // March (3) and later: use current year
   return currentYear;
 }
 
 /**
- * Calculate revenue from won estimates for a specific account and year
- * 
- * This function calculates revenue on-the-fly from won estimates, not from stored revenue_by_year.
- * Per spec R1, R11: Only won estimates are included in revenue calculations.
- * Per spec R2: Year determination uses priority order: contract_end → contract_start → estimate_date → created_date
- * Per spec R8-R9: Multi-year contracts are annualized and allocated to sequential calendar years
- * 
+ * Helper function to calculate Segment E/F for leads based on ICP score
  * @param {Object} account - Account object
- * @param {Array} estimates - Array of estimate objects for this account
- * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
- * @returns {number} - Revenue for selected year from won estimates, or 0 if no won estimates
+ * @returns {string} - 'E' if ICP >= 80, 'F' otherwise
  */
-export function calculateRevenueFromWonEstimates(account, estimates = [], selectedYear = null) {
-  const year = selectedYear || getCurrentYearForCalculation();
+function calculateLeadSegment(account) {
+  const organizationScore = account?.organization_score;
   
-  if (!estimates || estimates.length === 0) {
-    return 0;
+  // Strict validation: must be a valid number > 0
+  let icpScore = null;
+  
+  if (organizationScore !== null && organizationScore !== undefined && organizationScore !== '' && organizationScore !== '-') {
+    if (typeof organizationScore === 'number') {
+      if (!isNaN(organizationScore) && organizationScore > 0) {
+        icpScore = organizationScore;
+      }
+    } else {
+      const strValue = String(organizationScore).trim();
+      if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
+        const parsed = parseFloat(strValue);
+        if (!isNaN(parsed) && parsed > 0) {
+          icpScore = parsed;
+        }
+      }
+    }
   }
   
-  // Filter for won estimates only (per spec R1, R11)
-  const wonEstimates = estimates.filter(est => isWonStatus(est));
-  
-  if (wonEstimates.length === 0) {
-    return 0;
+  // Only assign Segment E if we have a valid ICP score >= 80
+  if (icpScore !== null && icpScore >= 80 && !isNaN(icpScore) && icpScore > 0) {
+    return 'E';
   }
   
-  // Calculate revenue from won estimates for the selected year
-  const revenue = wonEstimates.reduce((sum, est) => {
-    const yearData = getEstimateYearData(est, year);
-    if (!yearData || !yearData.appliesToCurrentYear) return sum;
-    return sum + (isNaN(yearData.value) ? 0 : yearData.value);
-  }, 0);
-  
-  return revenue;
-}
-
-/**
- * Get revenue for selected year from account's revenue_by_year field
- * 
- * IMPORTANT: Revenue is calculated during import only and stored in revenue_by_year.
- * This function reads from stored data, it does NOT calculate revenue from estimates.
- * 
- * Per spec R12a: Revenue display reads from stored revenue_by_year[selectedYear] field.
- * 
- * @param {Object} account - Account object
- * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
- * @returns {number} - Revenue for selected year, or 0 if not available
- */
-export function getRevenueForYear(account, selectedYear = null) {
-  const year = selectedYear || getCurrentYearForCalculation();
-  
-  if (account.revenue_by_year && typeof account.revenue_by_year === 'object') {
-    const yearRevenue = account.revenue_by_year[year.toString()];
-    return typeof yearRevenue === 'number' ? yearRevenue : parseFloat(yearRevenue) || 0;
-  }
-  
-  // No revenue_by_year data available
-  return 0;
+  // Default to Segment F: no ICP score, invalid ICP score, or ICP < 80%
+  return 'F';
 }
 
 /**
  * Calculate revenue segment for a specific year
- * Helper function used by both calculateRevenueSegment and calculateSegmentsForAllYears
- * 
  * IMPORTANT: totalRevenue parameter must be the total revenue for THIS SPECIFIC YEAR ONLY,
  * not total revenue across all years. Per spec R5: totalRevenue[year] = sum of all accounts'
  * revenue_by_year[year] for that year only.
@@ -498,83 +474,7 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
   
   // If no won estimates, this is a lead - check ICP score
   if (wonEstimates.length === 0) {
-    const organizationScore = account?.organization_score;
-    
-    // #region agent log
-    // Log ALL accounts with no won estimates to catch Segment E assignments
-    const accountNameLower = account?.name?.toLowerCase() || '';
-    const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
-    if (isBimboCanada || accountNameLower.includes('bimbo')) {
-      const logData = {location:'revenueSegmentCalculator.js:500',message:'Account with no won estimates - checking Segment E/F',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'};
-      console.log('[DEBUG Segment E/F Check]', logData);
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    }
-    // #endregion
-    
-    // Strict validation: must be a valid number > 0
-    // Handle null, undefined, empty string, 0, NaN, invalid strings, and special values like "-"
-    let icpScore = null;
-    
-    if (organizationScore !== null && organizationScore !== undefined && organizationScore !== '' && organizationScore !== '-') {
-      if (typeof organizationScore === 'number') {
-        // Valid number (including 0, but 0 is not a valid ICP score)
-        if (!isNaN(organizationScore) && organizationScore > 0) {
-          icpScore = organizationScore;
-        }
-      } else {
-        // Try to parse string, but exclude common invalid representations
-        const strValue = String(organizationScore).trim();
-        if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
-          const parsed = parseFloat(strValue);
-          if (!isNaN(parsed) && parsed > 0) {
-            icpScore = parsed;
-          }
-        }
-      }
-    }
-    
-    // #region agent log
-    if (isBimboCanada) {
-      const logData = {location:'revenueSegmentCalculator.js:523',message:'Bimbo Canada segment calc - after validation',data:{icpScore,orgScoreRaw:organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-      console.log('[DEBUG]', logData);
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    }
-    // #endregion
-    
-    // Only assign Segment E if we have a valid ICP score >= 80
-    // CRITICAL: Double-check that icpScore is actually valid before returning E
-    if (icpScore !== null && icpScore >= 80 && !isNaN(icpScore) && icpScore > 0) {
-      // #region agent log
-      // Reuse accountNameLower and isBimboCanada from above
-      if (isBimboCanada || accountNameLower.includes('bimbo')) {
-        const logData = {location:'revenueSegmentCalculator.js:543',message:'RETURNING Segment E',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-        console.log('[DEBUG RETURNING E]', logData);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-      }
-      // #endregion
-      return 'E';
-    }
-    
-    // #region agent log
-    // Log when we're about to return F but account might have stored E
-    // Reuse accountNameLower and isBimboCanada from above
-    if (isBimboCanada || accountNameLower.includes('bimbo')) {
-      const logData = {location:'revenueSegmentCalculator.js:560',message:'RETURNING Segment F (no valid ICP)',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-      console.log('[DEBUG RETURNING F]', logData);
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    }
-    // #endregion
-    
-    // #region agent log
-    if (isBimboCanada) {
-      const logData = {location:'revenueSegmentCalculator.js:531',message:'Bimbo Canada returning Segment F',data:{icpScore,reason:icpScore===null?'no valid score':icpScore<80?'score < 80':'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-      console.log('[DEBUG]', logData);
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    }
-    // #endregion
-    
-    // Default to Segment F: no ICP score, invalid ICP score, or ICP < 80%
-    return 'F';
+    return calculateLeadSegment(account);
   }
   
   // Existing clients (have won estimates) - proceed with A/B/C/D logic
@@ -601,57 +501,13 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
   
   const revenuePercentage = (accountRevenue / totalRevenue) * 100;
   
-  if (revenuePercentage > 15) return 'A';
-  if (revenuePercentage >= 5 && revenuePercentage <= 15) return 'B';
-  return 'C';
-}
-
-/**
- * Calculate revenue segment for a single account
- * Uses revenue_by_year[selectedYear] for account revenue
- * 
- * IMPORTANT: totalRevenue parameter must be the total revenue for the selected year ONLY,
- * not total revenue across all years. Per spec R5: totalRevenue[selectedYear] = sum of all
- * accounts' revenue_by_year[selectedYear] for that year only.
- * 
- * @param {Object} account - The account object
- * @param {number} totalRevenue - Total revenue for selected year ONLY (not across all years)
- * @param {Array} estimates - Array of estimate objects for this account (optional, only used for Segment D check)
- * @returns {string} - Revenue segment: 'A', 'B', 'C', 'D', 'E', or 'F'
- */
-export function calculateRevenueSegment(account, totalRevenue, estimates = []) {
-  // Use segment year (current year, or previous year if Jan/Feb)
-  const segmentYear = getSegmentYear();
-  return calculateRevenueSegmentForYear(account, segmentYear, totalRevenue, estimates);
-}
-
-/**
- * Calculate total revenue across all accounts for the selected year only
- * Calculates from won estimates (on-the-fly), not from stored revenue_by_year
- * 
- * IMPORTANT: This calculates total revenue for ONE specific year only (the selected year).
- * Total revenue is calculated separately for each year. The total revenue for 2024 is 
- * independent of the total revenue for 2025.
- * 
- * Per spec R1, R5: All segment information is based on total revenue for the selected year only
- * (not total revenue across all years).
- * 
- * @param {Array} accounts - Array of account objects
- * @param {Object} estimatesByAccountId - Map of account_id to estimates array
- * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
- * @returns {number} - Total revenue for selected year only (sum of all accounts' won estimates for that year)
- */
-export function calculateTotalRevenue(accounts, estimatesByAccountId = {}, selectedYear = null) {
-  // Per spec R1, R5: All segment information is based on total revenue for the selected year only
-  // (not total revenue across all years)
-  const year = selectedYear || getCurrentYearForCalculation();
-  
-  // Calculate total revenue from won estimates for all accounts for the selected year
-  return accounts.reduce((total, account) => {
-    const accountEstimates = estimatesByAccountId[account.id] || [];
-    const accountRevenue = calculateRevenueFromWonEstimates(account, accountEstimates, year);
-    return total + accountRevenue;
-  }, 0);
+  if (revenuePercentage >= 15) {
+    return 'A';
+  } else if (revenuePercentage >= 5) {
+    return 'B';
+  } else {
+    return 'C';
+  }
 }
 
 /**
@@ -715,62 +571,82 @@ export function calculateSegmentsForAllYears(account, allAccounts, estimates = [
  * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
  * @returns {number} - Total estimates count for selected year, or 0 if not available
  */
-export function getTotalEstimatesForYear(account, selectedYear = null) {
-  const year = selectedYear || getCurrentYearForCalculation();
-  
-  if (account.total_estimates_by_year && typeof account.total_estimates_by_year === 'object') {
-    const yearCount = account.total_estimates_by_year[year.toString()];
-    return typeof yearCount === 'number' ? yearCount : parseInt(yearCount) || 0;
+export function getTotalEstimatesForYear(account, selectedYear) {
+  if (!account || !account.total_estimates_by_year || typeof account.total_estimates_by_year !== 'object') {
+    return 0;
   }
   
-  // No total_estimates_by_year data available
+  const yearStr = selectedYear ? selectedYear.toString() : new Date().getFullYear().toString();
+  const count = account.total_estimates_by_year[yearStr];
+  
+  if (typeof count === 'number') {
+    return count;
+  }
+  
+  if (count) {
+    const parsed = parseInt(count);
+    if (!isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  
   return 0;
 }
 
 /**
- * Calculate segment for selected year from won estimates (on-the-fly calculation)
+ * Get segment for selected year
  * 
- * Calculates segment by:
- * 1. Calculating total revenue = sum of all won estimates from all accounts for selected year
- * 2. Calculating account revenue = sum of won estimates for this account for selected year
- * 3. Calculating percentage = (account revenue / total revenue) * 100
- * 4. Assigning segment based on percentage thresholds (A/B/C) or Segment D check
+ * IMPORTANT: 
+ * - For clients (accounts with won estimates): Always read from stored segment_by_year (A/B/C/D only change on import)
+ * - For leads (accounts with no won estimates): Calculate E/F on-the-fly based on current ICP score
  * 
  * @param {Object} account - Account object
- * @param {Array} allAccounts - Array of all account objects (for total revenue calculation)
- * @param {Object} estimatesByAccountId - Map of account_id to estimates array
  * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
- * @returns {string} - Segment for selected year: 'A', 'B', 'C', or 'D'
+ * @param {Array} allAccounts - Array of all account objects (for determining if account is a lead)
+ * @param {Object} estimatesByAccountId - Map of account_id to estimates array (for determining if account is a lead)
+ * @returns {string} - Segment for selected year: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function getSegmentForYear(account, selectedYear = null, allAccounts = [], estimatesByAccountId = {}) {
-  // Always use segment year (current year, or previous year if Jan/Feb) for segment calculations
-  // selectedYear parameter is ignored - segments are always based on current year logic
+  // Always use segment year (current year, or previous year if Jan/Feb)
   const segmentYear = getSegmentYear();
   
-  // If we don't have the required data for on-the-fly calculation, fall back to stored data
-  if (!allAccounts || allAccounts.length === 0 || !estimatesByAccountId) {
-    if (account.segment_by_year && typeof account.segment_by_year === 'object') {
-      const yearSegment = account.segment_by_year[segmentYear.toString()];
-      if (yearSegment && ['A', 'B', 'C', 'D', 'E', 'F'].includes(yearSegment)) {
-        return yearSegment;
-      }
-    }
-    return account.revenue_segment || 'C';
+  // Check if account is a lead (no won estimates) or client (has won estimates)
+  const accountEstimates = estimatesByAccountId?.[account.id] || [];
+  const wonEstimates = accountEstimates.filter(est => {
+    if (!isWonStatus(est)) return false;
+    const yearData = getEstimateYearData(est, segmentYear);
+    return yearData && yearData.appliesToCurrentYear;
+  });
+  
+  const isLead = wonEstimates.length === 0;
+  
+  if (isLead) {
+    // For leads: Calculate E/F on-the-fly based on current ICP score
+    // ICP scores can change anytime (when scorecard is filled out)
+    return calculateLeadSegment(account);
   }
   
-  // Calculate total revenue from all won estimates for all accounts for the segment year
-  const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId, segmentYear);
+  // For clients: Read from stored segment_by_year (segments only change on import)
+  if (account.segment_by_year && typeof account.segment_by_year === 'object') {
+    const yearSegment = account.segment_by_year[segmentYear.toString()];
+    if (yearSegment && ['A', 'B', 'C', 'D'].includes(yearSegment)) {
+      return yearSegment;
+    }
+    // If stored segment is E/F, validate it (shouldn't happen for clients, but catch bad data)
+    if (yearSegment === 'E' || yearSegment === 'F') {
+      // Client shouldn't have E/F, but if it does, recalculate as lead to validate
+      return calculateLeadSegment(account);
+    }
+  }
   
-  // Get this account's estimates
-  const accountEstimates = estimatesByAccountId[account.id] || [];
+  // Fallback to revenue_segment (backward compatibility)
+  const storedSegment = account.revenue_segment || 'C';
+  if (storedSegment === 'E' || storedSegment === 'F') {
+    // Validate stored E/F
+    return calculateLeadSegment(account);
+  }
   
-  // Calculate segment using the helper function
-  return calculateRevenueSegmentForYear(
-    account,
-    segmentYear,
-    totalRevenue,
-    accountEstimates
-  );
+  return storedSegment;
 }
 
 /**
