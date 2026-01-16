@@ -344,6 +344,44 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     }, 0);
   };
 
+  // Calculate total department estimates (won + lost + pending) for a department
+  const calculateDepartmentTotalEstimates = (departmentName) => {
+    // Use the same logic as totalEstimatedValue to ensure consistency:
+    // 1. Start with ALL estimates (not pre-filtered)
+    // 2. Check year applicability
+    // 3. Filter by department
+    // This ensures department totals match overall totals
+    
+    if (effectiveFilterYear === 'all') {
+      // For "all years", sum full values of all estimates in this department
+      const departmentEstimates = estimates.filter(est => 
+        !est.archived && 
+        normalizeDepartment(est.division) === departmentName
+      );
+      return departmentEstimates.reduce((sum, est) => {
+        // Check for fallback and show toast notification if needed (once per session)
+        checkPriceFieldFallback(est);
+        const amount = getEstimatePrice(est);
+        return sum + amount;
+      }, 0);
+    }
+    
+    // For specific year, use annualization to match overall totals
+    const selectedYear = parseInt(effectiveFilterYear);
+    const departmentEstimates = estimates.filter(est => 
+      !est.archived && 
+      normalizeDepartment(est.division) === departmentName
+    );
+    
+    return departmentEstimates.reduce((sum, est) => {
+      const yearData = getEstimateYearData(est, selectedYear);
+      if (yearData && yearData.appliesToCurrentYear) {
+        return sum + (yearData.value || 0);
+      }
+      return sum;
+    }, 0);
+  };
+
   // Calculate win percentage for a department
   const calculateDepartmentWinPercentage = (departmentEstimates) => {
     if (departmentEstimates.length === 0) return 0;
@@ -351,48 +389,33 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     return (won / departmentEstimates.length) * 100;
   };
 
-  // Filter estimates by year using contract_start date for COUNT-based won/loss ratio
-  // Multi-year contracts are treated as single-year contracts using contract_start year
-  // This is separate from yearFilteredEstimates which uses annualization for dollar values
+  // Filter estimates by year using contract-year allocation logic for COUNT-based won/loss ratio
+  // This should match yearFilteredEstimates to ensure consistency between count and dollar values
+  // Multi-year contracts are included if they apply to the selected year (e.g., a contract sold in 2025
+  // that ends in 2026 will be included in 2025 count)
   const countFilteredEstimates = useMemo(() => {
     if (effectiveFilterYear === 'all') {
       // If "all years" selected, return all non-archived estimates
       return estimates.filter(est => !est.archived);
     }
     
+    const selectedYear = parseInt(effectiveFilterYear);
     return estimates.filter(est => {
       // Per spec R2: Exclude archived estimates
       if (est.archived) {
         return false;
       }
       
-      // Per spec R1, R7: Year determination priority: contract_end → contract_start → estimate_date → created_date
-      // For won/loss ratio COUNT, use simple date extraction (treat multi-year as single-year)
-      let dateToUse = null;
-      if (est.contract_end) {
-        dateToUse = est.contract_end;
-      } else if (est.contract_start) {
-        dateToUse = est.contract_start;
-      } else if (est.estimate_date) {
-        dateToUse = est.estimate_date;
-      } else if (est.created_date) {
-        dateToUse = est.created_date;
-      }
-      
-      if (dateToUse) {
-        const year = getYearFromDateString(dateToUse);
-        if (year && year.toString() !== effectiveFilterYear) return false;
-      } else {
-        // No valid date field - exclude from year filtering
-        return false;
-      }
-      
-      return true;
+      // Use getEstimateYearData to check if estimate applies to selected year
+      // This handles multi-year contracts correctly - a contract sold in 2025
+      // that ends in 2026 will be included in 2025 count
+      const yearData = getEstimateYearData(est, selectedYear);
+      return yearData && yearData.appliesToCurrentYear;
     });
   }, [estimates, effectiveFilterYear]);
 
   // Calculate total win percentage for count-filtered estimates (for Overall Win Rate card)
-  // Uses countFilteredEstimates which treats multi-year contracts as single-year (contract_start year only)
+  // Uses countFilteredEstimates which includes multi-year contracts if they apply to the selected year
   const totalWinPercentage = useMemo(() => {
     if (countFilteredEstimates.length === 0) return 0;
     const won = countFilteredEstimates.filter(est => isWonStatus(est)).length;
@@ -614,7 +637,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
           {filteredDepartments.map((department) => {
             const departmentEstimates = estimatesByDepartment.grouped[department] || [];
             const isExpanded = expandedDepartments.has(department);
-            const departmentTotal = calculateDepartmentTotal(department);
+            const departmentWonTotal = calculateDepartmentTotal(department);
+            const departmentTotalEstimates = calculateDepartmentTotalEstimates(department);
             
             if (departmentEstimates.length === 0) return null;
 
@@ -685,7 +709,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
-                          {departmentTotal.toLocaleString('en-US', { 
+                          ${departmentTotalEstimates.toLocaleString('en-US', { 
                             minimumFractionDigits: 2, 
                             maximumFractionDigits: 2 
                           })}
@@ -778,8 +802,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                                 <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                 <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
                                   {getEstimatePrice(estimate).toLocaleString('en-US', { 
-                                    minimumFractionDigits: 2, 
-                                    maximumFractionDigits: 2 
+                                        minimumFractionDigits: 2, 
+                                        maximumFractionDigits: 2 
                                   })}
                                 </span>
                               </div>
