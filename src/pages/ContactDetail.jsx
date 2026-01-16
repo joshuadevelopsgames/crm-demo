@@ -30,6 +30,7 @@ import ContactNotes from '../components/contact/ContactNotes';
 export default function ContactDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const contactId = urlParams.get('id');
+  const returnTo = urlParams.get('returnTo');
   const navigate = useNavigate();
   const { permissions } = useUserPermissions();
   const canManageInteractions = permissions['manage_interactions'] === true;
@@ -116,9 +117,13 @@ export default function ContactDetail() {
         <Users className="w-12 h-12 text-slate-400" />
         <h2 className="text-xl font-semibold text-slate-900">Contact not found</h2>
         <p className="text-slate-600">The contact you're looking for doesn't exist.</p>
-        <Button onClick={() => navigate(createPageUrl('Contacts'))} variant="outline" className="border-slate-300">
+        <Button 
+          onClick={() => navigate(returnTo || createPageUrl('Contacts'))} 
+          variant="outline" 
+          className="border-slate-300"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Contacts
+          {returnTo ? 'Back' : 'Back to Contacts'}
         </Button>
       </div>
     );
@@ -136,7 +141,8 @@ export default function ContactDetail() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(createPageUrl('Contacts'))}
+            onClick={() => navigate(returnTo || createPageUrl('Contacts'))}
+            title={returnTo ? 'Back to Account' : 'Back to Contacts'}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>

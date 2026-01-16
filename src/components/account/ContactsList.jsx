@@ -270,7 +270,13 @@ export default function ContactsList({ contacts, accountId, accountName }) {
           <Card 
             key={contact.id} 
             className={`hover:shadow-lg transition-all cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800 opacity-75' : 'bg-white dark:bg-slate-900'}`}
-            onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
+            onClick={() => {
+              const returnTo = accountId ? createPageUrl(`AccountDetail?id=${accountId}`) : null;
+              const contactUrl = returnTo 
+                ? createPageUrl(`ContactDetail?id=${contact.id}&returnTo=${encodeURIComponent(returnTo)}`)
+                : createPageUrl(`ContactDetail?id=${contact.id}`);
+              navigate(contactUrl);
+            }}
           >
             <CardContent className="p-5">
               <div className="space-y-4">
@@ -395,7 +401,13 @@ export default function ContactsList({ contacts, accountId, accountName }) {
                     <tr 
                       key={contact.id}
                       className={`hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
-                      onClick={() => navigate(createPageUrl(`ContactDetail?id=${contact.id}`))}
+                      onClick={() => {
+                        const returnTo = accountId ? createPageUrl(`AccountDetail?id=${accountId}`) : null;
+                        const contactUrl = returnTo 
+                          ? createPageUrl(`ContactDetail?id=${contact.id}&returnTo=${encodeURIComponent(returnTo)}`)
+                          : createPageUrl(`ContactDetail?id=${contact.id}`);
+                        navigate(contactUrl);
+                      }}
                     >
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-3">
