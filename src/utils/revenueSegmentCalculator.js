@@ -23,7 +23,45 @@
  * Multi-year contracts are annualized (total price divided by number of years)
  */
 
-import { checkPriceFieldFallback } from './priceFieldFallbackNotification';
+// Inline checkPriceFieldFallback to avoid serverless import issues
+// This function checks for price field fallback and shows toast in browser only
+// Serverless-safe: Returns boolean, no toast in serverless environment
+function checkPriceFieldFallback(estimate) {
+  if (!estimate) return false;
+  
+  // Check if total_price is missing (null or undefined) and total_price_with_tax exists
+  // Note: total_price will always have a value (even if 0), so we only check for null/undefined
+  const totalPrice = estimate.total_price;
+  const totalPriceWithTax = estimate.total_price_with_tax;
+  
+  // Only show toast if total_price is truly missing (null or undefined), not if it's 0
+  // total_price will always exist (even if 0), so this should never trigger in normal operation
+  const isTotalPriceMissing = totalPrice === null || totalPrice === undefined;
+  
+  // Check if total_price_with_tax has a valid value (not null, undefined, or NaN)
+  const hasTotalPriceWithTax = totalPriceWithTax != null && 
+    !(typeof totalPriceWithTax === 'number' && isNaN(totalPriceWithTax));
+  
+  // If fallback is being used (total_price is missing AND total_price_with_tax exists)
+  // This should never happen in normal operation since total_price always has a value
+  if (isTotalPriceMissing && hasTotalPriceWithTax) {
+    // Only show toast in browser environment (not in serverless)
+    if (typeof window !== 'undefined') {
+      // Lazy import toast only in browser
+      import('./priceFieldFallbackNotification')
+        .then(module => {
+          // Call the actual function from the module to show toast
+          module.checkPriceFieldFallback(estimate);
+        })
+        .catch(() => {
+          // Toast module not available - skip (serverless environment)
+        });
+    }
+    return true;
+  }
+  
+  return false;
+}
 
 // Inline functions to avoid serverless import issues
 // Inline getYearFromDateString to avoid serverless import issues
