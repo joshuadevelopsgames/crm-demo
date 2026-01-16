@@ -344,44 +344,6 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     }, 0);
   };
 
-  // Calculate total department estimates (won + lost + pending) for a department
-  const calculateDepartmentTotalEstimates = (departmentName) => {
-    // Use the same logic as totalEstimatedValue to ensure consistency:
-    // 1. Start with ALL estimates (not pre-filtered)
-    // 2. Check year applicability
-    // 3. Filter by department
-    // This ensures department totals match overall totals
-    
-    if (effectiveFilterYear === 'all') {
-      // For "all years", sum full values of all estimates in this department
-      const departmentEstimates = estimates.filter(est => 
-        !est.archived && 
-        normalizeDepartment(est.division) === departmentName
-      );
-      return departmentEstimates.reduce((sum, est) => {
-        // Check for fallback and show toast notification if needed (once per session)
-        checkPriceFieldFallback(est);
-        const amount = getEstimatePrice(est);
-        return sum + amount;
-      }, 0);
-    }
-    
-    // For specific year, use annualization to match overall totals
-    const selectedYear = parseInt(effectiveFilterYear);
-    const departmentEstimates = estimates.filter(est => 
-      !est.archived && 
-      normalizeDepartment(est.division) === departmentName
-    );
-    
-    return departmentEstimates.reduce((sum, est) => {
-      const yearData = getEstimateYearData(est, selectedYear);
-      if (yearData && yearData.appliesToCurrentYear) {
-        return sum + (yearData.value || 0);
-      }
-      return sum;
-    }, 0);
-  };
-
   // Calculate win percentage for a department
   const calculateDepartmentWinPercentage = (departmentEstimates) => {
     if (departmentEstimates.length === 0) return 0;
@@ -637,8 +599,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
           {filteredDepartments.map((department) => {
             const departmentEstimates = estimatesByDepartment.grouped[department] || [];
             const isExpanded = expandedDepartments.has(department);
-            const departmentWonTotal = calculateDepartmentTotal(department);
-            const departmentTotalEstimates = calculateDepartmentTotalEstimates(department);
+            const departmentTotal = calculateDepartmentTotal(department);
             
             if (departmentEstimates.length === 0) return null;
 
@@ -709,7 +670,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
-                          ${departmentTotalEstimates.toLocaleString('en-US', { 
+                          ${departmentTotal.toLocaleString('en-US', { 
                             minimumFractionDigits: 2, 
                             maximumFractionDigits: 2 
                           })}

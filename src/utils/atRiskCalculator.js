@@ -476,6 +476,16 @@ export function calculateSegmentDowngrades(accounts, snoozes = []) {
     const lastYearRank = segmentHierarchy[lastYearSegment];
     const currentYearRank = segmentHierarchy[currentYearSegment] || 6; // Default to F if unknown
     
+    // Exclude cases where A/B/C/D clients become E or F (leads)
+    // Clients shouldn't become leads - this indicates data issues, not actual downgrades
+    const clientSegments = ['A', 'B', 'C', 'D'];
+    const leadSegments = ['E', 'F'];
+    
+    if (clientSegments.includes(lastYearSegment) && leadSegments.includes(currentYearSegment)) {
+      // Skip: Client becoming a lead shouldn't be flagged as a downgrade
+      return;
+    }
+    
     if (currentYearRank > lastYearRank) {
       // Segment downgraded
       downgradedAccounts.push({
