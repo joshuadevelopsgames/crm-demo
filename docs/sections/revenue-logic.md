@@ -41,7 +41,7 @@ This document defines how revenue is calculated, displayed, and used for segment
 **Required Fields:**
 - `status`: Must be "won" (case-insensitive) for revenue inclusion (per Estimates spec R1, R11: uses isWonStatus which respects pipeline_status priority)
 - At least one date field: `contract_end`, `contract_start`, `estimate_date`, or `created_date` (per Estimates spec R2)
-- At least one price field: `total_price_with_tax` or `total_price`
+- `total_price`: Always has a value (even if 0). Fallback to `total_price_with_tax` only if `total_price` is null or undefined
 
 **Optional Fields:**
 - `contract_start` + `contract_end`: Used for multi-year contract annualization
