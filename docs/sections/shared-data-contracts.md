@@ -94,8 +94,8 @@ This document defines common data structures and contracts used across multiple 
 4. `created_date` (Priority 4)
 
 **Price Field Priority** (per Revenue Logic spec R3):
-1. `total_price` (preferred)
-2. `total_price_with_tax` (fallback, shows toast notification)
+1. `total_price` (preferred, always has a value even if 0)
+2. `total_price_with_tax` (fallback only if `total_price` is null or undefined, not if it's 0, shows toast notification)
 
 **Status Determination** (per Estimates spec R1, R11):
 - Uses `isWonStatus()` which checks `pipeline_status` first, then `status`
