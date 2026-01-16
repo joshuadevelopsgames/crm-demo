@@ -216,11 +216,31 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     });
   }, [estimates, effectiveFilterYear]);
 
-  // Group estimates by department
+  // Group estimates by department - use yearFilteredEstimates to respect year filtering
   const estimatesByDepartment = useMemo(() => {
     const grouped = {};
     
-    statusFilteredEstimates.forEach(est => {
+    // Use yearFilteredEstimates to respect year filtering, but still apply status and user filters
+    let estimatesToGroup = yearFilteredEstimates;
+    
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      estimatesToGroup = estimatesToGroup.filter(est => {
+        const normalizedStatus = isWonStatus(est) ? 'won' : 'lost';
+        return normalizedStatus === filterStatus;
+      });
+    }
+    
+    // Apply user filter
+    if (selectedUsers.length > 0) {
+      estimatesToGroup = estimatesToGroup.filter(est => {
+        const salesperson = est.salesperson?.trim();
+        const estimator = est.estimator?.trim();
+        return selectedUsers.includes(salesperson) || selectedUsers.includes(estimator);
+      });
+    }
+    
+    estimatesToGroup.forEach(est => {
       const department = normalizeDepartment(est.division);
       if (!grouped[department]) {
         grouped[department] = [];
@@ -253,7 +273,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     });
     
     return { grouped, sortedDepartments };
-  }, [statusFilteredEstimates]);
+  }, [yearFilteredEstimates, filterStatus, selectedUsers]);
 
   // Filter by department if selected
   const filteredDepartments = useMemo(() => {
@@ -284,10 +304,26 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
 
   const calculateDepartmentTotal = (departmentEstimates) => {
     // Only calculate revenue from won estimates
+    // Use annualization when year filter is active (yearFilteredEstimates already handles this)
     const wonEstimates = departmentEstimates.filter(est => isWonStatus(est));
+    
+    if (effectiveFilterYear === 'all') {
+      // For "all years", sum full values
+      return wonEstimates.reduce((sum, est) => {
+        const amount = est.total_price_with_tax || est.total_price || 0;
+        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      }, 0);
+    }
+    
+    // For specific year, use annualization to match overall totals
+    const selectedYear = parseInt(effectiveFilterYear);
     return wonEstimates.reduce((sum, est) => {
-      const amount = est.total_price_with_tax || est.total_price || 0;
-      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      const yearData = getEstimateYearData(est, selectedYear);
+      if (yearData && yearData.appliesToCurrentYear) {
+        // yearData.value already contains the annualized amount for this year
+        return sum + (yearData.value || 0);
+      }
+      return sum;
     }, 0);
   };
 
