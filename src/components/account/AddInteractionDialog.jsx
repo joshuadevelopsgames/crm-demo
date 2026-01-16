@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -262,6 +263,11 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Interaction' : 'Log Interaction'}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Update the interaction details and attachments.'
+              : 'Log a new interaction and optionally attach files.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
@@ -381,13 +387,30 @@ export default function AddInteractionDialog({ open, onClose, accountId, contact
             </div>
             <div className="col-span-2">
               <Label>Attachments</Label>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                disabled={!accountId}
-              />
+              <div className="flex items-center gap-3">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={!accountId}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-300"
+                  disabled={!accountId}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Choose files
+                </Button>
+                <span className="text-sm text-slate-500">
+                  {pendingFiles.length > 0
+                    ? `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} selected`
+                    : 'No files selected'}
+                </span>
+              </div>
               {existingAttachments.length > 0 && (
                 <div className="mt-2 text-sm text-slate-600">
                   <p className="font-medium text-slate-700">Existing files:</p>

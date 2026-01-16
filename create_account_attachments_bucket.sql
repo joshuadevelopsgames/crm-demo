@@ -14,6 +14,7 @@
 -- These policies control who can upload, read, and delete files
 
 -- Policy: Allow authenticated users to upload files
+DROP POLICY IF EXISTS "Allow authenticated users to upload account attachments" ON storage.objects;
 CREATE POLICY "Allow authenticated users to upload account attachments"
 ON storage.objects
 FOR INSERT
@@ -24,6 +25,7 @@ WITH CHECK (
 );
 
 -- Policy: Allow authenticated users to read files
+DROP POLICY IF EXISTS "Allow authenticated users to read account attachments" ON storage.objects;
 CREATE POLICY "Allow authenticated users to read account attachments"
 ON storage.objects
 FOR SELECT
@@ -33,6 +35,7 @@ USING (bucket_id = 'account-attachments');
 -- Policy: Allow users to delete their own uploads
 -- Note: This requires checking the account_attachments table to verify ownership
 -- For simplicity, we allow all authenticated users to delete (can be restricted later)
+DROP POLICY IF EXISTS "Allow authenticated users to delete account attachments" ON storage.objects;
 CREATE POLICY "Allow authenticated users to delete account attachments"
 ON storage.objects
 FOR DELETE

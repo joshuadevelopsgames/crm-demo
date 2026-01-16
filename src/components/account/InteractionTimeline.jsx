@@ -112,6 +112,12 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
     return contact ? `${contact.first_name} ${contact.last_name}` : null;
   };
 
+  const isImageAttachment = (file) => {
+    if (file?.file_type?.startsWith('image/')) return true;
+    if (!file?.file_name) return false;
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.file_name);
+  };
+
   if (interactions.length === 0) {
     return (
       <Card>
@@ -217,22 +223,55 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                   {attachments.length > 0 && (
                     <div className="mt-3">
                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attachments</p>
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-2 space-y-3">
                         {attachments.map((file, i) => {
-                          const downloadUrl = file.storage_path
-                            ? `/api/storage/download?path=${encodeURIComponent(file.storage_path)}&filename=${encodeURIComponent(file.file_name || 'attachment')}`
-                            : file.file_url;
+                          const fileUrl = file.file_url;
+                          const canPreview = !!fileUrl && isImageAttachment(file);
                           return (
-                            <a
+                            <div
                               key={`${file.id || file.file_name}-${i}`}
-                              href={downloadUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-2"
+                              className="rounded-lg border border-slate-200 dark:border-slate-700 p-3"
                             >
-                              <ExternalLink className="w-4 h-4" />
-                              {file.file_name || 'Attachment'}
-                            </a>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+                                  {file.file_name || 'Attachment'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {fileUrl && (
+                                    <>
+                                      <a
+                                        href={fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                                      >
+                                        <ExternalLink className="w-4 h-4" />
+                                        Open
+                                      </a>
+                                      <a
+                                        href={fileUrl}
+                                        download={file.file_name || 'attachment'}
+                                        className="text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                                      >
+                                        Download
+                                      </a>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {canPreview && (
+                                <div className="mt-2">
+                                  <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={fileUrl}
+                                      alt={file.file_name || 'Attachment preview'}
+                                      className="max-h-48 rounded-md border border-slate-200 dark:border-slate-700 object-contain"
+                                      loading="lazy"
+                                    />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
