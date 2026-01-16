@@ -106,7 +106,7 @@ export const mappingRules = [
         const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
         
         // Use total_price_with_tax consistently
-        const totalPrice = parseFloat(estimate.total_price_with_tax) || 0;
+        const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
         if (totalPrice === 0) return null;
         
         // Case 1: Both contract_start and contract_end exist

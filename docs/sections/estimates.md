@@ -36,8 +36,8 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 - `pipeline_status` (text): Sales pipeline status (preferred for won/lost determination)
 - `division` (text): Department/division
 - `archived` (boolean): Archive flag
-- `total_price` (numeric): Price without tax
-- `total_price_with_tax` (numeric): Price with tax (preferred)
+- `total_price` (numeric): Price without tax (preferred)
+- `total_price_with_tax` (numeric): Price with tax (fallback if total_price missing)
 - `material_cost`, `material_price`, `labor_cost`, `labor_price`, etc.: Detailed cost/price breakdowns
 - `created_date` (timestamptz): When estimate was created in LMN
 - `created_at` (timestamptz): When record was created in our database
@@ -48,7 +48,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 **Required Fields:**
 - `lmn_estimate_id`: Must be present (error if missing)
 - At least one date field: `contract_end`, `contract_start`, `estimate_date`, or `created_date`
-- At least one price field: `total_price_with_tax` or `total_price` (for revenue calculations)
+- At least one price field: `total_price` or `total_price_with_tax` (for revenue calculations)
 
 **Optional Fields:**
 - `account_id`, `contact_id`: May be null (orphaned estimates)
@@ -144,7 +144,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 - **Date Parsing**: Multiple formats → YYYY-MM-DD strings
 - **Status Normalization**: Various status strings → 'won' or 'lost'
-- **Price Selection**: `total_price_with_tax` preferred, `total_price` fallback
+- **Price Selection**: `total_price` preferred, `total_price_with_tax` fallback
 - **Account Linking**: Multiple matching methods → single `account_id` assignment
 
 ### Computations and Formulas
@@ -153,7 +153,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
   - Archived estimates excluded from both numerator and denominator
   - Uses `isWonStatus()` function to respect `pipeline_status` priority
   - **Multi-year contracts**: Treated as single-year contracts for count-based calculations (appear only in determined year, typically `contract_start`). See Won Loss Ratio spec R40 for details.
-- **Department Total**: Sum of `total_price_with_tax` (or `total_price`) for all estimates in department
+- **Department Total**: Sum of `total_price` (or `total_price_with_tax`) for all estimates in department. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41).
 - **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
   - Archived estimates excluded
   - Uses `isWonStatus()` function for status determination
@@ -204,7 +204,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
   1. "Uncategorized" always first
   2. Known divisions (in order listed above)
   3. Other divisions alphabetically
-- **Department Totals**: Sum of `total_price_with_tax` (or `total_price`) for all estimates in department
+- **Department Totals**: Sum of `total_price` (or `total_price_with_tax`) for all estimates in department. For year-filtered views, multi-year contracts use annualization (per Won Loss Ratio spec R41).
 - **Department Win Rate**: `(won estimates in department / total estimates in department) * 100`
   - Archived estimates excluded from win rate calculation
 
@@ -216,7 +216,7 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 **R3**: All date fields are normalized to YYYY-MM-DD format during import. Database stores as `timestamptz`, but application logic uses date-only strings.
 
-**R4**: Price field selection: Prefer `total_price_with_tax`, fallback to `total_price` if missing/zero.
+**R4**: Price field selection: Prefer `total_price`, fallback to `total_price_with_tax` if missing/zero.
 
 **R5**: Missing `lmn_estimate_id` is an error - estimate is skipped, error is logged, and user is notified in import summary.
 
@@ -280,11 +280,11 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 
 ### Price Field Selection
 
-**Prefer**: `total_price_with_tax`
+**Prefer**: `total_price`
 - If present and > 0 → use this
 - If missing/zero → fall to fallback
 
-**Fallback**: `total_price`
+**Fallback**: `total_price_with_tax`
 - If present and > 0 → use this
 - If missing/zero → exclude from revenue calculations
 
@@ -296,8 +296,8 @@ This document defines how estimates (proposals/quotes) are imported, processed, 
 2. **Estimate has contract_end=2025-06-15 and estimate_date=2024-12-01**
    - Resolution: Use `contract_end` (Priority 1) → applies to 2025
 
-3. **Estimate has total_price_with_tax=0 and total_price=5000**
-   - Resolution: Use `total_price` (fallback) → 5000
+3. **Estimate has total_price=5000 and total_price_with_tax=0**
+   - Resolution: Use `total_price` (preferred) → 5000
 
 4. **Estimate has duplicate lmn_estimate_id in same import batch**
    - Resolution: Skip duplicate, log error, notify user

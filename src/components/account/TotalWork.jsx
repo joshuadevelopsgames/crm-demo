@@ -126,18 +126,18 @@ function getEstimateYearData(estimate, currentYear) {
   const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
   
   // Per spec R3-R5: Price field selection with fallback
-  const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
-  const totalPriceNoTax = parseFloat(estimate.total_price);
+  const totalPricePreferred = parseFloat(estimate.total_price);
+  const totalPriceFallback = parseFloat(estimate.total_price_with_tax);
   let totalPrice;
-  if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
-    if (totalPriceNoTax && totalPriceNoTax > 0) {
-      totalPrice = totalPriceNoTax;
+  if (isNaN(totalPricePreferred) || totalPricePreferred === 0) {
+    if (totalPriceFallback && totalPriceFallback > 0) {
+      totalPrice = totalPriceFallback;
     } else {
       // Per spec R5: Both missing/zero → exclude
       return null;
     }
   } else {
-    totalPrice = totalPriceWithTax;
+    totalPrice = totalPricePreferred;
   }
   
   // Per spec R2: Determine year using priority order - extract year from string (avoid timezone issues)
@@ -289,8 +289,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     
     estimates.forEach(est => {
       const yearData = getEstimateYearData(est, currentYear);
-      // Use total_price_with_tax consistently
-      const totalPrice = parseFloat(est.total_price_with_tax) || 0;
+      // Use total_price consistently
+      const totalPrice = parseFloat(est.total_price || est.total_price_with_tax) || 0;
       
         let reason = '';
         
@@ -331,8 +331,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
       .filter(est => isWonStatus(est))
       .forEach(est => {
         const yearData = getEstimateYearData(est, currentYear);
-        // Use total_price_with_tax consistently
-        const totalPrice = parseFloat(est.total_price_with_tax) || 0;
+        // Use total_price consistently
+        const totalPrice = parseFloat(est.total_price || est.total_price_with_tax) || 0;
         
         let reason = '';
         
@@ -406,10 +406,10 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
   }, [estimates]);
   
   // Calculate all-time totals (all estimates regardless of year)
-  // Try total_price_with_tax first, fall back to total_price if not available
+  // Try total_price first, fall back to total_price_with_tax if not available
   const allTimeEstimated = useMemo(() => {
     return estimates.reduce((sum, est) => {
-      const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+      const totalPrice = parseFloat(est.total_price) || parseFloat(est.total_price_with_tax) || 0;
       return sum + totalPrice;
     }, 0);
   }, [estimates]);
@@ -420,7 +420,7 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
     return estimates
       .filter(est => isWonStatus(est))
       .reduce((sum, est) => {
-        const totalPrice = parseFloat(est.total_price_with_tax) || parseFloat(est.total_price) || 0;
+        const totalPrice = parseFloat(est.total_price) || parseFloat(est.total_price_with_tax) || 0;
         return sum + totalPrice;
       }, 0);
   }, [estimates]);

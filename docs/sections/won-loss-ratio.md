@@ -14,8 +14,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
   - `account_id` (text, FK) - Links to accounts table
   - `status` (text) - Estimate status (e.g., 'won', 'lost', 'contract signed', 'work complete')
   - `pipeline_status` (text) - LMN pipeline status (e.g., 'sold', 'lost', 'pending')
-  - `total_price` (numeric) - Base price (fallback if total_price_with_tax missing)
-  - `total_price_with_tax` (numeric) - Tax-inclusive price (preferred)
+  - `total_price` (numeric) - Base price (preferred)
+  - `total_price_with_tax` (numeric) - Tax-inclusive price (fallback if total_price missing)
   - `division` (text) - Department/division name
   - `estimate_date` (timestamptz) - Estimate creation date
   - `contract_end` (timestamptz) - Contract end date (Priority 1 for year filtering, per Estimates spec R2)
@@ -36,8 +36,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 #### Optional but Important
 - `estimates.account_id` - Required for per-account statistics (estimates without account_id are excluded from account stats)
 - `estimates.division` - Defaults to 'Uncategorized' if missing
-- `estimates.total_price_with_tax` - Preferred for revenue calculations
-- `estimates.total_price` - Fallback if total_price_with_tax missing
+- `estimates.total_price` - Preferred for revenue calculations
+- `estimates.total_price_with_tax` - Fallback if total_price missing
 - `estimates.contract_end` - Priority 1 for year filtering (per Estimates spec R2)
 - `estimates.contract_start` - Priority 2 for year filtering (per Estimates spec R2)
 - `estimates.estimate_close_date` - Deprecated, no longer used for year determination priority
@@ -57,8 +57,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 
 - `estimates.status` can be null (treated as pending)
 - `estimates.pipeline_status` can be null (not checked if missing)
-- `estimates.total_price_with_tax` can be null (falls back to `total_price`)
-- `estimates.total_price` can be null (treated as 0 if both price fields are null)
+- `estimates.total_price` can be null (falls back to `total_price_with_tax`)
+- `estimates.total_price_with_tax` can be null (treated as 0 if both price fields are null)
 - `estimates.division` can be null (defaults to 'Uncategorized')
 - `estimates.account_id` can be null (excluded from account statistics)
 - `estimates.contract_end` can be null (falls back to `contract_start` → `estimate_date` → `created_date` per Estimates spec R2)
@@ -111,8 +111,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
    - Else → PENDING
 
 6. **Revenue Calculation** (for each estimate)
-   - Use `total_price_with_tax` if available and non-zero
-   - Fallback to `total_price` if `total_price_with_tax` is missing or zero
+   - Use `total_price` if available and non-zero
+   - Fallback to `total_price_with_tax` if `total_price` is missing or zero
    - If both are missing or zero, treat as 0
 
 7. **Overall Statistics Calculation**
@@ -181,8 +181,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 - **Revenue vs Won Ratio**: `(wonValue / totalValue) * 100`
   - Shows percentage of total revenue that comes from won estimates
 
-- **Revenue Value**: `parseFloat(total_price_with_tax || total_price) || 0`
-  - Prefers `total_price_with_tax`, falls back to `total_price`
+- **Revenue Value**: `parseFloat(total_price || total_price_with_tax) || 0`
+  - Prefers `total_price`, falls back to `total_price_with_tax`
   - Treats missing/null values as 0
 
 ### Sorting and Grouping Rules
@@ -214,9 +214,9 @@ Rules must be testable and numbered.
 
 ### Revenue Calculation Rules
 
-- **R9**: Revenue calculation uses `total_price_with_tax` if available and non-zero.
-- **R10**: If `total_price_with_tax` is missing, null, or zero, then use `total_price` as fallback.
-- **R11**: If both `total_price_with_tax` and `total_price` are missing, null, or zero, then revenue value is 0.
+- **R9**: Revenue calculation uses `total_price` if available and non-zero.
+- **R10**: If `total_price` is missing, null, or zero, then use `total_price_with_tax` as fallback.
+- **R11**: If both `total_price` and `total_price_with_tax` are missing, null, or zero, then revenue value is 0.
 
 ### Win Rate Calculation Rules
 
@@ -276,7 +276,7 @@ Rules must be testable and numbered.
 ### Explicit Precedence Order (Highest Wins)
 
 1. **Won Status Detection**: `pipeline_status` checked before `status` field (R1, R2)
-2. **Revenue Field**: `total_price_with_tax` preferred over `total_price` (R9, R10)
+2. **Revenue Field**: `total_price` preferred over `total_price_with_tax` (R9, R10)
 3. **Date for Year Filtering**: Per Estimates spec R2, priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (R22)
 4. **Duplicate Estimates**: First occurrence by `lmn_estimate_id` kept (R29, R30)
 5. **Missing Division**: Defaults to 'Uncategorized' (R35)
@@ -296,7 +296,7 @@ Rules must be testable and numbered.
 
 2. **Revenue Field Conflict**
    - Estimate: `{ total_price: 10000, total_price_with_tax: 0 }`
-   - Resolution: Use `total_price_with_tax` first (R9). Since it's 0, fall back to `total_price` (R10). Result: Revenue = 10000.
+   - Resolution: Use `total_price` first (R9). Since it's available and non-zero, use it. Result: Revenue = 10000.
 
 3. **Missing Division Conflict**
    - Estimate: `{ division: null, account_id: 'acc-123' }`
@@ -333,8 +333,8 @@ estimates = [
   pending: 1,  // ID 3 (R8)
   decidedCount: 3,  // won + lost
   winRate: 66.7,  // (2 / 3) * 100, rounded to 1 decimal (R12, R15)
-  totalValue: 140000,  // Sum of total_price_with_tax (R9)
-  wonValue: 90000,  // Sum of won estimates' total_price_with_tax
+  totalValue: 140000,  // Sum of total_price (R9)
+  wonValue: 90000,  // Sum of won estimates' total_price
   lostValue: 30000,
   pendingValue: 20000,
   estimatesVsWonRatio: '50.0',  // (2 / 4) * 100 (R16, R18)
@@ -494,9 +494,9 @@ estimates = [
 **Expected Revenue Values:**
 ```javascript
 [
-  50000,  // Uses total_price_with_tax (R9)
-  30000,  // Falls back to total_price (R10)
-  20000,  // Falls back to total_price (R10, since total_price_with_tax is 0)
+  45000,  // Uses total_price (R9)
+  30000,  // Uses total_price (R9, since total_price_with_tax is null)
+  20000,  // Uses total_price (R9, since total_price_with_tax is 0)
   0       // Both missing, treated as 0 (R11)
 ]
 ```
@@ -579,7 +579,7 @@ estimates = [
 
 - **AC1**: Overall statistics correctly calculate won, lost, and pending counts using `isWonStatus()` function (R6, R7, R8).
 - **AC2**: Win rate is calculated only from decided estimates (won + lost), excluding pending (R12, R13, R14).
-- **AC3**: Revenue calculations use `total_price_with_tax` with fallback to `total_price` (R9, R10, R11).
+- **AC3**: Revenue calculations use `total_price` with fallback to `total_price_with_tax` (R9, R10, R11).
 - **AC4**: Account statistics group estimates by `account_id` and exclude estimates without `account_id` (R32, R33).
 - **AC5**: Department statistics use 'Uncategorized' for missing divisions (R35).
 - **AC6**: Account statistics use 'Unknown Account' for missing account names (R37).
@@ -609,7 +609,7 @@ estimates = [
 
 ### Backward Compatibility Notes
 
-- **Revenue Field Change**: Previously used `total_price` with fallback to `total_price_with_tax`. Now uses `total_price_with_tax` with fallback to `total_price`. This may cause revenue values to change if estimates have different values in these fields.
+- **Revenue Field Change**: Previously used `total_price_with_tax` with fallback to `total_price`. Now uses `total_price` with fallback to `total_price_with_tax`. This may cause revenue values to change if estimates have different values in these fields.
 - **Division Default Change**: Previously used 'Unknown' for missing divisions. Now uses 'Uncategorized'. This affects grouping and display of department statistics.
 
 ### Locale Considerations
@@ -627,7 +627,7 @@ estimates = [
 ### Key Events to Log
 
 - **Estimate Classification**: Log when estimates are classified as won/lost/pending (for debugging status detection)
-- **Revenue Calculation**: Log when revenue fallback occurs (total_price_with_tax missing, using total_price)
+- **Revenue Calculation**: Log when revenue fallback occurs (total_price missing, using total_price_with_tax)
 - **Duplicate Detection**: Log when duplicates are found and removed by `lmn_estimate_id`
 - **Year Filtering**: Log when estimates are excluded due to missing dates or invalid years
 - **Missing Data**: Log when estimates are excluded from account stats due to missing `account_id`
@@ -635,7 +635,7 @@ estimates = [
 ### Metrics That Indicate Drift or Failure
 
 - **Win Rate Anomalies**: Sudden changes in win rate may indicate status detection issues
-- **Revenue Discrepancies**: Large differences between `total_price_with_tax` and `total_price` usage may indicate data quality issues
+- **Revenue Discrepancies**: Large differences between `total_price` and `total_price_with_tax` usage may indicate data quality issues
 - **Missing Division Count**: High number of 'Uncategorized' estimates may indicate data import issues
 - **Duplicate Count**: High number of duplicates may indicate import process issues
 - **Excluded Estimates**: High number of estimates excluded from year filtering may indicate date data quality issues
@@ -657,7 +657,7 @@ estimates = [
 This spec governs behavior for the Won Loss Ratio Logic section. Any change to the behavior described in this spec requires explicit product owner approval before editing this file or modifying the related code.
 
 The following changes were made and approved:
-- **2024-XX-XX**: Changed revenue field preference from `total_price` (with fallback to `total_price_with_tax`) to `total_price_with_tax` (with fallback to `total_price`)
+- **2024-XX-XX**: Changed revenue field preference from `total_price_with_tax` (with fallback to `total_price`) to `total_price` (with fallback to `total_price_with_tax`)
 - **2024-XX-XX**: Changed missing division default from 'Unknown' to 'Uncategorized'
 - **2025-01-09**: Added distinction between count-based and dollar-based multi-year contract handling. Count-based calculations (win rate, estimate counts) treat multi-year contracts as single-year using contract_start year. Dollar-based calculations (revenue, won value) continue using annualization (R40, R41).
 

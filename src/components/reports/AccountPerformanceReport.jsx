@@ -223,7 +223,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                                 : 'N/A')}
                                           </td>
                                           <td className="p-2 text-right text-slate-600 dark:text-slate-300">
-                                            {formatCurrency(parseFloat(estimate.total_price_with_tax) || 0)}
+                                            {formatCurrency(parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0)}
                                           </td>
                                           <td className="p-2 text-center">
                                             {getStatusBadge(estimate.status)}

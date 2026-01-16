@@ -47,17 +47,17 @@ export function calculateOverallStats(estimates) {
   const winRate = decidedCount > 0 ? ((won / decidedCount) * 100) : 0;
   
   // Calculate revenue values
-  // Use total_price_with_tax with fallback to total_price
-  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
+  // Use total_price with fallback to total_price_with_tax
+  const totalValue = estimates.reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const wonValue = estimates
     .filter(e => isWonStatus(e))
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const lostValue = estimates
     .filter(e => (e.status || '').toString().toLowerCase() === 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   const pendingValue = estimates
     .filter(e => !isWonStatus(e) && (e.status || '').toString().toLowerCase() !== 'lost')
-    .reduce((sum, e) => sum + (parseFloat(e.total_price_with_tax || e.total_price) || 0), 0);
+    .reduce((sum, e) => sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0), 0);
   
   return {
     total,
@@ -117,8 +117,8 @@ export function calculateAccountStats(estimates, accounts) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    // Use total_price_with_tax with fallback to total_price
-    const value = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
+    // Use total_price with fallback to total_price_with_tax
+    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {
@@ -179,8 +179,8 @@ export function calculateDepartmentStats(estimates) {
     stats.total++;
     stats.estimates.push(estimate);
     
-    // Use total_price_with_tax with fallback to total_price
-    const value = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
+    // Use total_price with fallback to total_price_with_tax
+    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {

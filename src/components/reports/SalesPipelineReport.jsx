@@ -26,7 +26,7 @@ export default function SalesPipelineReport({ estimates }) {
       grouped[normalizedStatus].count++;
       totalEstimates++;
       
-      const price = parseFloat(est.total_price_with_tax || est.total_price || 0);
+      const price = parseFloat(est.total_price || est.total_price_with_tax || 0);
       grouped[normalizedStatus].price += price;
       totalPrice += price;
     });
@@ -75,7 +75,7 @@ export default function SalesPipelineReport({ estimates }) {
       grouped[normalized].count++;
       totalEstimates++;
       
-      const price = parseFloat(est.total_price_with_tax || est.total_price || 0);
+      const price = parseFloat(est.total_price || est.total_price_with_tax || 0);
       grouped[normalized].price += price;
       totalPrice += price;
     });

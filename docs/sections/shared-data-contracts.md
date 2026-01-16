@@ -74,8 +74,8 @@ This document defines common data structures and contracts used across multiple 
   lmn_contact_id?: string;      // LMN's contact identifier
   status: string;               // Estimate status (e.g., 'won', 'lost', 'contract signed')
   pipeline_status?: string;     // LMN pipeline status (e.g., 'sold', 'lost', 'pending')
-  total_price?: number;         // Base price (fallback if total_price_with_tax missing)
-  total_price_with_tax?: number; // Tax-inclusive price (preferred)
+  total_price?: number;         // Base price (preferred)
+  total_price_with_tax?: number; // Tax-inclusive price (fallback if total_price missing)
   division?: string;            // Department/division name
   address?: string;             // Project address
   archived: boolean;            // Archive flag
@@ -94,8 +94,8 @@ This document defines common data structures and contracts used across multiple 
 4. `created_date` (Priority 4)
 
 **Price Field Priority** (per Revenue Logic spec R3):
-1. `total_price_with_tax` (preferred)
-2. `total_price` (fallback, shows toast notification)
+1. `total_price` (preferred)
+2. `total_price_with_tax` (fallback, shows toast notification)
 
 **Status Determination** (per Estimates spec R1, R11):
 - Uses `isWonStatus()` which checks `pipeline_status` first, then `status`

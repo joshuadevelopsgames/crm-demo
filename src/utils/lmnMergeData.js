@@ -829,18 +829,18 @@ export function mergeContactData(contactsExportData, leadsListData, estimatesDat
       const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
       
       // Per spec R3-R5: Price field selection with fallback
-      const totalPriceWithTax = parseFloat(estimate.total_price_with_tax);
-      const totalPriceNoTax = parseFloat(estimate.total_price);
+      const totalPricePreferred = parseFloat(estimate.total_price);
+      const totalPriceFallback = parseFloat(estimate.total_price_with_tax);
       let totalPrice;
-      if (isNaN(totalPriceWithTax) || totalPriceWithTax === 0) {
-        if (totalPriceNoTax && totalPriceNoTax > 0) {
-          totalPrice = totalPriceNoTax;
+      if (isNaN(totalPricePreferred) || totalPricePreferred === 0) {
+        if (totalPriceFallback && totalPriceFallback > 0) {
+          totalPrice = totalPriceFallback;
         } else {
           // Per spec R5: Both missing/zero → exclude
           return null;
         }
       } else {
-        totalPrice = totalPriceWithTax;
+        totalPrice = totalPricePreferred;
       }
       
       // Per spec R2: Year determination priority - extract year from string (avoid timezone issues)

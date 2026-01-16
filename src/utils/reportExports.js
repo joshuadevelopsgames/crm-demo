@@ -162,7 +162,7 @@ export function exportToXLSX(reportData, selectedYear, selectedMonth = 'all') {
         est.contract_end || est.contract_start || est.estimate_date || est.created_date || 'N/A',
         est.status || 'N/A',
         est.division || 'N/A',
-        parseFloat(est.total_price_with_tax || est.total_price || 0),
+        parseFloat(est.total_price || est.total_price_with_tax || 0),
         est.salesperson || 'N/A',
         est.estimator || 'N/A'
       ]);

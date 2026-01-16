@@ -285,7 +285,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     if (effectiveFilterYear === 'all') {
       // For "all years", sum full values
       return wonEstimates.reduce((sum, est) => {
-        const amount = est.total_price_with_tax || est.total_price || 0;
+        const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
     }
@@ -386,7 +386,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       // For "all years", sum full values of won estimates
       const wonEstimates = estimates.filter(est => !est.archived && isWonStatus(est));
       return wonEstimates.reduce((sum, est) => {
-        const amount = est.total_price_with_tax || est.total_price || 0;
+        const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
     }
@@ -408,7 +408,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     if (effectiveFilterYear === 'all') {
       // For "all years", sum all estimates (full value, not annualized)
       return estimates.filter(est => !est.archived).reduce((sum, est) => {
-        const amount = est.total_price_with_tax || est.total_price || 0;
+        const amount = est.total_price || est.total_price_with_tax || 0;
         return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
       }, 0);
     }
@@ -675,8 +675,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                               <div className="flex items-center justify-end gap-1">
                                 <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                 <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
-                                  {estimate.total_price_with_tax || estimate.total_price 
-                                    ? (estimate.total_price_with_tax || estimate.total_price).toLocaleString('en-US', { 
+                                  {estimate.total_price || estimate.total_price_with_tax 
+                                    ? (estimate.total_price || estimate.total_price_with_tax).toLocaleString('en-US', { 
                                         minimumFractionDigits: 2, 
                                         maximumFractionDigits: 2 
                                       })

@@ -652,14 +652,14 @@ export default function Reports() {
     
     const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
     
-    // Database uses total_price_with_tax (fallback to total_price)
+    // Database uses total_price (fallback to total_price_with_tax)
     const totalValue = filteredYearEstimates.reduce((sum, e) => {
-      return sum + (parseFloat(e.total_price_with_tax) || parseFloat(e.total_price) || 0);
+      return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
     }, 0);
     
     // Use filteredYearWonEstimates for won value to match LMN's logic
     const wonValue = filteredYearWonEstimates.reduce((sum, e) => {
-      return sum + (parseFloat(e.total_price_with_tax) || parseFloat(e.total_price) || 0);
+      return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
     }, 0);
 
     return {

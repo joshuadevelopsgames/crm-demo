@@ -33,8 +33,8 @@ The Accounts section provides the central hub for managing all company accounts 
   - `id` (text, PK)
   - `account_id` (text, FK) - Links to accounts
   - `status` (text) - Must be 'won' (case-insensitive) for revenue calculation
-  - `total_price` (numeric) - Base price (fallback if total_price_with_tax missing)
-  - `total_price_with_tax` (numeric) - Tax-inclusive price (preferred)
+  - `total_price` (numeric) - Base price (preferred)
+  - `total_price_with_tax` (numeric) - Tax-inclusive price (fallback if total_price missing)
   - `contract_start` (timestamptz) - Contract start date
   - `contract_end` (timestamptz) - Contract end date
   - `estimate_date` (timestamptz) - Estimate date
@@ -72,8 +72,8 @@ The Accounts section provides the central hub for managing all company accounts 
 - `accounts.status` - Defaults to 'active' on creation
 - `accounts.revenue_segment` - Defaults to 'C' if missing
 - `accounts.archived` - Archive flag (boolean, preferred over status='archived')
-- `estimates.total_price_with_tax` - Preferred for revenue calculation
-- `estimates.total_price` - Fallback if total_price_with_tax missing
+- `estimates.total_price` - Preferred for revenue calculation
+- `estimates.total_price_with_tax` - Fallback if total_price missing
 - `estimates.contract_start`, `contract_end` - Used for multi-year contract annualization
 
 ### Types and Units
@@ -88,7 +88,7 @@ The Accounts section provides the central hub for managing all company accounts 
 
 - `accounts.name` must be non-null (enforced by UI)
 - `accounts.revenue_segment` defaults to 'C' if null
-- `estimates.total_price_with_tax` can be null (falls back to `total_price`)
+- `estimates.total_price` can be null (falls back to `total_price_with_tax`)
 - `estimates.contract_start` and `contract_end` can be null (uses other date fields)
 - `accounts.archived` defaults to `false` if null
 
@@ -277,8 +277,8 @@ Contract duration is calculated in whole months before converting to years.
 
 ### Revenue Price Field Precedence
 
-1. **Primary**: `total_price_with_tax` (if available and > 0)
-2. **Fallback**: `total_price` (if total_price_with_tax missing/zero and total_price > 0)
+1. **Primary**: `total_price` (if available and > 0)
+2. **Fallback**: `total_price_with_tax` (if total_price missing/zero and total_price_with_tax > 0)
 3. **Result**: Use fallback with user notification
 
 ### Year Determination Precedence (per Estimates spec R2)
@@ -361,11 +361,10 @@ Contract duration is calculated in whole months before converting to years.
 ### Example 5: Price Fallback
 
 **Input**:
-- Estimate: `{ status: 'won', total_price_with_tax: null, total_price: 45000, contract_start: '2024-01-01', contract_end: '2024-12-31' }`
+- Estimate: `{ status: 'won', total_price: 45000, total_price_with_tax: null, contract_start: '2024-01-01', contract_end: '2024-12-31' }`
 
 **Result**:
-- Uses `total_price` ($45,000) as fallback
-- User notified via toast: "Some estimates are missing tax-inclusive prices. Using base price as fallback."
+- Uses `total_price` ($45,000) as primary field
 
 **Rules**: R7, R8, R9
 
@@ -414,7 +413,7 @@ Contract duration is calculated in whole months before converting to years.
 - **AC3**: Revenue is calculated and stored during import for all years (R10, R21, R22, R12)
 - **AC4**: Revenue segments are assigned based on selected year revenue percentages (R12-R15)
 - **AC5**: Segment D is assigned to project-only accounts (R15, R16)
-- **AC6**: Price fallback uses `total_price` when `total_price_with_tax` missing (during import only) (R8, R9)
+- **AC6**: Price fallback uses `total_price_with_tax` when `total_price` missing (during import only) (R8, R9)
 - **AC7**: Archive status uses boolean flag preferentially (R1, R2)
 - **AC8**: User filter matches accounts with salesperson OR estimator (R29)
 - **AC9**: At-risk filtering uses notification cache, excludes archived/snoozed (R31, R32)
@@ -426,7 +425,7 @@ Contract duration is calculated in whole months before converting to years.
 
 ### Edge Cases
 
-- **Missing price data**: Falls back to `total_price` with user notification
+- **Missing price data**: Falls back to `total_price_with_tax` with user notification
 - **No won estimates**: Revenue displays as "-", segment defaults to 'C'
 - **Conflicting archive flags**: Boolean `archived` takes precedence over `status='archived'`
 - **No dates on estimate**: Uses selected year for revenue calculation
@@ -465,7 +464,7 @@ Contract duration is calculated in whole months before converting to years.
 
 - Account creation/update/deletion
 - Revenue segment recalculation (manual and auto)
-- Price fallback usage (when total_price_with_tax missing)
+- Price fallback usage (when total_price missing)
 - Typo detection flags (contract duration 1 month over boundary)
 - Archive status conflicts (when both archived boolean and status='archived' exist)
 

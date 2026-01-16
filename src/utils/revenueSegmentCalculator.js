@@ -238,7 +238,7 @@ export function detectContractTypo(durationMonths, contractYears, startDate = nu
 export function getEstimateYearData(estimate, currentYear) {
   if (!estimate) return null;
   
-  const totalPrice = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
+  const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
   if (totalPrice === 0) return null;
   
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -343,16 +343,16 @@ export function calculateRevenueFromWonEstimates(account, estimates, year) {
     const yearData = getEstimateYearData(est, year);
     if (!yearData || !yearData.appliesToCurrentYear) return;
     
-    // Get price (prefer total_price_with_tax, fallback to total_price)
+    // Get price (prefer total_price, fallback to total_price_with_tax)
     let price = 0;
-    if (est.total_price_with_tax !== null && est.total_price_with_tax !== undefined) {
-      price = typeof est.total_price_with_tax === 'number' 
-        ? est.total_price_with_tax 
-        : parseFloat(est.total_price_with_tax) || 0;
-    } else if (est.total_price !== null && est.total_price !== undefined) {
+    if (est.total_price !== null && est.total_price !== undefined) {
       price = typeof est.total_price === 'number' 
         ? est.total_price 
         : parseFloat(est.total_price) || 0;
+    } else if (est.total_price_with_tax !== null && est.total_price_with_tax !== undefined) {
+      price = typeof est.total_price_with_tax === 'number' 
+        ? est.total_price_with_tax 
+        : parseFloat(est.total_price_with_tax) || 0;
     }
     
     if (price <= 0) return;

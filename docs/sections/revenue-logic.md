@@ -14,8 +14,8 @@ This document defines how revenue is calculated, displayed, and used for segment
 
 - **Estimates Table**: Primary source for revenue data
   - `status` (text): Estimate status, must be "won" (case-insensitive) to count
-  - `total_price_with_tax` (numeric): Primary price field for revenue calculations
-  - `total_price` (numeric): Fallback price field if `total_price_with_tax` is missing/zero
+  - `total_price` (numeric): Primary price field for revenue calculations
+  - `total_price_with_tax` (numeric): Fallback price field if `total_price` is missing/zero
   - `contract_end` (date): Priority 1 for year determination (per Estimates spec R2)
   - `contract_start` (date): Priority 2 for year determination (per Estimates spec R2)
   - `estimate_close_date` (date): Deprecated, no longer used for year determination priority
@@ -82,8 +82,8 @@ This document defines how revenue is calculated, displayed, and used for segment
    - If estimate applies to selected year, proceed; otherwise exclude
 
 4. **Select Price Field**
-   - Prefer `total_price_with_tax`
-   - If missing/zero, fallback to `total_price`
+   - Prefer `total_price`
+   - If missing/zero, fallback to `total_price_with_tax`
    - Show toast notification once per session if fallback is used
    - If both missing/zero, exclude estimate from revenue
 
@@ -177,9 +177,9 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 **R2**: Year determination uses priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (per Estimates spec R2).
 
-**R3**: Price field selection: Prefer `total_price_with_tax`, fallback to `total_price` if missing/zero.
+**R3**: Price field selection: Prefer `total_price`, fallback to `total_price_with_tax` if missing/zero.
 
-**R4**: If `total_price_with_tax` is missing/zero and `total_price` is used, show toast notification once per session.
+**R4**: If `total_price` is missing/zero and `total_price_with_tax` is used, show toast notification once per session.
 
 **R5**: If both price fields are missing/zero, exclude estimate from revenue calculations.
 
@@ -251,11 +251,11 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 
 ### Price Field Selection
 
-**Prefer**: `total_price_with_tax`
+**Prefer**: `total_price`
 - If present and > 0 → use this
 - If missing/zero → fall to fallback
 
-**Fallback**: `total_price`
+**Fallback**: `total_price_with_tax`
 - If present and > 0 → use this (show toast once per session)
 - If missing/zero → exclude estimate
 
@@ -278,8 +278,8 @@ revenuePercentage = (accountRevenue / totalRevenue) * 100
 - **Resolution**: Use `contract_end = 2025` (Priority 1, per Estimates spec R2) → applies to 2025
 
 **Example 2: Price Field Fallback**
-- Estimate has `total_price_with_tax = 0` and `total_price = 50000`
-- **Resolution**: Use `total_price` (fallback) → show toast once per session
+- Estimate has `total_price = 50000` and `total_price_with_tax = 0`
+- **Resolution**: Use `total_price` (preferred) → no fallback needed
 
 **Example 3: Segment D vs Percentage**
 - Account has Standard won estimates ($10k) and Service won estimates ($5k) for selected year
@@ -511,7 +511,7 @@ Current year: 2024
 
 **AC2**: Year determination uses priority order: `contract_end` → `contract_start` → `estimate_date` → `created_date` (per Estimates spec R2). (R2)
 
-**AC3**: Price field selection prefers `total_price_with_tax`, falls back to `total_price` if missing/zero, shows toast once per session. (R3, R4)
+**AC3**: Price field selection prefers `total_price`, falls back to `total_price_with_tax` if missing/zero, shows toast once per session. (R3, R4)
 
 **AC4**: Estimates with both price fields missing/zero are excluded from revenue. (R5)
 

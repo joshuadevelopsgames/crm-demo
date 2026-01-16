@@ -75,7 +75,7 @@ When you change a spec:
    // Per spec: revenue-logic.md R5
    function calculateRevenue(estimate) {
      // Now includes tax in all cases (R5)
-     return estimate.total_price_with_tax || estimate.total_price;
+     return estimate.total_price || estimate.total_price_with_tax;
    }
    ```
 
