@@ -545,8 +545,7 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     // CRITICAL: Double-check that icpScore is actually valid before returning E
     if (icpScore !== null && icpScore >= 80 && !isNaN(icpScore) && icpScore > 0) {
       // #region agent log
-      const accountNameLower = account?.name?.toLowerCase() || '';
-      const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
+      // Reuse accountNameLower and isBimboCanada from above
       if (isBimboCanada || accountNameLower.includes('bimbo')) {
         const logData = {location:'revenueSegmentCalculator.js:543',message:'RETURNING Segment E',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
         console.log('[DEBUG RETURNING E]', logData);
@@ -558,8 +557,7 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     
     // #region agent log
     // Log when we're about to return F but account might have stored E
-    const accountNameLower = account?.name?.toLowerCase() || '';
-    const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
+    // Reuse accountNameLower and isBimboCanada from above
     if (isBimboCanada || accountNameLower.includes('bimbo')) {
       const logData = {location:'revenueSegmentCalculator.js:560',message:'RETURNING Segment F (no valid ICP)',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
       console.log('[DEBUG RETURNING F]', logData);
