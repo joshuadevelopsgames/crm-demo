@@ -375,48 +375,38 @@ export default function Accounts() {
   const accountsWithRevenueAndSegment = useMemo(() => {
     // If estimates haven't loaded yet, return accounts with default revenue/segment
     // This allows accounts to render immediately
+    // IMPORTANT: Segments E and F require checking won estimates, so we wait for estimates to load
     if (estimatesLoading && allEstimates.length === 0) {
       return accounts.map(account => {
         // #region agent log
         const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
         if (isBimboCanada) {
-          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada using stored segment (estimates not loaded)',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada - estimates not loaded, using fallback',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
           console.log('[DEBUG]', logData);
           fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
         }
         // #endregion
         
-        // Validate stored Segment E: only use it if account has valid ICP score >= 80
-        let segment = account.segment_by_year?.[segmentYear] || 'C';
-        if (segment === 'E') {
-          const orgScore = account?.organization_score;
-          let hasValidICP = false;
-          if (orgScore !== null && orgScore !== undefined && orgScore !== '' && orgScore !== '-') {
-            if (typeof orgScore === 'number' && !isNaN(orgScore) && orgScore > 0 && orgScore >= 80) {
-              hasValidICP = true;
-            } else if (typeof orgScore === 'string') {
-              const strValue = String(orgScore).trim();
-              if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
-                const parsed = parseFloat(strValue);
-                if (!isNaN(parsed) && parsed > 0 && parsed >= 80) {
-                  hasValidICP = true;
-                }
-              }
-            }
-          }
-          if (!hasValidICP) {
-            // Override stored E to F if no valid ICP score
-            segment = 'F';
-            if (isBimboCanada) {
-              console.log('[DEBUG] Overriding stored Segment E to F for', account?.name, 'because no valid ICP score');
-            }
+        // Get stored segment, but don't use E or F until estimates have loaded
+        // E and F require checking won estimates to determine if account is a lead
+        const storedSegment = account.segment_by_year?.[segmentYear] || account.revenue_segment || 'C';
+        let segment = storedSegment;
+        
+        // If stored segment is E or F, we can't validate it without estimates
+        // Default to 'C' (or 'F' if we know it's definitely a lead, but we can't know that without estimates)
+        // Actually, let's be conservative: if it's E or F and estimates aren't loaded, use 'C' as fallback
+        // This prevents showing incorrect E segments
+        if (segment === 'E' || segment === 'F') {
+          segment = 'C'; // Default to C until estimates load and we can properly calculate E/F
+          if (isBimboCanada) {
+            console.log('[DEBUG] Deferring Segment E/F assignment for', account?.name, 'until estimates load. Using fallback C.');
           }
         }
         
         return {
           account,
           revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
-          segment // Use validated segment
+          segment // Use fallback segment (E/F deferred until estimates load)
         };
       });
     }
