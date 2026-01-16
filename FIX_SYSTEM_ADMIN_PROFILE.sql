@@ -234,4 +234,3 @@ SELECT
     THEN '✅ Trigger is active - All future users will automatically get profiles with correct roles'
     ELSE '❌ WARNING: Trigger is missing - Future users will NOT get profiles automatically!'
   END as future_user_protection;
-

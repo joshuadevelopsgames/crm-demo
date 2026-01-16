@@ -280,6 +280,7 @@ export default function Tasks() {
   });
   const [selectedTaskType, setSelectedTaskType] = useState(""); // 'sales', 'operations', or '' for no selection
   const [assignedUsersOpen, setAssignedUsersOpen] = useState(false);
+  const assignedUsersDropdownRef = useRef(null);
   const [newLabelInput, setNewLabelInput] = useState("");
 
   // Helper functions for multi-user assignment
@@ -351,6 +352,22 @@ export default function Tasks() {
     setSelectedTaskType("");
     setNewLabelInput("");
   };
+
+  // Close assigned users dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (assignedUsersDropdownRef.current && !assignedUsersDropdownRef.current.contains(event.target)) {
+        setAssignedUsersOpen(false);
+      }
+    };
+
+    if (assignedUsersOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [assignedUsersOpen]);
 
   const createTaskMutation = useMutation({
     mutationFn: async (data) => {
@@ -2214,24 +2231,27 @@ export default function Tasks() {
                             />
                           </div>
                         )}
-                        <div>
+                        <div className="relative" ref={assignedUsersDropdownRef}>
                           <Label>Assigned To</Label>
-                          <Select
-                            open={assignedUsersOpen}
-                            onOpenChange={setAssignedUsersOpen}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                            onClick={() => setAssignedUsersOpen(!assignedUsersOpen)}
                           >
-                            <SelectTrigger>
-                              <span className={`flex-1 text-left ${parseAssignedUsers(newTask.assigned_to).length > 0 ? 'text-slate-900 dark:text-white' : ''}`}>
-                                {parseAssignedUsers(newTask.assigned_to).length > 0
-                                  ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
-                                  : "Select users"}
-                              </span>
-                            </SelectTrigger>
-                            <SelectContent className={isMobile || isPWA || isNativeApp ? "max-h-[60vh] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
-                              <div className={isMobile || isPWA || isNativeApp ? "p-2 space-y-1" : "p-2 space-y-2"}>
+                            <span className={`flex-1 text-left ${parseAssignedUsers(newTask.assigned_to).length > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                              {parseAssignedUsers(newTask.assigned_to).length > 0
+                                ? getAssignedUserDisplay(newTask.assigned_to, currentUser?.email)
+                                : "Select users"}
+                            </span>
+                          </Button>
+                          {assignedUsersOpen && (
+                            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg">
+                              <div className={isMobile || isPWA || isNativeApp ? "p-2 space-y-1 max-h-[60vh] overflow-y-auto" : "p-2 space-y-2 max-h-[300px] overflow-y-auto"}>
                                 <div
                                   className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setNewTask({
                                       ...newTask,
                                       assigned_to: "",
@@ -2252,7 +2272,10 @@ export default function Tasks() {
                                     <div
                                       key={user.id || user.email}
                                       className={`flex items-center space-x-2 ${isMobile || isPWA || isNativeApp ? "p-3 min-h-[44px]" : "p-2"} rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer touch-manipulation`}
-                                      onClick={() => toggleUserAssignment(user.email)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleUserAssignment(user.email);
+                                      }}
                                     >
                                       <input
                                         type="checkbox"
@@ -2276,8 +2299,8 @@ export default function Tasks() {
                                   );
                                 })}
                               </div>
-                            </SelectContent>
-                          </Select>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <Label>Related Account</Label>
