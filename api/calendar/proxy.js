@@ -57,9 +57,15 @@ export default async function handler(req, res) {
   try {
     const supabase = getSupabase();
     if (!supabase) {
+      console.error('❌ Supabase configuration missing in calendar proxy');
+      console.error('Environment check:', {
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
       return res.status(500).json({ 
         success: false, 
-        error: 'Server configuration error' 
+        error: 'Server configuration error: Supabase not configured',
+        details: 'Please configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables'
       });
     }
 
@@ -112,14 +118,19 @@ export default async function handler(req, res) {
 
       // Refresh the token
       try {
-        const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID;
+        const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
         const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
         if (!CLIENT_ID || !CLIENT_SECRET) {
-          console.error('❌ Google OAuth credentials not configured');
+          console.error('❌ Google OAuth credentials not configured', {
+            hasClientId: !!CLIENT_ID,
+            hasClientSecret: !!CLIENT_SECRET,
+            envKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE') || k.includes('CLIENT'))
+          });
           return res.status(500).json({ 
             success: false, 
-            error: 'Server configuration error' 
+            error: 'Server configuration error: Google OAuth credentials missing',
+            details: 'Please configure VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables'
           });
         }
 
@@ -188,10 +199,18 @@ export default async function handler(req, res) {
         integration = updatedIntegration;
       } catch (error) {
         console.error('❌ Error refreshing Calendar token:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Failed to refresh token' 
-        });
+        // If token refresh fails, try to continue with existing token if it's not too expired
+        // Otherwise return error
+        const tokenAge = expiryTime ? (now.getTime() - expiryTime.getTime()) : Infinity;
+        if (tokenAge > 60 * 60 * 1000) { // More than 1 hour expired
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to refresh token. Please reconnect Calendar.',
+            details: error.message
+          });
+        }
+        // Token is only slightly expired, try to use it anyway
+        console.warn('⚠️ Token refresh failed but token is not too old, attempting to use existing token');
       }
     }
 
@@ -235,10 +254,28 @@ export default async function handler(req, res) {
     const data = await calendarResponse.json();
 
     if (!calendarResponse.ok) {
+      // Handle 401/403 errors - might indicate token issues
+      if (calendarResponse.status === 401 || calendarResponse.status === 403) {
+        console.error('❌ Calendar API authentication error:', {
+          status: calendarResponse.status,
+          error: data.error
+        });
+        
+        // If it's an auth error, try to clean up the integration
+        try {
+          await supabase
+            .from('google_calendar_integrations')
+            .delete()
+            .eq('user_id', user.id);
+        } catch (cleanupError) {
+          console.error('Error cleaning up integration:', cleanupError);
+        }
+      }
+      
       return res.status(calendarResponse.status).json({ 
         success: false, 
         error: data.error?.message || 'Calendar API error',
-        details: data
+        details: data.error
       });
     }
 
@@ -248,10 +285,12 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error proxying Calendar API:', error);
+    console.error('❌ Error proxying Calendar API:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ 
       success: false, 
-      error: error.message || 'Internal server error' 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

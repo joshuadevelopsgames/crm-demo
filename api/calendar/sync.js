@@ -111,14 +111,19 @@ export default async function handler(req, res) {
 
       // Refresh the token
       try {
-        const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID;
+        const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
         const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
         if (!CLIENT_ID || !CLIENT_SECRET) {
-          console.error('❌ Google OAuth credentials not configured');
+          console.error('❌ Google OAuth credentials not configured', {
+            hasClientId: !!CLIENT_ID,
+            hasClientSecret: !!CLIENT_SECRET,
+            envKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE') || k.includes('CLIENT'))
+          });
           return res.status(500).json({ 
             success: false, 
-            error: 'Server configuration error' 
+            error: 'Server configuration error: Google OAuth credentials missing',
+            details: 'Please configure VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables'
           });
         }
 
@@ -187,10 +192,18 @@ export default async function handler(req, res) {
         integration = updatedIntegration;
       } catch (error) {
         console.error('❌ Error refreshing Calendar token:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Failed to refresh token' 
-        });
+        // If token refresh fails, try to continue with existing token if it's not too expired
+        // Otherwise return error
+        const tokenAge = expiryTime ? (now.getTime() - expiryTime.getTime()) : Infinity;
+        if (tokenAge > 60 * 60 * 1000) { // More than 1 hour expired
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to refresh token. Please reconnect Calendar.',
+            details: error.message
+          });
+        }
+        // Token is only slightly expired, try to use it anyway
+        console.warn('⚠️ Token refresh failed but token is not too old, attempting to use existing token');
       }
     }
 
