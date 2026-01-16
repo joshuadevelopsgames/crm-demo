@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, ChevronDown, ChevronUp, Info, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
-import { detectContractTypo, getEstimateYearData } from '@/utils/revenueSegmentCalculator';
+import { detectContractTypo } from '@/utils/revenueSegmentCalculator';
 import { format } from 'date-fns';
 import { isWonStatus } from '@/utils/reportCalculations';
 import { getYearFromDateString } from '@/utils/dateFormatter';
