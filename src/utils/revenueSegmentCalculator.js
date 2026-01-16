@@ -275,7 +275,9 @@ export function getEstimateYearData(estimate, currentYear) {
   checkPriceFieldFallback(estimate);
   
   const totalPrice = getEstimatePrice(estimate);
-  if (totalPrice === 0) return null;
+  // Note: We still return year data even if price is 0, because estimates with $0 price
+  // still need to be counted for year applicability (e.g., for lead/client classification)
+  // The value will be 0, which is correct for revenue calculations
   
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
   const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
@@ -315,17 +317,17 @@ export function getEstimateYearData(estimate, currentYear) {
   if (estimate.contract_end) {
     determinationYear = getYearFromDateString(estimate.contract_end);
     source = 'contract_end';
-  }
+    }
   // Priority 2: contract_start
   else if (estimate.contract_start) {
     determinationYear = getYearFromDateString(estimate.contract_start);
     source = 'contract_start';
-  }
+    }
   // Priority 3: estimate_date
   else if (estimate.estimate_date) {
     determinationYear = getYearFromDateString(estimate.estimate_date);
     source = 'estimate_date';
-  }
+    }
   // Priority 4: created_date
   else if (estimate.created_date) {
     determinationYear = getYearFromDateString(estimate.created_date);
@@ -334,7 +336,7 @@ export function getEstimateYearData(estimate, currentYear) {
   
   if (determinationYear === null) return null;
   
-  return {
+      return {
     year: determinationYear,
     appliesToCurrentYear: determinationYear === currentYear,
     value: determinationYear === currentYear ? totalPrice : 0,
