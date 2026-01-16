@@ -26,6 +26,7 @@
 // Inline checkPriceFieldFallback to avoid serverless import issues
 // This function checks for price field fallback and shows toast in browser only
 // Serverless-safe: Returns boolean, no toast in serverless environment
+// Note: Toast functionality is handled by the actual module in browser, this is just a no-op in serverless
 function checkPriceFieldFallback(estimate) {
   if (!estimate) return false;
   
@@ -44,23 +45,8 @@ function checkPriceFieldFallback(estimate) {
   
   // If fallback is being used (total_price is missing AND total_price_with_tax exists)
   // This should never happen in normal operation since total_price always has a value
-  if (isTotalPriceMissing && hasTotalPriceWithTax) {
-    // Only show toast in browser environment (not in serverless)
-    if (typeof window !== 'undefined') {
-      // Lazy import toast only in browser
-      import('./priceFieldFallbackNotification')
-        .then(module => {
-          // Call the actual function from the module to show toast
-          module.checkPriceFieldFallback(estimate);
-        })
-        .catch(() => {
-          // Toast module not available - skip (serverless environment)
-        });
-    }
-    return true;
-  }
-  
-  return false;
+  // In serverless, we just return the boolean (toast handled by browser-side code)
+  return isTotalPriceMissing && hasTotalPriceWithTax;
 }
 
 // Inline functions to avoid serverless import issues
