@@ -7,6 +7,7 @@ import { findMappingRule, applyMappingRule } from './scorecardMappings';
 import { getCurrentYear } from '@/contexts/YearSelectorContext';
 import { isWonStatus } from './reportCalculations';
 import { getYearFromDateString } from './dateFormatter';
+import { getEstimatePrice } from './revenueSegmentCalculator';
 
 /**
  * Auto-score an account using the primary scorecard template
@@ -65,7 +66,7 @@ export function autoScoreAccount(account, estimates, jobsites, template) {
     const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
     const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
     const createdDate = estimate.created_date ? new Date(estimate.created_date) : null;
-    const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+    const totalPrice = getEstimatePrice(estimate);
     if (totalPrice === 0) return null;
     
     // If we have both contract_start and contract_end, use contract allocation (multi-year)

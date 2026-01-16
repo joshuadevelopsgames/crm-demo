@@ -14,8 +14,8 @@ This document defines how revenue is calculated, displayed, and used for segment
 
 - **Estimates Table**: Primary source for revenue data
   - `status` (text): Estimate status, must be "won" (case-insensitive) to count
-  - `total_price` (numeric): Primary price field for revenue calculations
-  - `total_price_with_tax` (numeric): Fallback price field if `total_price` is missing/zero
+  - `total_price` (numeric): Primary price field for revenue calculations (always has a value, even if 0)
+  - `total_price_with_tax` (numeric): Fallback price field if `total_price` is null or undefined (not if it's 0)
   - `contract_end` (date): Priority 1 for year determination (per Estimates spec R2)
   - `contract_start` (date): Priority 2 for year determination (per Estimates spec R2)
   - `estimate_close_date` (date): Deprecated, no longer used for year determination priority

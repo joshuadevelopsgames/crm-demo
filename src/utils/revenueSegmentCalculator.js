@@ -237,13 +237,44 @@ export function detectContractTypo(durationMonths, contractYears, startDate = nu
  * 
  * For multi-year contracts, annualizes the total price (divides by number of years)
  */
+/**
+ * Get price from estimate, preferring total_price over total_price_with_tax
+ * Only falls back to total_price_with_tax if total_price is null or undefined (not if it's 0)
+ * total_price will always have a value (even if 0), so fallback should never occur in normal operation
+ * 
+ * @param {Object} estimate - Estimate object
+ * @returns {number} - Price value (0 if both are missing/null)
+ */
+export function getEstimatePrice(estimate) {
+  if (!estimate) return 0;
+  
+  // Check for fallback and show toast notification if needed (once per session)
+  checkPriceFieldFallback(estimate);
+  
+  // total_price will always have a value (even if 0), so only fallback if null/undefined
+  if (estimate.total_price !== null && estimate.total_price !== undefined) {
+    return typeof estimate.total_price === 'number' 
+      ? estimate.total_price 
+      : parseFloat(estimate.total_price) || 0;
+  }
+  
+  // Fallback to total_price_with_tax only if total_price is null/undefined
+  if (estimate.total_price_with_tax !== null && estimate.total_price_with_tax !== undefined) {
+    return typeof estimate.total_price_with_tax === 'number'
+      ? estimate.total_price_with_tax
+      : parseFloat(estimate.total_price_with_tax) || 0;
+  }
+  
+  return 0;
+}
+
 export function getEstimateYearData(estimate, currentYear) {
   if (!estimate) return null;
   
   // Check for fallback and show toast notification if needed (once per session)
   checkPriceFieldFallback(estimate);
   
-  const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+  const totalPrice = getEstimatePrice(estimate);
   if (totalPrice === 0) return null;
   
   const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
@@ -351,17 +382,8 @@ export function calculateRevenueFromWonEstimates(account, estimates, year) {
     // Check for fallback and show toast notification if needed (once per session)
     checkPriceFieldFallback(est);
     
-    // Get price (prefer total_price, fallback to total_price_with_tax)
-    let price = 0;
-    if (est.total_price !== null && est.total_price !== undefined) {
-      price = typeof est.total_price === 'number' 
-        ? est.total_price 
-        : parseFloat(est.total_price) || 0;
-    } else if (est.total_price_with_tax !== null && est.total_price_with_tax !== undefined) {
-      price = typeof est.total_price_with_tax === 'number' 
-        ? est.total_price_with_tax 
-        : parseFloat(est.total_price_with_tax) || 0;
-    }
+    // Get price (prefer total_price, fallback to total_price_with_tax only if total_price is null/undefined)
+    const price = getEstimatePrice(est);
     
     if (price <= 0) return;
     

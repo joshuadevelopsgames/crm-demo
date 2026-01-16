@@ -13,6 +13,7 @@
 
 import { isWonStatus } from './reportCalculations';
 import { getYearFromDateString } from './dateFormatter';
+import { getEstimatePrice } from './revenueSegmentCalculator';
 
 /**
  * Mapping rules for automatically scoring accounts
@@ -105,8 +106,8 @@ export const mappingRules = [
         const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
         const estimateDate = estimate.estimate_date ? new Date(estimate.estimate_date) : null;
         
-        // Use total_price_with_tax consistently
-        const totalPrice = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+        // Use getEstimatePrice which correctly handles fallback (only when total_price is null/undefined, not 0)
+        const totalPrice = getEstimatePrice(estimate);
         if (totalPrice === 0) return null;
         
         // Case 1: Both contract_start and contract_end exist

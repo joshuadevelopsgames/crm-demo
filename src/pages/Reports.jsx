@@ -36,6 +36,7 @@ import DepartmentReport from '@/components/reports/DepartmentReport';
 import AccountPerformanceReport from '@/components/reports/AccountPerformanceReport';
 import SalesPipelineReport from '@/components/reports/SalesPipelineReport';
 import { getYearFromDateString } from '@/utils/dateFormatter';
+import { getEstimatePrice } from '@/utils/revenueSegmentCalculator';
 
 import { getCurrentYear, useYearSelector } from '@/contexts/YearSelectorContext';
 import toast from 'react-hot-toast';
@@ -654,12 +655,12 @@ export default function Reports() {
     
     // Database uses total_price (fallback to total_price_with_tax)
     const totalValue = filteredYearEstimates.reduce((sum, e) => {
-      return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
+      return sum + getEstimatePrice(e);
     }, 0);
     
     // Use filteredYearWonEstimates for won value to match LMN's logic
     const wonValue = filteredYearWonEstimates.reduce((sum, e) => {
-      return sum + (parseFloat(e.total_price) || parseFloat(e.total_price_with_tax) || 0);
+      return sum + getEstimatePrice(e);
     }, 0);
 
     return {

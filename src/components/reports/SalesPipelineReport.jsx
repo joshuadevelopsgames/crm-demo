@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/utils/reportCalculations';
+import { getEstimatePrice } from '@/utils/revenueSegmentCalculator';
 import { TrendingUp } from 'lucide-react';
 
 export default function SalesPipelineReport({ estimates }) {
@@ -26,7 +27,7 @@ export default function SalesPipelineReport({ estimates }) {
       grouped[normalizedStatus].count++;
       totalEstimates++;
       
-      const price = parseFloat(est.total_price || est.total_price_with_tax || 0);
+      const price = getEstimatePrice(est);
       grouped[normalizedStatus].price += price;
       totalPrice += price;
     });
@@ -75,7 +76,7 @@ export default function SalesPipelineReport({ estimates }) {
       grouped[normalized].count++;
       totalEstimates++;
       
-      const price = parseFloat(est.total_price || est.total_price_with_tax || 0);
+      const price = getEstimatePrice(est);
       grouped[normalized].price += price;
       totalPrice += price;
     });

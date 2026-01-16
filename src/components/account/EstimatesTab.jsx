@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { formatDateString, getYearFromDateString, getDateStringTimestamp } from '@/utils/dateFormatter';
 import { UserFilter } from '@/components/UserFilter';
 import { isWonStatus } from '@/utils/reportCalculations';
-import { getEstimateYearData } from '@/utils/revenueSegmentCalculator';
+import { getEstimateYearData, getEstimatePrice } from '@/utils/revenueSegmentCalculator';
 import { checkPriceFieldFallback } from '@/utils/priceFieldFallbackNotification';
 
 // Exact division categories from Google Sheet
@@ -321,8 +321,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       return wonEstimates.reduce((sum, est) => {
         // Check for fallback and show toast notification if needed (once per session)
         checkPriceFieldFallback(est);
-        const amount = est.total_price || est.total_price_with_tax || 0;
-        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+        const amount = getEstimatePrice(est);
+        return sum + amount;
       }, 0);
     }
     
@@ -408,8 +408,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       return wonEstimates.reduce((sum, est) => {
         // Check for fallback and show toast notification if needed (once per session)
         checkPriceFieldFallback(est);
-        const amount = est.total_price || est.total_price_with_tax || 0;
-        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+        const amount = getEstimatePrice(est);
+        return sum + amount;
       }, 0);
     }
     
@@ -460,8 +460,8 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       return estimates.filter(est => !est.archived).reduce((sum, est) => {
         // Check for fallback and show toast notification if needed (once per session)
         checkPriceFieldFallback(est);
-        const amount = est.total_price || est.total_price_with_tax || 0;
-        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+        const amount = getEstimatePrice(est);
+        return sum + amount;
       }, 0);
     }
     
@@ -493,7 +493,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
       // Estimates without valid dates can't be assigned to a year (correctly excluded)
       const yearData = getEstimateYearData(est, selectedYear);
       const isWon = isWonStatus(est);
-      const price = parseFloat(est.total_price || est.total_price_with_tax) || 0;
+      const price = getEstimatePrice(est);
       
       if (yearData && yearData.appliesToCurrentYear) {
         // yearData.value already contains the annualized amount for this year
@@ -777,8 +777,7 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
                               <div className="flex items-center justify-end gap-1">
                                 <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                                 <span className="font-semibold text-slate-900 dark:text-[#ffffff]">
-                                  {estimate.total_price || estimate.total_price_with_tax 
-                                    ? (estimate.total_price || estimate.total_price_with_tax).toLocaleString('en-US', { 
+                                  {getEstimatePrice(estimate).toLocaleString('en-US', { 
                                         minimumFractionDigits: 2, 
                                         maximumFractionDigits: 2 
                                       })

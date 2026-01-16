@@ -74,8 +74,8 @@ This document defines common data structures and contracts used across multiple 
   lmn_contact_id?: string;      // LMN's contact identifier
   status: string;               // Estimate status (e.g., 'won', 'lost', 'contract signed')
   pipeline_status?: string;     // LMN pipeline status (e.g., 'sold', 'lost', 'pending')
-  total_price?: number;         // Base price (preferred)
-  total_price_with_tax?: number; // Tax-inclusive price (fallback if total_price missing)
+  total_price?: number;         // Base price (preferred, always has a value even if 0)
+  total_price_with_tax?: number; // Tax-inclusive price (fallback only if total_price is null/undefined, not if it's 0)
   division?: string;            // Department/division name
   address?: string;             // Project address
   archived: boolean;            // Archive flag

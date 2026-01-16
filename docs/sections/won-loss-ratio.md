@@ -14,8 +14,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
   - `account_id` (text, FK) - Links to accounts table
   - `status` (text) - Estimate status (e.g., 'won', 'lost', 'contract signed', 'work complete')
   - `pipeline_status` (text) - LMN pipeline status (e.g., 'sold', 'lost', 'pending')
-  - `total_price` (numeric) - Base price (preferred)
-  - `total_price_with_tax` (numeric) - Tax-inclusive price (fallback if total_price missing)
+  - `total_price` (numeric) - Base price (preferred, always has a value even if 0)
+  - `total_price_with_tax` (numeric) - Tax-inclusive price (fallback only if total_price is null or undefined, not if it's 0)
   - `division` (text) - Department/division name
   - `estimate_date` (timestamptz) - Estimate creation date
   - `contract_end` (timestamptz) - Contract end date (Priority 1 for year filtering, per Estimates spec R2)
@@ -36,8 +36,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 #### Optional but Important
 - `estimates.account_id` - Required for per-account statistics (estimates without account_id are excluded from account stats)
 - `estimates.division` - Defaults to 'Uncategorized' if missing
-- `estimates.total_price` - Preferred for revenue calculations
-- `estimates.total_price_with_tax` - Fallback if total_price missing
+- `estimates.total_price` - Preferred for revenue calculations (always has a value even if 0)
+- `estimates.total_price_with_tax` - Fallback only if total_price is null or undefined (not if it's 0)
 - `estimates.contract_end` - Priority 1 for year filtering (per Estimates spec R2)
 - `estimates.contract_start` - Priority 2 for year filtering (per Estimates spec R2)
 - `estimates.estimate_close_date` - Deprecated, no longer used for year determination priority
@@ -57,8 +57,8 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 
 - `estimates.status` can be null (treated as pending)
 - `estimates.pipeline_status` can be null (not checked if missing)
-- `estimates.total_price` can be null (falls back to `total_price_with_tax`)
-- `estimates.total_price_with_tax` can be null (treated as 0 if both price fields are null)
+- `estimates.total_price` always has a value (even if 0). Falls back to `total_price_with_tax` only if null or undefined
+- `estimates.total_price_with_tax` can be null (treated as 0 if both price fields are null/undefined)
 - `estimates.division` can be null (defaults to 'Uncategorized')
 - `estimates.account_id` can be null (excluded from account statistics)
 - `estimates.contract_end` can be null (falls back to `contract_start` → `estimate_date` → `created_date` per Estimates spec R2)
@@ -111,9 +111,9 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
    - Else → PENDING
 
 6. **Revenue Calculation** (for each estimate)
-   - Use `total_price` if available and non-zero
-   - Fallback to `total_price_with_tax` if `total_price` is missing or zero
-   - If both are missing or zero, treat as 0
+   - Use `total_price` (always has a value, even if 0)
+   - Fallback to `total_price_with_tax` only if `total_price` is null or undefined (not if it's 0)
+   - If both are null/undefined, treat as 0
 
 7. **Overall Statistics Calculation**
    - **Count-based calculations** (use simple date extraction, R40):
@@ -187,8 +187,9 @@ The Won Loss Ratio Logic section calculates and displays win/loss statistics for
 - **Revenue vs Won Ratio**: `(wonValue / totalValue) * 100`
   - Shows percentage of total revenue that comes from won estimates
 
-- **Revenue Value**: `parseFloat(total_price || total_price_with_tax) || 0`
-  - Prefers `total_price`, falls back to `total_price_with_tax`
+- **Revenue Value**: Uses `getEstimatePrice()` helper function
+  - Prefers `total_price` (always has a value, even if 0)
+  - Falls back to `total_price_with_tax` only if `total_price` is null or undefined (not if it's 0)
   - Treats missing/null values as 0
 
 ### Sorting and Grouping Rules
@@ -220,9 +221,9 @@ Rules must be testable and numbered.
 
 ### Revenue Calculation Rules
 
-- **R9**: Revenue calculation uses `total_price` if available and non-zero.
-- **R10**: If `total_price` is missing, null, or zero, then use `total_price_with_tax` as fallback.
-- **R11**: If both `total_price` and `total_price_with_tax` are missing, null, or zero, then revenue value is 0.
+- **R9**: Revenue calculation uses `total_price` (always has a value, even if 0).
+- **R10**: If `total_price` is null or undefined (not if it's 0), then use `total_price_with_tax` as fallback.
+- **R11**: If both `total_price` and `total_price_with_tax` are null or undefined, then revenue value is 0.
 
 ### Win Rate Calculation Rules
 
@@ -303,7 +304,11 @@ Rules must be testable and numbered.
 
 2. **Revenue Field Conflict**
    - Estimate: `{ total_price: 10000, total_price_with_tax: 0 }`
-   - Resolution: Use `total_price` first (R9). Since it's available and non-zero, use it. Result: Revenue = 10000.
+   - Resolution: Use `total_price` first (R9). Since it has a value (even if 0), use it. Result: Revenue = 10000.
+   - Estimate: `{ total_price: 0, total_price_with_tax: 5000 }`
+   - Resolution: Use `total_price` (R9). Even though it's 0, we use it (not fallback). Result: Revenue = 0.
+   - Estimate: `{ total_price: null, total_price_with_tax: 5000 }`
+   - Resolution: `total_price` is null, so fallback to `total_price_with_tax` (R10). Result: Revenue = 5000.
 
 3. **Missing Division Conflict**
    - Estimate: `{ division: null, account_id: 'acc-123' }`

@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { calculateOverallStats, calculateAccountStats, calculateDepartmentStats, formatCurrency } from './reportCalculations';
+import { getEstimatePrice } from './revenueSegmentCalculator';
 
 /**
  * Export all report data to XLSX with professional formatting
@@ -162,7 +163,7 @@ export function exportToXLSX(reportData, selectedYear, selectedMonth = 'all') {
         est.contract_end || est.contract_start || est.estimate_date || est.created_date || 'N/A',
         est.status || 'N/A',
         est.division || 'N/A',
-        parseFloat(est.total_price || est.total_price_with_tax || 0),
+        getEstimatePrice(est),
         est.salesperson || 'N/A',
         est.estimator || 'N/A'
       ]);

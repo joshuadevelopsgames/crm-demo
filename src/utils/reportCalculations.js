@@ -4,7 +4,7 @@
  */
 
 import { getYearFromDateString, parseDateString } from './dateFormatter';
-import { getSegmentYear } from './revenueSegmentCalculator';
+import { getSegmentYear, getEstimatePrice } from './revenueSegmentCalculator';
 import { checkPriceFieldFallback } from './priceFieldFallbackNotification';
 
 /**
@@ -51,7 +51,7 @@ export function calculateOverallStats(estimates) {
   // Use total_price with fallback to total_price_with_tax
   const totalValue = estimates.reduce((sum, e) => {
     checkPriceFieldFallback(e);
-    return sum + (parseFloat(e.total_price || e.total_price_with_tax) || 0);
+    return sum + getEstimatePrice(e);
   }, 0);
   const wonValue = estimates
     .filter(e => isWonStatus(e))
@@ -132,7 +132,7 @@ export function calculateAccountStats(estimates, accounts) {
     
     // Use total_price with fallback to total_price_with_tax
     checkPriceFieldFallback(estimate);
-    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+    const value = getEstimatePrice(estimate);
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {
@@ -195,7 +195,7 @@ export function calculateDepartmentStats(estimates) {
     
     // Use total_price with fallback to total_price_with_tax
     checkPriceFieldFallback(estimate);
-    const value = parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0;
+    const value = getEstimatePrice(estimate);
     stats.totalValue += value;
     
     if (isWonStatus(estimate)) {

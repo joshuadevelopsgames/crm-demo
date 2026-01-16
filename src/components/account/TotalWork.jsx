@@ -292,8 +292,8 @@ export default function TotalWork({ account, estimates = [], selectedYear: propS
       const yearData = getEstimateYearData(est, currentYear);
       // Check for fallback and show toast notification if needed (once per session)
       checkPriceFieldFallback(est);
-      // Use total_price consistently
-      const totalPrice = parseFloat(est.total_price || est.total_price_with_tax) || 0;
+      // Use getEstimatePrice which correctly handles fallback (only when total_price is null/undefined, not 0)
+      const totalPrice = getEstimatePrice(est);
       
         let reason = '';
         

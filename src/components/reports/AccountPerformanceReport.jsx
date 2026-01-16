@@ -8,6 +8,7 @@ import { formatDateString, getDateStringTimestamp } from '@/utils/dateFormatter'
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { calculateAccountStats, formatCurrency, enhanceAccountStatsWithMetadata } from '@/utils/reportCalculations';
+import { getEstimatePrice } from '@/utils/revenueSegmentCalculator';
 
 export default function AccountPerformanceReport({ estimates, accounts, selectedYear, interactionStatsMap, scorecardStatsMap }) {
   const navigate = useNavigate();
@@ -223,7 +224,7 @@ export default function AccountPerformanceReport({ estimates, accounts, selected
                                                 : 'N/A')}
                                           </td>
                                           <td className="p-2 text-right text-slate-600 dark:text-slate-300">
-                                            {formatCurrency(parseFloat(estimate.total_price || estimate.total_price_with_tax) || 0)}
+                                            {formatCurrency(getEstimatePrice(estimate))}
                                           </td>
                                           <td className="p-2 text-center">
                                             {getStatusBadge(estimate.status)}
