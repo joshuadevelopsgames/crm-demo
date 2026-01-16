@@ -303,8 +303,9 @@ export default function InteractionTimeline({ interactions, contacts, accountId,
                                         Open
                                       </a>
                                       <a
-                                        href={fileUrl}
-                                        download={file.file_name || 'attachment'}
+                                        href={file.storage_path
+                                          ? `/api/storage/download?path=${encodeURIComponent(file.storage_path)}&filename=${encodeURIComponent(file.file_name || 'attachment')}&download=1`
+                                          : fileUrl}
                                         className="text-sm text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                                       >
                                         Download
