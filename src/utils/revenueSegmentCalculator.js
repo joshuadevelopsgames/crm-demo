@@ -501,20 +501,23 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     const organizationScore = account?.organization_score;
     
     // Strict validation: must be a valid number > 0
-    // Handle null, undefined, empty string, 0, NaN, and invalid strings
+    // Handle null, undefined, empty string, 0, NaN, invalid strings, and special values like "-"
     let icpScore = null;
     
-    if (organizationScore !== null && organizationScore !== undefined && organizationScore !== '') {
+    if (organizationScore !== null && organizationScore !== undefined && organizationScore !== '' && organizationScore !== '-') {
       if (typeof organizationScore === 'number') {
         // Valid number (including 0, but 0 is not a valid ICP score)
         if (!isNaN(organizationScore) && organizationScore > 0) {
           icpScore = organizationScore;
         }
       } else {
-        // Try to parse string
-        const parsed = parseFloat(organizationScore);
-        if (!isNaN(parsed) && parsed > 0) {
-          icpScore = parsed;
+        // Try to parse string, but exclude common invalid representations
+        const strValue = String(organizationScore).trim();
+        if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
+          const parsed = parseFloat(strValue);
+          if (!isNaN(parsed) && parsed > 0) {
+            icpScore = parsed;
+          }
         }
       }
     }
