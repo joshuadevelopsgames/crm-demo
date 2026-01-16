@@ -110,17 +110,54 @@ export function calculateDurationMonths(startDate, endDate) {
 }
 
 /**
+ * Check if contract end date is within grace period (30 days) after an exact N-year anniversary
+ * @param {Date} startDate - Contract start date
+ * @param {Date} endDate - Contract end date
+ * @param {number} years - Number of years to check (e.g., 1, 2, 3)
+ * @returns {boolean} - True if end date is within 30 days after the anniversary
+ */
+function isWithinGracePeriod(startDate, endDate, years) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Calculate the exact anniversary date
+  const anniversaryDate = new Date(start);
+  anniversaryDate.setFullYear(start.getFullYear() + years);
+  
+  // Calculate days difference (end date - anniversary date)
+  const daysDiff = Math.floor((end - anniversaryDate) / (1000 * 60 * 60 * 24));
+  
+  // Grace period: 0 to 30 days after anniversary (not before)
+  return daysDiff >= 0 && daysDiff <= 30;
+}
+
+/**
  * Determine number of contract years based on duration in months
  * Rules:
  * - duration_months ≤ 12 → years_count = 1
  * - 12 < duration_months ≤ 24 → years_count = 2
  * - 24 < duration_months ≤ 36 → years_count = 3
  * - Exact multiples of 12 do NOT round up (24 months = 2 years, not 3)
+ * - Grace period: If end date is within 30 days after an exact N-year anniversary, treat as N years (not N+1)
  * - Otherwise: ceil(duration_months / 12)
  * @param {number} durationMonths - Duration in months
+ * @param {Date} [startDate] - Optional contract start date (for grace period check)
+ * @param {Date} [endDate] - Optional contract end date (for grace period check)
  * @returns {number} - Number of contract years
  */
-export function getContractYears(durationMonths) {
+export function getContractYears(durationMonths, startDate = null, endDate = null) {
+  // If we have dates, check for grace period eligibility
+  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+    // Check if it's within grace period for 1, 2, 3, etc. years
+    for (let years = 1; years <= 10; years++) {
+      if (isWithinGracePeriod(startDate, endDate, years)) {
+        // End date is within 30 days after N-year anniversary, treat as exactly N years
+        return years;
+      }
+    }
+  }
+  
+  // Standard calculation (no grace period applies)
   if (durationMonths <= 12) return 1;
   if (durationMonths <= 24) return 2;
   if (durationMonths <= 36) return 3;
@@ -136,16 +173,28 @@ export function getContractYears(durationMonths) {
  * Flags contracts where duration is exactly 1 month over an exact year boundary
  * (e.g., 13 months, 25 months, 37 months)
  * Per spec R24-R27: Typo detection is advisory only and does not change contract_years
+ * Grace period: Contracts ending within 30 days after an anniversary are NOT flagged as typos
  * @param {number} durationMonths - Duration in months
  * @param {number} contractYears - Calculated contract years
+ * @param {Date} [startDate] - Optional contract start date (for grace period check)
+ * @param {Date} [endDate] - Optional contract end date (for grace period check)
  * @returns {boolean} - True if typo is detected
  */
-export function detectContractTypo(durationMonths, contractYears) {
+export function detectContractTypo(durationMonths, contractYears, startDate = null, endDate = null) {
+  // If we have dates and the contract qualifies for grace period, don't flag as typo
+  if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+    // Check if it's within grace period for the calculated years
+    if (isWithinGracePeriod(startDate, endDate, contractYears)) {
+      return false; // Within grace period, not a typo
+    }
+  }
+  
   // Calculate remainder months
   const remainderMonths = durationMonths % 12;
   
   // Typo detected if remainder is exactly 1 month (per spec R24)
   // This catches: 13 months (1 year + 1), 25 months (2 years + 1), 37 months (3 years + 1), etc.
+  // But only if NOT within grace period
   return remainderMonths === 1;
 }
 
@@ -263,7 +312,8 @@ export function getEstimateYearData(estimate, currentYear) {
     const durationMonths = calculateDurationMonths(contractStart, contractEnd);
     if (durationMonths <= 0) return null;
     
-    const yearsCount = getContractYears(durationMonths);
+    // Pass dates to getContractYears for grace period check
+    const yearsCount = getContractYears(durationMonths, contractStart, contractEnd);
     const annualAmount = totalPrice / yearsCount;
     
     // Per spec R9: Allocate to sequential calendar years starting from contract_start
@@ -273,8 +323,8 @@ export function getEstimateYearData(estimate, currentYear) {
     }
     const appliesToCurrentYear = yearsApplied.includes(currentYear);
     
-    // Detect typo (per spec R20)
-    const hasTypo = detectContractTypo(durationMonths, yearsCount);
+    // Detect typo (per spec R20) - pass dates for grace period check
+    const hasTypo = detectContractTypo(durationMonths, yearsCount, contractStart, contractEnd);
     
     return {
       appliesToCurrentYear,

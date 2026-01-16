@@ -949,8 +949,8 @@ export async function createContractTypoNotifications(estimates, supabase) {
         const durationMonths = calculateDurationMonths(contractStart, contractEnd);
         if (durationMonths <= 0) return false;
         
-        const contractYears = getContractYears(durationMonths);
-        return detectContractTypo(durationMonths, contractYears);
+        const contractYears = getContractYears(durationMonths, contractStart, contractEnd);
+        return detectContractTypo(durationMonths, contractYears, contractStart, contractEnd);
       } catch (error) {
         return false;
       }
@@ -985,7 +985,7 @@ export async function createContractTypoNotifications(estimates, supabase) {
       const contractStart = new Date(est.contract_start);
       const contractEnd = new Date(est.contract_end);
       const durationMonths = calculateDurationMonths(contractStart, contractEnd);
-      const contractYears = getContractYears(durationMonths);
+      const contractYears = getContractYears(durationMonths, contractStart, contractEnd);
       const estimateNumber = est.estimate_number || est.lmn_estimate_id || est.id || 'Unknown';
       
       return {
