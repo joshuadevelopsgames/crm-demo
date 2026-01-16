@@ -560,6 +560,38 @@ export function calculateSegmentsForAllYears(account, allAccounts, estimates = [
 }
 
 /**
+ * Get revenue for selected year from account's revenue_by_year field
+ * 
+ * IMPORTANT: Revenue is calculated during import only and stored in revenue_by_year.
+ * This function reads from stored data, it does NOT calculate revenue from estimates.
+ * 
+ * @param {Object} account - Account object
+ * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
+ * @returns {number} - Revenue for selected year, or 0 if not available
+ */
+export function getRevenueForYear(account, selectedYear) {
+  if (!account || !account.revenue_by_year || typeof account.revenue_by_year !== 'object') {
+    return 0;
+  }
+  
+  const yearStr = selectedYear ? selectedYear.toString() : new Date().getFullYear().toString();
+  const revenue = account.revenue_by_year[yearStr];
+  
+  if (typeof revenue === 'number') {
+    return revenue;
+  }
+  
+  if (revenue) {
+    const parsed = parseFloat(revenue);
+    if (!isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  
+  return 0;
+}
+
+/**
  * Get total estimates count for selected year from account's total_estimates_by_year field
  * 
  * IMPORTANT: Total estimates are calculated during import only and stored in total_estimates_by_year.
