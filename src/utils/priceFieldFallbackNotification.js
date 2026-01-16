@@ -2,21 +2,28 @@
  * Utility to show toast notification when total_price_with_tax is used as fallback
  * Per Revenue Logic spec R4: Show toast notification once per session when fallback occurs
  * 
- * Serverless-safe: Only shows toast in browser environment, safe to call in serverless functions
+ * Serverless-safe: Only imports toast in browser environment, safe to call in serverless functions
  */
 
-// Dynamic import for toast (only in browser environment)
-let toast = null;
-if (typeof window !== 'undefined') {
-  // Only import toast in browser environment (not in serverless)
-  import('react-hot-toast').then(module => {
-    toast = module.default;
-  }).catch(() => {
-    // Toast not available (serverless environment) - this is fine
-  });
-}
-
 const SESSION_STORAGE_KEY = 'price_field_fallback_toast_shown';
+
+// Lazy load toast only in browser environment (serverless-safe)
+let toastPromise = null;
+function getToast() {
+  // Only try to import toast in browser environment
+  if (typeof window === 'undefined') {
+    return Promise.resolve(null);
+  }
+  
+  // Lazy load toast on first use
+  if (!toastPromise) {
+    toastPromise = import('react-hot-toast')
+      .then(module => module.default)
+      .catch(() => null); // Return null if import fails (serverless environment)
+  }
+  
+  return toastPromise;
+}
 
 /**
  * Check if total_price is missing and total_price_with_tax is being used as fallback
@@ -61,31 +68,20 @@ export function checkPriceFieldFallback(estimate) {
  * Per spec R4: Show notification once per session
  * Only works in browser environment (serverless-safe)
  */
-function showFallbackToastOnce() {
+async function showFallbackToastOnce() {
   // Only show toast in browser environment
   if (typeof window === 'undefined') return;
-  
-  // Check if toast library is available
-  if (!toast) {
-    // Try to import toast synchronously if not already loaded
-    import('react-hot-toast').then(module => {
-      toast = module.default;
-      showToast();
-    }).catch(() => {
-      // Toast not available - skip
-    });
-    return;
-  }
-  
-  showToast();
-}
-
-function showToast() {
-  if (!toast) return;
   
   // Check if toast has already been shown this session
   const toastShown = sessionStorage.getItem(SESSION_STORAGE_KEY);
   if (toastShown === 'true') {
+    return;
+  }
+  
+  // Lazy load toast (only in browser)
+  const toast = await getToast();
+  if (!toast) {
+    // Toast not available (serverless environment) - skip
     return;
   }
   
