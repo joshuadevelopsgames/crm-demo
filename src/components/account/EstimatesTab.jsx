@@ -192,6 +192,30 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     return filtered;
   }, [estimates, filterStatus, effectiveFilterYear, selectedUsers]);
 
+  // Filter estimates by year using contract-year allocation logic (for Overall Win Rate card)
+  // This matches the logic used in Total Work card to ensure consistency
+  // Per Year Selection System spec R1, R2, R7-R9: Use contract-year allocation for multi-year contracts
+  // MUST be defined before estimatesByDepartment which uses it
+  const yearFilteredEstimates = useMemo(() => {
+    if (effectiveFilterYear === 'all') {
+      // If "all years" selected, return all non-archived estimates
+      return estimates.filter(est => !est.archived);
+    }
+    
+    const selectedYear = parseInt(effectiveFilterYear);
+    return estimates.filter(est => {
+      // Per spec R2: Exclude archived estimates
+      if (est.archived) {
+        return false;
+      }
+      
+      // Use getEstimateYearData to check if estimate applies to selected year
+      // This handles multi-year contracts with annualization
+      const yearData = getEstimateYearData(est, selectedYear);
+      return yearData && yearData.appliesToCurrentYear;
+    });
+  }, [estimates, effectiveFilterYear]);
+
   // Group estimates by department - use same filtering as overall totals
   const estimatesByDepartment = useMemo(() => {
     const grouped = {};
@@ -326,29 +350,6 @@ export default function EstimatesTab({ estimates = [], accountId, account = null
     const won = departmentEstimates.filter(est => isWonStatus(est)).length;
     return (won / departmentEstimates.length) * 100;
   };
-
-  // Filter estimates by year using contract-year allocation logic (for Overall Win Rate card)
-  // This matches the logic used in Total Work card to ensure consistency
-  // Per Year Selection System spec R1, R2, R7-R9: Use contract-year allocation for multi-year contracts
-  const yearFilteredEstimates = useMemo(() => {
-    if (effectiveFilterYear === 'all') {
-      // If "all years" selected, return all non-archived estimates
-      return estimates.filter(est => !est.archived);
-    }
-    
-    const selectedYear = parseInt(effectiveFilterYear);
-    return estimates.filter(est => {
-      // Per spec R2: Exclude archived estimates
-      if (est.archived) {
-        return false;
-      }
-      
-      // Use getEstimateYearData to check if estimate applies to selected year
-      // This handles multi-year contracts with annualization
-      const yearData = getEstimateYearData(est, selectedYear);
-      return yearData && yearData.appliesToCurrentYear;
-    });
-  }, [estimates, effectiveFilterYear]);
 
   // Filter estimates by year using contract_start date for COUNT-based won/loss ratio
   // Multi-year contracts are treated as single-year contracts using contract_start year
