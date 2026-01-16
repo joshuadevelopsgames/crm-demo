@@ -1,15 +1,28 @@
 /**
  * Utility to show toast notification when total_price_with_tax is used as fallback
  * Per Revenue Logic spec R4: Show toast notification once per session when fallback occurs
+ * 
+ * Serverless-safe: Only shows toast in browser environment, safe to call in serverless functions
  */
 
-import toast from 'react-hot-toast';
+// Dynamic import for toast (only in browser environment)
+let toast = null;
+if (typeof window !== 'undefined') {
+  // Only import toast in browser environment (not in serverless)
+  import('react-hot-toast').then(module => {
+    toast = module.default;
+  }).catch(() => {
+    // Toast not available (serverless environment) - this is fine
+  });
+}
 
 const SESSION_STORAGE_KEY = 'price_field_fallback_toast_shown';
 
 /**
  * Check if total_price is missing and total_price_with_tax is being used as fallback
- * Shows toast notification once per session if fallback is detected
+ * Shows toast notification once per session if fallback is detected (browser only)
+ * 
+ * Serverless-safe: Returns boolean without showing toast in serverless environment
  * 
  * @param {Object} estimate - Estimate object
  * @returns {boolean} - true if fallback is being used, false otherwise
@@ -30,10 +43,13 @@ export function checkPriceFieldFallback(estimate) {
   const hasTotalPriceWithTax = totalPriceWithTax != null && 
     !(typeof totalPriceWithTax === 'number' && isNaN(totalPriceWithTax));
   
-  // If fallback is being used (total_price is missing AND total_price_with_tax exists), show toast once per session
+  // If fallback is being used (total_price is missing AND total_price_with_tax exists)
   // This should never happen in normal operation since total_price always has a value
   if (isTotalPriceMissing && hasTotalPriceWithTax) {
-    showFallbackToastOnce();
+    // Only show toast in browser environment (not in serverless)
+    if (typeof window !== 'undefined') {
+      showFallbackToastOnce();
+    }
     return true;
   }
   
@@ -43,8 +59,30 @@ export function checkPriceFieldFallback(estimate) {
 /**
  * Show toast notification once per session when price field fallback is used
  * Per spec R4: Show notification once per session
+ * Only works in browser environment (serverless-safe)
  */
 function showFallbackToastOnce() {
+  // Only show toast in browser environment
+  if (typeof window === 'undefined') return;
+  
+  // Check if toast library is available
+  if (!toast) {
+    // Try to import toast synchronously if not already loaded
+    import('react-hot-toast').then(module => {
+      toast = module.default;
+      showToast();
+    }).catch(() => {
+      // Toast not available - skip
+    });
+    return;
+  }
+  
+  showToast();
+}
+
+function showToast() {
+  if (!toast) return;
+  
   // Check if toast has already been shown this session
   const toastShown = sessionStorage.getItem(SESSION_STORAGE_KEY);
   if (toastShown === 'true') {
