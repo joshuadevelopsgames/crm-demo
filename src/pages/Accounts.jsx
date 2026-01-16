@@ -380,7 +380,9 @@ export default function Accounts() {
         // #region agent log
         const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
         if (isBimboCanada) {
-          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:378',message:'Bimbo Canada using stored segment (estimates not loaded)',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada using stored segment (estimates not loaded)',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          console.log('[DEBUG]', logData);
+          fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
         }
         // #endregion
         return {
@@ -397,7 +399,9 @@ export default function Accounts() {
       // #region agent log
       const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
       if (isBimboCanada) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:386',message:'Bimbo Canada before segment calc',data:{accountId:account?.id,accountName:account?.name,organizationScore:account?.organization_score,orgScoreType:typeof account?.organization_score,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length,accountEstimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
+        const logData = {location:'Accounts.jsx:386',message:'Bimbo Canada before segment calc',data:{accountId:account?.id,accountName:account?.name,organizationScore:account?.organization_score,orgScoreType:typeof account?.organization_score,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length,accountEstimatesCount:accountEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'};
+        console.log('[DEBUG]', logData);
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
       }
       // #endregion
       
@@ -410,7 +414,9 @@ export default function Accounts() {
       
       // #region agent log
       if (isBimboCanada) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:393',message:'Bimbo Canada after segment calc',data:{calculatedSegment:segment,storedSegment:account?.segment_by_year?.[segmentYear]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        const logData = {location:'Accounts.jsx:393',message:'Bimbo Canada after segment calc',data:{calculatedSegment:segment,storedSegment:account?.segment_by_year?.[segmentYear]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+        console.log('[DEBUG]', logData);
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
       }
       // #endregion
       

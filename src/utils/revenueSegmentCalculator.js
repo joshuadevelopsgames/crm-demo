@@ -503,7 +503,9 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     // #region agent log
     const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
     if (isBimboCanada) {
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:500',message:'Bimbo Canada segment calc - entry',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'})}).catch(()=>{});
+      const logData = {location:'revenueSegmentCalculator.js:500',message:'Bimbo Canada segment calc - entry',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'};
+      console.log('[DEBUG]', logData);
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
     }
     // #endregion
     
@@ -531,7 +533,9 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     
     // #region agent log
     if (isBimboCanada) {
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:523',message:'Bimbo Canada segment calc - after validation',data:{icpScore,orgScoreRaw:organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      const logData = {location:'revenueSegmentCalculator.js:523',message:'Bimbo Canada segment calc - after validation',data:{icpScore,orgScoreRaw:organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      console.log('[DEBUG]', logData);
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
     }
     // #endregion
     
@@ -539,7 +543,15 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     if (icpScore !== null && icpScore >= 80) {
       // #region agent log
       if (isBimboCanada) {
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:527',message:'Bimbo Canada returning Segment E',data:{icpScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        const logData = {location:'revenueSegmentCalculator.js:527',message:'Bimbo Canada returning Segment E',data:{icpScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+        console.log('[DEBUG]', logData);
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
+      }
+      // Log ALL accounts getting Segment E to catch any with invalid scores
+      if (!icpScore || icpScore < 80) {
+        const logData = {location:'revenueSegmentCalculator.js:527',message:'WARNING: Returning Segment E but icpScore invalid',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+        console.warn('[DEBUG WARNING]', logData);
+        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
       }
       // #endregion
       return 'E';
@@ -547,7 +559,9 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     
     // #region agent log
     if (isBimboCanada) {
-      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'revenueSegmentCalculator.js:531',message:'Bimbo Canada returning Segment F',data:{icpScore,reason:icpScore===null?'no valid score':icpScore<80?'score < 80':'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      const logData = {location:'revenueSegmentCalculator.js:531',message:'Bimbo Canada returning Segment F',data:{icpScore,reason:icpScore===null?'no valid score':icpScore<80?'score < 80':'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      console.log('[DEBUG]', logData);
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
     }
     // #endregion
     
