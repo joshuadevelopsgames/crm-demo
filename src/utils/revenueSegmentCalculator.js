@@ -501,10 +501,12 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     const organizationScore = account?.organization_score;
     
     // #region agent log
-    const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
-    if (isBimboCanada) {
-      const logData = {location:'revenueSegmentCalculator.js:500',message:'Bimbo Canada segment calc - entry',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'};
-      console.log('[DEBUG]', logData);
+    // Log ALL accounts with no won estimates to catch Segment E assignments
+    const accountNameLower = account?.name?.toLowerCase() || '';
+    const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
+    if (isBimboCanada || accountNameLower.includes('bimbo')) {
+      const logData = {location:'revenueSegmentCalculator.js:500',message:'Account with no won estimates - checking Segment E/F',data:{accountId:account?.id,accountName:account?.name,organizationScore,orgScoreType:typeof organizationScore,orgScoreString:String(organizationScore),wonEstimatesCount:wonEstimates.length,year,hasStoredSegment:!!account?.segment_by_year,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E'};
+      console.log('[DEBUG Segment E/F Check]', logData);
       fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
     }
     // #endregion
@@ -540,22 +542,30 @@ export function calculateRevenueSegmentForYear(account, year, totalRevenue, esti
     // #endregion
     
     // Only assign Segment E if we have a valid ICP score >= 80
-    if (icpScore !== null && icpScore >= 80) {
+    // CRITICAL: Double-check that icpScore is actually valid before returning E
+    if (icpScore !== null && icpScore >= 80 && !isNaN(icpScore) && icpScore > 0) {
       // #region agent log
-      if (isBimboCanada) {
-        const logData = {location:'revenueSegmentCalculator.js:527',message:'Bimbo Canada returning Segment E',data:{icpScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-        console.log('[DEBUG]', logData);
-        fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-      }
-      // Log ALL accounts getting Segment E to catch any with invalid scores
-      if (!icpScore || icpScore < 80) {
-        const logData = {location:'revenueSegmentCalculator.js:527',message:'WARNING: Returning Segment E but icpScore invalid',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-        console.warn('[DEBUG WARNING]', logData);
+      const accountNameLower = account?.name?.toLowerCase() || '';
+      const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
+      if (isBimboCanada || accountNameLower.includes('bimbo')) {
+        const logData = {location:'revenueSegmentCalculator.js:543',message:'RETURNING Segment E',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+        console.log('[DEBUG RETURNING E]', logData);
         fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
       }
       // #endregion
       return 'E';
     }
+    
+    // #region agent log
+    // Log when we're about to return F but account might have stored E
+    const accountNameLower = account?.name?.toLowerCase() || '';
+    const isBimboCanada = accountNameLower.includes('bimbo') && accountNameLower.includes('canada');
+    if (isBimboCanada || accountNameLower.includes('bimbo')) {
+      const logData = {location:'revenueSegmentCalculator.js:560',message:'RETURNING Segment F (no valid ICP)',data:{accountName:account?.name,accountId:account?.id,icpScore,organizationScore,orgScoreType:typeof organizationScore,storedSegment:account?.segment_by_year?.[year]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      console.log('[DEBUG RETURNING F]', logData);
+      fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
+    }
+    // #endregion
     
     // #region agent log
     if (isBimboCanada) {

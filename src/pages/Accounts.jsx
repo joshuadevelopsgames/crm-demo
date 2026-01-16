@@ -385,10 +385,38 @@ export default function Accounts() {
           fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
         }
         // #endregion
+        
+        // Validate stored Segment E: only use it if account has valid ICP score >= 80
+        let segment = account.segment_by_year?.[segmentYear] || 'C';
+        if (segment === 'E') {
+          const orgScore = account?.organization_score;
+          let hasValidICP = false;
+          if (orgScore !== null && orgScore !== undefined && orgScore !== '' && orgScore !== '-') {
+            if (typeof orgScore === 'number' && !isNaN(orgScore) && orgScore > 0 && orgScore >= 80) {
+              hasValidICP = true;
+            } else if (typeof orgScore === 'string') {
+              const strValue = String(orgScore).trim();
+              if (strValue !== '-' && strValue !== 'null' && strValue !== 'undefined' && strValue !== 'N/A' && strValue !== 'n/a') {
+                const parsed = parseFloat(strValue);
+                if (!isNaN(parsed) && parsed > 0 && parsed >= 80) {
+                  hasValidICP = true;
+                }
+              }
+            }
+          }
+          if (!hasValidICP) {
+            // Override stored E to F if no valid ICP score
+            segment = 'F';
+            if (isBimboCanada) {
+              console.log('[DEBUG] Overriding stored Segment E to F for', account?.name, 'because no valid ICP score');
+            }
+          }
+        }
+        
         return {
           account,
           revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
-          segment: account.segment_by_year?.[segmentYear] || 'C' // Segments use segmentYear
+          segment // Use validated segment
         };
       });
     }
