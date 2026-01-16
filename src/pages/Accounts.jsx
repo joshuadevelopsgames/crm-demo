@@ -374,39 +374,29 @@ export default function Accounts() {
 
   const accountsWithRevenueAndSegment = useMemo(() => {
     // If estimates haven't loaded yet, return accounts with default revenue/segment
-    // This allows accounts to render immediately
-    // IMPORTANT: Segments E and F require checking won estimates, so we wait for estimates to load
+    // IMPORTANT: All segments (A/B/C/D/E/F) require estimates for accurate calculation:
+    // - A/B/C: Need won estimates for revenue percentage calculation
+    // - D: Need to check estimate types (Standard vs Service)
+    // - E/F: Need to check if there are won estimates (to determine if account is a lead)
+    // Therefore, we defer ALL segment assignments until estimates have loaded
+    // This ensures accuracy and prevents showing incorrect segments from stale stored data
     if (estimatesLoading && allEstimates.length === 0) {
       return accounts.map(account => {
         // #region agent log
         const isBimboCanada = account?.name?.toLowerCase().includes('bimbo') && account?.name?.toLowerCase().includes('canada');
         if (isBimboCanada) {
-          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada - estimates not loaded, using fallback',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+          const logData = {location:'Accounts.jsx:378',message:'Bimbo Canada - estimates not loaded, deferring segment calculation',data:{accountId:account?.id,accountName:account?.name,storedSegment:account?.segment_by_year?.[segmentYear],estimatesLoading,allEstimatesCount:allEstimates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
           console.log('[DEBUG]', logData);
           fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
         }
         // #endregion
         
-        // Get stored segment, but don't use E or F until estimates have loaded
-        // E and F require checking won estimates to determine if account is a lead
-        const storedSegment = account.segment_by_year?.[segmentYear] || account.revenue_segment || 'C';
-        let segment = storedSegment;
-        
-        // If stored segment is E or F, we can't validate it without estimates
-        // Default to 'C' (or 'F' if we know it's definitely a lead, but we can't know that without estimates)
-        // Actually, let's be conservative: if it's E or F and estimates aren't loaded, use 'C' as fallback
-        // This prevents showing incorrect E segments
-        if (segment === 'E' || segment === 'F') {
-          segment = 'C'; // Default to C until estimates load and we can properly calculate E/F
-          if (isBimboCanada) {
-            console.log('[DEBUG] Deferring Segment E/F assignment for', account?.name, 'until estimates load. Using fallback C.');
-          }
-        }
-        
+        // Defer ALL segment assignments until estimates load
+        // Use 'C' as a temporary fallback - this will be recalculated once estimates load
         return {
           account,
           revenue: account.revenue_by_year?.[selectedYear] || 0, // Revenue still uses selectedYear
-          segment // Use fallback segment (E/F deferred until estimates load)
+          segment: 'C' // Temporary fallback - will be recalculated once estimates load
         };
       });
     }
