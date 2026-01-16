@@ -225,66 +225,85 @@ export function detectContractTypo(durationMonths, contractYears, startDate = nu
 
 /**
  * Get estimate year data - determines which year(s) an estimate applies to
- * Returns object with year and appliesToCurrentYear flag
+ * Returns object with year, appliesToCurrentYear flag, and value (annualized for multi-year contracts)
  * 
  * Priority for year determination (per spec R2):
  * 1. contract_end
  * 2. contract_start
  * 3. estimate_date
  * 4. created_date
+ * 
+ * For multi-year contracts, annualizes the total price (divides by number of years)
  */
 export function getEstimateYearData(estimate, currentYear) {
   if (!estimate) return null;
   
+  const totalPrice = parseFloat(estimate.total_price_with_tax || estimate.total_price) || 0;
+  if (totalPrice === 0) return null;
+  
+  const contractStart = estimate.contract_start ? new Date(estimate.contract_start) : null;
+  const contractEnd = estimate.contract_end ? new Date(estimate.contract_end) : null;
+  
+  // Handle multi-year contracts with annualization
+  if (contractStart && !isNaN(contractStart.getTime()) && contractEnd && !isNaN(contractEnd.getTime())) {
+    const startYear = getYearFromDateString(estimate.contract_start);
+    if (startYear === null) return null;
+    
+    const durationMonths = calculateDurationMonths(contractStart, contractEnd);
+    if (durationMonths <= 0) return null;
+    
+    const yearsCount = getContractYears(contractStart, contractEnd);
+    if (yearsCount <= 0) return null;
+    
+    const yearsApplied = [];
+    for (let i = 0; i < yearsCount; i++) {
+      yearsApplied.push(startYear + i);
+    }
+    
+    const appliesToCurrentYear = yearsApplied.includes(currentYear);
+    const annualAmount = totalPrice / yearsCount;
+    
+    return {
+      year: startYear,
+      appliesToCurrentYear,
+      value: appliesToCurrentYear ? annualAmount : 0,
+      source: 'contract_allocation'
+    };
+  }
+  
+  // Single-year contracts - use date priority
+  let determinationYear = null;
+  let source = null;
+  
   // Priority 1: contract_end
   if (estimate.contract_end) {
-    const year = getYearFromDateString(estimate.contract_end);
-    if (year) {
-      return {
-        year,
-        appliesToCurrentYear: year === currentYear,
-        source: 'contract_end'
-      };
-    }
+    determinationYear = getYearFromDateString(estimate.contract_end);
+    source = 'contract_end';
   }
-  
   // Priority 2: contract_start
-  if (estimate.contract_start) {
-    const year = getYearFromDateString(estimate.contract_start);
-    if (year) {
-      return {
-        year,
-        appliesToCurrentYear: year === currentYear,
-        source: 'contract_start'
-      };
-    }
+  else if (estimate.contract_start) {
+    determinationYear = getYearFromDateString(estimate.contract_start);
+    source = 'contract_start';
   }
-  
   // Priority 3: estimate_date
-  if (estimate.estimate_date) {
-    const year = getYearFromDateString(estimate.estimate_date);
-    if (year) {
-      return {
-        year,
-        appliesToCurrentYear: year === currentYear,
-        source: 'estimate_date'
-      };
-    }
+  else if (estimate.estimate_date) {
+    determinationYear = getYearFromDateString(estimate.estimate_date);
+    source = 'estimate_date';
   }
-  
   // Priority 4: created_date
-  if (estimate.created_date) {
-    const year = getYearFromDateString(estimate.created_date);
-    if (year) {
-      return {
-        year,
-        appliesToCurrentYear: year === currentYear,
-        source: 'created_date'
-      };
-    }
+  else if (estimate.created_date) {
+    determinationYear = getYearFromDateString(estimate.created_date);
+    source = 'created_date';
   }
   
-  return null;
+  if (determinationYear === null) return null;
+  
+  return {
+    year: determinationYear,
+    appliesToCurrentYear: determinationYear === currentYear,
+    value: determinationYear === currentYear ? totalPrice : 0,
+    source
+  };
 }
 
 /**
