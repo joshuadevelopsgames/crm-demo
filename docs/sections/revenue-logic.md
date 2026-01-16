@@ -130,7 +130,7 @@ This document defines how revenue is calculated, displayed, and used for segment
 ### Transformations in Sequence
 
 1. **Year Determination**: Date field selection → Extract year → Compare to selected year
-2. **Price Selection**: `total_price_with_tax` → `total_price` (fallback) → Exclude if both missing
+2. **Price Selection**: `total_price` (preferred, always has value even if 0) → `total_price_with_tax` (fallback only if `total_price` is null/undefined) → Exclude if both missing
 3. **Duration Calculation**: Contract dates → Months → Years
 4. **Annualization**: Total price → Divide by years → Allocate to calendar years
 5. **Revenue Aggregation**: Sum annualized values per account
