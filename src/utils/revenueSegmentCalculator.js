@@ -642,6 +642,32 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
   // Always use segment year (current year, or previous year if Jan/Feb)
   const segmentYear = getSegmentYear();
   
+  // CRITICAL: Always validate stored Segment E before using it
+  // Check stored segments first to catch bad data
+  if (account.segment_by_year && typeof account.segment_by_year === 'object') {
+    const yearSegment = account.segment_by_year[segmentYear.toString()];
+    if (yearSegment === 'E') {
+      // Always validate stored E - if no valid ICP score, return F
+      const leadSegment = calculateLeadSegment(account);
+      if (leadSegment === 'F') {
+        return 'F'; // Stored E is invalid, return F
+      }
+      // Only return E if calculateLeadSegment confirms it's valid
+      return 'E';
+    }
+  }
+  
+  // Also check revenue_segment fallback
+  const storedSegment = account.revenue_segment || 'C';
+  if (storedSegment === 'E') {
+    // Always validate stored E
+    const leadSegment = calculateLeadSegment(account);
+    if (leadSegment === 'F') {
+      return 'F'; // Stored E is invalid, return F
+    }
+    return 'E';
+  }
+  
   // Check if account is a lead (no won estimates) or client (has won estimates)
   const accountEstimates = estimatesByAccountId?.[account.id] || [];
   const wonEstimates = accountEstimates.filter(est => {
@@ -664,21 +690,18 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
     if (yearSegment && ['A', 'B', 'C', 'D'].includes(yearSegment)) {
       return yearSegment;
     }
-    // If stored segment is E/F, validate it (shouldn't happen for clients, but catch bad data)
-    if (yearSegment === 'E' || yearSegment === 'F') {
-      // Client shouldn't have E/F, but if it does, recalculate as lead to validate
-      return calculateLeadSegment(account);
+    // If stored segment is F, return it (F is valid for clients that became leads)
+    if (yearSegment === 'F') {
+      return 'F';
     }
   }
   
   // Fallback to revenue_segment (backward compatibility)
-  const storedSegment = account.revenue_segment || 'C';
-  if (storedSegment === 'E' || storedSegment === 'F') {
-    // Validate stored E/F
-    return calculateLeadSegment(account);
+  if (storedSegment && storedSegment !== 'E') {
+    return storedSegment;
   }
   
-  return storedSegment;
+  return 'C'; // Default fallback
 }
 
 /**
