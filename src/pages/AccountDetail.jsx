@@ -73,15 +73,20 @@ export default function AccountDetail() {
   const { user: currentUser } = useUser();
   const { permissions } = useUserPermissions();
   const canManageInteractions = permissions['manage_interactions'] === true;
-  const { selectedYear: globalSelectedYear, availableYears: globalAvailableYears } = useYearSelector();
+  const { selectedYear: globalSelectedYear, availableYears: globalAvailableYears, getCurrentYear } = useYearSelector();
+  
+  // Ensure we always have a valid year - use fallback chain
+  const currentYearFallback = new Date().getFullYear();
+  const safeGlobalYear = globalSelectedYear ?? getCurrentYear() ?? currentYearFallback;
   
   // Local year selector for this account page (defaults to global selected year)
-  const [accountSelectedYear, setAccountSelectedYear] = useState(globalSelectedYear);
+  const [accountSelectedYear, setAccountSelectedYear] = useState(safeGlobalYear);
   
   // Update local year when global year changes
   useEffect(() => {
-    setAccountSelectedYear(globalSelectedYear);
-  }, [globalSelectedYear]);
+    const safeYear = globalSelectedYear ?? getCurrentYear() ?? currentYearFallback;
+    setAccountSelectedYear(safeYear);
+  }, [globalSelectedYear, getCurrentYear]);
 
   const queryClient = useQueryClient();
 
