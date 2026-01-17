@@ -85,6 +85,23 @@ export default function AccountDetail() {
 
   const queryClient = useQueryClient();
 
+  // Fetch all accounts (needed for segment calculation)
+  const { data: allAccounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list()
+  });
+
+  // Fetch all estimates (needed for segment calculation)
+  const { data: allEstimates = [] } = useQuery({
+    queryKey: ['estimates', accountSelectedYear],
+    queryFn: async () => {
+      const response = await fetch('/api/data/estimates');
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result.success ? (result.data || []) : [];
+    }
+  });
+
   const { data: account, isLoading } = useQuery({
     queryKey: ['account', accountId],
     queryFn: async () => {
@@ -175,6 +192,26 @@ export default function AccountDetail() {
   
   // Use account-specific years if available, otherwise use global years
   const availableYears = accountAvailableYears.length > 0 ? accountAvailableYears : globalAvailableYears;
+
+  // Group all estimates by account_id (needed for segment calculation, matching Accounts.jsx logic)
+  const estimatesByAccountId = useMemo(() => {
+    const grouped = {};
+    allEstimates.forEach(est => {
+      if (est.account_id) {
+        if (!grouped[est.account_id]) {
+          grouped[est.account_id] = [];
+        }
+        grouped[est.account_id].push(est);
+      }
+    });
+    return grouped;
+  }, [allEstimates]);
+
+  // Calculate segment for this account (matching Accounts.jsx logic)
+  const accountSegment = useMemo(() => {
+    if (!account || allAccounts.length === 0) return null;
+    return getSegmentForYear(account, accountSelectedYear, allAccounts, estimatesByAccountId);
+  }, [account, accountSelectedYear, allAccounts, estimatesByAccountId]);
 
   // Fetch jobsites for this account (server-side filtering for accuracy)
   const { data: jobsites = [] } = useQuery({
@@ -376,9 +413,9 @@ export default function AccountDetail() {
               <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
                 {account.account_type}
               </Badge>
-              {getSegmentForYear(account, accountSelectedYear) && (
+              {accountSegment && (
                 <Badge variant="outline" className="text-slate-700 dark:text-slate-300">
-                  {getSegmentForYear(account, accountSelectedYear)}
+                  {accountSegment}
                 </Badge>
               )}
               <Badge variant="outline" className="text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-mono text-xs">
