@@ -371,12 +371,16 @@ export default function Accounts() {
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
         const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
-        const effectiveSegmentYear = (selectedYear === currentYear && isJanOrFeb) 
+        const segmentYearValue = selectedYear !== null && selectedYear !== undefined ? selectedYear : (getSegmentYear() || currentYear);
+        const effectiveSegmentYear = (segmentYearValue === currentYear && isJanOrFeb) 
           ? currentYear - 1 
-          : (selectedYear !== null && selectedYear !== undefined ? selectedYear : (getSegmentYear() || currentYear));
+          : segmentYearValue;
+        
+        // Ensure effectiveSegmentYear is never null/undefined
+        const safeSegmentYear = effectiveSegmentYear || currentYear;
         
         // Try to read stored segment, but validate E segments
-        const storedSegment = account.segment_by_year?.[(effectiveSegmentYear || currentYear).toString()] || account.revenue_segment || 'C';
+        const storedSegment = account.segment_by_year?.[safeSegmentYear.toString()] || account.revenue_segment || 'C';
         let segment = storedSegment;
         
         // If stored segment is E, validate ICP score
