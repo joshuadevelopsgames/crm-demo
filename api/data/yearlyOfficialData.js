@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     'https://crm-demo.vercel.app',
     'https://crm-demo.vercel.app',
     'https://crm-demo.vercel.app',
-    /^https:\/\/lecrm.*\.vercel\.app$/ // Allow all Vercel preview URLs
+    /^https:\/\/crm-demo.*\.vercel\.app$/ // Allow all Vercel preview URLs
   ];
 
   const origin = req.headers.origin;

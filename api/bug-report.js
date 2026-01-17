@@ -401,7 +401,7 @@ async function sendViaResend(recipientEmail, subject, body) {
     }
     
     // Format from email properly
-    const fromEmail = fromEmailRaw.includes('<') ? fromEmailRaw : `LECRM Bug Reports <${fromEmailRaw}>`;
+    const fromEmail = fromEmailRaw.includes('<') ? fromEmailRaw : `CRM Bug Reports <${fromEmailRaw}>`;
     const replyTo = process.env.RESEND_REPLY_TO || fromEmailRaw;
     
     console.log(`📧 Sending email via Resend from ${fromEmail} to ${recipientEmail}`);
