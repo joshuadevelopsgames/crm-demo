@@ -29,9 +29,9 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://lecrm-dev.vercel.app',
-    'https://lecrm-stg.vercel.app',
-    'https://lecrm.vercel.app'
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app'
   ];
   
   const origin = req.headers.origin;

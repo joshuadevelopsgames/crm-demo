@@ -34,9 +34,9 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://lecrm-dev.vercel.app',
-    'https://lecrm-stg.vercel.app',
-    'https://lecrm.vercel.app'
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app'
   ];
   
   const origin = req.headers.origin;
@@ -686,7 +686,7 @@ async function sendTicketArchivedNotification(ticket, supabase) {
       return;
     }
 
-    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm-demo.vercel.app'}/tickets/${ticket.id}`;
     
     const subject = `Ticket #${ticket.ticket_number} has been archived`;
     const body = `Your ticket has been archived:
@@ -701,7 +701,7 @@ This ticket has been archived before completion. If you believe this was done in
 
 View this ticket: ${ticketUrl}`;
 
-    await sendEmail(reporterEmail, subject, body, 'LECRM Tickets');
+    await sendEmail(reporterEmail, subject, body, 'CRM Tickets');
     console.log(`✅ Archive notification sent to ${reporterEmail}`);
   } catch (error) {
     console.error('❌ Error in sendTicketArchivedNotification:', error);
@@ -748,7 +748,7 @@ async function sendTicketStatusChangeNotification(ticket, previousStatus, supaba
 
     const previousStatusLabel = statusLabels[previousStatus] || previousStatus;
     const newStatusLabel = statusLabels[ticket.status] || ticket.status;
-    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm-demo.vercel.app'}/tickets/${ticket.id}`;
     
     const subject = `Ticket #${ticket.ticket_number} status updated: ${newStatusLabel}`;
     const body = `Your ticket status has been updated:
@@ -762,7 +762,7 @@ async function sendTicketStatusChangeNotification(ticket, previousStatus, supaba
 
 View this ticket: ${ticketUrl}`;
 
-    await sendEmail(reporterEmail, subject, body, 'LECRM Tickets');
+    await sendEmail(reporterEmail, subject, body, 'CRM Tickets');
     console.log(`✅ Status change notification sent to ${reporterEmail}`);
   } catch (error) {
     console.error('❌ Error in sendTicketStatusChangeNotification:', error);
@@ -792,7 +792,7 @@ async function sendTicketAssignmentNotification(ticket, previousAssigneeId, supa
       return;
     }
 
-    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lecrm.vercel.app'}/tickets/${ticket.id}`;
+    const ticketUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://crm-demo.vercel.app'}/tickets/${ticket.id}`;
     
     const subject = `You've been assigned to ticket #${ticket.ticket_number}`;
     const body = `You have been assigned to a ticket:
@@ -809,7 +809,7 @@ ${ticket.description?.substring(0, 500) || 'No description provided'}${ticket.de
 
 View and respond to this ticket: ${ticketUrl}`;
 
-    await sendEmail(assigneeProfile.email, subject, body, 'LECRM Tickets');
+    await sendEmail(assigneeProfile.email, subject, body, 'CRM Tickets');
     console.log(`✅ Assignment notification sent to ${assigneeProfile.email}`);
   } catch (error) {
     console.error('❌ Error in sendTicketAssignmentNotification:', error);

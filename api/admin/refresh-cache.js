@@ -78,8 +78,8 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://lecrm-dev.vercel.app',
-    'https://lecrm.vercel.app',
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
   ].filter(Boolean);
 

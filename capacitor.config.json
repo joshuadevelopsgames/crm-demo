@@ -1,16 +1,16 @@
 {
-  "appId": "com.lecrm.app",
-  "appName": "LECRM",
+  "appId": "com.crm.demo",
+  "appName": "CRM Demo",
   "webDir": "dist",
   "server": {
-    "androidScheme": "com.lecrm.app",
-    "iosScheme": "com.lecrm.app",
-    "hostname": "app.lecrm.com",
+    "androidScheme": "com.crm.demo",
+    "iosScheme": "com.crm.demo",
+    "hostname": "crm-demo.vercel.app",
     "allowNavigation": [
       "*.google.com",
       "*.googleapis.com",
       "accounts.google.com",
-      "https://lecrm-fhmlnu2u1-joshuas-projects-81b25231.vercel.app"
+      "https://crm-demo*.vercel.app"
     ]
   },
   "plugins": {
@@ -25,7 +25,7 @@
       "overlaysWebView": false
     },
     "App": {
-      "launchUrl": "com.lecrm.app://"
+      "launchUrl": "com.crm.demo://"
     }
   },
   "ios": {

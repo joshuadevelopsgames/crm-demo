@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 /**
  * Send email via Resend
  */
-export async function sendViaResend(recipientEmail, subject, body, fromName = 'LECRM') {
+export async function sendViaResend(recipientEmail, subject, body, fromName = 'CRM') {
   const resendApiKey = process.env.RESEND_API_KEY;
   
   if (!resendApiKey) {
@@ -106,7 +106,7 @@ export async function sendViaResend(recipientEmail, subject, body, fromName = 'L
 /**
  * Send email via SMTP (Nodemailer)
  */
-export async function sendViaSMTP(recipientEmail, subject, body, fromName = 'LECRM') {
+export async function sendViaSMTP(recipientEmail, subject, body, fromName = 'CRM') {
   if (!nodemailer) {
     const errorMsg = 'Nodemailer not available. Please ensure nodemailer is installed: npm install nodemailer';
     console.error(`❌ ${errorMsg}`);
@@ -183,7 +183,7 @@ export async function sendViaSMTP(recipientEmail, subject, body, fromName = 'LEC
 /**
  * Send email using configured service (Resend or SMTP)
  */
-export async function sendEmail(recipientEmail, subject, body, fromName = 'LECRM') {
+export async function sendEmail(recipientEmail, subject, body, fromName = 'CRM') {
   const emailService = process.env.EMAIL_SERVICE || 'resend';
   
   try {

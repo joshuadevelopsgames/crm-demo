@@ -4,7 +4,7 @@
  */
 
 // Google Sheets API configuration
-const GOOGLE_SHEET_ID = '1yz-StxTwUcisYEFREG0IbRfIkbmLQUE0DvEnL8oBxlk'; // LECRM Database sheet
+const GOOGLE_SHEET_ID = '1yz-StxTwUcisYEFREG0IbRfIkbmLQUE0DvEnL8oBxlk'; // CRM Database sheet
 const SCORECARD_TEMPLATE_SHEET_ID = '1p_e-nHr2iqQe2WBSEzF5tto66ZdhcuUNhUKcuTi8eQw'; // Primary Scorecard Template Sheet
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '';
 // Note: WEB_APP_URL and SECRET_TOKEN are now handled server-side via API proxy

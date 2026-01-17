@@ -1,0 +1,38 @@
+name: Sync to Production (Manual Approval)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DEPLOY" to sync staging → production'
+        required: true
+        type: string
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DEPLOY'
+    steps:
+      - name: Checkout staging repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+      
+      - name: Add production remote
+        run: |
+          git remote add production https://${{ secrets.SYNC_TOKEN }}@github.com/joshuadevelopsgames/LECRM.git
+      
+      - name: Push to production
+        run: |
+          git push production main:main
+      
+      - name: Success
+        run: |
+          echo "✅ Synced staging → production"
+          echo "🚀 Vercel will auto-deploy to lecrm.vercel.app"
+

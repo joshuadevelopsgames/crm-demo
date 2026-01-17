@@ -173,7 +173,7 @@ export default function Login() {
       // If on localhost, use dev domain; otherwise use current origin
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1');
       const redirectUrl = isLocalhost
-        ? 'https://lecrm-dev.vercel.app/google-auth-callback' // Use dev domain for local development
+        ? 'https://crm-demo.vercel.app/google-auth-callback' // Use demo domain for local development
         : window.location.origin + '/google-auth-callback'; // Use current domain for deployed environments
       
       // #region agent log

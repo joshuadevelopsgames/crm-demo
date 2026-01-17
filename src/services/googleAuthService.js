@@ -18,7 +18,7 @@ const getRedirectUri = () => {
   if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     // Use the Vercel deployment URL for OAuth redirect
     // The callback page will handle redirecting to the app
-    return 'https://lecrm-fhmlnu2u1-joshuas-projects-81b25231.vercel.app/google-auth-callback';
+    return 'https://crm-demo.vercel.app/google-auth-callback';
   }
   
   // Web browser - use the current origin

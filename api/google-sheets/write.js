@@ -7,9 +7,9 @@
 export default async function handler(req, res) {
   // Set CORS headers - restrict to your domains
   const allowedOrigins = [
-    'https://lecrm.vercel.app',
-    'https://lecrm-stg.vercel.app',
-    'https://lecrm-dev.vercel.app',
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app',
+    'https://crm-demo.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000'
   ];

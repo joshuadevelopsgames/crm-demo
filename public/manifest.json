@@ -1,6 +1,6 @@
 {
-  "name": "LECRM - Customer Relationship Management",
-  "short_name": "LECRM",
+  "name": "CRM - Customer Relationship Management",
+  "short_name": "CRM",
   "description": "Manage customer relationships, track interactions, and automate follow-ups",
   "start_url": "/",
   "display": "standalone",

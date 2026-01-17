@@ -244,9 +244,9 @@ export default function GoogleAuthCallback() {
           if (isMobile) {
             setTimeout(() => {
               // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:105',message:'Mobile redirect executing',data:{targetUrl:'com.lecrm.app://dashboard',currentOrigin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+              fetch('http://127.0.0.1:7242/ingest/2cc4f12b-6a88-4e9e-a820-e2a749ce68ac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GoogleAuthCallback.jsx:105',message:'Mobile redirect executing',data:{targetUrl:'com.crm.demo://dashboard',currentOrigin:window.location.origin},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
               // #endregion
-              window.location.href = 'com.lecrm.app://dashboard';
+              window.location.href = 'com.crm.demo://dashboard';
             }, 1000);
           } else {
             setTimeout(() => {
@@ -329,7 +329,7 @@ export default function GoogleAuthCallback() {
           } else if (session) {
             setStatus('success');
             setTimeout(() => {
-              window.location.href = 'com.lecrm.app://dashboard';
+              window.location.href = 'com.crm.demo://dashboard';
             }, 1000);
           }
         } catch (err) {
