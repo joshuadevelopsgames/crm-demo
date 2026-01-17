@@ -431,7 +431,7 @@ export default function AccountDetail() {
         </div>
         <div className="flex gap-3">
           <Select 
-            value={(accountSelectedYear || globalSelectedYear).toString()} 
+            value={(accountSelectedYear ?? globalSelectedYear ?? currentYearFallback).toString()} 
             onValueChange={(value) => {
               const newYear = parseInt(value, 10);
               setAccountSelectedYear(newYear);
@@ -439,7 +439,7 @@ export default function AccountDetail() {
           >
             <SelectTrigger className="w-32">
               <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue>{accountSelectedYear || globalSelectedYear}</SelectValue>
+              <SelectValue>{accountSelectedYear ?? globalSelectedYear ?? currentYearFallback}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {availableYears && availableYears.length > 0 ? (
