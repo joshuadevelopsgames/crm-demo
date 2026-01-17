@@ -878,7 +878,7 @@ export default function Accounts() {
             position="bottom"
           >
             <Select 
-              value={selectedYear.toString()} 
+              value={selectedYear?.toString() || getCurrentYear().toString()} 
               onValueChange={(value) => {
                 const newYear = parseInt(value, 10);
                 console.log('[Accounts] Year selector changed:', { oldYear: selectedYear, newYear });
@@ -886,7 +886,7 @@ export default function Accounts() {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue>{selectedYear}</SelectValue>
+                <SelectValue>{selectedYear || getCurrentYear()}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map((year) => (
