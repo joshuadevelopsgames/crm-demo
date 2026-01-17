@@ -24,6 +24,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* Prevent page shift when scrollbar appears/disappears */
   overflow-y: scroll;
+  /* Reserve space for scrollbar even when overflow is hidden by modals/dropdowns */
+  scrollbar-gutter: stable;
 }
 
 /* Mobile app specific styles - only apply in native app */
