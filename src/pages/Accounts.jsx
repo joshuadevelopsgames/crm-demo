@@ -411,6 +411,21 @@ export default function Accounts() {
       const revenue = account.revenue_by_year?.[selectedYear] || 0;
       const segment = getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId);
       
+      // Validate: Check if stored revenue matches calculated revenue from estimates
+      // Only log console warning for system debugging (not shown to normal users)
+      const accountEstimates = estimatesByAccountId[account.id] || [];
+      if (accountEstimates.length > 0) {
+        const calculatedRevenue = calculateRevenueFromWonEstimates(account, accountEstimates, selectedYear);
+        if (Math.abs(revenue - calculatedRevenue) > 0.01) {
+          console.warn(`⚠️ [Revenue Mismatch] ${account.name || account.id} (${selectedYear}):`, {
+            stored: revenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            calculated: calculatedRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            difference: (revenue - calculatedRevenue).toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+            note: 'Stored revenue_by_year does not match calculated revenue from estimates.'
+          });
+        }
+      }
+      
       return {
         account,
         revenue,

@@ -706,18 +706,75 @@ export function getTotalEstimatesForYear(account, selectedYear) {
 }
 
 /**
+ * Calculate segment on-the-fly from stored revenue_by_year data
+ * Uses revenue_by_year (not estimates) to match stored revenue calculation
+ * 
+ * @param {Object} account - Account object
+ * @param {number} year - Year to calculate segment for
+ * @param {number} totalRevenue - Total revenue for this year (sum of all accounts' revenue_by_year[year])
+ * @param {Array} estimates - Array of estimate objects (for Segment D check and lead detection)
+ * @returns {string} - Segment: 'A', 'B', 'C', 'D', 'E', or 'F'
+ */
+function calculateSegmentFromStoredRevenue(account, year, totalRevenue, estimates = []) {
+  // Check for leads (Segments E and F) - highest priority
+  const wonEstimates = estimates.filter(est => {
+    if (!isWonStatus(est)) return false;
+    const yearData = getEstimateYearData(est, year);
+    return yearData && yearData.appliesToCurrentYear;
+  });
+  
+  // If no won estimates, this is a lead - check ICP score
+  if (wonEstimates.length === 0) {
+    return calculateLeadSegment(account);
+  }
+  
+  // Existing clients (have won estimates) - proceed with A/B/C/D logic
+  // Segment D check (uses estimates for this specific year)
+  if (estimates && estimates.length > 0) {
+    const hasStandardEstimates = wonEstimates.some(est => 
+      est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'standard'
+    );
+    const hasServiceEstimates = wonEstimates.some(est => 
+      est.estimate_type && est.estimate_type.toString().trim().toLowerCase() === 'service'
+    );
+    
+    if (hasStandardEstimates && !hasServiceEstimates) {
+      return 'D';
+    }
+  }
+  
+  // Use stored revenue_by_year (not calculated from estimates)
+  const accountRevenue = getRevenueForYear(account, year);
+  
+  if (accountRevenue <= 0 || !totalRevenue || totalRevenue <= 0) {
+    return 'C';
+  }
+  
+  const revenuePercentage = (accountRevenue / totalRevenue) * 100;
+  
+  if (revenuePercentage > 15) {
+    return 'A';
+  } else if (revenuePercentage >= 5) {
+    return 'B';
+  } else {
+    return 'C';
+  }
+}
+
+/**
  * Get segment for selected year
  * 
  * IMPORTANT: 
- * - For clients (accounts with won estimates): Always read from stored segment_by_year (A/B/C/D only change on import)
+ * - Always calculates segments on-the-fly from revenue_by_year data (ensures accuracy)
+ * - Compares calculated segment to stored segment and logs console warning if mismatch (for system debugging)
  * - For leads (accounts with no won estimates): Calculate E/F on-the-fly based on current ICP score
  * - January/February rule (use previous year's segments) only applies when viewing CURRENT year
  * - Historical years always use that year's segments regardless of current month
  * 
  * @param {Object} account - Account object
  * @param {number} selectedYear - Selected year (optional, defaults to current year from context)
- * @param {Array} allAccounts - Array of all account objects (for determining if account is a lead)
- * @param {Object} estimatesByAccountId - Map of account_id to estimates array (for determining if account is a lead)
+ * @param {Array} allAccounts - Array of all account objects (for total revenue calculation)
+ * @param {Object} estimatesByAccountId - Map of account_id to estimates array (for Segment D check and lead detection)
  * @returns {string} - Segment for selected year: 'A', 'B', 'C', 'D', 'E', or 'F'
  */
 export function getSegmentForYear(account, selectedYear = null, allAccounts = [], estimatesByAccountId = {}) {
@@ -745,66 +802,40 @@ export function getSegmentForYear(account, selectedYear = null, allAccounts = []
     segmentYear = getSegmentYear();
   }
   
-  // CRITICAL: Always validate stored Segment E before using it
-  // Check stored segments first to catch bad data
-  if (account.segment_by_year && typeof account.segment_by_year === 'object') {
-    const yearSegment = account.segment_by_year[segmentYear.toString()];
-    if (yearSegment === 'E') {
-      // Always validate stored E - if no valid ICP score, return F
-      const leadSegment = calculateLeadSegment(account);
-      if (leadSegment === 'F') {
-        return 'F'; // Stored E is invalid, return F
-      }
-      // Only return E if calculateLeadSegment confirms it's valid
-      return 'E';
-    }
-  }
-  
-  // Also check revenue_segment fallback
-  const storedSegment = account.revenue_segment || 'C';
-  if (storedSegment === 'E') {
-    // Always validate stored E
-    const leadSegment = calculateLeadSegment(account);
-    if (leadSegment === 'F') {
-      return 'F'; // Stored E is invalid, return F
-    }
-    return 'E';
-  }
-  
-  // Check if account is a lead (no won estimates) or client (has won estimates)
+  // Get account estimates for Segment D check and lead detection
   const accountEstimates = estimatesByAccountId?.[account.id] || [];
-  const wonEstimates = accountEstimates.filter(est => {
-    if (!isWonStatus(est)) return false;
-    const yearData = getEstimateYearData(est, segmentYear);
-    return yearData && yearData.appliesToCurrentYear;
-  });
   
-  const isLead = wonEstimates.length === 0;
+  // Calculate total revenue for segmentYear (sum of all accounts' revenue_by_year[segmentYear])
+  const totalRevenue = calculateTotalRevenue(allAccounts, estimatesByAccountId, segmentYear);
   
-  if (isLead) {
-    // For leads: Calculate E/F on-the-fly based on current ICP score
-    // ICP scores can change anytime (when scorecard is filled out)
-    return calculateLeadSegment(account);
+  // Calculate segment on-the-fly from stored revenue_by_year data
+  const calculatedSegment = calculateSegmentFromStoredRevenue(
+    account,
+    segmentYear,
+    totalRevenue,
+    accountEstimates
+  );
+  
+  // Get stored segment for comparison (console warning only, no user-facing warnings)
+  const storedSegment = account.segment_by_year?.[segmentYear.toString()] || account.revenue_segment || null;
+  
+  // Validate: Check if stored segment matches calculated segment
+  // Only log console warning for system debugging (not shown to normal users)
+  if (storedSegment && storedSegment !== calculatedSegment && ['A', 'B', 'C', 'D'].includes(storedSegment)) {
+    const accountRevenue = getRevenueForYear(account, segmentYear);
+    const revenuePercentage = totalRevenue > 0 ? (accountRevenue / totalRevenue * 100).toFixed(2) : '0.00';
+    console.warn(`⚠️ [Segment Mismatch] ${account.name || account.id} (${segmentYear}):`, {
+      stored: storedSegment,
+      calculated: calculatedSegment,
+      accountRevenue: accountRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      totalRevenue: totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+      percentage: `${revenuePercentage}%`,
+      note: 'Stored segment does not match calculated segment. Using calculated value.'
+    });
   }
   
-  // For clients: Read from stored segment_by_year (segments only change on import)
-  if (account.segment_by_year && typeof account.segment_by_year === 'object') {
-    const yearSegment = account.segment_by_year[segmentYear.toString()];
-    if (yearSegment && ['A', 'B', 'C', 'D'].includes(yearSegment)) {
-      return yearSegment;
-    }
-    // If stored segment is F, return it (F is valid for clients that became leads)
-    if (yearSegment === 'F') {
-      return 'F';
-    }
-  }
-  
-  // Fallback to revenue_segment (backward compatibility)
-  if (storedSegment && storedSegment !== 'E') {
-    return storedSegment;
-  }
-  
-  return 'C'; // Default fallback
+  // Always return calculated segment (always accurate, uses current revenue_by_year data)
+  return calculatedSegment;
 }
 
 /**
