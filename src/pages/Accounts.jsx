@@ -56,7 +56,17 @@ import { snoozeNotification } from '@/services/notificationService';
 export default function Accounts() {
   // Use year selector to trigger re-render when year changes
   const { selectedYear: contextSelectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
-  const selectedYear = contextSelectedYear || getCurrentYear(); // Fallback to current year if null
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:58',message:'Year selector values',data:{contextSelectedYear,getCurrentYearResult:getCurrentYear(),availableYears},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  const getCurrentYearResult = getCurrentYear();
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:61',message:'getCurrentYear result',data:{getCurrentYearResult,isNull:getCurrentYearResult===null,isUndefined:getCurrentYearResult===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+  const selectedYear = contextSelectedYear || getCurrentYearResult || new Date().getFullYear(); // Fallback to current year if null
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:64',message:'Final selectedYear after fallback',data:{selectedYear,isNull:selectedYear===null,isUndefined:selectedYear===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   const navigate = useNavigate();
 
 
@@ -882,7 +892,13 @@ export default function Accounts() {
             position="bottom"
           >
             <Select 
-              value={selectedYear?.toString() || getCurrentYear().toString()} 
+              value={(() => {
+                // #region agent log
+                const safeYear = selectedYear || getCurrentYear() || new Date().getFullYear();
+                fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:895',message:'Select value calculation',data:{selectedYear,getCurrentYearResult:getCurrentYear(),safeYear},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
+                return safeYear.toString();
+              })()} 
               onValueChange={(value) => {
                 const newYear = parseInt(value, 10);
                 console.log('[Accounts] Year selector changed:', { oldYear: selectedYear, newYear });
@@ -890,7 +906,13 @@ export default function Accounts() {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue>{selectedYear || getCurrentYear()}</SelectValue>
+                <SelectValue>{(() => {
+                  // #region agent log
+                  const displayValue = selectedYear || getCurrentYear() || new Date().getFullYear();
+                  fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:904',message:'SelectValue display calculation',data:{selectedYear,getCurrentYearResult:getCurrentYear(),displayValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                  // #endregion
+                  return displayValue;
+                })()}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map((year) => (
