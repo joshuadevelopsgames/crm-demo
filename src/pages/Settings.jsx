@@ -305,7 +305,15 @@ export default function Settings() {
       toast.loading('Recalculating revenue segments...', { id: 'recalculate-segments-toast' });
       
       // Fetch all accounts and estimates
-      const accounts = await base44.entities.Account.list();
+      const allAccounts = await base44.entities.Account.list();
+      
+      // CRITICAL: Filter out archived accounts for segment calculation
+      // Segments should be calculated using only active accounts to match what's displayed
+      // This ensures total revenue matches between calculation and display
+      const accounts = allAccounts.filter(acc => 
+        !(acc.archived === true || acc.status === 'archived')
+      );
+      
       const estimatesResponse = await fetch('/api/data/estimates');
       if (!estimatesResponse.ok) throw new Error('Failed to fetch estimates');
       const estimatesResult = await estimatesResponse.json();
@@ -322,7 +330,8 @@ export default function Settings() {
         }
       });
       
-      // Calculate segments for all accounts
+      // Calculate segments for active accounts only
+      // This ensures total revenue used for percentage calculation matches what's displayed
       const updatedAccounts = autoAssignRevenueSegments(accounts, estimatesByAccountId);
       
       // Count segments for logging (use selected year's segment)
