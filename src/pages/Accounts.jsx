@@ -1593,7 +1593,7 @@ export default function Accounts() {
                       // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
                       const isArchived = account.archived === true || account.status === 'archived';
                       // Calculate revenue for selected year - do this in map so React detects the change
-                      const revenue = getRevenueForYear(account, selectedYear);
+                      const revenue = getRevenueForYear(account, selectedYear || new Date().getFullYear());
                       return (
                         <tr 
                           key={rowKey} 
@@ -1675,7 +1675,7 @@ export default function Accounts() {
                 // Per spec R1, R2: archived boolean takes precedence, but check both for compatibility
                 const isArchived = account.archived === true || account.status === 'archived';
                 // Calculate revenue for selected year - do this in map so React detects the change
-                const revenue = getRevenueForYear(account, selectedYear);
+                const revenue = getRevenueForYear(account, selectedYear || new Date().getFullYear());
                 return (
                 <Link key={rowKey} to={createPageUrl(`AccountDetail?id=${account.id}`)}>
                   <Card className={`p-5 hover:shadow-lg transition-all border-slate-200 dark:border-slate-700 h-full ${isArchived ? 'bg-slate-50 dark:bg-slate-800' : ''}`}>
