@@ -373,10 +373,10 @@ export default function Accounts() {
         const isJanOrFeb = currentMonth === 1 || currentMonth === 2;
         const effectiveSegmentYear = (selectedYear === currentYear && isJanOrFeb) 
           ? currentYear - 1 
-          : (selectedYear !== null && selectedYear !== undefined ? selectedYear : getSegmentYear());
+          : (selectedYear !== null && selectedYear !== undefined ? selectedYear : (getSegmentYear() || currentYear));
         
         // Try to read stored segment, but validate E segments
-        const storedSegment = account.segment_by_year?.[effectiveSegmentYear.toString()] || account.revenue_segment || 'C';
+        const storedSegment = account.segment_by_year?.[(effectiveSegmentYear || currentYear).toString()] || account.revenue_segment || 'C';
         let segment = storedSegment;
         
         // If stored segment is E, validate ICP score
@@ -1121,7 +1121,7 @@ export default function Accounts() {
                           revenue,
                           selectedYear: account._selectedYear,
                           revenue_by_year: account.revenue_by_year,
-                          revenue_for_selected_year: account.revenue_by_year?.[account._selectedYear?.toString()],
+                          revenue_for_selected_year: account.revenue_by_year?.[account._selectedYear?.toString()] || 0,
                           enrichedRevenue: account._revenueForSelectedYear
                         });
                       }
