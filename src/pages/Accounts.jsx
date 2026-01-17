@@ -885,13 +885,7 @@ export default function Accounts() {
             position="bottom"
           >
             <Select 
-              value={(() => {
-                // #region agent log
-                const safeYear = selectedYear || getCurrentYear() || new Date().getFullYear();
-                fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:895',message:'Select value calculation',data:{selectedYear,getCurrentYearResult:getCurrentYear(),safeYear},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                // #endregion
-                return safeYear.toString();
-              })()} 
+              value={selectedYear.toString()} 
               onValueChange={(value) => {
                 const newYear = parseInt(value, 10);
                 console.log('[Accounts] Year selector changed:', { oldYear: selectedYear, newYear });
@@ -899,13 +893,7 @@ export default function Accounts() {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue>{(() => {
-                  // #region agent log
-                  const displayValue = selectedYear || getCurrentYear() || new Date().getFullYear();
-                  fetch('http://127.0.0.1:7243/ingest/c2f52703-32d9-471f-b35b-366a5df002f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Accounts.jsx:904',message:'SelectValue display calculation',data:{selectedYear,getCurrentYearResult:getCurrentYear(),displayValue},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                  // #endregion
-                  return displayValue;
-                })()}</SelectValue>
+                <SelectValue>{selectedYear}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map((year) => (
