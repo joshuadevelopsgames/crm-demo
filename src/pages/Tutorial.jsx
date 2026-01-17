@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTutorial } from '../contexts/TutorialContext';
-import ScribeEmbed from '../components/ScribeEmbed';
 
 const tutorialSteps = [
   {
@@ -616,29 +615,25 @@ const tutorialSteps = [
   {
     id: 'lmn-import',
     title: 'Importing from LMN',
-    description: 'Learn how to export data from LMN and import it into LECRM',
+    description: 'Learn how to export data from LMN and import it into CRM',
     content: (
       <div className="space-y-6">
-        <p>You can import accounts, contacts, estimates, and jobsites directly from LMN (golmn.com) into LECRM using XLSX files.</p>
+        <p>You can import accounts, contacts, estimates, and jobsites directly from LMN (golmn.com) into CRM using XLSX files.</p>
         
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>💡 Tip:</strong> Follow the interactive guides below to see exactly where to find and export each sheet in LMN, then learn how to import them into LECRM.
+            <strong>💡 Tip:</strong> Export each sheet from LMN and import them into CRM using the import buttons on the Accounts and Contacts pages.
           </p>
         </div>
 
         <div className="space-y-4">
           <h3 className="font-semibold text-lg">Step 1: Export Estimates List from LMN</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            The Estimates List contains account information and estimate data. Follow the guide below to export it from LMN.
+            The Estimates List contains account information and estimate data. Export it from LMN and import it using the import button on the Accounts page.
           </p>
         </div>
       </div>
-    ),
-    scribeUrl: 'https://scribehow.com/embed/Export_Estimates_List_from_LMN__h6KEyY45TrK-D5Un_2vf3A',
-    scribeTitle: 'Export Estimates List from LMN',
-    scribeDescription: 'Learn where to find and export the Estimates List sheet from LMN',
-    scribeHeight: '551px'
+    )
   },
   {
     id: 'lmn-import-sheet-2',
@@ -646,7 +641,7 @@ const tutorialSteps = [
     description: 'Learn how to export both Jobsite and Contact reports from LMN',
     content: (
       <div className="space-y-4">
-        <p>This guide shows you how to export both the <strong>Jobsite</strong> and <strong>Contact</strong> reports from LMN. These are two important sheets you'll need for importing into LECRM.</p>
+        <p>This guide shows you how to export both the <strong>Jobsite</strong> and <strong>Contact</strong> reports from LMN. These are two important sheets you'll need for importing into CRM.</p>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <Building2 className="w-5 h-5 text-blue-500 mt-0.5" />
@@ -665,23 +660,19 @@ const tutorialSteps = [
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>💡 Tip:</strong> Follow the interactive guide below to see exactly where to find and export both reports from LMN.
+            <strong>💡 Tip:</strong> Export both reports from LMN and import them using the import buttons on the Accounts and Contacts pages.
           </p>
         </div>
       </div>
-    ),
-    scribeUrl: 'https://scribehow.com/embed/Export_Jobsite_and_Contact_Reports__88R9A89yRHqNlJEnTpAKrQ',
-    scribeTitle: 'Export Jobsite and Contact Reports from LMN',
-    scribeDescription: 'Learn where to find and export both the Jobsite and Contact reports from LMN',
-    scribeHeight: '679px'
+    )
   },
   {
     id: 'lmn-import-final',
-    title: 'Export Leads Sheet and Import into LECRM',
+    title: 'Export Leads Sheet and Import into CRM',
     description: 'Find the Leads sheet in LMN and import it using the blue import button',
     content: (
       <div className="space-y-4">
-        <p>This final guide shows you how to export the <strong>Leads</strong> sheet from LMN and then import it into LECRM using the blue "Import from LMN" button.</p>
+        <p>This final guide shows you how to export the <strong>Leads</strong> sheet from LMN and then import it into CRM using the blue "Import from LMN" button.</p>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <FileSpreadsheet className="w-5 h-5 text-blue-500 mt-0.5" />
@@ -707,15 +698,11 @@ const tutorialSteps = [
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>💡 Tip:</strong> Follow the interactive guide below to see the complete process from exporting in LMN to importing into LECRM.
+            <strong>💡 Tip:</strong> Export the Leads sheet from LMN and import it using the blue "Import from LMN" button on the Accounts or Contacts page.
           </p>
         </div>
       </div>
-    ),
-    scribeUrl: 'https://scribehow.com/embed/Export_Last_Leads_Sheet_From_LMN_and_Import_to_LECRM__CrTyqBJNSbSllvGhyzDuQA',
-    scribeTitle: 'Export Leads Sheet from LMN and Import to LECRM',
-    scribeDescription: 'Complete guide: Find the Leads sheet in LMN, export it, and import it into LECRM using the blue import button',
-    scribeHeight: '679px'
+    )
   },
   {
     id: 'complete',
@@ -863,20 +850,6 @@ export default function Tutorial() {
           <CardContent className="space-y-6">
             {step.content}
             
-            {(() => {
-              // Debug: Log step info
-              console.log('Tutorial step:', step.id, 'has scribeUrl:', !!step.scribeUrl, 'scribeUrl:', step.scribeUrl);
-              return step.scribeUrl ? (
-                <div className="pt-4 border-t">
-                  <ScribeEmbed 
-                    scribeUrl={step.scribeUrl}
-                    title={step.scribeTitle || `${step.title} - Interactive Guide`}
-                    description={step.scribeDescription}
-                    height={step.scribeHeight || '600px'}
-                  />
-                </div>
-              ) : null;
-            })()}
             
             {step.action && (
               <div className="pt-4 border-t">

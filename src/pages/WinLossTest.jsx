@@ -486,7 +486,7 @@ export default function WinLossTest() {
             </ol>
           </div>
           <p className="text-sm text-blue-800 mt-3">
-            <strong>Note:</strong> This page is not integrated into the main LECRM navigation. Access it directly for testing purposes.
+            <strong>Note:</strong> This page is not integrated into the main CRM navigation. Access it directly for testing purposes.
           </p>
         </Card>
       </div>

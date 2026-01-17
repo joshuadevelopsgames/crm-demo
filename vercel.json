@@ -4,6 +4,9 @@
   "devCommand": "npm run dev",
   "installCommand": "PUPPETEER_SKIP_DOWNLOAD=true npm ci || PUPPETEER_SKIP_DOWNLOAD=true npm install",
   "framework": "vite",
+  "env": {
+    "VITE_DEMO_MODE": "true"
+  },
   "crons": [
     {
       "path": "/api/cron/refresh-notifications",

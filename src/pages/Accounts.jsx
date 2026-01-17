@@ -55,7 +55,8 @@ import { snoozeNotification } from '@/services/notificationService';
 
 export default function Accounts() {
   // Use year selector to trigger re-render when year changes
-  const { selectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
+  const { selectedYear: contextSelectedYear, setYear, getCurrentYear, availableYears } = useYearSelector();
+  const selectedYear = contextSelectedYear || getCurrentYear(); // Fallback to current year if null
   const navigate = useNavigate();
 
 
@@ -351,7 +352,9 @@ export default function Accounts() {
   // This avoids recalculating total revenue for every account in getSegmentForYear
   // Moved before useEffect that uses it to avoid TDZ error
   const totalRevenueForYear = useMemo(() => {
-    return calculateTotalRevenue(accounts, estimatesByAccountId, selectedYear);
+    // Use selectedYear or fallback to current year if null
+    const year = selectedYear || new Date().getFullYear();
+    return calculateTotalRevenue(accounts, estimatesByAccountId, year);
   }, [accounts, estimatesByAccountId, selectedYear]);
 
   // Pre-calculate revenue and segments for all accounts (performance optimization)
@@ -400,7 +403,7 @@ export default function Accounts() {
         
         return {
           account,
-          revenue: account.revenue_by_year?.[selectedYear] || 0,
+          revenue: account.revenue_by_year?.[selectedYear?.toString()] || 0,
           segment
         };
       });
@@ -408,7 +411,7 @@ export default function Accounts() {
     
     // Estimates loaded: use getSegmentForYear which handles client vs lead logic
     return accounts.map(account => {
-      const revenue = account.revenue_by_year?.[selectedYear] || 0;
+      const revenue = account.revenue_by_year?.[selectedYear?.toString()] || 0;
       const segment = getSegmentForYear(account, selectedYear, accounts, estimatesByAccountId);
       
       // Validate: Check if stored revenue matches calculated revenue from estimates

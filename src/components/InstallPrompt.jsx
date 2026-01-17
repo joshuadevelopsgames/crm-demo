@@ -206,7 +206,7 @@ export default function InstallPrompt() {
             fontWeight: '600', 
             color: isDarkMode ? 'white' : '#0f172a'
           }}>
-            Install LECRM
+            Install CRM
           </h3>
           {isIOS ? (
             <p style={{ 

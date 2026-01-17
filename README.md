@@ -5,6 +5,7 @@ A comprehensive Customer Relationship Management system built with React, integr
 ## 📚 Documentation
 
 - **[Complete User Guide](./USER_GUIDE.md)** - Comprehensive guide on how to use the system
+- **[Demo Mode Guide](./DEMO_MODE.md)** - Run the CRM with mock data (no setup required!)
 - **[Google Sheets Setup](./GOOGLE_SHEETS_QUICK_SETUP.md)** - Quick setup for Google Sheets integration
 - **[Sheet to CRM Mapping](./SHEET_TO_CRM_MAPPING.md)** - How Google Sheet tabs map to CRM features
 - **[Mobile App Setup](./MOBILE_APP_SETUP.md)** - Build iOS and Android apps with Capacitor
@@ -35,6 +36,29 @@ A comprehensive Customer Relationship Management system built with React, integr
 
 ## Setup
 
+### Quick Start with Demo Mode (Recommended for Testing)
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Enable demo mode by creating a `.env` file:
+```bash
+VITE_DEMO_MODE=true
+```
+
+3. Start development server:
+```bash
+npm run dev
+```
+
+4. Navigate to the login page and enter any email/password to access the demo with mock data.
+
+See **[Demo Mode Guide](./DEMO_MODE.md)** for more details.
+
+### Full Setup (Production)
+
 1. Install dependencies:
 ```bash
 npm install
@@ -44,7 +68,9 @@ npm install
    - Update `src/api/base44Client.js` with your base44 instance configuration
    - Add your API key and base URL
 
-3. Start development server:
+3. Configure environment variables (see `.env.example` for required variables)
+
+4. Start development server:
 ```bash
 npm run dev
 ```

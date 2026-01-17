@@ -7,6 +7,8 @@ import { getSupabaseAuth } from '../services/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useTheme } from '@/contexts/ThemeContext';
+import { isDemoMode } from '@/api/mockApiService';
+import AtomLogo from '@/components/AtomLogo';
 
 export default function Login() {
   console.log('✅ Login component is rendering!');
@@ -27,6 +29,36 @@ export default function Login() {
 
     try {
       console.log('🔐 Login form submitted with email:', email);
+      
+      // Check if demo mode is enabled
+      if (isDemoMode()) {
+        console.log('🎭 Demo mode enabled - using mock authentication');
+        // In demo mode, accept any email/password or use demo credentials
+        if (email && password) {
+          // Set demo authentication
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('demoMode', 'true');
+          localStorage.setItem('demoUser', JSON.stringify({
+            id: 'demo-1',
+            email: email || 'demo@company.com',
+            full_name: 'Demo User',
+            role: 'admin'
+          }));
+          
+          // Trigger auth state change event
+          window.dispatchEvent(new Event('authStateChange'));
+          
+          toast.success('Demo mode: Successfully logged in!', { duration: 2000 });
+          navigate('/dashboard');
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error('Please enter email and password for demo mode');
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       const supabase = getSupabaseAuth();
       console.log('🔐 Supabase client:', supabase ? '✅ Found' : '❌ Not found');
       console.log('🔐 Environment check:', {
@@ -37,10 +69,30 @@ export default function Login() {
       });
       
       if (!supabase) {
-        console.warn('⚠️ Supabase not configured');
-        toast.error('Authentication is not configured. Please contact support.');
-        setIsLoading(false);
-        return;
+        console.warn('⚠️ Supabase not configured - enabling demo mode automatically');
+        // Auto-enable demo mode if Supabase is not configured
+        if (email && password) {
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('demoMode', 'true');
+          localStorage.setItem('demoUser', JSON.stringify({
+            id: 'demo-1',
+            email: email || 'demo@company.com',
+            full_name: 'Demo User',
+            role: 'admin'
+          }));
+          
+          // Trigger auth state change event
+          window.dispatchEvent(new Event('authStateChange'));
+          
+          toast.success('Demo mode: Successfully logged in!', { duration: 2000 });
+          navigate('/dashboard');
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error('Please enter email and password for demo mode');
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Sign in with email and password using Supabase
@@ -200,16 +252,9 @@ export default function Login() {
             style={{ display: 'inline-block' }}
           >
             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-              <img 
-                src="/logo.png" 
-                alt="LECRM Logo" 
-                style={{ height: (isPWA || isMobile) ? '56px' : isDesktop ? '72px' : '64px', width: 'auto' }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
+              <AtomLogo className="text-slate-900" style={{ height: (isPWA || isMobile) ? '56px' : isDesktop ? '72px' : '64px', width: (isPWA || isMobile) ? '56px' : isDesktop ? '72px' : '64px' }} />
             </div>
-            <h1 style={{ fontSize: (isPWA || isMobile) ? '26px' : isDesktop ? '34px' : '30px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px', cursor: 'pointer' }}>LECRM</h1>
+            <h1 style={{ fontSize: (isPWA || isMobile) ? '26px' : isDesktop ? '34px' : '30px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px', cursor: 'pointer' }}>CRM</h1>
           </Link>
           <p style={{ color: '#475569', fontSize: (isPWA || isMobile) ? '14px' : '16px' }}>Sign in to your account</p>
         </div>
@@ -307,49 +352,70 @@ export default function Login() {
             </div>
 
             {/* Google Sign-In Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: (isPWA || isMobile) ? '14px 16px' : '10px 16px',
-                backgroundColor: isLoading ? '#f1f5f9' : 'white',
-                color: isLoading ? '#94a3b8' : '#0f172a',
-                border: '1px solid #cbd5e1',
+            {!isDemoMode() && (
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: (isPWA || isMobile) ? '14px 16px' : '10px 16px',
+                  backgroundColor: isLoading ? '#f1f5f9' : 'white',
+                  color: isLoading ? '#94a3b8' : '#0f172a',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: (isPWA || isMobile) ? '16px' : '14px',
+                  fontWeight: '500',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  minHeight: (isPWA || isMobile) ? '48px' : 'auto', // Better touch targets
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+              >
+                <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Sign in with Google
+              </button>
+            )}
+
+            {/* Demo Mode Notice */}
+            {isDemoMode() && (
+              <div style={{
+                marginTop: '16px',
+                padding: '12px',
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
                 borderRadius: '6px',
-                fontSize: (isPWA || isMobile) ? '16px' : '14px',
-                fontWeight: '500',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                minHeight: (isPWA || isMobile) ? '48px' : 'auto', // Better touch targets
-                WebkitTapHighlightColor: 'transparent',
-                touchAction: 'manipulation'
-              }}
-            >
-              <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Sign in with Google
-            </button>
+                fontSize: '13px',
+                color: '#0369a1',
+                textAlign: 'center'
+              }}>
+                <strong>Demo Mode Active</strong>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+                  Using mock data. Enter any email and password to continue.
+                </p>
+              </div>
+            )}
 
           </div>
         </div>

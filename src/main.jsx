@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Initialize mock API service if demo mode is enabled
+import './api/mockApiService';
+
 // Hide the initial loading screen once React is ready
 const hideLoadingScreen = () => {
   const loadingScreen = document.getElementById('loading-screen');
@@ -117,7 +120,7 @@ const checkAndHide = () => {
       const hasMain = root.querySelector('main');
       const hasLayout = root.querySelector('[class*="Layout"]');
       const hasDashboard = root.querySelector('[class*="Dashboard"]');
-      const hasLogin = root.querySelector('[class*="Login"]') || root.textContent.includes('LECRM') || root.textContent.includes('Sign in');
+      const hasLogin = root.querySelector('[class*="Login"]') || root.textContent.includes('CRM') || root.textContent.includes('Sign in');
       const hasTutorialBar = root.querySelector('[class*="Tutorial"]');
       const hasCard = root.querySelector('[class*="Card"]');
       const hasButton = root.querySelector('button');
@@ -137,7 +140,7 @@ const checkAndHide = () => {
                             root.querySelector('[data-reactroot]') ||
                             root.querySelector('div > div'); // Nested divs suggest React Router structure
     
-    const hasRealContent = hasNav || hasMain || hasLayout || hasDashboard || hasLogin || hasTutorialBar || hasCard || hasButton || hasForm || root.textContent.includes('LECRM') || root.textContent.includes('Sign in');
+    const hasRealContent = hasNav || hasMain || hasLayout || hasDashboard || hasLogin || hasTutorialBar || hasCard || hasButton || hasForm || root.textContent.includes('CRM') || root.textContent.includes('Sign in');
     
     console.log('Check', checkCount, {
       hasNav: !!hasNav,

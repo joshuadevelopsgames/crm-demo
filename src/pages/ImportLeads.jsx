@@ -392,7 +392,7 @@ export default function ImportLeads() {
                 Import Successful!
               </h2>
               <p className="text-slate-600">
-                Your leads have been imported into LECRM
+                Your leads have been imported into CRM
               </p>
             </div>
 

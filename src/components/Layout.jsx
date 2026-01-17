@@ -29,6 +29,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import NotificationBell from './NotificationBell';
 import ProfileDropdown from './ProfileDropdown';
 import AnnouncementBanner from './AnnouncementBanner';
+import AtomLogo from './AtomLogo';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { getSupabaseAuth } from '@/services/supabaseClient';
 import { clearGoogleAuthSession } from '@/services/googleAuthService';
@@ -257,17 +258,9 @@ export default function Layout({ children, currentPageName }) {
                 className="flex-shrink-0 flex items-center gap-3 hover:opacity-80 transition-all cursor-pointer group"
               >
                 <div className="relative">
-                  <img 
-                    src="/logo.png" 
-                    alt="LECRM Logo" 
-                    className="h-10 w-auto transition-transform group-hover:scale-105"
-                    onError={(e) => {
-                      console.error('Logo failed to load');
-                      e.target.style.display = 'none';
-                    }}
-                  />
+                  <AtomLogo className="h-10 w-10 transition-transform group-hover:scale-105 text-primary" />
                 </div>
-                <span className="text-xl md:text-2xl font-bold text-foreground">LECRM</span>
+                <span className="text-xl md:text-2xl font-bold text-foreground">CRM</span>
               </Link>
             </div>
 

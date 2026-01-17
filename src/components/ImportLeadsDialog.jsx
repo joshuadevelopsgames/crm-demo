@@ -3221,7 +3221,7 @@ export default function ImportLeadsDialog({ open, onClose }) {
                   Import Complete!
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 text-sm">
-                  Your LMN data has been imported into LECRM
+                  Your LMN data has been imported into CRM
                 </p>
               </div>
 

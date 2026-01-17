@@ -440,6 +440,7 @@ export function calculateRevenueFromWonEstimates(account, estimates, year) {
  */
 export function calculateTotalRevenue(accounts, estimatesByAccountId = {}, year) {
   if (!accounts || accounts.length === 0) return 0;
+  if (!year) return 0; // Return 0 if year is null/undefined
   
   let total = 0;
   

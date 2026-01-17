@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseAuth } from '@/services/supabaseClient';
+import { isDemoMode } from '@/api/mockApiService';
 
 const UserContext = createContext(null);
 
@@ -16,6 +17,28 @@ export function UserProvider({ children }) {
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ['auth-session'],
     queryFn: async () => {
+      // Check for demo mode first
+      if (isDemoMode()) {
+        const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+        if (isAuth) {
+          const demoUserStr = localStorage.getItem('demoUser');
+          if (demoUserStr) {
+            const demoUser = JSON.parse(demoUserStr);
+            return {
+              user: {
+                id: demoUser.id,
+                email: demoUser.email,
+                user_metadata: {
+                  full_name: demoUser.full_name
+                }
+              },
+              access_token: 'demo-token'
+            };
+          }
+        }
+        return null;
+      }
+      
       if (!supabase) return null;
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -163,13 +186,33 @@ export function UserProvider({ children }) {
         });
       }
     } else {
-      // Fallback for demo mode
-      const email = sessionToUse.user.email || localStorage.getItem('userEmail');
-      setProfile({
-        id: sessionToUse.user.id,
-        email: email,
-        role: email === 'jrsschroeder@gmail.com' ? 'system_admin' : 'user'
-      });
+      // Fallback for demo mode or when Supabase is not configured
+      if (isDemoMode()) {
+        const demoUserStr = localStorage.getItem('demoUser');
+        if (demoUserStr) {
+          const demoUser = JSON.parse(demoUserStr);
+          setProfile({
+            id: demoUser.id,
+            email: demoUser.email,
+            full_name: demoUser.full_name || 'Demo User',
+            role: demoUser.role || 'admin'
+          });
+        } else {
+          setProfile({
+            id: sessionToUse.user.id,
+            email: sessionToUse.user.email,
+            full_name: 'Demo User',
+            role: 'admin'
+          });
+        }
+      } else {
+        const email = sessionToUse.user.email || localStorage.getItem('userEmail');
+        setProfile({
+          id: sessionToUse.user.id,
+          email: email,
+          role: email === 'jrsschroeder@gmail.com' ? 'system_admin' : 'user'
+        });
+      }
     }
 
     setIsLoading(false);
@@ -182,6 +225,47 @@ export function UserProvider({ children }) {
 
   // Listen for auth state changes and refetch session/profile immediately
   useEffect(() => {
+    // Handle demo mode auth state changes
+    if (isDemoMode()) {
+      const handleDemoAuthChange = () => {
+        const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+        if (isAuth) {
+          const demoUserStr = localStorage.getItem('demoUser');
+          if (demoUserStr) {
+            const demoUser = JSON.parse(demoUserStr);
+            const mockSession = {
+              user: {
+                id: demoUser.id,
+                email: demoUser.email,
+                user_metadata: {
+                  full_name: demoUser.full_name
+                }
+              },
+              access_token: 'demo-token'
+            };
+            fetchProfileForSession(mockSession);
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+          setIsLoading(false);
+        }
+      };
+
+      // Check initial state
+      handleDemoAuthChange();
+
+      // Listen for storage changes (from other tabs/windows)
+      window.addEventListener('storage', handleDemoAuthChange);
+      // Listen for custom event (from same window)
+      window.addEventListener('authStateChange', handleDemoAuthChange);
+
+      return () => {
+        window.removeEventListener('storage', handleDemoAuthChange);
+        window.removeEventListener('authStateChange', handleDemoAuthChange);
+      };
+    }
+
     if (!supabase) return;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {

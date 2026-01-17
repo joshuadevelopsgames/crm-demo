@@ -1,4 +1,5 @@
 import React from 'react';
+import AtomLogo from './AtomLogo';
 
 export default function LoadingScreen() {
   return (
@@ -14,18 +15,10 @@ export default function LoadingScreen() {
       {/* Logo */}
       <div className="mb-8 flex items-center gap-3">
         <div className="relative">
-          <img 
-            src="/logo.png" 
-            alt="LECRM Logo" 
-            className="h-16 w-auto transition-transform"
-            onError={(e) => {
-              // Fallback if logo doesn't load
-              e.target.style.display = 'none';
-            }}
-          />
+          <AtomLogo className="h-16 w-16 text-slate-900 dark:text-foreground transition-transform" />
         </div>
         <span className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-foreground dark:to-muted-foreground bg-clip-text text-transparent">
-          LECRM
+          CRM
         </span>
       </div>
 
